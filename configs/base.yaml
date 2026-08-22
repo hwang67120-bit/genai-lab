@@ -1,0 +1,28 @@
+# 사람이 자주 바꾸는 값만 이 파일에 둡니다.
+model:
+  family: sd15
+  id: stable-diffusion-v1-5/stable-diffusion-v1-5
+  cache_dir: D:/genai-cache/huggingface
+  dtype: float16
+
+generation:
+  width: 512
+  height: 512
+  steps: 25
+  guidance_scale: 7.5
+  limit: 3
+  default_negative_prompt: >-
+    low quality, worst quality, blurry, deformed, bad anatomy,
+    extra fingers, missing fingers, text, watermark, logo
+
+style:
+  enabled: true
+  reference_image: inputs/reference/style.png
+  adapter_repository: h94/IP-Adapter
+  adapter_subfolder: models
+  adapter_weight: ip-adapter_sd15.bin
+  scale: 0.55
+
+paths:
+  prompts_file: inputs/prompts.csv
+  output_dir: outputs

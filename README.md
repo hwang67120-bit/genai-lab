@@ -8,6 +8,7 @@
 - 검증된 오픈소스와 공식 기능이 있으면 직접 다시 만들지 않고 먼저 활용합니다.
 - 바이브 코딩은 AI가 제시한 코드를 그대로 붙이는 방식이 아니라, 계획을 먼저 세우고 빠르게 구현·검증하는 도구로 사용합니다.
 - 추가한 코드와 오픈소스는 목적, 입력, 처리, 출력, 실패 조건과 확인 방법을 한글로 설명할 수 있어야 합니다.
+- 실제 오류를 해결하거나 중요한 판단을 확정하면, AI의 평가를 덧붙이지 않고 대화에서 확인된 내용만 `docs/TROUBLESHOOTING.md`에 이어서 기록합니다.
 - 공식 문서, 모델 문서와 라이선스를 확인하지 않은 도구는 프로젝트에 추가하지 않습니다.
 - 품질 문제가 실제로 확인되기 전에는 LoRA, ControlNet 또는 새로운 기능을 미리 추가하지 않습니다.
 - 1차 출시는 작업시간 20~35시간을 목표로 하며, 참조 그림 입력·후보 3장 생성·선택 저장·Windows 설치만 포함합니다.
@@ -41,7 +42,7 @@
 
 현재 GUI는 기준 이미지 등록, 화면 범위 선택과 이미지 한 장 생성까지 지원합니다. 생성 후보의 통과·재생성 판단 화면은 아직 구현되지 않았습니다. 별도의 Java 프로그램이나 서버는 만들지 않습니다.
 
-사용자 판단 흐름은 [SCENARIOS.md](docs/SCENARIOS.md), 자세한 입력과 출력 흐름은 [FLOW.md](docs/FLOW.md), 각 파일이 필요한 이유는 [STRUCTURE.md](docs/STRUCTURE.md)를 먼저 읽습니다.
+사용자 판단 흐름은 [SCENARIOS.md](docs/SCENARIOS.md), 자세한 입력과 출력 흐름은 [FLOW.md](docs/FLOW.md), 블록 사이의 데이터는 [DATA_MODELS.md](docs/DATA_MODELS.md), 각 파일이 필요한 이유는 [STRUCTURE.md](docs/STRUCTURE.md)를 먼저 읽습니다. 프로젝트를 진행하며 막힌 점과 내가 이해하게 된 내용은 [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)에 기록합니다.
 
 ## 프로젝트 구조
 
@@ -70,6 +71,8 @@ genai-lab/
 │  ├─ STRUCTURE.md
 │  ├─ FLOW.md
 │  ├─ DECISIONS.md
+│  ├─ DATA_MODELS.md
+│  ├─ TROUBLESHOOTING.md
 │  └─ GLOSSARY.md
 └─ tests/
    └─ test_run.py

@@ -79,29 +79,38 @@ CHARACTER_FRAMING_RULES: Mapping[
         width=576,
         height=896,
         prompt=(
-            "full body, standing, head to toe, feet visible, "
-            "entire character in frame, centered composition, long shot"
+            "full body, standing, head to toe, feet visible, entire head visible, "
+            "entire character inside frame, space above head, space below feet, "
+            "centered composition, long shot"
         ),
         negative_prompt=(
             "cropped, out of frame, close-up, upper body, cowboy shot, "
-            "feet out of frame, head out of frame"
+            "feet out of frame, head out of frame, cropped legs, cut off body"
         ),
     ),
     CharacterFramingType.UPPER_BODY: CharacterFramingRule(
         width=768,
         height=768,
-        prompt="upper body, waist up, centered composition, face visible",
-        negative_prompt="full body, close-up, cropped head, out of frame",
+        prompt=(
+            "upper body, head to waist, entire head visible, full face visible, "
+            "both eyes visible, hair fully visible, centered composition, medium shot"
+        ),
+        negative_prompt=(
+            "full body, lower body, extreme close-up, cropped head, cropped face, "
+            "face out of frame, cut off head, out of frame"
+        ),
     ),
     CharacterFramingType.FACE: CharacterFramingRule(
         width=768,
         height=768,
         prompt=(
-            "portrait, close-up, face focus, "
-            "head and shoulders, centered composition"
+            "portrait, face focus, full face visible, entire head visible, "
+            "both eyes visible, hair fully visible, head and shoulders, "
+            "margin around head, centered composition"
         ),
         negative_prompt=(
-            "full body, upper body, wide shot, cropped face, out of frame"
+            "full body, wide shot, extreme close-up, cropped forehead, cropped chin, "
+            "cropped face, partial face, cut off face, out of frame"
         ),
     ),
 }
@@ -142,6 +151,11 @@ def prepare_character_generation_request(
             "solo",
             "masterpiece",
             "best quality",
+            "same character as reference image",
+            "consistent character design",
+            "matching hairstyle",
+            "matching eye color",
+            "matching outfit and colors",
             framing_rule.prompt,
             "white background",
             "simple background",

@@ -2,6 +2,9 @@
 /outputs/**
 !/outputs/README.md
 
+# 로컬 오류 추적 로그
+/logs/**
+
 # 사용자가 선택한 참조 이미지
 /inputs/reference/**
 !/inputs/reference/README.md

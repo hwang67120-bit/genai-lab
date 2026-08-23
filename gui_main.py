@@ -2,6 +2,7 @@ import sys
 import os
 import traceback
 from pathlib import Path
+from time import perf_counter
 
 from PySide6.QtCore import QObject, QThread, Signal, Slot
 from PySide6.QtWidgets import (
@@ -26,6 +27,11 @@ from genai_lab.request import (
     prepare_character_generation_request,
 )
 from genai_lab.result import create_new_run_directory, initial_result, write_json
+from genai_lab.run_log import (
+    GenerationRunLog,
+    create_generation_run_log,
+    find_recovery_action,
+)
 
 
 FRAMING_OPTIONS = (
@@ -42,20 +48,35 @@ class GenerationWorker(QObject):
     completed = Signal(str, object)
     failed = Signal(str, str, object)
 
-    def __init__(self, config, prompts, current_dir, pipeline=None):
+    def __init__(
+        self,
+        config,
+        prompts,
+        current_dir,
+        run_log: GenerationRunLog,
+        pipeline=None,
+    ):
         super().__init__()
         self.config = config
         self.prompts = prompts
         self.current_dir = current_dir
+        self.run_log = run_log
         self.pipeline = pipeline
 
     @Slot()
     def run(self):
+        execution_started_at = perf_counter()
         run_directory = None
         result = None
         try:
+            self.run_log.write_stage("환경 검사", "GPU와 필수 도구 확인 시작")
             configure_system_certificates()
             environment = check_environment()
+            gpu_memory_gb = environment["vram_bytes"] / (1024**3)
+            self.run_log.write_stage(
+                "환경 검사",
+                f"GPU={environment['gpu']}, GPU 메모리={gpu_memory_gb:.1f}GB",
+            )
             output_name = self.config.get("paths", {}).get("output_dir", "outputs")
             output_root = self.current_dir / output_name
             run_directory = create_new_run_directory(output_root)
@@ -66,10 +87,20 @@ class GenerationWorker(QObject):
             write_json(run_directory / "result.json", result)
 
             if self.pipeline is None:
+                model_started_at = perf_counter()
                 self.status_changed.emit("모델과 참조 그림 장치 준비 중...")
+                self.run_log.write_stage("모델 준비", "모델 불러오기 시작")
                 self.pipeline = prepare_pipeline(self.config)
+                self.run_log.write_stage(
+                    "모델 준비",
+                    f"완료, 소요 시간={perf_counter() - model_started_at:.1f}초",
+                )
+            else:
+                self.run_log.write_stage("모델 준비", "메모리에 있는 모델 재사용")
 
+            generation_started_at = perf_counter()
             self.status_changed.emit("이미지 생성 중...")
+            self.run_log.write_stage("이미지 생성", "후보 1번 생성 시작")
             generate_images(
                 self.pipeline,
                 self.config,
@@ -77,15 +108,37 @@ class GenerationWorker(QObject):
                 run_directory,
                 result,
                 self.current_dir,
+                self.run_log,
+            )
+            self.run_log.write_stage(
+                "이미지 생성",
+                f"완료, 소요 시간={perf_counter() - generation_started_at:.1f}초",
+            )
+            self.run_log.write_stage(
+                "실행 완료",
+                (
+                    f"전체 소요 시간={perf_counter() - execution_started_at:.1f}초, "
+                    f"결과 폴더={run_directory}"
+                ),
             )
             self.completed.emit(str(run_directory), self.pipeline)
         except Exception as error:
             details = traceback.format_exc()
+            self.run_log.write_failure(
+                "이미지 생성 실행",
+                error,
+                find_recovery_action(error),
+            )
             if result is not None and run_directory is not None:
                 result["status"] = "failed"
                 result["error"] = str(error)
                 write_json(run_directory / "result.json", result)
-            self.failed.emit(str(error), details, self.pipeline)
+            details_with_log = (
+                f"로그 파일: {self.run_log.file_path}\n\n{details}"
+            )
+            self.failed.emit(str(error), details_with_log, self.pipeline)
+        finally:
+            self.run_log.close()
 
 
 class GenAILabWindow(QMainWindow):
@@ -110,9 +163,9 @@ class GenAILabWindow(QMainWindow):
         self.setCentralWidget(central_widget)
         layout = QVBoxLayout(central_widget)
 
-        # 1. 캐릭터 디자인 분위기 선택 UI
+        # 1. 원본 캐릭터 기준 이미지 선택 UI
         style_layout = QHBoxLayout()
-        self.style_label = QLabel("1. 캐릭터 디자인 분위기: 선택되지 않음")
+        self.style_label = QLabel("1. 원본 캐릭터 기준 이미지: 선택되지 않음")
         style_button = QPushButton("이미지 선택")
         style_button.clicked.connect(lambda: self.select_image("style"))
         style_layout.addWidget(self.style_label)
@@ -168,7 +221,7 @@ class GenAILabWindow(QMainWindow):
             file_name = os.path.basename(file_path)
             if target_type == "style":
                 self.style_path = file_path
-                self.style_label.setText(f"1. 캐릭터 디자인 분위기: {file_name}")
+                self.style_label.setText(f"1. 원본 캐릭터 기준 이미지: {file_name}")
                 self.status_label.setText("상태: 생성 준비 완료")
 
     def start_generation(self):
@@ -180,8 +233,14 @@ class GenAILabWindow(QMainWindow):
             QMessageBox.information(self, "안내", "이미지를 생성하고 있습니다.")
             return
 
+        run_log: GenerationRunLog | None = None
         try:
             current_dir = Path(__file__).resolve().parent
+            run_log = create_generation_run_log(current_dir)
+            run_log.write_stage(
+                "사용자 입력",
+                f"참조 이미지={Path(self.style_path).name}",
+            )
             config_path = current_dir / "configs" / "animagine.yaml"
             self.config = load_yaml(config_path)
             self.config["style"]["enabled"] = True
@@ -225,6 +284,19 @@ class GenAILabWindow(QMainWindow):
                 generation_settings,
                 candidate_number=1,
             )
+            run_log.write_stage(
+                "요청 준비",
+                (
+                    f"화면 범위={generation_request.framing_type.value}, "
+                    f"원본 크기={generation_request.reference_image.width}x"
+                    f"{generation_request.reference_image.height}, "
+                    f"크기={generation_request.width}x{generation_request.height}, "
+                    f"시드={generation_request.seed}, "
+                    f"참조 이미지 반영 강도="
+                    f"{generation_request.reference_image_strength:.2f}, "
+                    f"모델={generation_request.model_id}"
+                ),
+            )
 
             # 기존 모델 실행 함수가 아직 config와 PromptItem을 받으므로
             # 확정 요청을 현재 실행 형식으로 옮긴다.
@@ -248,7 +320,11 @@ class GenAILabWindow(QMainWindow):
 
             self.worker_thread = QThread(self)
             self.worker = GenerationWorker(
-                self.config, prompts, current_dir, self.pipeline
+                self.config,
+                prompts,
+                current_dir,
+                run_log,
+                self.pipeline,
             )
             self.worker.moveToThread(self.worker_thread)
             self.worker_thread.started.connect(self.worker.run)
@@ -261,10 +337,20 @@ class GenAILabWindow(QMainWindow):
             self.worker_thread.finished.connect(self.worker_thread.deleteLater)
             self.worker_thread.finished.connect(self.clear_worker)
             self.worker_thread.start()
+            run_log = None
         except Exception as error:
+            error_message = str(error)
+            if run_log is not None:
+                run_log.write_failure(
+                    "요청 준비",
+                    error,
+                    find_recovery_action(error),
+                )
+                error_message += f"\n\n로그 파일: {run_log.file_path}"
+                run_log.close()
             self.generate_button.setEnabled(True)
             self.status_label.setText(f"상태: 설정 오류 ({error})")
-            QMessageBox.critical(self, "설정 오류", str(error))
+            QMessageBox.critical(self, "설정 오류", error_message)
 
     @Slot(str)
     def show_worker_status(self, message):

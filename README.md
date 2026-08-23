@@ -42,7 +42,7 @@
 
 현재 GUI는 기준 이미지 등록, 화면 범위 선택과 이미지 한 장 생성까지 지원합니다. 생성 후보의 통과·재생성 판단 화면은 아직 구현되지 않았습니다. 별도의 Java 프로그램이나 서버는 만들지 않습니다.
 
-사용자 판단 흐름은 [SCENARIOS.md](docs/SCENARIOS.md), 자세한 입력과 출력 흐름은 [FLOW.md](docs/FLOW.md), 각 파일이 필요한 이유는 [STRUCTURE.md](docs/STRUCTURE.md)를 먼저 읽습니다. 프로젝트를 진행하며 막힌 점과 내가 이해하게 된 내용은 [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)에 기록합니다.
+사용자 판단 흐름은 [SCENARIOS.md](docs/SCENARIOS.md), 자세한 입력과 출력 흐름은 [FLOW.md](docs/FLOW.md), 블록 사이의 데이터는 [DATA_MODELS.md](docs/DATA_MODELS.md), 각 파일이 필요한 이유는 [STRUCTURE.md](docs/STRUCTURE.md)를 먼저 읽습니다. 프로젝트를 진행하며 막힌 점과 내가 이해하게 된 내용은 [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)에 기록합니다.
 
 ## 프로젝트 구조
 
@@ -71,6 +71,7 @@ genai-lab/
 │  ├─ STRUCTURE.md
 │  ├─ FLOW.md
 │  ├─ DECISIONS.md
+│  ├─ DATA_MODELS.md
 │  ├─ TROUBLESHOOTING.md
 │  └─ GLOSSARY.md
 └─ tests/

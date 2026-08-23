@@ -35,7 +35,7 @@
 - 모델 실행
 - 결과 파일 저장
 
-이 블록의 출력은 **사용자 생성 요청(UserGenerationRequest)**입니다.
+이 블록의 출력은 **캐릭터 생성 입력(CharacterGenerationInput)**입니다.
 
 포함하는 값:
 
@@ -55,7 +55,7 @@
 - 모델 설정과 사용자 선택을 한 요청으로 묶기
 - 크기, 시드와 필수 값의 마지막 검사
 
-이 블록의 출력은 **실행 준비 요청(PreparedGenerationRequest)**입니다.
+이 블록의 출력은 **캐릭터 생성 실행 요청(CharacterGenerationRequest)**입니다.
 
 포함하는 값:
 
@@ -81,7 +81,7 @@
 - 실행 시간과 GPU 사용 결과 수집
 - 생성 이미지를 시스템 메모리로 반환
 
-이 블록의 출력은 **생성 후보(GenerationCandidate)**입니다.
+이 블록의 출력은 **캐릭터 생성 후보(CharacterGenerationCandidate)**입니다.
 
 포함하는 값:
 

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from genai_lab.result import refresh_summary, update_request_result, write_json
+from genai_lab.run_log import GenerationRunLog
 from genai_lab.style import load_reference_image
 
 
@@ -16,11 +17,20 @@ def generate_images(
     run_directory: Path,
     result: dict[str, Any],
     project_root: Path,
+    run_log: GenerationRunLog | None = None,
 ) -> None:
     import torch
 
     generation = config["generation"]
     reference_image = load_reference_image(config, project_root)
+    if reference_image is not None and run_log is not None:
+        run_log.write_stage(
+            "참조 이미지 준비",
+            (
+                f"IP-Adapter 입력 크기={reference_image.width}x"
+                f"{reference_image.height}, 전체 이미지 여백 보존"
+            ),
+        )
     default_negative = generation.get("default_negative_prompt", "")
     result_path = run_directory / "result.json"
 
@@ -51,6 +61,14 @@ def generate_images(
 
         try:
             image = pipeline(**arguments).images[0]
+            if run_log is not None:
+                run_log.write_stage(
+                    "모델 반환",
+                    (
+                        f"이미지 크기={image.width}x{image.height}, "
+                        "저장 전 자르기 없음"
+                    ),
+                )
             image.save(output_path)
             elapsed = round(time.perf_counter() - started, 3)
             peak_vram = torch.cuda.max_memory_allocated()

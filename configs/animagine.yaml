@@ -13,7 +13,10 @@ generation:
   limit: 1
   default_negative_prompt: >-
     nsfw, lowres, bad, text, error, extra digits, missing fingers,
-    worst quality, low quality, watermark, signature, unfinished
+    worst quality, low quality, watermark, signature, unfinished,
+    different character, different character design,
+    different hairstyle, different hair color, different eye color,
+    different outfit, mismatched colors, missing character features
 
 style:
   enabled: true
@@ -21,7 +24,7 @@ style:
   adapter_repository: h94/IP-Adapter
   adapter_subfolder: sdxl_models
   adapter_weight: ip-adapter_sdxl.bin
-  scale: 0.55
+  scale: 0.80
 
 paths:
   prompts_file: inputs/prompts_animagine.csv

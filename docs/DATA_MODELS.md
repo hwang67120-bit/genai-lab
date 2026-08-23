@@ -1,6 +1,6 @@
 # 데이터 객체 정의
 
-이 문서는 GUI 후보 생성 흐름에서 블록 사이로 전달하는 데이터의 이름과 필드를 정의합니다. 아직 Python 코드를 작성한 문서가 아니며, 구현할 때 이름 없는 `dict`, `list[dict]`와 `Any` 대신 이 계약을 사용합니다.
+이 문서는 GUI 후보 생성 흐름에서 블록 사이로 전달하는 데이터의 이름과 필드를 정의합니다. 구현할 때 이름 없는 `dict`, `list[dict]`와 `Any` 대신 이 계약을 사용합니다.
 
 ## 이름 규칙
 
@@ -15,6 +15,7 @@
 | 객체 이름 | 한글 뜻 | 객체 종류가 뜻하는 단계 |
 |---|---|---|
 | `CharacterGenerationInput` | 캐릭터 생성 입력 | 사용자가 화면에서 직접 선택한 원본 값 |
+| `CharacterGenerationSettings` | 캐릭터 생성 설정 | YAML 검사를 통과해 이름이 붙은 실행 설정 |
 | `CharacterGenerationRequest` | 캐릭터 생성 실행 요청 | 검사와 가공이 끝나 모델이 바로 사용할 값 |
 | `CharacterGenerationCandidate` | 캐릭터 생성 후보 | 모델 실행은 성공했지만 사용자가 아직 승인하지 않은 결과 |
 
@@ -62,7 +63,30 @@
 
 AI 모델을 호출하지 않습니다. 파일로 저장하지 않고 데이터 가공 블록에만 전달합니다.
 
-## 2. CharacterGenerationRequest
+## 2. CharacterGenerationSettings
+
+### 한글 뜻
+
+YAML 파일에서 읽고 기존 설정 검사를 통과한 캐릭터 생성 설정입니다. 설정 `dict`가 데이터 가공 함수 안으로 퍼지지 않도록 필요한 값에 이름과 타입을 붙입니다.
+
+### 생성 위치
+
+`gui_main.py`에서 YAML 설정 검사가 끝난 뒤 생성합니다.
+
+### 포함 필드
+
+| 필드 | 타입 | 한글 뜻 |
+|---|---|---|
+| `model_id` | `str` | 사용할 기본 이미지 모델 이름 |
+| `reference_adapter_id` | `str` | 기준 이미지 특징 전달 모델과 파일 이름 |
+| `inference_steps` | `int` | 모델이 이미지를 다듬는 반복 횟수 |
+| `guidance_scale` | `float` | 생성 문장을 따르는 강도 |
+| `reference_image_strength` | `float` | 기준 이미지 특징을 반영하는 강도 |
+| `default_negative_prompt` | `str` | 모든 생성에서 피할 기본 표현 |
+
+AI 모델을 호출하지 않으며 파일로 따로 저장하지 않습니다. `CharacterGenerationInput`과 함께 데이터 가공 블록에 전달합니다.
+
+## 3. CharacterGenerationRequest
 
 ### 한글 뜻
 
@@ -70,7 +94,7 @@ AI 모델을 호출하지 않습니다. 파일로 저장하지 않고 데이터 
 
 ### 생성 위치
 
-`genai_lab/request.py`의 데이터 가공 블록에서 생성할 예정입니다.
+`genai_lab/request.py`의 데이터 가공 블록에서 생성합니다.
 
 ### 포함 필드
 
@@ -114,7 +138,7 @@ AI 모델을 호출하지 않습니다. 파일로 저장하지 않고 데이터 
 
 규칙으로만 생성하며 AI 모델을 호출하지 않습니다. 객체 자체는 저장하지 않고 AI 모델 실행 블록으로 전달합니다.
 
-## 3. CharacterGenerationCandidate
+## 4. CharacterGenerationCandidate
 
 ### 한글 뜻
 
@@ -153,7 +177,7 @@ AI 모델 실행으로 만들어집니다. 처음에는 이미지와 객체 모�
 ## 객체 전달 순서
 
 ```text
-CharacterGenerationInput
+CharacterGenerationInput + CharacterGenerationSettings
         ↓ 규칙 기반 검사와 가공
 CharacterGenerationRequest
         ↓ AI 모델 실행
@@ -179,16 +203,17 @@ CharacterGenerationCandidate
 
 ## 외부 전달과 저장 여부
 
-세 객체는 모두 Python 프로그램 내부에서만 사용합니다. Java, 서버나 외부 API에 전달하지 않습니다.
+흐름 객체와 설정 객체는 모두 Python 프로그램 내부에서만 사용합니다. Java, 서버나 외부 API에 전달하지 않습니다.
 
 - `CharacterGenerationInput`: 저장하지 않음
+- `CharacterGenerationSettings`: 저장하지 않음
 - `CharacterGenerationRequest`: 저장하지 않음
 - `CharacterGenerationCandidate`: 승인 전 저장하지 않음
 - 승인 후: 후보 이미지와 재현에 필요한 요청 필드만 PNG와 JSON으로 저장
 
 ## 구현 형태
 
-세 객체는 외부 API의 요청·응답이 아니라 로컬 Python 프로그램 내부에서 전달하는 값입니다. 구현할 때는 dataclass를 사용하고 모든 필드에 타입을 적습니다.
+이 객체들은 외부 API의 요청·응답이 아니라 로컬 Python 프로그램 내부에서 전달하는 값입니다. dataclass를 사용하고 모든 필드에 타입을 적습니다.
 
 - 이름 없는 `dict`, `list[dict]`와 `Any`를 사용하지 않습니다.
 - 객체를 만든 뒤 필드를 임의로 추가하지 않습니다.

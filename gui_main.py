@@ -1,6 +1,5 @@
 import sys
 import os
-import secrets
 import traceback
 from pathlib import Path
 
@@ -20,54 +19,20 @@ from run import (
 )
 from genai_lab.model import prepare_pipeline
 from genai_lab.generator import generate_images
+from genai_lab.request import (
+    CharacterFramingType,
+    CharacterGenerationInput,
+    CharacterGenerationSettings,
+    prepare_character_generation_request,
+)
 from genai_lab.result import create_new_run_directory, initial_result, write_json
 
 
-# 화면 범위마다 캔버스 비율, 반드시 넣을 표현, 피할 표현을 한곳에서 관리한다.
-FRAMING_PRESETS = {
-    "full_body": {
-        "label": "전신 (머리부터 발끝까지)",
-        "width": 576,
-        "height": 896,
-        "prompt": (
-            "full body, standing, head to toe, feet visible, entire character in frame, "
-            "centered composition, long shot"
-        ),
-        "negative": (
-            "cropped, out of frame, close-up, upper body, cowboy shot, "
-            "feet out of frame, head out of frame"
-        ),
-    },
-    "upper_body": {
-        "label": "상반신 (허리 위)",
-        "width": 768,
-        "height": 768,
-        "prompt": "upper body, waist up, centered composition, face visible",
-        "negative": "full body, close-up, cropped head, out of frame",
-    },
-    "face": {
-        "label": "얼굴 중심 (어깨 위)",
-        "width": 768,
-        "height": 768,
-        "prompt": "portrait, close-up, face focus, head and shoulders, centered composition",
-        "negative": "full body, upper body, wide shot, cropped face, out of frame",
-    },
-}
-
-
-def apply_framing_preset(config, framing_key):
-    """선택한 화면 범위를 생성 크기와 문장에 함께 반영한다."""
-    if framing_key not in FRAMING_PRESETS:
-        raise ValueError(f"지원하지 않는 화면 범위입니다: {framing_key}")
-
-    preset = FRAMING_PRESETS[framing_key]
-    config["generation"]["width"] = preset["width"]
-    config["generation"]["height"] = preset["height"]
-    base_negative = config["generation"].get("default_negative_prompt", "")
-    negative_prompt = ", ".join(
-        part for part in (base_negative, preset["negative"]) if part
-    )
-    return preset["prompt"], negative_prompt
+FRAMING_OPTIONS = (
+    (CharacterFramingType.FULL_BODY, "전신 (머리부터 발끝까지)"),
+    (CharacterFramingType.UPPER_BODY, "상반신 (허리 위)"),
+    (CharacterFramingType.FACE, "얼굴 중심 (어깨 위)"),
+)
 
 
 class GenerationWorker(QObject):
@@ -174,8 +139,8 @@ class GenAILabWindow(QMainWindow):
         framing_layout = QHBoxLayout()
         framing_label = QLabel("4. 화면 범위:")
         self.framing_combo = QComboBox()
-        for key, preset in FRAMING_PRESETS.items():
-            self.framing_combo.addItem(preset["label"], key)
+        for framing_type, label in FRAMING_OPTIONS:
+            self.framing_combo.addItem(label, framing_type.value)
         self.framing_combo.setCurrentIndex(0)
         framing_layout.addWidget(framing_label)
         framing_layout.addWidget(self.framing_combo)
@@ -221,19 +186,60 @@ class GenAILabWindow(QMainWindow):
             self.config = load_yaml(config_path)
             self.config["style"]["enabled"] = True
             self.config["style"]["reference_image"] = self.style_path
-            framing_key = self.framing_combo.currentData()
-            framing_prompt, framing_negative = apply_framing_preset(
-                self.config, framing_key
-            )
             validate_config(self.config)
 
+            model_config = self.config["model"]
+            generation_config = self.config["generation"]
+            style_config = self.config["style"]
+            generation_settings = CharacterGenerationSettings(
+                model_id=str(model_config["id"]),
+                reference_adapter_id="/".join(
+                    (
+                        str(style_config["adapter_repository"]),
+                        str(style_config["adapter_subfolder"]),
+                        str(style_config["adapter_weight"]),
+                    )
+                ),
+                inference_steps=int(generation_config["steps"]),
+                guidance_scale=float(generation_config["guidance_scale"]),
+                reference_image_strength=float(style_config["scale"]),
+                default_negative_prompt=str(
+                    generation_config.get("default_negative_prompt", "")
+                ),
+            )
+
+            # CharacterGenerationInput(캐릭터 생성 입력)
+            # - 포함: 사용자가 고른 참조 이미지와 화면 범위.
+            # - 생성: GUI 선택값을 읽어 만든다.
+            # - 처리: 규칙 검사만 수행하며 AI 모델은 실행하지 않는다.
+            # - 저장: 저장하지 않고 생성 요청을 만드는 데만 사용한다.
+            # - 다음 사용처: request.py에서 CharacterGenerationRequest로 변환한다.
+            generation_input = CharacterGenerationInput(
+                reference_image_path=Path(self.style_path),
+                framing_type=CharacterFramingType(
+                    self.framing_combo.currentData()
+                ),
+            )
+            generation_request = prepare_character_generation_request(
+                generation_input,
+                generation_settings,
+                candidate_number=1,
+            )
+
+            # 기존 모델 실행 함수가 아직 config와 PromptItem을 받으므로
+            # 확정 요청을 현재 실행 형식으로 옮긴다.
+            generation_config["width"] = generation_request.width
+            generation_config["height"] = generation_request.height
+            validate_config(self.config)
             prompts = [
                 PromptItem(
-                    request_id="gui_char_01",
+                    request_id=(
+                        f"gui_char_{generation_request.candidate_number:02d}"
+                    ),
                     description_ko="GUI 캐릭터 생성",
-                    prompt=f"1girl, solo, masterpiece, best quality, {framing_prompt}, white background, simple background",
-                    negative_prompt=framing_negative,
-                    seed=secrets.randbelow(2**31),
+                    prompt=generation_request.prompt,
+                    negative_prompt=generation_request.negative_prompt,
+                    seed=generation_request.seed,
                 )
             ]
 

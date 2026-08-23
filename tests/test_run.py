@@ -267,33 +267,3 @@ def test_memory_error_keeps_completed_image_and_korean_record(
     saved = json.loads((run_directory / "result.json").read_text(encoding="utf-8"))
     assert saved["status"] == "failed"
     assert saved["requests"][1]["error"] == "GPU 메모리 부족"
-
-
-def test_full_body_preset_uses_tall_canvas_and_crop_guardrails() -> None:
-    from gui_main import apply_framing_preset
-
-    config = {
-        "generation": {
-            "width": 768,
-            "height": 768,
-            "default_negative_prompt": "low quality",
-        }
-    }
-
-    prompt, negative = apply_framing_preset(config, "full_body")
-
-    assert (config["generation"]["width"], config["generation"]["height"]) == (
-        576,
-        896,
-    )
-    assert "head to toe" in prompt
-    assert "feet visible" in prompt
-    assert "cropped" in negative
-    assert "feet out of frame" in negative
-
-
-def test_unknown_framing_preset_is_rejected() -> None:
-    from gui_main import apply_framing_preset
-
-    with pytest.raises(ValueError, match="지원하지 않는 화면 범위"):
-        apply_framing_preset({"generation": {}}, "unknown")

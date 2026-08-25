@@ -19,8 +19,9 @@ def character_generation_settings() -> CharacterGenerationSettings:
         reference_adapter_id=(
             "h94/IP-Adapter/sdxl_models/ip-adapter_sdxl.bin"
         ),
-        inference_steps=20,
+        inference_steps=28,
         guidance_scale=5.5,
+        original_image_change_strength=0.25,
         reference_image_strength=0.55,
         default_negative_prompt="low quality",
     )
@@ -49,8 +50,8 @@ def test_full_body_input_becomes_model_ready_request(
 
     assert generation_request.reference_image.mode == "RGB"
     assert generation_request.reference_image_name == "character.png"
-    assert (generation_request.width, generation_request.height) == (576, 896)
     assert generation_request.seed == 1234
+    assert (generation_request.width, generation_request.height) == (768, 1344)
     assert "head to toe" in generation_request.prompt
     assert "feet visible" in generation_request.prompt
     assert "cropped" in generation_request.negative_prompt
@@ -67,7 +68,7 @@ def test_missing_reference_image_is_rejected(tmp_path: Path) -> None:
         prepare_character_generation_request(
             CharacterGenerationInput(
                 reference_image_path=missing_image_path,
-                framing_type=CharacterFramingType.FACE,
+                framing_type=CharacterFramingType.FULL_BODY,
             ),
             character_generation_settings(),
             candidate_number=1,

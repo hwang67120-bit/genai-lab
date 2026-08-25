@@ -183,6 +183,34 @@ def validate_config(config: dict[str, Any]) -> None:
     if not isinstance(guidance, (int, float)) or guidance <= 0:
         raise AppError("설정 'generation.guidance_scale'은 0보다 커야 합니다.")
 
+    generation_mode = generation.get("mode", "text_to_image")
+    if generation_mode not in {"text_to_image", "image_to_image"}:
+        raise AppError(
+            "설정 'generation.mode'는 text_to_image 또는 "
+            "image_to_image여야 합니다."
+        )
+    if generation_mode == "image_to_image":
+        original_image_change_strength = generation.get(
+            "original_image_change_strength"
+        )
+        if not isinstance(original_image_change_strength, (int, float)) or not (
+            0.15 <= original_image_change_strength <= 0.35
+        ):
+            raise AppError(
+                "원본 유지 모드의 'generation.original_image_change_strength'는 "
+                "0.15부터 0.35 사이여야 합니다."
+            )
+
+    reference_quality = config.get("reference_quality")
+    if reference_quality is not None:
+        if not isinstance(reference_quality, dict):
+            raise AppError("설정 'reference_quality'는 항목 묶음이어야 합니다.")
+        validate_reference_quality_config(reference_quality)
+    detail_correction = config.get("detail_correction")
+    if detail_correction is not None:
+        if not isinstance(detail_correction, dict):
+            raise AppError("설정 'detail_correction'은 항목 묶음이어야 합니다.")
+        validate_detail_correction_config(detail_correction)
     if not isinstance(style.get("enabled"), bool):
         raise AppError("설정 'style.enabled'는 true 또는 false여야 합니다.")
     if style["enabled"]:
@@ -207,6 +235,78 @@ def validate_config(config: dict[str, Any]) -> None:
 
     require_value(paths, "prompts_file", "paths")
     require_value(paths, "output_dir", "paths")
+
+
+def validate_reference_quality_config(
+    reference_quality: dict[str, Any],
+) -> None:
+    """참조 이미지 화질 검사와 확대 복원 설정을 검사한다."""
+    if not isinstance(reference_quality.get("enabled"), bool):
+        raise AppError("설정 'reference_quality.enabled'는 true 또는 false여야 합니다.")
+    if not reference_quality["enabled"]:
+        return
+
+    for key in ("minimum_short_side", "tile_size", "tile_overlap", "maximum_long_side"):
+        if not isinstance(reference_quality.get(key), int):
+            raise AppError(f"설정 'reference_quality.{key}'는 정수여야 합니다.")
+    if reference_quality["minimum_short_side"] < 256:
+        raise AppError("'reference_quality.minimum_short_side'는 256 이상이어야 합니다.")
+    if reference_quality["maximum_long_side"] < reference_quality["minimum_short_side"]:
+        raise AppError(
+            "'reference_quality.maximum_long_side'는 minimum_short_side 이상이어야 합니다."
+        )
+    if reference_quality["tile_size"] < 64:
+        raise AppError("'reference_quality.tile_size'는 64 이상이어야 합니다.")
+    if not 0 <= reference_quality["tile_overlap"] < reference_quality["tile_size"]:
+        raise AppError(
+            "'reference_quality.tile_overlap'은 0 이상이고 tile_size보다 작아야 합니다."
+        )
+    sharpness = reference_quality.get("minimum_sharpness_score")
+    if not isinstance(sharpness, (int, float)) or sharpness <= 0:
+        raise AppError(
+            "'reference_quality.minimum_sharpness_score'는 0보다 커야 합니다."
+        )
+    require_value(reference_quality, "model_path", "reference_quality")
+
+
+def validate_detail_correction_config(
+    detail_correction: dict[str, Any],
+) -> None:
+    """얼굴·손 탐지, 마스크 제한과 Inpaint 설정을 검사한다."""
+    if not isinstance(detail_correction.get("enabled"), bool):
+        raise AppError("설정 'detail_correction.enabled'는 true 또는 false여야 합니다.")
+    if not detail_correction["enabled"]:
+        return
+
+    for key in ("detector_repository", "face_model", "hand_model"):
+        require_value(detail_correction, key, "detail_correction")
+    confidence = detail_correction.get("minimum_confidence")
+    if not isinstance(confidence, (int, float)) or not 0 < confidence <= 1:
+        raise AppError("'detail_correction.minimum_confidence'는 0 초과 1 이하여야 합니다.")
+    for key in (
+        "maximum_face_regions",
+        "maximum_hand_regions",
+        "inpaint_steps",
+        "padding_mask_crop",
+    ):
+        if not isinstance(detail_correction.get(key), int) or detail_correction[key] < 1:
+            raise AppError(f"설정 'detail_correction.{key}'는 1 이상의 정수여야 합니다.")
+
+    minimum_area = detail_correction.get("minimum_mask_area_ratio")
+    maximum_area = detail_correction.get("maximum_mask_area_ratio")
+    if not isinstance(minimum_area, (int, float)) or not isinstance(
+        maximum_area, (int, float)
+    ):
+        raise AppError("부분 보정 마스크 면적 비율은 숫자여야 합니다.")
+    if not 0 < minimum_area < maximum_area < 1:
+        raise AppError(
+            "부분 보정 마스크 비율은 0 < 최소 < 최대 < 1 순서여야 합니다."
+        )
+    for key in ("mask_padding_ratio", "inpaint_strength", "guidance_scale"):
+        if not isinstance(detail_correction.get(key), (int, float)):
+            raise AppError(f"설정 'detail_correction.{key}'는 숫자여야 합니다.")
+    if not 0 < detail_correction["inpaint_strength"] <= 1:
+        raise AppError("'detail_correction.inpaint_strength'는 0 초과 1 이하여야 합니다.")
 
 
 def read_prompts(path: Path, limit: int) -> list[PromptItem]:

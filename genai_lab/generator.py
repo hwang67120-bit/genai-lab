@@ -5,9 +5,318 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from genai_lab.result import refresh_summary, update_request_result, write_json
+from genai_lab.clothing import (
+    CatVTONLocalSettings,
+    CharacterClothingProtectionError,
+    ClothingReferenceInput,
+    execute_catvton_clothing_try_on,
+)
+from genai_lab.detail import (
+    CharacterDetailCorrectionError,
+    correct_character_candidate_details,
+)
+from genai_lab.request import CharacterGenerationRequest
+from genai_lab.result import (
+    CharacterGenerationCandidate,
+    refresh_summary,
+    update_request_result,
+    write_json,
+)
 from genai_lab.run_log import GenerationRunLog
-from genai_lab.style import load_reference_image
+from genai_lab.style import (
+    load_reference_image,
+    prepare_ip_adapter_reference_image,
+    prepare_original_image_canvas,
+)
+
+
+def generate_character_candidate(
+    pipeline: Any,
+    config: dict[str, Any],
+    generation_request: CharacterGenerationRequest,
+    project_root: Path,
+    run_log: GenerationRunLog | None = None,
+    clothing_reference_input: ClothingReferenceInput | None = None,
+    catvton_settings: CatVTONLocalSettings | None = None,
+) -> CharacterGenerationCandidate:
+    """AI로 후보 한 장을 만들고 파일 저장 없이 메모리 객체로 반환한다.
+
+    반환값:
+        사용자 승인 전까지 메모리에만 존재하는 캐릭터 이미지 후보.
+
+    오류:
+        모델 실행 또는 GPU 메모리 부족 시 한글 오류를 발생시킨다.
+    """
+    import torch
+
+    ip_adapter_reference_image = prepare_ip_adapter_reference_image(
+        generation_request.reference_image
+    )
+    if run_log is not None:
+        run_log.write_stage(
+            "참조 이미지 준비",
+            (
+                f"IP-Adapter 입력 크기={ip_adapter_reference_image.width}x"
+                f"{ip_adapter_reference_image.height}, 사용자 승인본 사용"
+            ),
+        )
+
+    original_image_canvas = prepare_original_image_canvas(
+        generation_request.reference_image,
+        generation_request.width,
+        generation_request.height,
+    )
+    if run_log is not None:
+        run_log.write_stage(
+            "원본 유지 화면 준비",
+            (
+                f"시작 화면={original_image_canvas.width}x"
+                f"{original_image_canvas.height}, "
+                f"원본 변경 강도="
+                f"{generation_request.original_image_change_strength:.2f}, "
+                "비율 유지 및 흰색 여백 사용"
+            ),
+        )
+
+    torch.cuda.reset_peak_memory_stats()
+    random_start = torch.Generator(device="cpu").manual_seed(
+        generation_request.seed
+    )
+    model_arguments: dict[str, Any] = {
+        "prompt": generation_request.prompt,
+        "negative_prompt": generation_request.negative_prompt,
+        "num_inference_steps": generation_request.inference_steps,
+        "guidance_scale": generation_request.guidance_scale,
+        "generator": random_start,
+    }
+    generation_mode = config["generation"].get("mode", "text_to_image")
+    if generation_mode == "image_to_image":
+        model_arguments["image"] = original_image_canvas
+        model_arguments["strength"] = (
+            generation_request.original_image_change_strength
+        )
+    else:
+        model_arguments["width"] = generation_request.width
+        model_arguments["height"] = generation_request.height
+    model_arguments["ip_adapter_image"] = [ip_adapter_reference_image]
+
+    generation_started_at = time.perf_counter()
+    try:
+        generated_image = pipeline(**model_arguments).images[0]
+    except (torch.cuda.OutOfMemoryError, RuntimeError) as error:
+        is_memory_error = isinstance(error, torch.cuda.OutOfMemoryError) or (
+            "out of memory" in str(error).lower()
+        )
+        torch.cuda.empty_cache()
+        if is_memory_error:
+            raise RuntimeError(
+                "GPU 메모리가 부족합니다. 다른 GPU 사용 프로그램을 닫은 뒤 "
+                "같은 설정으로 다시 생성하세요."
+            ) from error
+        raise
+    finally:
+        ip_adapter_reference_image.close()
+        original_image_canvas.close()
+
+    elapsed_seconds = round(time.perf_counter() - generation_started_at, 3)
+    peak_vram_bytes = torch.cuda.max_memory_allocated()
+    if run_log is not None:
+        run_log.write_stage(
+            "모델 반환",
+            (
+                f"이미지 크기={generated_image.width}x{generated_image.height}, "
+                "파일 저장 없음, 사용자 검토용 메모리 보관"
+            ),
+        )
+
+    before_clothing_image = None
+    clothing_change_mask = None
+    clothing_try_on_status = "not_requested"
+    clothing_verification_warning_ko = None
+    if clothing_reference_input is not None:
+        clothing_try_on_status = "failed"
+        if catvton_settings is None:
+            clothing_verification_warning_ko = (
+                "의상 참조가 있지만 CatVTON 실행 설정이 없습니다."
+            )
+        else:
+            if run_log is not None:
+                run_log.write_stage(
+                    "의상 참조 합성",
+                    "CatVTON 별도 프로세스와 의상 영역 보호 검사 시작",
+                )
+            try:
+                if hasattr(pipeline, "maybe_free_model_hooks"):
+                    pipeline.maybe_free_model_hooks()
+                torch.cuda.empty_cache()
+                clothing_try_on_result = execute_catvton_clothing_try_on(
+                    base_character_image=generated_image,
+                    clothing_reference_input=clothing_reference_input,
+                    settings=catvton_settings,
+                    seed=generation_request.seed,
+                )
+                before_clothing_image = generated_image.copy()
+                generated_image.close()
+                generated_image = clothing_try_on_result.candidate.image
+                clothing_change_mask = (
+                    clothing_try_on_result.clothing_change_mask
+                )
+                clothing_try_on_status = "completed"
+                clothing_verification_warning_ko = (
+                    clothing_try_on_result.candidate.verification.reason_ko
+                )
+                if run_log is not None:
+                    changed_pixel_count = (
+                        clothing_try_on_result.candidate.verification
+                        .changed_pixel_count_outside_clothing
+                    )
+                    run_log.write_stage(
+                        "의상 참조 합성",
+                        (
+                            "완료, 의상 영역 밖 변경 픽셀="
+                            f"{changed_pixel_count}"
+                        ),
+                    )
+            except (CharacterClothingProtectionError, OSError) as error:
+                clothing_verification_warning_ko = str(error)
+                if run_log is not None:
+                    run_log.write_stage(
+                        "의상 참조 합성 실패",
+                        f"{error} 기본 생성 후보를 유지합니다.",
+                    )
+
+
+    candidate_image = generated_image
+    original_generated_image = None
+    detail_correction_status = "disabled"
+    detected_face_count = 0
+    detected_hand_count = 0
+    corrected_region_count = 0
+    rejected_region_count = 0
+    detail_verification_warning_ko = None
+    detail_config = config.get("detail_correction", {})
+    if detail_config.get("enabled", False):
+        if run_log is not None:
+            run_log.write_stage(
+                "얼굴·손 부분 보정",
+                "YOLO 탐지와 제한 영역 Inpaint 시작",
+            )
+        try:
+            correction_result = correct_character_candidate_details(
+                generation_pipeline=pipeline,
+                generated_image=generated_image,
+                approved_reference_image=generation_request.reference_image,
+                prompt=generation_request.prompt,
+                negative_prompt=generation_request.negative_prompt,
+                seed=generation_request.seed,
+                detail_config=detail_config,
+                cache_dir=Path(config["model"]["cache_dir"]),
+            )
+            detected_face_count = correction_result.detected_face_count
+            detected_hand_count = correction_result.detected_hand_count
+            corrected_region_count = correction_result.corrected_region_count
+            rejected_region_count = correction_result.rejected_region_count
+            detail_verification_warning_ko = (
+                correction_result.verification_warning_ko
+            )
+            if corrected_region_count:
+                candidate_image = correction_result.corrected_image
+                original_generated_image = (
+                    correction_result.original_generated_image
+                )
+                generated_image.close()
+                detail_correction_status = (
+                    "warning"
+                    if detail_verification_warning_ko
+                    else "completed"
+                )
+            else:
+                correction_result.corrected_image.close()
+                correction_result.original_generated_image.close()
+                detail_correction_status = "not_detected"
+            if run_log is not None:
+                run_log.write_stage(
+                    "얼굴·손 부분 보정",
+                    (
+                        f"상태={detail_correction_status}, "
+                        f"얼굴={detected_face_count}, 손={detected_hand_count}, "
+                        f"보정={corrected_region_count}, 거절={rejected_region_count}, "
+                        "마스크 밖 변경=0"
+                    ),
+                )
+        except Exception as error:
+            detail_correction_status = "failed"
+            if isinstance(error, CharacterDetailCorrectionError):
+                detail_verification_warning_ko = str(error)
+            else:
+                detail_verification_warning_ko = (
+                    "예상하지 못한 세부 보정 오류가 발생했습니다: "
+                    f"{type(error).__name__}: {error}"
+                )
+            if run_log is not None:
+                run_log.write_stage(
+                    "얼굴·손 부분 보정 실패",
+                    (
+                        f"{detail_verification_warning_ko} "
+                        "보정 전 후보를 유지합니다."
+                    ),
+                )
+
+    elapsed_seconds = round(time.perf_counter() - generation_started_at, 3)
+    peak_vram_bytes = torch.cuda.max_memory_allocated()
+
+    # CharacterGenerationCandidate(캐릭터 생성 후보)
+    # - 포함: 생성 이미지, 시드, 화면 범위, 모델 설정과 실행 기록.
+    # - 생성: AI 모델이 이미지 한 장을 반환한 직후 만든다.
+    # - 처리: 사용자 승인 전 후보이며 AI가 품질을 확정하지 않는다.
+    # - 저장: 현재 단계에서는 저장하지 않고 GUI 메모리에 전달한다.
+    # - 다음 사용처: GUI 미리보기와 사용자 승인 후 저장에 사용한다.
+    return CharacterGenerationCandidate(
+        image=candidate_image,
+        original_generated_image=original_generated_image,
+        before_clothing_image=before_clothing_image,
+        clothing_change_mask=clothing_change_mask,
+        clothing_reference_name=(
+            clothing_reference_input.image_path.name
+            if clothing_reference_input is not None
+            else None
+        ),
+        clothing_category=(
+            clothing_reference_input.category.value
+            if clothing_reference_input is not None
+            else None
+        ),
+        clothing_try_on_status=clothing_try_on_status,
+        clothing_verification_warning_ko=clothing_verification_warning_ko,
+        reference_image_name=generation_request.reference_image_name,
+        reference_enhancement_applied=(
+            generation_request.reference_enhancement_applied
+        ),
+        reference_enhancement_model_id=(
+            generation_request.reference_enhancement_model_id
+        ),
+        reference_quality_status=generation_request.reference_quality_status,
+        framing_type=generation_request.framing_type.value,
+        seed=generation_request.seed,
+        candidate_number=generation_request.candidate_number,
+        prompt=generation_request.prompt,
+        negative_prompt=generation_request.negative_prompt,
+        model_id=generation_request.model_id,
+        reference_adapter_id=generation_request.reference_adapter_id,
+        original_image_change_strength=(
+            generation_request.original_image_change_strength
+        ),
+        reference_image_strength=generation_request.reference_image_strength,
+        detail_correction_status=detail_correction_status,
+        detected_face_count=detected_face_count,
+        detected_hand_count=detected_hand_count,
+        corrected_region_count=corrected_region_count,
+        rejected_region_count=rejected_region_count,
+        detail_verification_warning_ko=detail_verification_warning_ko,
+        elapsed_seconds=elapsed_seconds,
+        peak_vram_bytes=peak_vram_bytes,
+        generated_at=datetime.now().astimezone().isoformat(),
+    )
 
 
 def generate_images(

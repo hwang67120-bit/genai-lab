@@ -23,6 +23,10 @@ class CharacterGenerationInput:
 
     reference_image_path: Path
     framing_type: CharacterFramingType
+    approved_reference_image: Image.Image | None = None
+    reference_enhancement_applied: bool = False
+    reference_enhancement_model_id: str | None = None
+    reference_quality_status: str = "not_checked"
 
 
 @dataclass(frozen=True)
@@ -33,6 +37,7 @@ class CharacterGenerationSettings:
     reference_adapter_id: str
     inference_steps: int
     guidance_scale: float
+    original_image_change_strength: float
     reference_image_strength: float
     default_negative_prompt: str
 
@@ -53,6 +58,9 @@ class CharacterGenerationRequest:
 
     reference_image: Image.Image
     reference_image_name: str
+    reference_enhancement_applied: bool
+    reference_enhancement_model_id: str | None
+    reference_quality_status: str
     framing_type: CharacterFramingType
     width: int
     height: int
@@ -62,6 +70,7 @@ class CharacterGenerationRequest:
     candidate_number: int
     inference_steps: int
     guidance_scale: float
+    original_image_change_strength: float
     reference_image_strength: float
     model_id: str
     reference_adapter_id: str
@@ -76,8 +85,8 @@ CHARACTER_FRAMING_RULES: Mapping[
     CharacterFramingRule,
 ] = {
     CharacterFramingType.FULL_BODY: CharacterFramingRule(
-        width=576,
-        height=896,
+        width=768,
+        height=1344,
         prompt=(
             "full body, standing, head to toe, feet visible, entire head visible, "
             "entire character inside frame, space above head, space below feet, "
@@ -139,9 +148,14 @@ def prepare_character_generation_request(
     framing_rule = find_character_framing_rule(
         character_generation_input.framing_type
     )
-    reference_image = load_reference_image_as_rgb(
-        character_generation_input.reference_image_path
-    )
+    if character_generation_input.approved_reference_image is None:
+        reference_image = load_reference_image_as_rgb(
+            character_generation_input.reference_image_path
+        )
+    else:
+        reference_image = (
+            character_generation_input.approved_reference_image.convert("RGB").copy()
+        )
     generation_seed = seed if seed is not None else randbelow(2**31)
     validate_generation_seed(generation_seed)
 
@@ -156,6 +170,14 @@ def prepare_character_generation_request(
             "matching hairstyle",
             "matching eye color",
             "matching outfit and colors",
+            "detailed eyes",
+            "symmetrical eyes",
+            "detailed pupils",
+            "detailed hands",
+            "five fingers",
+            "natural hand pose",
+            "natural fabric folds",
+            "clean clothing contours",
             framing_rule.prompt,
             "white background",
             "simple background",
@@ -175,6 +197,13 @@ def prepare_character_generation_request(
     return CharacterGenerationRequest(
         reference_image=reference_image,
         reference_image_name=character_generation_input.reference_image_path.name,
+        reference_enhancement_applied=(
+            character_generation_input.reference_enhancement_applied
+        ),
+        reference_enhancement_model_id=(
+            character_generation_input.reference_enhancement_model_id
+        ),
+        reference_quality_status=character_generation_input.reference_quality_status,
         framing_type=character_generation_input.framing_type,
         width=framing_rule.width,
         height=framing_rule.height,
@@ -184,6 +213,9 @@ def prepare_character_generation_request(
         candidate_number=candidate_number,
         inference_steps=character_generation_settings.inference_steps,
         guidance_scale=character_generation_settings.guidance_scale,
+        original_image_change_strength=(
+            character_generation_settings.original_image_change_strength
+        ),
         reference_image_strength=(
             character_generation_settings.reference_image_strength
         ),
@@ -262,6 +294,11 @@ def validate_character_generation_settings(
     if settings.guidance_scale <= 0:
         raise CharacterGenerationPreparationError(
             "프롬프트 반영 강도는 0보다 커야 합니다."
+        )
+    if not 0.15 <= settings.original_image_change_strength <= 0.35:
+        raise CharacterGenerationPreparationError(
+            "원본 유지 모드의 이미지 변경 강도는 "
+            "0.15부터 0.35 사이여야 합니다."
         )
     if not 0.0 <= settings.reference_image_strength <= 1.0:
         raise CharacterGenerationPreparationError(

@@ -6,17 +6,64 @@ model:
   dtype: float16
 
 generation:
+  mode: image_to_image
   width: 768
-  height: 768
-  steps: 20
+  height: 1344
+  steps: 28
   guidance_scale: 5.5
+  original_image_change_strength: 0.25
   limit: 1
   default_negative_prompt: >-
     nsfw, lowres, bad, text, error, extra digits, missing fingers,
     worst quality, low quality, watermark, signature, unfinished,
     different character, different character design,
     different hairstyle, different hair color, different eye color,
-    different outfit, mismatched colors, missing character features
+    different outfit, mismatched colors, missing character features,
+    bad anatomy, bad hands, malformed hands, fused fingers, extra fingers,
+    uneven eyes, asymmetrical eyes, missing pupils, deformed pupils,
+    unnatural clothing folds, warped clothing
+
+reference_quality:
+  enabled: true
+  minimum_short_side: 512
+  minimum_sharpness_score: 120.0
+  model_path: D:/genai-cache/models/RealESRGAN_x4plus_anime_6B.pth
+  tile_size: 256
+  tile_overlap: 16
+  maximum_long_side: 2048
+
+clothing_try_on:
+  enabled: true
+  python_executable: D:/genai-cache/catvton-venv/Scripts/python.exe
+  repository_path: D:/genai-cache/tools/CatVTON
+  runner_path: scripts/catvton_runner.py
+  temporary_root: D:/genai-cache/temp/catvton
+  cache_dir: D:/genai-cache/huggingface
+  model_id: zhengchong/CatVTON
+  base_model_id: booksforcharlie/stable-diffusion-inpainting
+  width: 576
+  height: 1024
+  inference_steps: 30
+  guidance_scale: 2.5
+  mixed_precision: bf16
+  timeout_seconds: 1800
+
+
+detail_correction:
+  enabled: true
+  detector_repository: Bingsu/adetailer
+  face_model: face_yolov8s.pt
+  hand_model: hand_yolov8n.pt
+  minimum_confidence: 0.30
+  maximum_face_regions: 1
+  maximum_hand_regions: 2
+  mask_padding_ratio: 0.20
+  minimum_mask_area_ratio: 0.0002
+  maximum_mask_area_ratio: 0.12
+  inpaint_strength: 0.30
+  inpaint_steps: 12
+  guidance_scale: 5.5
+  padding_mask_crop: 64
 
 style:
   enabled: true

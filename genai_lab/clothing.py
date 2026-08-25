@@ -1,0 +1,574 @@
+"""의상 참조 합성 결과가 캐릭터의 보호 영역을 바꾸지 못하게 제한한다."""
+
+from dataclasses import dataclass
+import os
+import subprocess
+import tempfile
+
+from enum import Enum
+from pathlib import Path
+from typing import Protocol
+
+from PIL import Image, ImageChops, ImageFilter, ImageOps, UnidentifiedImageError
+
+
+class ClothingCategory(str, Enum):
+    """의상 참조가 바꿀 수 있는 의상 종류."""
+
+    TOP = "top"
+    BOTTOM = "bottom"
+    DRESS = "dress"
+    FULL_BODY_OUTFIT = "full_body_outfit"
+    GLOVES = "gloves"
+    SHOES = "shoes"
+
+
+@dataclass(frozen=True)
+class ClothingReferenceInput:
+    """사용자가 선택한 의상 참조 입력."""
+
+    image_path: Path
+    category: ClothingCategory
+
+
+@dataclass(frozen=True)
+class CharacterClothingTryOnRequest:
+    """의상 합성 모델에 전달할 캐릭터와 승인된 의상 참조."""
+
+    base_character_image: Image.Image
+    clothing_reference_image: Image.Image
+    clothing_category: ClothingCategory
+
+
+@dataclass(frozen=True)
+class CharacterTryOnProtectionPlan:
+    """의상 합성에서 변경 허용 영역과 보호 영역을 분리한 계획."""
+
+    clothing_change_mask: Image.Image
+    identity_protection_mask: Image.Image
+    boundary_blend_mask: Image.Image
+
+
+@dataclass(frozen=True)
+class CharacterTryOnVerification:
+    """보호 영역 불변 검사가 끝난 의상 합성 검증 결과."""
+
+    passed: bool
+    changed_pixel_count_outside_clothing: int
+    reason_ko: str
+
+
+@dataclass(frozen=True)
+class CharacterClothingTryOnCandidate:
+    """의상 합성 후 보호 영역 검사를 마쳤지만 아직 승인되지 않은 후보."""
+
+    image: Image.Image
+    verification: CharacterTryOnVerification
+    clothing_category: ClothingCategory
+
+
+class CharacterClothingTryOnEngine(Protocol):
+    """CatVTON 같은 의상 합성 구현체가 지켜야 하는 최소 계약."""
+
+    def generate_clothing_try_on_image(
+        self,
+        request: CharacterClothingTryOnRequest,
+    ) -> Image.Image:
+        """의상 합성 원본을 반환하며 파일에는 저장하지 않는다."""
+
+
+class CharacterClothingProtectionError(ValueError):
+    """의상 합성 보호 계획이나 결과를 안전하게 처리할 수 없는 오류."""
+
+
+def load_clothing_reference_image(
+    clothing_reference_input: ClothingReferenceInput,
+) -> Image.Image:
+    """의상 참조 파일을 읽고 RGB 이미지로 반환한다."""
+    image_path = clothing_reference_input.image_path
+    if not image_path.is_file():
+        raise CharacterClothingProtectionError(
+            f"의상 참조 이미지를 찾을 수 없습니다: {image_path}"
+        )
+    try:
+        with Image.open(image_path) as opened_image:
+            opened_image.load()
+            return opened_image.convert("RGB").copy()
+    except (UnidentifiedImageError, OSError) as error:
+        raise CharacterClothingProtectionError(
+            f"의상 참조 이미지를 읽을 수 없습니다: {image_path}"
+        ) from error
+
+
+def create_character_try_on_protection_plan(
+    clothing_change_mask: Image.Image,
+    identity_protection_mask: Image.Image,
+    boundary_blur_radius: float = 4.0,
+) -> CharacterTryOnProtectionPlan:
+    """의상 영역에서 얼굴·손·발·피부 보호 영역을 뺀 합성 계획을 만든다.
+
+    반환값:
+        의상 변경 가능 영역, 변경 금지 영역과 경계 혼합 영역.
+
+    오류:
+        마스크 크기가 다르거나 실제 변경 가능 영역이 없으면 중단한다.
+    """
+    validate_same_image_size(
+        clothing_change_mask,
+        identity_protection_mask,
+        "의상 영역 마스크와 신체 보호 마스크",
+    )
+    if boundary_blur_radius < 0:
+        raise CharacterClothingProtectionError(
+            "의상 경계 흐림 반경은 0 이상이어야 합니다."
+        )
+
+    normalized_clothing_mask = clothing_change_mask.convert("L")
+    normalized_identity_mask = identity_protection_mask.convert("L")
+
+    # CharacterTryOnProtectionPlan(캐릭터 의상 합성 보호 계획)
+    # - 포함: 의상 변경 가능 영역, 얼굴·머리·손·발·피부·배경 보호 영역과 경계.
+    # - 생성: 사람·의상 분리 모델의 마스크를 규칙으로 결합해 만든다.
+    # - 처리: 이 함수에는 AI 호출이 없고 픽셀 규칙만 사용한다.
+    # - 저장: 마스크는 임시 값이며 자동 저장하지 않는다.
+    # - 다음 사용처: 의상 합성 원본에서 허용 픽셀만 가져올 때 사용한다.
+    safe_clothing_change_mask = ImageChops.multiply(
+        normalized_clothing_mask,
+        ImageOps.invert(normalized_identity_mask),
+    )
+    if safe_clothing_change_mask.getbbox() is None:
+        raise CharacterClothingProtectionError(
+            "신체 보호 영역을 제외한 뒤 변경 가능한 의상 영역이 없습니다."
+        )
+
+    strict_identity_protection_mask = ImageOps.invert(
+        safe_clothing_change_mask
+    )
+    blurred_boundary_mask = safe_clothing_change_mask.filter(
+        ImageFilter.GaussianBlur(radius=boundary_blur_radius)
+    )
+    boundary_blend_mask = ImageChops.multiply(
+        blurred_boundary_mask,
+        safe_clothing_change_mask,
+    )
+    return CharacterTryOnProtectionPlan(
+        clothing_change_mask=safe_clothing_change_mask,
+        identity_protection_mask=strict_identity_protection_mask,
+        boundary_blend_mask=boundary_blend_mask,
+    )
+
+
+def apply_protected_clothing_try_on(
+    try_on_engine: CharacterClothingTryOnEngine,
+    try_on_request: CharacterClothingTryOnRequest,
+    protection_plan: CharacterTryOnProtectionPlan,
+) -> CharacterClothingTryOnCandidate:
+    """의상 합성 원본에서 허용된 의상 픽셀만 기본 캐릭터에 합성한다.
+
+    반환값:
+        보호 영역 불변 검사를 통과한 사용자 승인 전 의상 후보.
+
+    오류:
+        합성기가 크기를 바꾸거나 보호 영역 픽셀이 하나라도 달라지면 중단한다.
+    """
+    raw_try_on_image = try_on_engine.generate_clothing_try_on_image(
+        try_on_request
+    ).convert("RGB")
+    base_character_image = try_on_request.base_character_image.convert("RGB")
+    try:
+        validate_same_image_size(
+            base_character_image,
+            raw_try_on_image,
+            "기본 캐릭터와 의상 합성 결과",
+        )
+        validate_protection_plan_size(
+            protection_plan,
+            base_character_image.size,
+        )
+        protected_candidate_image = Image.composite(
+            raw_try_on_image,
+            base_character_image,
+            protection_plan.boundary_blend_mask,
+        )
+    finally:
+        raw_try_on_image.close()
+        base_character_image.close()
+
+    verification = verify_character_try_on_protection(
+        try_on_request.base_character_image,
+        protected_candidate_image,
+        protection_plan,
+    )
+    if not verification.passed:
+        protected_candidate_image.close()
+        raise CharacterClothingProtectionError(verification.reason_ko)
+
+    return CharacterClothingTryOnCandidate(
+        image=protected_candidate_image,
+        verification=verification,
+        clothing_category=try_on_request.clothing_category,
+    )
+
+
+def verify_character_try_on_protection(
+    base_character_image: Image.Image,
+    protected_candidate_image: Image.Image,
+    protection_plan: CharacterTryOnProtectionPlan,
+) -> CharacterTryOnVerification:
+    """의상 변경 허용 영역 밖의 픽셀이 그대로인지 검사한다."""
+    validate_same_image_size(
+        base_character_image,
+        protected_candidate_image,
+        "기본 캐릭터와 보호 합성 후보",
+    )
+    validate_protection_plan_size(
+        protection_plan,
+        base_character_image.size,
+    )
+
+    difference_image = ImageChops.difference(
+        base_character_image.convert("RGB"),
+        protected_candidate_image.convert("RGB"),
+    ).convert("L")
+    protected_difference_image = ImageChops.multiply(
+        difference_image,
+        protection_plan.identity_protection_mask,
+    )
+    changed_pixel_count = sum(protected_difference_image.histogram()[1:])
+    protected_difference_image.close()
+    difference_image.close()
+
+    if changed_pixel_count:
+        return CharacterTryOnVerification(
+            passed=False,
+            changed_pixel_count_outside_clothing=changed_pixel_count,
+            reason_ko=(
+                "의상 밖의 얼굴·신체·배경 영역이 "
+                f"{changed_pixel_count}픽셀 변경되어 의상 후보를 폐기합니다."
+            ),
+        )
+    return CharacterTryOnVerification(
+        passed=True,
+        changed_pixel_count_outside_clothing=0,
+        reason_ko="의상 변경 허용 영역 밖의 픽셀이 모두 유지되었습니다.",
+    )
+
+
+def validate_protection_plan_size(
+    protection_plan: CharacterTryOnProtectionPlan,
+    expected_size: tuple[int, int],
+) -> None:
+    """보호 계획의 모든 마스크가 캐릭터 이미지와 같은 크기인지 검사한다."""
+    for mask_name, mask_image in (
+        ("의상 변경", protection_plan.clothing_change_mask),
+        ("신체 보호", protection_plan.identity_protection_mask),
+        ("경계 혼합", protection_plan.boundary_blend_mask),
+    ):
+        if mask_image.size != expected_size:
+            raise CharacterClothingProtectionError(
+                f"{mask_name} 마스크 크기 {mask_image.size}가 "
+                f"캐릭터 이미지 크기 {expected_size}와 다릅니다."
+            )
+
+
+def validate_same_image_size(
+    first_image: Image.Image,
+    second_image: Image.Image,
+    image_description: str,
+) -> None:
+    """두 이미지 크기가 다르면 안전한 픽셀 합성을 중단한다."""
+    if first_image.size != second_image.size:
+        raise CharacterClothingProtectionError(
+            f"{image_description}의 크기가 다릅니다: "
+            f"{first_image.size}, {second_image.size}"
+        )
+
+
+
+@dataclass(frozen=True)
+class CatVTONLocalSettings:
+    """별도 Python 환경에 설치한 CatVTON 로컬 실행 설정."""
+
+    python_executable: Path
+    repository_path: Path
+    runner_path: Path
+    temporary_root: Path
+    cache_dir: Path
+    model_id: str
+    base_model_id: str
+    width: int
+    height: int
+    inference_steps: int
+    guidance_scale: float
+    mixed_precision: str
+    timeout_seconds: int
+
+
+@dataclass(frozen=True)
+class CatVTONClothingTryOnResult:
+    """CatVTON 합성과 보호 검사가 끝난 사용자 승인 전 결과."""
+
+    candidate: CharacterClothingTryOnCandidate
+    clothing_change_mask: Image.Image
+
+
+@dataclass(frozen=True)
+class PreparedClothingTryOnEngine:
+    """이미 실행된 CatVTON 원본을 보호 합성 함수에 전달한다."""
+
+    raw_try_on_image: Image.Image
+
+    def generate_clothing_try_on_image(
+        self,
+        request: CharacterClothingTryOnRequest,
+    ) -> Image.Image:
+        return self.raw_try_on_image.copy()
+
+
+def execute_catvton_clothing_try_on(
+    base_character_image: Image.Image,
+    clothing_reference_input: ClothingReferenceInput,
+    settings: CatVTONLocalSettings,
+    seed: int,
+) -> CatVTONClothingTryOnResult:
+    """별도 CatVTON 프로세스를 실행하고 의상 허용 영역만 합성한다.
+
+    반환값:
+        마스크 밖 픽셀 불변 검사를 통과한 의상 후보와 확인용 마스크.
+
+    오류:
+        별도 환경이 없거나 CatVTON 실행·보호 검사에 실패하면 중단한다.
+
+    부수 효과:
+        로컬 임시 폴더에 입력과 중간 결과를 만들고 함수 종료 시 제거한다.
+    """
+    validate_catvton_local_settings(settings)
+    catvton_clothing_type = find_catvton_clothing_type(
+        clothing_reference_input.category
+    )
+    clothing_reference_image = load_clothing_reference_image(
+        clothing_reference_input
+    )
+    settings.temporary_root.mkdir(parents=True, exist_ok=True)
+
+    with tempfile.TemporaryDirectory(
+        prefix="genai-lab-catvton-",
+        dir=settings.temporary_root,
+    ) as temporary_directory_name:
+        temporary_directory = Path(temporary_directory_name)
+        person_input_path = temporary_directory / "person.png"
+        clothing_input_path = temporary_directory / "clothing.png"
+        raw_output_path = temporary_directory / "raw_try_on.png"
+        mask_output_path = temporary_directory / "clothing_mask.png"
+        protection_output_path = temporary_directory / "identity_protection_mask.png"
+
+        base_character_image.convert("RGB").save(person_input_path)
+        clothing_reference_image.save(clothing_input_path)
+        clothing_reference_image.close()
+
+        command = [
+            str(settings.python_executable),
+            str(settings.runner_path),
+            "--repository-path",
+            str(settings.repository_path),
+            "--person-image",
+            str(person_input_path),
+            "--clothing-image",
+            str(clothing_input_path),
+            "--clothing-type",
+            catvton_clothing_type,
+            "--output-image",
+            str(raw_output_path),
+            "--output-mask",
+            str(mask_output_path),
+            "--output-protection-mask",
+            str(protection_output_path),
+            "--model-id",
+            settings.model_id,
+            "--base-model-id",
+            settings.base_model_id,
+            "--cache-dir",
+            str(settings.cache_dir),
+            "--width",
+            str(settings.width),
+            "--height",
+            str(settings.height),
+            "--inference-steps",
+            str(settings.inference_steps),
+            "--guidance-scale",
+            str(settings.guidance_scale),
+            "--mixed-precision",
+            settings.mixed_precision,
+            "--seed",
+            str(seed),
+        ]
+        execution_environment = os.environ.copy()
+        execution_environment["HF_HOME"] = str(settings.cache_dir)
+        try:
+            completed_process = subprocess.run(
+                command,
+                cwd=settings.repository_path,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=settings.timeout_seconds,
+                check=False,
+                env=execution_environment,
+            )
+        except subprocess.TimeoutExpired as error:
+            raise CharacterClothingProtectionError(
+                "의상 합성 제한 시간을 초과했습니다. "
+                f"제한={settings.timeout_seconds}초"
+            ) from error
+        except OSError as error:
+            raise CharacterClothingProtectionError(
+                f"CatVTON 별도 실행을 시작하지 못했습니다: {error}"
+            ) from error
+
+        if completed_process.returncode != 0:
+            execution_details = (
+                completed_process.stderr.strip()
+                or completed_process.stdout.strip()
+                or "상세 출력 없음"
+            )
+            raise CharacterClothingProtectionError(
+                "CatVTON 의상 합성에 실패했습니다. "
+                f"별도 실행 출력: {execution_details}"
+            )
+        if (
+            not raw_output_path.is_file()
+            or not mask_output_path.is_file()
+            or not protection_output_path.is_file()
+        ):
+            raise CharacterClothingProtectionError(
+                "CatVTON 실행은 끝났지만 합성 이미지 또는 보호 마스크가 없습니다."
+            )
+
+        with Image.open(raw_output_path) as opened_raw_image:
+            raw_try_on_image = opened_raw_image.convert("RGB").copy()
+        with Image.open(mask_output_path) as opened_mask_image:
+            clothing_change_mask = opened_mask_image.convert("L").copy()
+
+        with Image.open(protection_output_path) as opened_protection_image:
+            identity_protection_mask = (
+                opened_protection_image.convert("L").copy()
+            )
+    original_size = base_character_image.size
+    if raw_try_on_image.size != original_size:
+        resized_raw_try_on_image = raw_try_on_image.resize(
+            original_size,
+            Image.Resampling.LANCZOS,
+        )
+        raw_try_on_image.close()
+        raw_try_on_image = resized_raw_try_on_image
+    if clothing_change_mask.size != original_size:
+        resized_clothing_change_mask = clothing_change_mask.resize(
+            original_size,
+            Image.Resampling.NEAREST,
+        )
+        clothing_change_mask.close()
+        clothing_change_mask = resized_clothing_change_mask
+
+    if identity_protection_mask.size != original_size:
+        resized_identity_protection_mask = identity_protection_mask.resize(
+            original_size,
+            Image.Resampling.NEAREST,
+        )
+        identity_protection_mask.close()
+        identity_protection_mask = resized_identity_protection_mask
+    protection_plan = create_character_try_on_protection_plan(
+        clothing_change_mask,
+        identity_protection_mask,
+        boundary_blur_radius=4.0,
+    )
+    safe_clothing_change_mask = protection_plan.clothing_change_mask.copy()
+    try_on_clothing_reference_image = load_clothing_reference_image(
+        clothing_reference_input
+    )
+    try:
+        try_on_candidate = apply_protected_clothing_try_on(
+            PreparedClothingTryOnEngine(raw_try_on_image),
+            CharacterClothingTryOnRequest(
+                base_character_image=base_character_image,
+                clothing_reference_image=try_on_clothing_reference_image,
+                clothing_category=clothing_reference_input.category,
+            ),
+            protection_plan,
+        )
+    finally:
+        raw_try_on_image.close()
+        try_on_clothing_reference_image.close()
+        clothing_change_mask.close()
+        identity_protection_mask.close()
+        protection_plan.clothing_change_mask.close()
+        protection_plan.identity_protection_mask.close()
+        protection_plan.boundary_blend_mask.close()
+
+    return CatVTONClothingTryOnResult(
+        candidate=try_on_candidate,
+        clothing_change_mask=safe_clothing_change_mask,
+    )
+
+
+def validate_catvton_local_settings(
+    settings: CatVTONLocalSettings,
+) -> None:
+    """CatVTON 별도 실행에 필요한 경로와 값이 준비됐는지 검사한다."""
+    if not settings.python_executable.is_file():
+        raise CharacterClothingProtectionError(
+            "CatVTON 전용 Python이 없습니다: "
+            f"{settings.python_executable}"
+        )
+    if not (settings.repository_path / "model" / "pipeline.py").is_file():
+        raise CharacterClothingProtectionError(
+            "CatVTON 저장소를 찾을 수 없습니다: "
+            f"{settings.repository_path}"
+        )
+    if not settings.runner_path.is_file():
+        raise CharacterClothingProtectionError(
+            f"CatVTON 연결 실행 파일이 없습니다: {settings.runner_path}"
+        )
+    if settings.width < 256 or settings.height < 256:
+        raise CharacterClothingProtectionError(
+            "CatVTON 처리 크기는 가로와 세로 모두 256 이상이어야 합니다."
+        )
+    if settings.width % 8 or settings.height % 8:
+        raise CharacterClothingProtectionError(
+            "CatVTON 처리 크기는 8의 배수여야 합니다."
+        )
+    if settings.inference_steps < 1:
+        raise CharacterClothingProtectionError(
+            "CatVTON 반복 횟수는 1 이상이어야 합니다."
+        )
+    if settings.guidance_scale <= 0:
+        raise CharacterClothingProtectionError(
+            "CatVTON 문장 반영 강도는 0보다 커야 합니다."
+        )
+    if settings.mixed_precision not in ("fp16", "bf16"):
+        raise CharacterClothingProtectionError(
+            "CatVTON 계산 형식은 fp16 또는 bf16이어야 합니다."
+        )
+    if settings.timeout_seconds < 60:
+        raise CharacterClothingProtectionError(
+            "CatVTON 제한 시간은 60초 이상이어야 합니다."
+        )
+
+
+def find_catvton_clothing_type(
+    clothing_category: ClothingCategory,
+) -> str:
+    """프로젝트 의상 종류를 CatVTON이 받는 종류로 변환한다."""
+    category_mapping = {
+        ClothingCategory.TOP: "upper",
+        ClothingCategory.BOTTOM: "lower",
+        ClothingCategory.DRESS: "overall",
+        ClothingCategory.FULL_BODY_OUTFIT: "overall",
+    }
+    catvton_clothing_type = category_mapping.get(clothing_category)
+    if catvton_clothing_type is None:
+        raise CharacterClothingProtectionError(
+            "현재 CatVTON 연결은 상의, 하의, 드레스와 전신 의상만 지원합니다."
+        )
+    return catvton_clothing_type
+

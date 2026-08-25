@@ -7,9 +7,14 @@ from typing import Any
 def prepare_pipeline(config: dict[str, Any]):
     """기준 모델과 선택적인 참조 그림 장치를 GPU에 준비한다."""
     import torch
-    from diffusers import StableDiffusionPipeline, StableDiffusionXLPipeline
+    from diffusers import (
+        AutoPipelineForImage2Image,
+        StableDiffusionPipeline,
+        StableDiffusionXLPipeline,
+    )
 
     model = config["model"]
+    generation = config["generation"]
     style = config["style"]
     cache_dir = Path(model["cache_dir"])
     cache_dir.mkdir(parents=True, exist_ok=True)
@@ -42,6 +47,10 @@ def prepare_pipeline(config: dict[str, Any]):
             cache_dir=str(cache_dir),
         )
         pipeline.set_ip_adapter_scale(float(style["scale"]))
+
+    if generation.get("mode", "text_to_image") == "image_to_image":
+        print("원본 유지: 기존 모델을 이미지 수정 방식으로 전환")
+        pipeline = AutoPipelineForImage2Image.from_pipe(pipeline)
 
     if family == "sdxl":
         print("GPU 메모리 절약: 사용 중인 모델 부분만 GPU로 이동")

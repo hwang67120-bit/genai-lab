@@ -18,8 +18,9 @@
 | `gui_main.py` | 화면, 입력, 크기·문장·시드 준비와 작업 연결 | 사용자 입력과 데이터 가공이 섞여 있음 |
 | `genai_lab/model.py` | 모델과 GPU 준비 | 모델 실행을 돕는 역할로 유지 가능 |
 | `genai_lab/style.py` | 기준 이미지 준비 | 모델 실행을 돕는 역할로 유지 가능 |
-| `genai_lab/generator.py` | 모델 실행, 이미지 저장과 기록 갱신 | AI 모델 실행과 결과 출력이 섞여 있음 |
-| `genai_lab/result.py` | 결과 폴더와 JSON 기록 | 승인 전에 저장하는 기존 흐름을 바꿔야 함 |
+| `genai_lab/clothing.py` | CatVTON 별도 실행, 의상 허용 영역과 신체 보호 검사 | 합성 실패 시 기본 후보로 복구 |
+| `genai_lab/generator.py` | 모델 실행과 메모리 후보 반환 | Animagine·CatVTON·부분 보정 실행 순서 담당 |
+| `genai_lab/result.py` | 승인된 후보의 PNG와 JSON 기록 | 사용자 저장 승인 전에는 실행하지 않음 |
 | `configs/base.yaml` | 비교용 SD 1.5 설정 | 기존 명령 시험을 위해 유지 |
 | `configs/animagine.yaml` | GUI에서 사용하는 Animagine 설정 | 데이터 가공 블록이 읽어서 실행 준비 요청에 반영 |
 | `inputs/prompts.csv` | 명령 실행용 요청 목록 | GUI의 사용자 입력으로 사용하지 않음 |
@@ -42,7 +43,7 @@
 
 ### 2. 데이터 가공
 
-새 파일 `genai_lab/request.py`가 담당할 예정입니다.
+`genai_lab/request.py`가 담당합니다.
 
 - 사용자 선택 검사
 - 화면 범위를 크기와 생성 문장으로 변환
@@ -80,9 +81,10 @@ genai-lab/
 ├─ gui_main.py                 # 사용자 입력과 결과 표시
 ├─ run.py                      # 기존 명령 실행 경로
 ├─ genai_lab/
-│  ├─ request.py               # 입력 검사와 실행 요청 준비, 구현 예정
+│  ├─ request.py               # 입력 검사와 실행 요청 준비
 │  ├─ model.py                 # 모델과 GPU 준비
 │  ├─ style.py                 # 기준 이미지 준비
+│  ├─ clothing.py              # 의상 변경 허용 영역과 보호 픽셀 검사
 │  ├─ generator.py             # 후보 한 장을 메모리로 반환
 │  └─ result.py                # 승인된 PNG와 JSON만 저장
 ├─ configs/
@@ -92,15 +94,19 @@ genai-lab/
 └─ tests/
 ```
 
-`request.py` 외에는 새 처리 파일을 추가하지 않습니다. 파일 이름보다 네 블록의 책임을 지키는 것이 우선입니다.
+새 파일은 독립된 책임이 생겼을 때만 추가합니다. `clothing.py`는 현재 앱의 처리 계약과 보호 규칙을 담당하고, `scripts/catvton_runner.py`는 Python 3.9 기반 공식 CatVTON 환경 호출만 담당합니다. 파일 이름보다 네 블록의 책임을 지키는 것이 우선입니다.
 
 ## 구현 순서
 
 1. 데이터 가공의 입력과 출력 형태를 작성합니다.
+│  ├─ reference.py             # 참조 화질 검사와 사용자 승인 전 복원
 2. 현재 `gui_main.py`의 크기·문장·시드 준비를 데이터 가공 블록으로 옮깁니다.
+│  ├─ detail.py                # 얼굴·손 탐지와 제한 부분 보정
 3. `generator.py`가 저장하지 않고 후보를 반환하도록 바꿉니다.
 4. 승인된 결과만 `result.py`로 저장합니다.
 5. 각 단계를 테스트한 뒤 다음 블록으로 넘어갑니다.
+├─ scripts/
+│  └─ catvton_runner.py        # 별도 CatVTON 환경 연결
 
 기존 `run.py` 명령 실행 경로는 GUI 흐름이 통과할 때까지 동시에 고치지 않습니다.
 

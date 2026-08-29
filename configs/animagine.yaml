@@ -32,6 +32,56 @@ reference_quality:
   tile_overlap: 16
   maximum_long_side: 2048
 
+clothing_preparation:
+  detector_model_id: IDEA-Research/grounding-dino-tiny
+  cache_dir: D:/genai-cache/huggingface
+  inference_device: cpu
+  box_threshold: 0.30
+  text_threshold: 0.25
+  minimum_area_ratio: 0.02
+  maximum_area_ratio: 0.95
+
+clothing_mask_extraction:
+  model_id: facebook/sam2.1-hiera-tiny
+  cache_dir: D:/genai-cache/huggingface
+  inference_device: cpu
+  maximum_candidate_count: 3
+  maximum_region_count: 8
+  alpha_empty_probability: 0.01
+  alpha_solid_probability: 0.99
+
+clothing_pixel_extraction:
+  maximum_hole_area_pixels: 4096
+  maximum_hole_area_ratio: 0.0025
+  maximum_rgb_distance: 36.0
+  white_clothing_luminance: 200.0
+  maximum_white_luminance_difference: 48.0
+
+clothing_design_analysis:
+  model_id: SmilingWolf/wd-vit-tagger-v3
+  cache_dir: D:/genai-cache/huggingface
+  model_filename: model.onnx
+  label_filename: selected_tags.csv
+  execution_provider: CPUExecutionProvider
+  score_threshold: 0.35
+  maximum_tag_count: 30
+
+character_body_comparison:
+  python_executable: D:/genai-cache/catvton-venv/Scripts/python.exe
+  repository_path: D:/genai-cache/tools/CatVTON
+  runner_path: scripts/body_comparison_runner.py
+  temporary_root: D:/genai-cache/temp/body-comparison
+  cache_dir: D:/genai-cache/huggingface
+  width: 576
+  height: 1024
+  timeout_seconds: 1800
+  pose_device: cpu
+  minimum_pose_confidence: 0.30
+  mask_expansion_ratio: 0.01
+  minimum_mask_expansion_pixels: 5
+  maximum_mask_expansion_pixels: 15
+  mask_closing_radius_pixels: 2
+
 clothing_try_on:
   enabled: true
   python_executable: D:/genai-cache/catvton-venv/Scripts/python.exe
@@ -47,6 +97,10 @@ clothing_try_on:
   guidance_scale: 2.5
   mixed_precision: bf16
   timeout_seconds: 1800
+  mask_expansion_ratio: 0.01
+  mask_expansion_min_pixels: 5
+  mask_expansion_max_pixels: 15
+  mask_closing_radius: 2
 
 
 detail_correction:

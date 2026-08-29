@@ -11,6 +11,11 @@ from typing import Protocol
 
 from PIL import Image, ImageChops, ImageFilter, ImageOps, UnidentifiedImageError
 
+from genai_lab.body_comparison import (
+    calculate_mask_expansion_radius,
+    refine_character_clothing_change_mask,
+)
+
 
 class ClothingCategory(str, Enum):
     """의상 참조가 바꿀 수 있는 의상 종류."""
@@ -29,6 +34,8 @@ class ClothingReferenceInput:
 
     image_path: Path
     category: ClothingCategory
+    region_box_xyxy: tuple[int, int, int, int] | None = None
+    approved_image: Image.Image | None = None
 
 
 @dataclass(frozen=True)
@@ -84,7 +91,23 @@ class CharacterClothingProtectionError(ValueError):
 def load_clothing_reference_image(
     clothing_reference_input: ClothingReferenceInput,
 ) -> Image.Image:
-    """의상 참조 파일을 읽고 RGB 이미지로 반환한다."""
+    """의상 참조 파일을 읽고 승인된 영역만 잘라 RGB 이미지로 반환한다."""
+    if clothing_reference_input.approved_image is not None:
+        approved_rgba_image = clothing_reference_input.approved_image.convert(
+            "RGBA"
+        )
+        white_background = Image.new(
+            "RGBA", approved_rgba_image.size, (255, 255, 255, 255)
+        )
+        try:
+            return Image.alpha_composite(
+                white_background,
+                approved_rgba_image,
+            ).convert("RGB")
+        finally:
+            approved_rgba_image.close()
+            white_background.close()
+
     image_path = clothing_reference_input.image_path
     if not image_path.is_file():
         raise CharacterClothingProtectionError(
@@ -93,7 +116,25 @@ def load_clothing_reference_image(
     try:
         with Image.open(image_path) as opened_image:
             opened_image.load()
-            return opened_image.convert("RGB").copy()
+            normalized_image = ImageOps.exif_transpose(opened_image).convert("RGB")
+            region_box = clothing_reference_input.region_box_xyxy
+            if region_box is None:
+                return normalized_image
+
+            x1, y1, x2, y2 = region_box
+            if not (
+                0 <= x1 < x2 <= normalized_image.width
+                and 0 <= y1 < y2 <= normalized_image.height
+            ):
+                normalized_image.close()
+                raise CharacterClothingProtectionError(
+                    "승인된 의상 영역이 이미지 경계를 벗어났습니다. "
+                    f"이미지={opened_image.width}x{opened_image.height}, "
+                    f"영역={region_box}"
+                )
+            cropped_image = normalized_image.crop(region_box)
+            normalized_image.close()
+            return cropped_image
     except (UnidentifiedImageError, OSError) as error:
         raise CharacterClothingProtectionError(
             f"의상 참조 이미지를 읽을 수 없습니다: {image_path}"
@@ -302,6 +343,10 @@ class CatVTONLocalSettings:
     guidance_scale: float
     mixed_precision: str
     timeout_seconds: int
+    mask_expansion_ratio: float = 0.01
+    minimum_mask_expansion_pixels: int = 5
+    maximum_mask_expansion_pixels: int = 15
+    mask_closing_radius_pixels: int = 2
 
 
 @dataclass(frozen=True)
@@ -362,10 +407,20 @@ def execute_catvton_clothing_try_on(
         mask_output_path = temporary_directory / "clothing_mask.png"
         protection_output_path = temporary_directory / "identity_protection_mask.png"
 
-        base_character_image.convert("RGB").save(person_input_path)
+        person_input_image = base_character_image.convert("RGB")
+        try:
+            person_input_image.save(person_input_path)
+        finally:
+            person_input_image.close()
         clothing_reference_image.save(clothing_input_path)
         clothing_reference_image.close()
 
+        runner_mask_expansion_radius = calculate_mask_expansion_radius(
+            (settings.width, settings.height),
+            settings.mask_expansion_ratio,
+            settings.minimum_mask_expansion_pixels,
+            settings.maximum_mask_expansion_pixels,
+        )
         command = [
             str(settings.python_executable),
             str(settings.runner_path),
@@ -401,6 +456,10 @@ def execute_catvton_clothing_try_on(
             settings.mixed_precision,
             "--seed",
             str(seed),
+            "--mask-expansion-radius",
+            str(runner_mask_expansion_radius),
+            "--mask-closing-radius",
+            str(settings.mask_closing_radius_pixels),
         ]
         execution_environment = os.environ.copy()
         execution_environment["HF_HOME"] = str(settings.cache_dir)
@@ -477,9 +536,21 @@ def execute_catvton_clothing_try_on(
         )
         identity_protection_mask.close()
         identity_protection_mask = resized_identity_protection_mask
+    expansion_radius_pixels = calculate_mask_expansion_radius(
+        original_size,
+        settings.mask_expansion_ratio,
+        settings.minimum_mask_expansion_pixels,
+        settings.maximum_mask_expansion_pixels,
+    )
+    mask_refinement = refine_character_clothing_change_mask(
+        raw_clothing_mask=clothing_change_mask,
+        identity_protection_mask=identity_protection_mask,
+        expansion_radius_pixels=expansion_radius_pixels,
+        closing_radius_pixels=settings.mask_closing_radius_pixels,
+    )
     protection_plan = create_character_try_on_protection_plan(
-        clothing_change_mask,
-        identity_protection_mask,
+        mask_refinement.safe_change_mask,
+        mask_refinement.identity_protection_mask,
         boundary_blur_radius=4.0,
     )
     safe_clothing_change_mask = protection_plan.clothing_change_mask.copy()
@@ -504,6 +575,7 @@ def execute_catvton_clothing_try_on(
         protection_plan.clothing_change_mask.close()
         protection_plan.identity_protection_mask.close()
         protection_plan.boundary_blend_mask.close()
+        mask_refinement.close()
 
     return CatVTONClothingTryOnResult(
         candidate=try_on_candidate,
@@ -552,6 +624,16 @@ def validate_catvton_local_settings(
     if settings.timeout_seconds < 60:
         raise CharacterClothingProtectionError(
             "CatVTON 제한 시간은 60초 이상이어야 합니다."
+        )
+    calculate_mask_expansion_radius(
+        (settings.width, settings.height),
+        settings.mask_expansion_ratio,
+        settings.minimum_mask_expansion_pixels,
+        settings.maximum_mask_expansion_pixels,
+    )
+    if not 1 <= settings.mask_closing_radius_pixels <= 3:
+        raise CharacterClothingProtectionError(
+            "CatVTON 마스크 닫기 반경은 1~3픽셀이어야 합니다."
         )
 
 

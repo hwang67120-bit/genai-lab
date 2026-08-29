@@ -18,14 +18,17 @@
 | `gui_main.py` | 화면, 입력, 크기·문장·시드 준비와 작업 연결 | 사용자 입력과 데이터 가공이 섞여 있음 |
 | `genai_lab/model.py` | 모델과 GPU 준비 | 모델 실행을 돕는 역할로 유지 가능 |
 | `genai_lab/style.py` | 기준 이미지 준비 | 모델 실행을 돕는 역할로 유지 가능 |
+| `genai_lab/body_comparison.py` | SCHP·DensePose·DWPose 결과 계약, 의상 제거 마스크와 Human-Agnostic 후보 생성 | 승인 이미지·마스크의 CatVTON 입력 연결은 다음 단계 |
 | `genai_lab/clothing.py` | CatVTON 별도 실행, 의상 허용 영역과 신체 보호 검사 | 합성 실패 시 기본 후보로 복구 |
+| `genai_lab/clothing_reference.py` | 의상 입력 정규화, 영역 최대 8개 선택, SAM2 구성 변환, 0~255 알파 마스크 합치기, 원본 RGB 추출과 작은 공백 판정 | 흰 와이셔츠 수동 확인 1건, 체감 약 99%, 자동 정확도 아님 |
+| `genai_lab/clothing_analysis.py` | WD14 모델·CSV 캐시 준비, 투명 의상 전처리, CPU ONNX 추론과 일반 태그 후보 생성 | 모델 378,536,310바이트, 35.0% 이상 최대 30개, 시험 추론 1회 3.735초 |
 | `genai_lab/generator.py` | 모델 실행과 메모리 후보 반환 | Animagine·CatVTON·부분 보정 실행 순서 담당 |
 | `genai_lab/result.py` | 승인된 후보의 PNG와 JSON 기록 | 사용자 저장 승인 전에는 실행하지 않음 |
 | `configs/base.yaml` | 비교용 SD 1.5 설정 | 기존 명령 시험을 위해 유지 |
 | `configs/animagine.yaml` | GUI에서 사용하는 Animagine 설정 | 데이터 가공 블록이 읽어서 실행 준비 요청에 반영 |
 | `inputs/prompts.csv` | 명령 실행용 요청 목록 | GUI의 사용자 입력으로 사용하지 않음 |
 | `outputs` | 결과 저장 위치 | 승인된 PNG와 JSON만 남기는 구조로 변경 예정 |
-| `docs` | 범위, 흐름, 결정과 문제 해결 기록 | 구현 전에 역할 경계를 합의하기 위해 유지 |
+| `docs` | 범위, 흐름, 결정, 문제 해결과 수치·증거 작성 규칙 | 구현 전에 역할 경계를 합의하고 측정값과 근거를 같은 형식으로 남기기 위해 유지 |
 | `tests` | 자동 확인 | 블록 경계가 다시 섞이지 않는지 확인 |
 
 ## 하향식 적용 후의 목표 역할
@@ -85,6 +88,7 @@ genai-lab/
 │  ├─ model.py                 # 모델과 GPU 준비
 │  ├─ style.py                 # 기준 이미지 준비
 │  ├─ clothing.py              # 의상 변경 허용 영역과 보호 픽셀 검사
+│  ├─ clothing_reference.py    # 의상 정규화·자동 탐지·수동 선택·측정
 │  ├─ generator.py             # 후보 한 장을 메모리로 반환
 │  └─ result.py                # 승인된 PNG와 JSON만 저장
 ├─ configs/

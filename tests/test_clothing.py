@@ -130,3 +130,25 @@ def test_loaded_clothing_reference_remains_open_after_file_is_closed(
 
     assert clothing_reference_image.getpixel((0, 0)) == (255, 255, 255)
     clothing_reference_image.save(tmp_path / "copied.png")
+
+
+def test_clothing_reference_uses_only_approved_region(tmp_path) -> None:
+    clothing_path = tmp_path / "clothing-region.png"
+    source_image = Image.new("RGB", (10, 8), "red")
+    ImageDraw.Draw(source_image).rectangle((2, 1, 7, 5), fill="blue")
+    source_image.save(clothing_path)
+    source_image.close()
+
+    clothing_reference_image = load_clothing_reference_image(
+        ClothingReferenceInput(
+            image_path=clothing_path,
+            category=ClothingCategory.TOP,
+            region_box_xyxy=(2, 1, 8, 6),
+        )
+    )
+
+    try:
+        assert clothing_reference_image.size == (6, 5)
+        assert clothing_reference_image.getpixel((0, 0)) == (0, 0, 255)
+    finally:
+        clothing_reference_image.close()

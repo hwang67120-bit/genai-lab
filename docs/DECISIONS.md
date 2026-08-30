@@ -348,3 +348,12 @@
 - 좌표 차단: 후보·Human-Agnostic·승인 마스크 크기가 하나라도 다르면 임의 리사이즈하지 않고 GPU 실행 전에 중단합니다.
 - 검증: 의상·신체 비교 집중 검사 27개 통과, 0개 실패, 1.74초이며 Python 파일 5개 구문 검사와 GUI import 1회를 통과했습니다. 수정 경로의 실제 GPU 실행은 0회입니다.
 - 공식 근거: https://github.com/Zheng-Chong/CatVTON/blob/main/app.py 및 https://github.com/Zheng-Chong/CatVTON/blob/main/model/pipeline.py
+
+## D-034 CatVTON 의상 조건 이미지 투명 여백 제거
+
+- 문제: 승인 의상 추출본이 원본 전체 캔버스 크기를 유지하면 실제 의상 픽셀이 CatVTON 조건 이미지에서 작아져, 새 의상 특징이 약하게 전달될 수 있습니다.
+- 선택: 승인 RGBA 추출본의 알파 픽셀 경계 상자로 모델 입력용 복사본만 자릅니다. 사용자가 확인한 원본 추출 이미지와 RGB 픽셀은 변경하지 않습니다.
+- 수치 기록: 추출 원본 가로·세로, 조건 이미지 가로·세로, 알파 픽셀 수와 조건 이미지 내부 알파 점유율을 별도 실행 기록과 GUI 로그에 남깁니다.
+- 차단 규칙: 알파 픽셀 `0개`, 조건 이미지 전체 픽셀보다 큰 알파 수, 계산값과 기록값의 점유율 차이 `0.001% 초과`는 GPU 실행 전 또는 결과 수용 전에 중단합니다.
+- 검증: 의상 계약 테스트 18개 통과, 0개 실패, 1.56초이며 Python 파일 3개 구문 검사를 통과했습니다. 수정 경로의 실제 GPU 실행은 0회입니다.
+- 공식 근거: https://github.com/Zheng-Chong/CatVTON/blob/main/app.py 및 https://github.com/Zheng-Chong/CatVTON/blob/main/utils.py

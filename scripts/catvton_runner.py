@@ -15,6 +15,14 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--person-image", required=True)
     parser.add_argument("--approved-change-mask", required=True)
     parser.add_argument("--clothing-image", required=True)
+    parser.add_argument("--clothing-source-width", type=int, required=True)
+    parser.add_argument("--clothing-source-height", type=int, required=True)
+    parser.add_argument(
+        "--clothing-alpha-pixel-count", type=int, required=True
+    )
+    parser.add_argument(
+        "--clothing-alpha-coverage-percent", type=float, required=True
+    )
     parser.add_argument(
         "--clothing-type",
         choices=("upper", "lower", "overall", "inner", "outer"),
@@ -131,6 +139,57 @@ def main() -> None:
         )
 
     original_clothing_image = load_rgb_image(arguments.clothing_image)
+    clothing_input_size = original_clothing_image.size
+    clothing_input_pixel_count = (
+        clothing_input_size[0] * clothing_input_size[1]
+    )
+    if (
+        arguments.clothing_source_width < clothing_input_size[0]
+        or arguments.clothing_source_height < clothing_input_size[1]
+    ):
+        source_person_image.close()
+        approved_change_mask.close()
+        person_image.close()
+        processed_change_mask.close()
+        original_clothing_image.close()
+        raise RuntimeError(
+            "의상 조건 이미지가 승인 추출본보다 클 수 없습니다: "
+            f"원본={arguments.clothing_source_width}x"
+            f"{arguments.clothing_source_height}, "
+            f"조건={clothing_input_size[0]}x{clothing_input_size[1]}"
+        )
+    if not (
+        0 < arguments.clothing_alpha_pixel_count <= clothing_input_pixel_count
+    ):
+        source_person_image.close()
+        approved_change_mask.close()
+        person_image.close()
+        processed_change_mask.close()
+        original_clothing_image.close()
+        raise RuntimeError(
+            "의상 알파 픽셀 수가 조건 이미지 범위를 벗어났습니다: "
+            f"알파={arguments.clothing_alpha_pixel_count}, "
+            f"조건 전체={clothing_input_pixel_count}"
+        )
+    measured_clothing_coverage_percent = (
+        arguments.clothing_alpha_pixel_count
+        / clothing_input_pixel_count
+        * 100.0
+    )
+    if abs(
+        measured_clothing_coverage_percent
+        - arguments.clothing_alpha_coverage_percent
+    ) > 0.001:
+        source_person_image.close()
+        approved_change_mask.close()
+        person_image.close()
+        processed_change_mask.close()
+        original_clothing_image.close()
+        raise RuntimeError(
+            "의상 알파 점유율 기록이 실제 조건 이미지와 다릅니다: "
+            f"계산={measured_clothing_coverage_percent:.6f}%, "
+            f"기록={arguments.clothing_alpha_coverage_percent:.6f}%"
+        )
     try:
         clothing_image = resize_and_padding(
             original_clothing_image,
@@ -191,6 +250,14 @@ def main() -> None:
         "person_input_source": "generated_candidate",
         "person_input_width": approved_size[0],
         "person_input_height": approved_size[1],
+        "clothing_source_width": arguments.clothing_source_width,
+        "clothing_source_height": arguments.clothing_source_height,
+        "clothing_input_width": clothing_input_size[0],
+        "clothing_input_height": clothing_input_size[1],
+        "clothing_alpha_pixel_count": arguments.clothing_alpha_pixel_count,
+        "clothing_alpha_coverage_percent": (
+            measured_clothing_coverage_percent
+        ),
     }
     try:
         resized_output_image.save(arguments.output_image)

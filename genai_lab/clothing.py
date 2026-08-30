@@ -67,6 +67,23 @@ class CatVTONExecutionMetadata:
     person_input_source: str
     person_input_width: int
     person_input_height: int
+    clothing_source_width: int
+    clothing_source_height: int
+    clothing_input_width: int
+    clothing_input_height: int
+    clothing_alpha_pixel_count: int
+    clothing_alpha_coverage_percent: float
+
+
+@dataclass(frozen=True)
+class CatVTONClothingConditionImage:
+    """승인 추출본에서 투명 여백을 제거한 모델 전용 의상 입력."""
+
+    image: Image.Image
+    source_size: tuple[int, int]
+    crop_box_xyxy: tuple[int, int, int, int]
+    alpha_pixel_count: int
+    alpha_coverage_percent: float
 
 
 @dataclass(frozen=True)
@@ -122,22 +139,62 @@ class CharacterClothingProtectionError(ValueError):
 def load_clothing_reference_image(
     clothing_reference_input: ClothingReferenceInput,
 ) -> Image.Image:
-    """의상 참조 파일을 읽고 승인된 영역만 잘라 RGB 이미지로 반환한다."""
+    """의상 참조에서 모델에 전달할 여백 제거 RGB 이미지를 반환한다."""
+    return prepare_catvton_clothing_condition_image(
+        clothing_reference_input
+    ).image
+
+
+def prepare_catvton_clothing_condition_image(
+    clothing_reference_input: ClothingReferenceInput,
+) -> CatVTONClothingConditionImage:
+    """승인 알파 영역의 경계 상자로 잘라 CatVTON 조건 입력을 만든다.
+
+    반환값:
+        원본 추출 증거를 변경하지 않은 모델 전용 복사본과 수치 기록.
+
+    오류:
+        승인 이미지의 의상 알파 픽셀이 0개면 실행을 중단한다.
+    """
     if clothing_reference_input.approved_image is not None:
         approved_rgba_image = clothing_reference_input.approved_image.convert(
             "RGBA"
         )
-        white_background = Image.new(
-            "RGBA", approved_rgba_image.size, (255, 255, 255, 255)
-        )
+        alpha_channel = approved_rgba_image.getchannel("A")
         try:
-            return Image.alpha_composite(
-                white_background,
-                approved_rgba_image,
-            ).convert("RGB")
+            crop_box = alpha_channel.getbbox()
+            if crop_box is None:
+                raise CharacterClothingProtectionError(
+                    "승인된 의상 추출본의 알파 픽셀이 0개입니다."
+                )
+            alpha_histogram = alpha_channel.histogram()
+            alpha_pixel_count = sum(alpha_histogram[1:])
+            cropped_rgba_image = approved_rgba_image.crop(crop_box)
+            white_background = Image.new(
+                "RGBA", cropped_rgba_image.size, (255, 255, 255, 255)
+            )
+            try:
+                condition_image = Image.alpha_composite(
+                    white_background,
+                    cropped_rgba_image,
+                ).convert("RGB")
+            finally:
+                cropped_rgba_image.close()
+                white_background.close()
+            crop_pixel_count = condition_image.width * condition_image.height
+            coverage_percent = (
+                alpha_pixel_count / crop_pixel_count * 100.0
+            )
+            return CatVTONClothingConditionImage(
+                image=condition_image,
+                source_size=approved_rgba_image.size,
+                crop_box_xyxy=crop_box,
+                alpha_pixel_count=alpha_pixel_count,
+                alpha_coverage_percent=coverage_percent,
+            )
         finally:
+            alpha_channel.close()
             approved_rgba_image.close()
-            white_background.close()
 
     image_path = clothing_reference_input.image_path
     if not image_path.is_file():
@@ -150,7 +207,14 @@ def load_clothing_reference_image(
             normalized_image = ImageOps.exif_transpose(opened_image).convert("RGB")
             region_box = clothing_reference_input.region_box_xyxy
             if region_box is None:
-                return normalized_image
+                width, height = normalized_image.size
+                return CatVTONClothingConditionImage(
+                    image=normalized_image,
+                    source_size=(width, height),
+                    crop_box_xyxy=(0, 0, width, height),
+                    alpha_pixel_count=width * height,
+                    alpha_coverage_percent=100.0,
+                )
 
             x1, y1, x2, y2 = region_box
             if not (
@@ -165,7 +229,13 @@ def load_clothing_reference_image(
                 )
             cropped_image = normalized_image.crop(region_box)
             normalized_image.close()
-            return cropped_image
+            return CatVTONClothingConditionImage(
+                image=cropped_image,
+                source_size=(opened_image.width, opened_image.height),
+                crop_box_xyxy=region_box,
+                alpha_pixel_count=cropped_image.width * cropped_image.height,
+                alpha_coverage_percent=100.0,
+            )
     except (UnidentifiedImageError, OSError) as error:
         raise CharacterClothingProtectionError(
             f"의상 참조 이미지를 읽을 수 없습니다: {image_path}"
@@ -433,9 +503,10 @@ def execute_catvton_clothing_try_on(
         base_character_image=base_character_image,
         approved_agnostic_input=approved_agnostic_input,
     )
-    clothing_reference_image = load_clothing_reference_image(
+    clothing_condition = prepare_catvton_clothing_condition_image(
         clothing_reference_input
     )
+    clothing_reference_image = clothing_condition.image
     settings.temporary_root.mkdir(parents=True, exist_ok=True)
 
     with tempfile.TemporaryDirectory(
@@ -475,6 +546,14 @@ def execute_catvton_clothing_try_on(
             str(approved_mask_input_path),
             "--clothing-image",
             str(clothing_input_path),
+            "--clothing-source-width",
+            str(clothing_condition.source_size[0]),
+            "--clothing-source-height",
+            str(clothing_condition.source_size[1]),
+            "--clothing-alpha-pixel-count",
+            str(clothing_condition.alpha_pixel_count),
+            "--clothing-alpha-coverage-percent",
+            f"{clothing_condition.alpha_coverage_percent:.6f}",
             "--clothing-type",
             catvton_clothing_type,
             "--output-image",
@@ -754,6 +833,24 @@ def load_catvton_execution_metadata(
             ),
             person_input_width=int(metadata_payload["person_input_width"]),
             person_input_height=int(metadata_payload["person_input_height"]),
+            clothing_source_width=int(
+                metadata_payload["clothing_source_width"]
+            ),
+            clothing_source_height=int(
+                metadata_payload["clothing_source_height"]
+            ),
+            clothing_input_width=int(
+                metadata_payload["clothing_input_width"]
+            ),
+            clothing_input_height=int(
+                metadata_payload["clothing_input_height"]
+            ),
+            clothing_alpha_pixel_count=int(
+                metadata_payload["clothing_alpha_pixel_count"]
+            ),
+            clothing_alpha_coverage_percent=float(
+                metadata_payload["clothing_alpha_coverage_percent"]
+            ),
         )
     except (
         OSError,
@@ -770,6 +867,40 @@ def load_catvton_execution_metadata(
     if execution_metadata.person_input_source != "generated_candidate":
         raise CharacterClothingProtectionError(
             "CatVTON 인물 입력이 실제 생성 후보가 아닙니다."
+        )
+    clothing_input_pixel_count = (
+        execution_metadata.clothing_input_width
+        * execution_metadata.clothing_input_height
+    )
+    if (
+        execution_metadata.clothing_source_width
+        < execution_metadata.clothing_input_width
+        or execution_metadata.clothing_source_height
+        < execution_metadata.clothing_input_height
+        or clothing_input_pixel_count <= 0
+    ):
+        raise CharacterClothingProtectionError(
+            "CatVTON 의상 조건 이미지 크기 기록이 잘못됐습니다."
+        )
+    if not (
+        0
+        < execution_metadata.clothing_alpha_pixel_count
+        <= clothing_input_pixel_count
+    ):
+        raise CharacterClothingProtectionError(
+            "CatVTON 의상 알파 픽셀 기록이 조건 이미지 범위를 벗어났습니다."
+        )
+    measured_coverage_percent = (
+        execution_metadata.clothing_alpha_pixel_count
+        / clothing_input_pixel_count
+        * 100.0
+    )
+    if abs(
+        measured_coverage_percent
+        - execution_metadata.clothing_alpha_coverage_percent
+    ) > 0.001:
+        raise CharacterClothingProtectionError(
+            "CatVTON 의상 알파 점유율 기록이 실제 수치와 다릅니다."
         )
     if (
         execution_metadata.person_input_width,

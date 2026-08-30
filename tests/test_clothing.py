@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import json
+from pathlib import Path
 
 import pytest
 from PIL import Image, ImageDraw
@@ -15,6 +16,7 @@ from genai_lab.clothing import (
     find_catvton_clothing_type,
     load_clothing_reference_image,
     load_catvton_execution_metadata,
+    prepare_catvton_clothing_condition_image,
     validate_character_agnostic_approved_input,
     validate_catvton_approved_coordinates,
     validate_runner_mask_matches_approved_input,
@@ -99,6 +101,12 @@ def test_catvton_metadata_confirms_disabled_safety_check(tmp_path) -> None:
                 "person_input_source": "generated_candidate",
                 "person_input_width": 8,
                 "person_input_height": 8,
+                "clothing_source_width": 10,
+                "clothing_source_height": 12,
+                "clothing_input_width": 5,
+                "clothing_input_height": 8,
+                "clothing_alpha_pixel_count": 20,
+                "clothing_alpha_coverage_percent": 50.0,
             }
         ),
         encoding="utf-8",
@@ -137,6 +145,12 @@ def test_catvton_metadata_rejects_unexpected_safety_check_state(
                 "person_input_source": "generated_candidate",
                 "person_input_width": 8,
                 "person_input_height": 8,
+                "clothing_source_width": 10,
+                "clothing_source_height": 12,
+                "clothing_input_width": 5,
+                "clothing_input_height": 8,
+                "clothing_alpha_pixel_count": 20,
+                "clothing_alpha_coverage_percent": 50.0,
             }
         ),
         encoding="utf-8",
@@ -274,6 +288,49 @@ def test_clothing_reference_uses_only_approved_region(tmp_path) -> None:
         assert clothing_reference_image.getpixel((0, 0)) == (0, 0, 255)
     finally:
         clothing_reference_image.close()
+
+
+def test_catvton_condition_crops_transparent_approved_margin() -> None:
+    approved_image = Image.new("RGBA", (12, 10), (0, 0, 0, 0))
+    ImageDraw.Draw(approved_image).rectangle(
+        (3, 2, 8, 7), fill=(10, 20, 30, 255)
+    )
+    condition = prepare_catvton_clothing_condition_image(
+        ClothingReferenceInput(
+            image_path=Path("unused.png"),
+            category=ClothingCategory.TOP,
+            approved_image=approved_image,
+        )
+    )
+
+    try:
+        assert condition.source_size == (12, 10)
+        assert condition.crop_box_xyxy == (3, 2, 9, 8)
+        assert condition.image.size == (6, 6)
+        assert condition.alpha_pixel_count == 36
+        assert condition.alpha_coverage_percent == 100.0
+        assert condition.image.getpixel((0, 0)) == (10, 20, 30)
+    finally:
+        condition.image.close()
+        approved_image.close()
+
+
+def test_catvton_condition_rejects_empty_approved_alpha() -> None:
+    approved_image = Image.new("RGBA", (8, 8), (0, 0, 0, 0))
+    try:
+        with pytest.raises(
+            CharacterClothingProtectionError,
+            match="알파 픽셀이 0개",
+        ):
+            prepare_catvton_clothing_condition_image(
+                ClothingReferenceInput(
+                    image_path=Path("unused.png"),
+                    category=ClothingCategory.TOP,
+                    approved_image=approved_image,
+                )
+            )
+    finally:
+        approved_image.close()
 
 
 def test_catvton_coordinates_accept_same_generated_candidate_size() -> None:

@@ -2,7 +2,6 @@
 
 import time
 from dataclasses import replace
-from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -19,6 +18,10 @@ from genai_lab.detail import (
     correct_character_candidate_details,
 )
 from genai_lab.request import CharacterGenerationRequest
+from genai_lab.pose_estimation import (
+    PoseEstimationApprovedInput,
+    prepare_pose_control_input,
+)
 from genai_lab.result import (
     CharacterGenerationCandidate,
     refresh_summary,
@@ -42,6 +45,7 @@ def generate_character_candidate(
     clothing_reference_input: ClothingReferenceInput | None = None,
     catvton_settings: CatVTONLocalSettings | None = None,
     approved_agnostic_input: CharacterAgnosticApprovedInput | None = None,
+    approved_pose_estimation: PoseEstimationApprovedInput | None = None,
 ) -> CharacterGenerationCandidate:
     """AI로 후보 한 장을 만들고 파일 저장 없이 메모리 객체로 반환한다.
 
@@ -82,6 +86,59 @@ def generate_character_candidate(
             ),
         )
 
+    prepared_pose_control = None
+    pose_control_status = "not_requested"
+    pose_control_model_id = None
+    pose_control_conditioning_scale = None
+    pose_control_guidance_start = None
+    pose_control_guidance_end = None
+    executed_image_change_strength = (
+        generation_request.original_image_change_strength
+    )
+    if approved_pose_estimation is not None:
+        pose_config = config.get("pose_control", {})
+        if not pose_config.get("enabled", False):
+            raise RuntimeError(
+                "승인 자세가 있지만 설정 'pose_control.enabled'가 꺼져 있습니다."
+            )
+        prepared_pose_control = prepare_pose_control_input(
+            approved_pose_estimation,
+            generation_request.width,
+            generation_request.height,
+        )
+        pose_control_status = "applied"
+        pose_control_model_id = str(pose_config["model_id"])
+        pose_control_conditioning_scale = float(
+            pose_config["conditioning_scale"]
+        )
+        pose_control_guidance_start = float(pose_config["guidance_start"])
+        pose_control_guidance_end = float(pose_config["guidance_end"])
+        executed_image_change_strength = float(
+            pose_config["original_image_change_strength"]
+        )
+        if run_log is not None:
+            run_log.write_stage(
+                "자세 제어 입력",
+                (
+                    f"DWPose 승인 관절={approved_pose_estimation.detected_joint_count}/18개, "
+                    f"원본 지도={prepared_pose_control.source_width}x"
+                    f"{prepared_pose_control.source_height}, "
+                    f"생성 지도={prepared_pose_control.target_width}x"
+                    f"{prepared_pose_control.target_height}, "
+                    f"확대 비율={prepared_pose_control.resize_scale:.4f}, "
+                    "검은 여백="
+                    f"{prepared_pose_control.padding_left},"
+                    f"{prepared_pose_control.padding_top},"
+                    f"{prepared_pose_control.padding_right},"
+                    f"{prepared_pose_control.padding_bottom}px, "
+                    f"뼈대 픽셀={prepared_pose_control.non_black_pixel_count:,}px, "
+                    f"ControlNet 강도={pose_control_conditioning_scale:.2f}, "
+                    f"적용 구간={pose_control_guidance_start:.2f}~"
+                    f"{pose_control_guidance_end:.2f}, "
+                    f"이미지 변경 강도={executed_image_change_strength:.2f}"
+                ),
+            )
+
     torch.cuda.reset_peak_memory_stats()
     random_start = torch.Generator(device="cpu").manual_seed(
         generation_request.seed
@@ -96,13 +153,20 @@ def generate_character_candidate(
     generation_mode = config["generation"].get("mode", "text_to_image")
     if generation_mode == "image_to_image":
         model_arguments["image"] = original_image_canvas
-        model_arguments["strength"] = (
-            generation_request.original_image_change_strength
-        )
+        model_arguments["strength"] = executed_image_change_strength
     else:
         model_arguments["width"] = generation_request.width
         model_arguments["height"] = generation_request.height
     model_arguments["ip_adapter_image"] = [ip_adapter_reference_image]
+    if prepared_pose_control is not None:
+        model_arguments["control_image"] = (
+            prepared_pose_control.control_map_image
+        )
+        model_arguments["controlnet_conditioning_scale"] = (
+            pose_control_conditioning_scale
+        )
+        model_arguments["control_guidance_start"] = pose_control_guidance_start
+        model_arguments["control_guidance_end"] = pose_control_guidance_end
 
     generation_started_at = time.perf_counter()
     try:
@@ -121,6 +185,8 @@ def generate_character_candidate(
     finally:
         ip_adapter_reference_image.close()
         original_image_canvas.close()
+        if prepared_pose_control is not None:
+            prepared_pose_control.close()
 
     elapsed_seconds = round(time.perf_counter() - generation_started_at, 3)
     peak_vram_bytes = torch.cuda.max_memory_allocated()
@@ -320,10 +386,13 @@ def generate_character_candidate(
         negative_prompt=generation_request.negative_prompt,
         model_id=generation_request.model_id,
         reference_adapter_id=generation_request.reference_adapter_id,
-        original_image_change_strength=(
-            generation_request.original_image_change_strength
-        ),
+        original_image_change_strength=executed_image_change_strength,
         reference_image_strength=generation_request.reference_image_strength,
+        pose_control_status=pose_control_status,
+        pose_control_model_id=pose_control_model_id,
+        pose_control_conditioning_scale=pose_control_conditioning_scale,
+        pose_control_guidance_start=pose_control_guidance_start,
+        pose_control_guidance_end=pose_control_guidance_end,
         detail_correction_status=detail_correction_status,
         detected_face_count=detected_face_count,
         detected_hand_count=detected_hand_count,

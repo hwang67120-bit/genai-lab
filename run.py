@@ -201,6 +201,54 @@ def validate_config(config: dict[str, Any]) -> None:
                 "0.15부터 0.35 사이여야 합니다."
             )
 
+    pose_control = config.get("pose_control")
+    if pose_control is not None:
+        if not isinstance(pose_control, dict):
+            raise AppError("설정 'pose_control'은 항목 묶음이어야 합니다.")
+        if not isinstance(pose_control.get("enabled"), bool):
+            raise AppError("설정 'pose_control.enabled'는 true 또는 false여야 합니다.")
+        if pose_control.get("enabled"):
+            if family != "sdxl" or generation_mode != "image_to_image":
+                raise AppError(
+                    "자세 제어는 SDXL 이미지 수정 방식에서만 사용할 수 있습니다."
+                )
+            require_value(pose_control, "model_id", "pose_control")
+            conditioning_scale = pose_control.get("conditioning_scale")
+            if not isinstance(conditioning_scale, (int, float)) or not (
+                0.0 < conditioning_scale <= 2.0
+            ):
+                raise AppError(
+                    "설정 'pose_control.conditioning_scale'은 0 초과 2.0 이하여야 합니다."
+                )
+            guidance_start = pose_control.get("guidance_start")
+            guidance_end = pose_control.get("guidance_end")
+            if not isinstance(guidance_start, (int, float)) or not (
+                0.0 <= guidance_start <= 1.0
+            ):
+                raise AppError(
+                    "설정 'pose_control.guidance_start'는 0.0~1.0이어야 합니다."
+                )
+            if not isinstance(guidance_end, (int, float)) or not (
+                0.0 <= guidance_end <= 1.0
+            ):
+                raise AppError(
+                    "설정 'pose_control.guidance_end'는 0.0~1.0이어야 합니다."
+                )
+            if guidance_start >= guidance_end:
+                raise AppError(
+                    "자세 제어 시작 비율은 종료 비율보다 작아야 합니다."
+                )
+            pose_image_strength = pose_control.get(
+                "original_image_change_strength"
+            )
+            if not isinstance(pose_image_strength, (int, float)) or not (
+                0.15 <= pose_image_strength <= 0.60
+            ):
+                raise AppError(
+                    "설정 'pose_control.original_image_change_strength'는 "
+                    "0.15~0.60이어야 합니다."
+                )
+
     reference_quality = config.get("reference_quality")
     if reference_quality is not None:
         if not isinstance(reference_quality, dict):

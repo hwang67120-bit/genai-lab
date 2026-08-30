@@ -34,6 +34,11 @@ class CharacterGenerationCandidate:
     reference_adapter_id: str
     original_image_change_strength: float
     reference_image_strength: float
+    pose_control_status: str
+    pose_control_model_id: str | None
+    pose_control_conditioning_scale: float | None
+    pose_control_guidance_start: float | None
+    pose_control_guidance_end: float | None
     detail_correction_status: str
     detected_face_count: int
     detected_hand_count: int
@@ -184,6 +189,17 @@ def save_approved_character_candidate(
         ),
         "reference_image_strength": (
             character_candidate.reference_image_strength
+        ),
+        "pose_control_status": character_candidate.pose_control_status,
+        "pose_control_model_id": character_candidate.pose_control_model_id,
+        "pose_control_conditioning_scale": (
+            character_candidate.pose_control_conditioning_scale
+        ),
+        "pose_control_guidance_start": (
+            character_candidate.pose_control_guidance_start
+        ),
+        "pose_control_guidance_end": (
+            character_candidate.pose_control_guidance_end
         ),
         "elapsed_seconds": character_candidate.elapsed_seconds,
         "peak_vram_bytes": character_candidate.peak_vram_bytes,

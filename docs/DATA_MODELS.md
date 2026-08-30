@@ -364,6 +364,35 @@ GUI에서 사용자가 승인한 Human-Agnostic 이미지 1개, 변경 마스크
 ### OriginalClothingRemovalVerification
 
 SCHP가 탐지한 기존 의상 중 승인 변경 마스크 밖에 남은 위치를 수치와 흑백 마스크로 나타냅니다. 탐지·포함·잔여 픽셀 수, 제거율과 통과 여부를 포함합니다. 통과 조건은 제거율 `100.000%`, 잔여 `0픽셀`이며 실패하면 CatVTON 호출은 `0회`입니다.
+
+### PoseReferenceReviewCandidate
+
+사용자가 선택했지만 아직 승인하지 않은 자세 참조 원본입니다. RGB 이미지, PNG·JPEG 형식, 가로·세로, 전체 픽셀 수, 가로/세로 비율과 파일 크기를 포함합니다. 최소 변 `64px` 미만 또는 전체 `40,000,000px` 초과 입력은 거절합니다. AI 호출과 파일 저장은 각각 `0회·0개`입니다.
+
+### PoseReferenceApprovedInput
+
+사용자가 미리보기와 수치를 확인한 뒤 승인한 독립 이미지 복사본입니다. GUI 메모리에만 유지하며 선택 해제·교체·앱 종료 때 닫습니다. DWPose Worker에 전달하는 입력이며 Worker가 별도 복사본을 소유합니다.
+
+### PoseJointCoordinateCandidate
+
+DWPose가 추정한 몸 관절 18개 각각의 이름, 원본 픽셀 좌표 `x·y`, 신뢰도 `0.0~1.0`, 기준 통과 여부와 모델 추정 여부를 포함합니다. 사용자가 승인하기 전 확정 자세가 아닙니다.
+
+### PoseEstimationReviewCandidate
+
+자세 원본, 원본 위 관절 확인본, 표준 OpenPose 뼈대 지도, 관절 좌표 18개, 탐지·누락 수, 기준 `30.0%`, 모델 ID와 처리 시간을 포함합니다. 실제 GUI DWPose 실행은 아직 `0회`입니다.
+
+### PoseEstimationApprovedInput
+
+사용자가 3개 이미지를 확인한 뒤 승인한 표준 OpenPose 지도 복사본과 관절 좌표입니다. GUI와 생성 Worker가 서로 다른 이미지 복사본을 소유하며 Worker 종료 때 생성용 복사본을 닫습니다. ControlNet 전달 코드는 연결됐고 실제 GPU 전달과 자동 저장은 각각 `0회·0개`입니다.
+
+### PoseControlPreparedInput
+
+승인 OpenPose 지도를 생성 해상도로 바꾼 ControlNet 전용 임시 입력입니다. 원본·목표 가로와 세로, 확대 비율, 좌·상·우·하 검은 여백 픽셀, 검은색이 아닌 뼈대 픽셀 수를 포함합니다. 원본 비율을 유지하고 자르기는 `0px`이며, 뼈대 픽셀이 `0px`이면 GPU 호출 전에 중단합니다. 모델 호출 뒤 즉시 닫고 파일로 저장하지 않습니다.
+
+### CharacterGenerationCandidate 자세 실행 기록
+
+후보에는 자세 제어 상태, ControlNet 모델 ID, 강도, 시작 비율과 종료 비율을 기록합니다. 현재 초기값은 `xinsir/controlnet-openpose-sdxl-1.0`, `0.65`, `0.00`, `0.80`이며 자세 입력이 없으면 상태는 `not_requested`, 나머지 4개 값은 `null`입니다.
+
 ## 7. 의상 전처리와 GUI 상태 객체
 
 2026-08-27에 확정한 의상 전처리 계약입니다. 전체 전처리는 5단계이며 현재 1/5 입력 정규화, 2/5 의상 영역 최대 8개 선택과 3/5 영역별 SAM2 후보 선택·합치기까지 코드로 구현했습니다. 단일 영역 SAM2는 사용자 확인 1회이며 새 복수 영역 SAM2 실제 추론은 0회입니다. WD Tagger와 CatVTON 호출도 이번 검증에서는 각각 0회입니다.

@@ -82,6 +82,23 @@ character_body_comparison:
   maximum_mask_expansion_pixels: 15
   mask_closing_radius_pixels: 2
 
+pose_reference_estimation:
+  python_executable: D:/genai-cache/catvton-venv/Scripts/python.exe
+  runner_path: scripts/pose_reference_runner.py
+  temporary_root: D:/genai-cache/temp/pose-reference
+  cache_dir: D:/genai-cache/huggingface
+  timeout_seconds: 600
+  pose_device: cpu
+  minimum_pose_confidence: 0.30
+
+pose_control:
+  enabled: true
+  model_id: xinsir/controlnet-openpose-sdxl-1.0
+  conditioning_scale: 0.65
+  guidance_start: 0.00
+  guidance_end: 0.80
+  original_image_change_strength: 0.35
+
 clothing_try_on:
   enabled: true
   safety_check_enabled: false

@@ -82,6 +82,21 @@ from genai_lab.reference import (
     approve_original_reference_image,
     prepare_reference_image_for_review,
 )
+from genai_lab.pose_reference import (
+    PoseReferenceApprovedInput,
+    PoseReferenceReviewCandidate,
+    PoseReferenceValidationError,
+    approve_pose_reference_candidate,
+    load_pose_reference_candidate,
+)
+from genai_lab.pose_estimation import (
+    PoseEstimationApprovedInput,
+    PoseEstimationReviewCandidate,
+    PoseReferenceEstimationError,
+    PoseReferenceEstimationSettings,
+    approve_pose_estimation_candidate,
+    execute_pose_reference_estimation,
+)
 
 from genai_lab.result import (
     CharacterGenerationCandidate,
@@ -629,6 +644,49 @@ class CharacterBodyComparisonWorker(QObject):
             self.failed.emit(str(error), traceback.format_exc())
         finally:
             self.character_image.close()
+
+
+class PoseReferenceEstimationWorker(QObject):
+    """승인 자세 이미지의 DWPose 관절 추출을 GUI 밖에서 1회 실행한다."""
+
+    status_changed = Signal(str)
+    completed = Signal(object)
+    failed = Signal(str, str)
+
+    def __init__(
+        self,
+        approved_pose_reference: PoseReferenceApprovedInput,
+        settings: PoseReferenceEstimationSettings,
+    ) -> None:
+        super().__init__()
+        self.approved_pose_reference = PoseReferenceApprovedInput(
+            source_path=approved_pose_reference.source_path,
+            image=approved_pose_reference.image.copy(),
+            image_format=approved_pose_reference.image_format,
+            width=approved_pose_reference.width,
+            height=approved_pose_reference.height,
+            pixel_count=approved_pose_reference.pixel_count,
+            aspect_ratio=approved_pose_reference.aspect_ratio,
+            file_size_bytes=approved_pose_reference.file_size_bytes,
+        )
+        self.settings = settings
+
+    @Slot()
+    def run(self) -> None:
+        try:
+            self.status_changed.emit(
+                "승인 자세 이미지에서 DWPose 관절 18개 추출 중..."
+            )
+            configure_system_certificates()
+            estimation_candidate = execute_pose_reference_estimation(
+                self.approved_pose_reference,
+                self.settings,
+            )
+            self.completed.emit(estimation_candidate)
+        except Exception as error:
+            self.failed.emit(str(error), traceback.format_exc())
+        finally:
+            self.approved_pose_reference.close()
 
 
 class ClothingMaskReviewDialog(QDialog):
@@ -1427,6 +1485,122 @@ class ReferenceEnhancementDialog(QDialog):
         self.accept()
 
 
+class PoseReferenceApprovalDialog(QDialog):
+    """자세 참조 원본과 입력 수치를 보여주고 사용자 승인을 받는다."""
+
+    def __init__(
+        self,
+        review_candidate: PoseReferenceReviewCandidate,
+        parent=None,
+    ) -> None:
+        super().__init__(parent)
+        self.is_approved = False
+        self.setWindowTitle("자세 참조 이미지 확인")
+        self.resize(720, 760)
+        layout = QVBoxLayout(self)
+
+        file_size_kib = review_candidate.file_size_bytes / 1024.0
+        information_label = QLabel(
+            "아직 관절 추출이나 이미지 생성에는 사용하지 않습니다.\n"
+            f"파일={review_candidate.source_path.name}, "
+            f"형식={review_candidate.image_format}, "
+            f"크기={review_candidate.width}x{review_candidate.height}px, "
+            f"전체={review_candidate.pixel_count:,}px, "
+            f"가로/세로={review_candidate.aspect_ratio:.4f}, "
+            f"파일 크기={file_size_kib:.1f}KiB"
+        )
+        information_label.setWordWrap(True)
+        layout.addWidget(information_label)
+
+        preview_label = QLabel()
+        preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        preview_label.setPixmap(
+            create_pil_image_pixmap(review_candidate.image).scaled(
+                620,
+                600,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+        )
+        layout.addWidget(preview_label)
+
+        button_layout = QHBoxLayout()
+        approve_button = QPushButton("자세 참조 승인")
+        reject_button = QPushButton("거절")
+        approve_button.clicked.connect(self.approve_pose_reference)
+        reject_button.clicked.connect(self.reject)
+        button_layout.addWidget(approve_button)
+        button_layout.addWidget(reject_button)
+        layout.addLayout(button_layout)
+
+    @Slot()
+    def approve_pose_reference(self) -> None:
+        """승인 상태만 기록하고 다음 관절 추출은 실행하지 않는다."""
+        self.is_approved = True
+        self.accept()
+
+
+class PoseEstimationApprovalDialog(QDialog):
+    """자세 원본·관절 확인본·ControlNet 뼈대 지도의 승인을 받는다."""
+
+    def __init__(
+        self,
+        review_candidate: PoseEstimationReviewCandidate,
+        parent=None,
+    ) -> None:
+        super().__init__(parent)
+        self.is_approved = False
+        self.setWindowTitle("DWPose 관절 추출 확인")
+        self.resize(1120, 760)
+        layout = QVBoxLayout(self)
+        information_label = QLabel(
+            f"관절={review_candidate.detected_joint_count}/18개, "
+            f"누락={review_candidate.missing_joint_count}/18개, "
+            f"기준={review_candidate.minimum_pose_confidence * 100.0:.1f}%, "
+            f"시간={review_candidate.elapsed_seconds:.2f}초\n"
+            "초록 선·점은 기준을 통과한 관절입니다. 승인 전 ControlNet 호출은 0회입니다."
+        )
+        information_label.setWordWrap(True)
+        layout.addWidget(information_label)
+
+        comparison_layout = QHBoxLayout()
+        for title, image in (
+            ("1. 자세 원본", review_candidate.source_image),
+            ("2. 원본 위 관절 확인", review_candidate.overlay_image),
+            ("3. ControlNet용 뼈대 지도", review_candidate.control_map_image),
+        ):
+            column = QVBoxLayout()
+            column.addWidget(QLabel(title))
+            image_label = QLabel()
+            image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            image_label.setPixmap(
+                create_pil_image_pixmap(image).scaled(
+                    340,
+                    580,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+            )
+            column.addWidget(image_label)
+            comparison_layout.addLayout(column)
+        layout.addLayout(comparison_layout)
+
+        button_layout = QHBoxLayout()
+        approve_button = QPushButton("관절과 뼈대 지도 승인")
+        reject_button = QPushButton("거절하고 자세 다시 선택")
+        approve_button.clicked.connect(self.approve_estimation)
+        reject_button.clicked.connect(self.reject)
+        button_layout.addWidget(approve_button)
+        button_layout.addWidget(reject_button)
+        layout.addLayout(button_layout)
+
+    @Slot()
+    def approve_estimation(self) -> None:
+        """뼈대 지도 승인 상태만 기록하고 ControlNet은 실행하지 않는다."""
+        self.is_approved = True
+        self.accept()
+
+
 class DetailCorrectionComparisonDialog(QDialog):
     """보정 전후 후보를 비교하고 최종 후보로 사용할 이미지를 선택한다."""
 
@@ -1585,6 +1759,7 @@ class GenerationWorker(QObject):
         clothing_reference_input: ClothingReferenceInput | None,
         catvton_settings: CatVTONLocalSettings | None,
         approved_agnostic_input: CharacterAgnosticApprovedInput | None,
+        approved_pose_estimation: PoseEstimationApprovedInput | None,
         existing_candidate: CharacterGenerationCandidate | None = None,
         pipeline=None,
     ):
@@ -1597,6 +1772,24 @@ class GenerationWorker(QObject):
         self.clothing_reference_input = clothing_reference_input
         self.catvton_settings = catvton_settings
         self.approved_agnostic_input = approved_agnostic_input
+        self.approved_pose_estimation = (
+            PoseEstimationApprovedInput(
+                control_map_image=(
+                    approved_pose_estimation.control_map_image.copy()
+                ),
+                joint_coordinates=approved_pose_estimation.joint_coordinates,
+                detected_joint_count=(
+                    approved_pose_estimation.detected_joint_count
+                ),
+                missing_joint_count=approved_pose_estimation.missing_joint_count,
+                minimum_pose_confidence=(
+                    approved_pose_estimation.minimum_pose_confidence
+                ),
+                model_ids=approved_pose_estimation.model_ids,
+            )
+            if approved_pose_estimation is not None
+            else None
+        )
         self.existing_candidate = existing_candidate
 
     @Slot()
@@ -1611,17 +1804,29 @@ class GenerationWorker(QObject):
                 "환경 검사",
                 f"GPU={environment['gpu']}, GPU 메모리={gpu_memory_gb:.1f}GB",
             )
-            if self.pipeline is None:
+            pose_control_enabled = (
+                self.existing_candidate is None
+                and self.approved_pose_estimation is not None
+            )
+            if self.pipeline is None and self.existing_candidate is None:
                 model_started_at = perf_counter()
                 self.status_changed.emit("모델과 참조 그림 장치 준비 중...")
                 self.run_log.write_stage("모델 준비", "모델 불러오기 시작")
-                self.pipeline = prepare_pipeline(self.config)
+                self.pipeline = prepare_pipeline(
+                    self.config,
+                    pose_control_enabled=pose_control_enabled,
+                )
                 self.run_log.write_stage(
                     "모델 준비",
                     f"완료, 소요 시간={perf_counter() - model_started_at:.1f}초",
                 )
-            else:
+            elif self.pipeline is not None:
                 self.run_log.write_stage("모델 준비", "메모리에 있는 모델 재사용")
+            else:
+                self.run_log.write_stage(
+                    "모델 준비",
+                    "승인된 기존 후보의 의상 적용만 실행하므로 베이스 모델 로딩 생략",
+                )
 
             generation_started_at = perf_counter()
             if self.existing_candidate is None:
@@ -1633,6 +1838,7 @@ class GenerationWorker(QObject):
                     self.generation_request,
                     self.current_dir,
                     self.run_log,
+                    approved_pose_estimation=self.approved_pose_estimation,
                 )
             else:
                 if (
@@ -1682,6 +1888,9 @@ class GenerationWorker(QObject):
             if self.approved_agnostic_input is not None:
                 self.approved_agnostic_input.close()
                 self.approved_agnostic_input = None
+            if self.approved_pose_estimation is not None:
+                self.approved_pose_estimation.close()
+                self.approved_pose_estimation = None
 
 
 class GenAILabWindow(QMainWindow):
@@ -1705,6 +1914,8 @@ class GenAILabWindow(QMainWindow):
         self.design_worker_thread = None
         self.body_comparison_worker = None
         self.body_comparison_worker_thread = None
+        self.pose_estimation_worker = None
+        self.pose_estimation_worker_thread = None
         self.confirmed_character_body_comparison: ConfirmedCharacterBodyComparison | None = None
         self.body_comparison_clothing_category: ClothingCategory | None = None
         self.pending_clothing_source: NormalizedClothingSource | None = None
@@ -1718,6 +1929,8 @@ class GenAILabWindow(QMainWindow):
         self.clothing_source_size: tuple[int, int] | None = None
         self.clothing_region_measurements = ()
         self.approved_reference_image: ApprovedReferenceImage | None = None
+        self.approved_pose_reference: PoseReferenceApprovedInput | None = None
+        self.approved_pose_estimation: PoseEstimationApprovedInput | None = None
         self.pending_character_candidate: CharacterGenerationCandidate | None = None
         self.pending_clothing_base_candidate: CharacterGenerationCandidate | None = None
         self.candidate_is_approved = False
@@ -1771,11 +1984,20 @@ class GenAILabWindow(QMainWindow):
         )
 
         pose_layout = QHBoxLayout()
-        self.pose_label = QLabel("3. 자세 참조(ControlNet): 추후 지원")
-        pose_button = QPushButton("아직 사용할 수 없음")
-        pose_button.setEnabled(False)
+        self.pose_label = QLabel("3. 자세 참조: 선택하지 않음")
+        self.pose_button = QPushButton("자세 이미지 선택")
+        self.pose_button.clicked.connect(lambda: self.select_image("pose"))
+        self.pose_estimation_button = QPushButton("관절 추출 시작")
+        self.pose_estimation_button.setEnabled(False)
+        self.pose_estimation_button.clicked.connect(
+            self.start_pose_reference_estimation
+        )
+        clear_pose_button = QPushButton("자세 선택 해제")
+        clear_pose_button.clicked.connect(self.clear_pose_reference)
         pose_layout.addWidget(self.pose_label)
-        pose_layout.addWidget(pose_button)
+        pose_layout.addWidget(self.pose_button)
+        pose_layout.addWidget(self.pose_estimation_button)
+        pose_layout.addWidget(clear_pose_button)
         layout.addLayout(pose_layout)
 
         framing_layout = QHBoxLayout()
@@ -1908,6 +2130,213 @@ class GenAILabWindow(QMainWindow):
 
             elif target_type == "outfit":
                 self.start_outfit_region_preparation(Path(file_path))
+
+            elif target_type == "pose":
+                self.review_pose_reference(Path(file_path))
+
+    def review_pose_reference(self, image_path: Path) -> None:
+        """자세 원본과 수치를 공개하고 승인된 복사본만 보관한다."""
+        try:
+            review_candidate = load_pose_reference_candidate(image_path)
+        except PoseReferenceValidationError as error:
+            self.status_label.setText(
+                f"상태: 자세 참조 입력 실패 ({error})"
+            )
+            QMessageBox.critical(self, "자세 참조 입력 실패", str(error))
+            return
+
+        dialog = PoseReferenceApprovalDialog(review_candidate, self)
+        dialog.exec()
+        if dialog.is_approved:
+            approved_pose_reference = approve_pose_reference_candidate(
+                review_candidate
+            )
+            self.release_approved_pose_reference()
+            self.release_approved_pose_estimation()
+            self.approved_pose_reference = approved_pose_reference
+            self.pose_estimation_button.setEnabled(True)
+            self.pose_label.setText(
+                "3. 자세 참조: "
+                f"{image_path.name} (승인, "
+                f"{approved_pose_reference.width}x"
+                f"{approved_pose_reference.height}px)"
+            )
+            self.status_label.setText(
+                "상태: 자세 참조 입력 승인 완료 - "
+                "관절 추출과 생성 적용은 다음 단계"
+            )
+        else:
+            self.status_label.setText(
+                "상태: 새 자세 참조 입력 거절 - 기존 승인 상태 유지"
+            )
+        review_candidate.close()
+
+    @Slot()
+    def clear_pose_reference(self) -> None:
+        """승인 자세 입력을 저장하지 않고 메모리에서 해제한다."""
+        if self.pending_character_candidate is not None:
+            QMessageBox.information(self, "안내", "현재 후보를 먼저 판단하세요.")
+            return
+        self.release_approved_pose_reference()
+        self.release_approved_pose_estimation()
+        self.pose_estimation_button.setEnabled(False)
+        self.pose_label.setText("3. 자세 참조: 선택하지 않음")
+        self.status_label.setText("상태: 자세 참조 선택 해제")
+
+    def release_approved_pose_reference(self) -> None:
+        """이전 승인 자세 이미지의 메모리 복사본을 해제한다."""
+        if self.approved_pose_reference is not None:
+            self.approved_pose_reference.close()
+            self.approved_pose_reference = None
+
+    def release_approved_pose_estimation(self) -> None:
+        """이전 승인 뼈대 지도 복사본을 메모리에서 해제한다."""
+        if self.approved_pose_estimation is not None:
+            self.approved_pose_estimation.close()
+            self.approved_pose_estimation = None
+
+    @Slot()
+    def start_pose_reference_estimation(self) -> None:
+        """승인 자세를 DWPose CPU 작업으로 1회 전달한다."""
+        if (
+            self.pose_estimation_worker_thread is not None
+            and self.pose_estimation_worker_thread.isRunning()
+        ):
+            QMessageBox.information(
+                self, "안내", "현재 자세 관절을 추출하고 있습니다."
+            )
+            return
+        if self.approved_pose_reference is None:
+            QMessageBox.warning(
+                self, "자세 입력 오류", "자세 이미지를 먼저 승인하세요."
+            )
+            return
+
+        current_dir = Path(__file__).resolve().parent
+        if self.config is None:
+            self.config = load_yaml(current_dir / "configs" / "animagine.yaml")
+        pose_config = self.config.get("pose_reference_estimation", {})
+        runner_path = Path(str(pose_config.get(
+            "runner_path", "scripts/pose_reference_runner.py"
+        )))
+        if not runner_path.is_absolute():
+            runner_path = current_dir / runner_path
+        settings = PoseReferenceEstimationSettings(
+            python_executable=Path(str(pose_config.get(
+                "python_executable",
+                "D:/genai-cache/catvton-venv/Scripts/python.exe",
+            ))),
+            runner_path=runner_path,
+            temporary_root=Path(str(pose_config.get(
+                "temporary_root", "D:/genai-cache/temp/pose-reference"
+            ))),
+            cache_dir=Path(str(pose_config.get(
+                "cache_dir", "D:/genai-cache/huggingface"
+            ))),
+            timeout_seconds=int(pose_config.get("timeout_seconds", 600)),
+            pose_device=str(pose_config.get("pose_device", "cpu")),
+            minimum_pose_confidence=float(
+                pose_config.get("minimum_pose_confidence", 0.30)
+            ),
+        )
+        self.release_approved_pose_estimation()
+        self.pose_estimation_button.setEnabled(False)
+        self.status_label.setText("상태: DWPose 관절 추출 준비 중...")
+        self.pose_estimation_worker_thread = QThread(self)
+        self.pose_estimation_worker = PoseReferenceEstimationWorker(
+            self.approved_pose_reference,
+            settings,
+        )
+        self.pose_estimation_worker.moveToThread(
+            self.pose_estimation_worker_thread
+        )
+        self.pose_estimation_worker_thread.started.connect(
+            self.pose_estimation_worker.run
+        )
+        self.pose_estimation_worker.status_changed.connect(
+            self.show_worker_status
+        )
+        self.pose_estimation_worker.completed.connect(
+            self.pose_reference_estimation_completed
+        )
+        self.pose_estimation_worker.failed.connect(
+            self.pose_reference_estimation_failed
+        )
+        self.pose_estimation_worker.completed.connect(
+            self.pose_estimation_worker_thread.quit
+        )
+        self.pose_estimation_worker.failed.connect(
+            self.pose_estimation_worker_thread.quit
+        )
+        self.pose_estimation_worker_thread.finished.connect(
+            self.pose_estimation_worker.deleteLater
+        )
+        self.pose_estimation_worker_thread.finished.connect(
+            self.pose_estimation_worker_thread.deleteLater
+        )
+        self.pose_estimation_worker_thread.finished.connect(
+            self.clear_pose_estimation_worker
+        )
+        self.pose_estimation_worker_thread.start()
+
+    @Slot(object)
+    def pose_reference_estimation_completed(
+        self,
+        review_candidate: PoseEstimationReviewCandidate,
+    ) -> None:
+        """DWPose 중간 결과 3개를 공개하고 사용자 승인을 받는다."""
+        dialog = PoseEstimationApprovalDialog(review_candidate, self)
+        try:
+            dialog.exec()
+            if not dialog.is_approved:
+                self.pose_estimation_button.setEnabled(True)
+                self.status_label.setText(
+                    "상태: DWPose 관절 결과 거절 - 자세를 다시 선택하세요"
+                )
+                return
+            self.release_approved_pose_estimation()
+            self.approved_pose_estimation = approve_pose_estimation_candidate(
+                review_candidate
+            )
+            self.pose_estimation_button.setEnabled(True)
+            self.pose_label.setText(
+                "3. 자세 참조: 관절 승인 "
+                f"{review_candidate.detected_joint_count}/18개"
+            )
+            self.status_label.setText(
+                "상태: DWPose 관절 승인 완료 - "
+                f"탐지={review_candidate.detected_joint_count}/18개, "
+                f"누락={review_candidate.missing_joint_count}/18개, "
+                f"시간={review_candidate.elapsed_seconds:.2f}초, "
+                "ControlNet 적용은 다음 단계"
+            )
+        finally:
+            review_candidate.close()
+
+    @Slot(str, str)
+    def pose_reference_estimation_failed(
+        self,
+        message: str,
+        details: str,
+    ) -> None:
+        """DWPose 실패 원인과 재시도 행동을 표시한다."""
+        self.pose_estimation_button.setEnabled(True)
+        self.status_label.setText(f"상태: DWPose 관절 추출 실패 ({message})")
+        dialog = QMessageBox(self)
+        dialog.setIcon(QMessageBox.Icon.Critical)
+        dialog.setWindowTitle("DWPose 관절 추출 실패")
+        dialog.setText(message)
+        dialog.setInformativeText(
+            "승인 자세 이미지는 유지합니다. 다른 자세를 선택하거나 다시 실행하세요."
+        )
+        dialog.setDetailedText(details)
+        dialog.exec()
+
+    @Slot()
+    def clear_pose_estimation_worker(self) -> None:
+        """종료된 DWPose 자세 작업 객체를 해제한다."""
+        self.pose_estimation_worker = None
+        self.pose_estimation_worker_thread = None
 
     def start_outfit_region_preparation(self, image_path: Path) -> None:
         """의상 이미지를 정규화하고 자동 위치 탐지를 별도 작업으로 시작한다."""
@@ -3031,6 +3460,16 @@ class GenAILabWindow(QMainWindow):
             )
             return
         if (
+            self.approved_pose_reference is not None
+            and self.approved_pose_estimation is None
+        ):
+            QMessageBox.warning(
+                self,
+                "자세 승인 필요",
+                "자세 이미지를 선택했습니다. 관절 추출과 뼈대 지도 승인을 먼저 완료하세요.",
+            )
+            return
+        if (
             self.outfit_path is not None
             and self.confirmed_character_body_comparison is not None
         ):
@@ -3234,9 +3673,40 @@ class GenAILabWindow(QMainWindow):
                     f"{generation_request.original_image_change_strength:.2f}, "
                     f"참조 이미지 반영 강도="
                     f"{generation_request.reference_image_strength:.2f}, "
-                    f"모델={generation_request.model_id}"
+                    f"모델={generation_request.model_id}, "
+                    "자세 제어="
+                    f"{'사용' if self.approved_pose_estimation is not None else '미사용'}"
                 ),
             )
+
+            requested_pose_pipeline = (
+                self.pending_clothing_base_candidate is None
+                and self.approved_pose_estimation is not None
+            )
+            if (
+                self.pending_clothing_base_candidate is None
+                and self.pipeline is not None
+                and bool(
+                getattr(
+                    self.pipeline,
+                    "_genai_lab_pose_control_enabled",
+                    False,
+                )
+                ) != requested_pose_pipeline
+            ):
+                run_log.write_stage(
+                    "모델 전환",
+                    (
+                        "기존 모델의 자세 제어 상태와 요청이 달라 재사용하지 않음, "
+                        f"새 자세 제어={'사용' if requested_pose_pipeline else '미사용'}"
+                    ),
+                )
+                if hasattr(self.pipeline, "maybe_free_model_hooks"):
+                    self.pipeline.maybe_free_model_hooks()
+                self.pipeline = None
+                import torch
+
+                torch.cuda.empty_cache()
 
             self.generate_button.setEnabled(False)
             self.status_label.setText("상태: 생성 작업 준비 중...")
@@ -3250,6 +3720,7 @@ class GenAILabWindow(QMainWindow):
                 clothing_reference_input,
                 catvton_settings,
                 approved_agnostic_input,
+                self.approved_pose_estimation,
                 self.pending_clothing_base_candidate,
                 self.pipeline,
             )
@@ -3562,6 +4033,7 @@ class GenAILabWindow(QMainWindow):
                 self.mask_worker_thread,
                 self.design_worker_thread,
                 self.body_comparison_worker_thread,
+                self.pose_estimation_worker_thread,
                 self.worker_thread,
             )
             if thread is not None and thread.isRunning()
@@ -3582,6 +4054,8 @@ class GenAILabWindow(QMainWindow):
         self.release_pending_clothing_base_candidate()
         self.release_clothing_mask_state()
         self.release_approved_reference_image()
+        self.release_approved_pose_reference()
+        self.release_approved_pose_estimation()
         self.pipeline = None
         event.accept()
 

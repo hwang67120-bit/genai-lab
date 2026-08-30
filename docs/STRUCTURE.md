@@ -16,8 +16,11 @@
 |---|---|---|
 | `run.py` | 명령 실행의 설정 검사와 전체 순서 | GUI 흐름과 동시에 고치지 않고 기존 시험 경로로 유지 |
 | `gui_main.py` | 화면, 입력, 크기·문장·시드 준비와 작업 연결 | 사용자 입력과 데이터 가공이 섞여 있음 |
-| `genai_lab/model.py` | 모델과 GPU 준비 | 모델 실행을 돕는 역할로 유지 가능 |
+| `genai_lab/model.py` | 자세 승인 유무에 따라 일반 SDXL 또는 SDXL ControlNet Image-to-Image 모델과 GPU 준비 | 두 종류를 동시에 유지하지 않고 요청과 다른 기존 모델은 재사용하지 않음 |
 | `genai_lab/style.py` | 기준 이미지 준비 | 모델 실행을 돕는 역할로 유지 가능 |
+| `genai_lab/pose_reference.py` | 자세 원본 PNG·JPEG 규칙 검사와 첫 사용자 승인 | AI 호출 0회, 파일 저장 0개 |
+| `genai_lab/pose_estimation.py` | DWPose 검토 결과·승인 결과와 생성 크기 ControlNet 지도 준비 | 비율 유지, 자르기 0px, 빈 뼈대 지도 차단 |
+| `scripts/pose_reference_runner.py` | 별도 CPU 환경에서 몸 관절 18개와 표준 OpenPose 지도 생성 | ControlNet과 이미지 생성은 호출하지 않음 |
 | `genai_lab/body_comparison.py` | 같은 생성 후보의 SCHP·DensePose·DWPose 결과, 의상 제거 마스크, 잔여 0픽셀 검사와 Human-Agnostic 검토 자료 생성 | SCHP 미탐지 조각은 사용자 10번째 화면 검토 필요 |
 | `genai_lab/clothing.py` | CatVTON 별도 실행, 의상 허용 영역과 신체 보호 검사 | 합성 실패 시 기본 후보로 복구 |
 | `genai_lab/clothing_reference.py` | 의상 입력 정규화, 영역 최대 8개 선택, SAM2 구성 변환, 0~255 알파 마스크 합치기, 원본 RGB 추출과 작은 공백 판정 | 흰 와이셔츠 수동 확인 1건, 체감 약 99%, 자동 정확도 아님 |
@@ -111,6 +114,7 @@ genai-lab/
 5. 각 단계를 테스트한 뒤 다음 블록으로 넘어갑니다.
 ├─ scripts/
 │  └─ catvton_runner.py        # 별도 CatVTON 환경 연결
+│  └─ pose_reference_runner.py # 승인 자세의 DWPose 관절 추출
 
 기존 `run.py` 명령 실행 경로는 GUI 흐름이 통과할 때까지 동시에 고치지 않습니다.
 

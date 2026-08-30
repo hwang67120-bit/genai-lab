@@ -357,3 +357,35 @@
 - 차단 규칙: 알파 픽셀 `0개`, 조건 이미지 전체 픽셀보다 큰 알파 수, 계산값과 기록값의 점유율 차이 `0.001% 초과`는 GPU 실행 전 또는 결과 수용 전에 중단합니다.
 - 검증: 의상 계약 테스트 18개 통과, 0개 실패, 1.56초이며 Python 파일 3개 구문 검사를 통과했습니다. 수정 경로의 실제 GPU 실행은 0회입니다.
 - 공식 근거: https://github.com/Zheng-Chong/CatVTON/blob/main/app.py 및 https://github.com/Zheng-Chong/CatVTON/blob/main/utils.py
+
+## D-035 자세 참조 이미지 입력과 사용자 승인
+
+- 문제: 자세를 생성 문장으로만 지정하면 입력 자세가 실제로 적용됐는지 사용자가 생성 전에 확인할 수 없습니다.
+- 선택: GUI에서 PNG·JPEG 자세 이미지 1개를 선택하고 원본 미리보기, 가로·세로, 전체 픽셀, 가로/세로 비율과 파일 크기를 표시한 뒤 사용자가 승인 또는 거절합니다.
+- 입력 제한: 최소 변 `64px`, 전체 상한 `40,000,000px`입니다. 파일 확장자가 아니라 Pillow가 감지한 실제 형식으로 검사합니다.
+- 실행 경계: 이번 단계의 DWPose·ControlNet·이미지 생성 호출은 각각 `0회`이며 자동 저장은 `0개`입니다. 승인 객체는 메모리에만 보관합니다.
+- 생명주기: 새 후보를 거절하면 기존 승인 자세를 유지합니다. 선택 해제·교체 승인·앱 종료 때 이전 승인 이미지 복사본을 닫습니다.
+- 검증: 자세 참조 규칙 테스트 4개 통과, 0개 실패, 6.01초이며 Python 파일 2개 구문 검사와 GUI import 1회를 통과했습니다. 실제 GUI 클릭 검증은 0회입니다.
+- 다음 단계: `PoseReferenceApprovedInput`만 DWPose 관절 추출 Worker에 전달하고, 관절 미리보기 사용자 승인 전 ControlNet 호출은 `0회`로 유지합니다.
+
+## D-036 DWPose 관절 추출과 표준 OpenPose 지도 승인
+
+- 입력: 사용자가 승인한 `PoseReferenceApprovedInput` 이미지 복사본 1개입니다.
+- 처리: CatVTON 전용 Python의 `easy-dwpose 1.0.2`를 CPU에서 1회 실행해 몸 관절 18개와 신뢰도를 추출합니다. 사람 후보가 여러 명이면 몸 관절 평균 신뢰도가 가장 높은 1명만 선택합니다.
+- 공개 결과: 자세 원본, 원본 위 관절 확인본, `easy_dwpose.draw.draw_openpose`가 만든 표준 OpenPose 지도 3개와 탐지·누락 수, 기준 `30.0%`, 처리 시간을 표시합니다.
+- 사용자 경계: 사용자가 3개 결과를 승인하기 전 ControlNet 호출은 `0회`, 파일 자동 저장은 `0개`입니다. 거절하면 검토 이미지 3개를 닫고 승인 자세 원본은 유지합니다.
+- 자원: DWPose는 CPU만 허용하며 제한 시간은 `600초`입니다. Worker 종료 때 입력 복사본을 닫고 GUI 종료 중 실행 중인 Worker가 있으면 종료를 막습니다.
+- 검증: 자세 입력·승인·기존 신체 비교 테스트 16개 통과, 0개 실패, 1.58초이며 Python 파일 5개 구문 검사와 비표시 GUI 생성 1회를 통과했습니다. 설치된 `easy-dwpose 1.0.2` 표준 렌더러의 합성 관절 지도 생성 검사 1회도 통과했습니다. 실제 DWPose 모델 실행은 `0회`입니다.
+- 다음 단계: 사용자 승인 `PoseEstimationApprovedInput`을 SDXL OpenPose ControlNet에 전달하되 캐릭터·의상 입력과 역할을 섞지 않습니다.
+- 구현 근거: https://github.com/IDEA-Research/DWPose 및 https://github.com/huggingface/controlnet_aux
+
+## D-037 승인 자세의 SDXL ControlNet 연결
+
+- 역할 분리: `image`는 승인 캐릭터의 생성 시작 화면, `ip_adapter_image`는 캐릭터 디자인·색상 참조, `control_image`는 승인 OpenPose 자세만 담당합니다. 의상 이미지는 이 호출에 넣지 않고 기준 후보 생성 뒤 CatVTON 단계에서만 사용합니다.
+- 모델: `xinsir/controlnet-openpose-sdxl-1.0` 1개를 사용합니다. 자세 승인이 없으면 기존 SDXL Image-to-Image 파이프라인을 유지하고 ControlNet을 불러오지 않습니다.
+- 초기 수치: IP-Adapter `0.80`, 자세 제어 `0.65`, 적용 구간 `0.00~0.80`, Image-to-Image 변경 강도 `0.35`, 반복 `28회`, 프롬프트 반영 `5.5`입니다. 첫 실제 비교에서는 한 번에 1개 수치만 바꿉니다.
+- 좌표 처리: 승인 지도는 비율을 유지해 생성 크기로 확대·축소하고 남은 좌·상·우·하 영역을 검은색으로 채웁니다. 자르기는 `0px`입니다. 목표 크기 불일치, 관절 합계 `18개` 불일치, 탐지 관절 `0개`, 뼈대 픽셀 `0px`는 GPU 호출 전에 중단합니다.
+- 생명주기: DWPose는 CPU에서 먼저 끝냅니다. ControlNet·Animagine·IP-Adapter는 CPU 대피 방식을 사용해 후보 1장만 생성합니다. 생성 Worker는 승인 자세 복사본을 소유하고 종료 때 닫습니다. CatVTON과 동시에 GPU에 두 모델을 유지하지 않습니다.
+- 저장 경계: ControlNet 결과도 승인 전에는 메모리에만 존재하며 자동 저장은 `0개`입니다. 승인 저장 JSON에는 자세 제어 상태, 모델 ID, 강도와 적용 구간 5개 값을 기록합니다.
+- 검증: 수정 Python 파일 7개의 구문 검사, 자세 집중 테스트 8개 통과·0개 실패·6.23초, 설정 검사 1회, 비표시 GUI 생성 1회와 Diffusers `0.38.0`의 SDXL ControlNet Image-to-Image 클래스 확인 1회를 통과했습니다. 모델 다운로드, 실제 ControlNet GPU 생성, 자세 품질과 최대 VRAM 측정은 각각 `0회`입니다.
+- 공식 근거: https://huggingface.co/docs/diffusers/api/pipelines/controlnet_sdxl 및 https://huggingface.co/docs/diffusers/using-diffusers/ip_adapter

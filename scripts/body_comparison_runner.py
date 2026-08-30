@@ -56,8 +56,9 @@ def create_pose_preview_and_coordinates(
     source_image: Image.Image,
     pose_detector,
     minimum_confidence: float,
+    include_openpose_control_map: bool = False,
 ):
-    """DWPose를 1회 실행해 18개 몸 관절 좌표와 확인 그림을 만든다."""
+    """DWPose를 1회 실행해 관절 좌표·확인 그림·선택적 표준 지도를 만든다."""
     import numpy as np
 
     normalized_source_image = source_image.convert("RGB")
@@ -119,7 +120,55 @@ def create_pose_preview_and_coordinates(
                 "detected": detected,
             }
         )
-    return preview_image, joint_coordinates
+    if not include_openpose_control_map:
+        return preview_image, joint_coordinates
+
+    from easy_dwpose.draw import draw_openpose
+
+    selected_all_candidates = candidates[
+        selected_person_index:selected_person_index + 1
+    ].copy()
+    selected_all_scores = scores[
+        selected_person_index:selected_person_index + 1
+    ].copy()
+    image_height, image_width = source_array.shape[:2]
+    selected_all_candidates[..., 0] /= float(image_width)
+    selected_all_candidates[..., 1] /= float(image_height)
+    body_candidates = selected_all_candidates[:, :18].reshape(18, 2)
+    body_scores = selected_all_scores[:, :18].copy()
+    for joint_index in range(18):
+        body_scores[0][joint_index] = (
+            joint_index
+            if body_scores[0][joint_index] >= minimum_confidence
+            else -1
+        )
+    openpose_payload = {
+        "bodies": body_candidates,
+        "body_scores": body_scores,
+        "hands": np.vstack(
+            [
+                selected_all_candidates[:, 92:113],
+                selected_all_candidates[:, 113:],
+            ]
+        ),
+        "hands_scores": np.vstack(
+            [
+                selected_all_scores[:, 92:113],
+                selected_all_scores[:, 113:],
+            ]
+        ),
+        "faces": selected_all_candidates[:, 24:92],
+        "faces_scores": selected_all_scores[:, 24:92],
+    }
+    control_map_array = draw_openpose(
+        openpose_payload,
+        height=image_height,
+        width=image_width,
+        include_face=True,
+        include_hands=True,
+    )
+    control_map_image = Image.fromarray(control_map_array).convert("RGB")
+    return preview_image, joint_coordinates, control_map_image
 
 
 def main() -> None:

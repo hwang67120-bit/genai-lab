@@ -315,6 +315,36 @@
 - 불변 조건: 중립화 마스크 밖 변경 픽셀은 `0개`여야 하며, 대상 픽셀이 `0개`이면 승인 화면을 열지 않습니다.
 - 사용자 승인: 원본·DensePose·DWPose·마스크 5개·Human-Agnostic Image를 합친 9개 화면을 사용자가 확인합니다.
 - 생명주기: 승인한 Human-Agnostic 이미지 1개와 정확한 변경 마스크 1개는 메모리에 유지합니다. 캐릭터 또는 의상 종류가 바뀌면 두 이미지를 닫고 승인을 무효화합니다.
-- 현재 경계: 승인 결과의 생성과 메모리 보관까지만 구현했습니다. CatVTON 실행기에 승인 이미지와 마스크를 전달하는 변경은 다음 단계이며 현재 실행기는 기존처럼 마스크를 다시 계산합니다.
+- 현재 경계: 승인 결과의 생성과 메모리 보관, CatVTON 실행기 전달까지 구현했습니다. 실행기는 승인 마스크를 사용하고 내부 마스크를 다시 계산하지 않습니다.
 - 검증: 2026-08-29 집중 테스트 9개 통과, 0개 실패, 4.89초이며 변경 파일 2개가 Python 구문 검사를 통과했습니다. 실제 GUI 확인과 GPU CatVTON 호출은 각각 0회입니다.
 - 근거: https://github.com/Zheng-Chong/CatVTON/blob/edited/model/cloth_masker.py 및 https://github.com/Zheng-Chong/CatVTON/blob/edited/app.py
+
+## D-031 승인 Human-Agnostic 입력과 CatVTON 실행 마스크 동일성
+
+- 문제: GUI 승인 뒤 CatVTON 내부 AutoMasker가 다시 실행되면 사용자가 확인한 변경 영역과 실제 합성 영역이 달라집니다.
+- 선택: `CharacterAgnosticApprovedInput`으로 승인 Human-Agnostic 이미지, 승인 마스크, 의상 종류와 승인 픽셀 수를 GUI → 작업 스레드 → 생성 흐름 → 별도 실행기에 전달합니다.
+- 차단 규칙: 별도 실행기의 `mask_source`는 `user_approved`, AutoMasker 실행 횟수는 0회여야 합니다. 반환 마스크가 승인 마스크와 1픽셀이라도 다르면 후보를 폐기합니다.
+- 보호 규칙: 승인 변경 마스크를 반전한 영역을 신체 보호 영역으로 사용합니다. CatVTON 안에서 SCHP·DensePose·닫기·팽창을 다시 수행하지 않습니다.
+- 생명주기: GUI는 승인 이미지 2개의 복사본을 작업 스레드에 넘기고 성공·실패와 관계없이 스레드 종료 시 닫습니다. 별도 실행 파일은 임시 입력·결과만 만들며 상위 임시 폴더 종료 시 제거됩니다.
+- 검증: 의상 계약·신체 비교 단위 테스트 21개 통과, 0개 실패, 1.51초이며 변경 Python 파일 5개의 구문 검사를 통과했습니다. 새 경로의 실제 GPU CatVTON 실행은 0회입니다.
+- 한계: 승인 Human-Agnostic 이미지가 기준 이미지 좌표를 따르므로 이후 생성 후보의 자세·화면 비율이 크게 다르면 정렬이 어긋날 수 있습니다. 자세 참조 단계 전에는 실제 후보 1건으로 확인하며 성공으로 간주하지 않습니다.
+- 공식 근거: https://github.com/Zheng-Chong/CatVTON/blob/edited/app.py
+
+## D-032 로컬 CatVTON 안전 검사 비활성화
+
+- 문제: 정상 의상 시험 결과가 CatVTON 안전 검사에서 잘못 차단되면 실제 합성본 대신 `NSFW.jpg`가 반환되어 의상 재현성을 평가할 수 없습니다.
+- 선택: 로컬 시험 설정 `safety_check_enabled`를 `false`로 고정하고 CatVTON에 `skip_safety_check=True`를 전달합니다.
+- 범위: CatVTON 내부 결과 교체 기능만 비활성화합니다. 마스크 승인, 변경 영역 제한, 자동 저장 금지와 사용자 승인 절차는 유지합니다.
+- 추적: GUI 로그와 별도 실행 메타데이터에 안전 검사 실행 여부를 기록하며 요청값과 실행 기록이 다르면 결과를 거절합니다.
+- 현재 검증: 의상 계약·신체 비교 집중 테스트 23개 통과, 0개 실패, 2.29초이며 Python 파일 5개의 구문 검사를 통과했습니다. 안전 검사를 끈 실제 GPU 결과는 아직 0회입니다.
+- 공식 근거: https://github.com/Zheng-Chong/CatVTON/blob/edited/model/pipeline.py
+
+## D-033 생성 후보 좌표 고정과 기존 의상 잔여 차단
+
+- 문제: 2026-08-30 실제 GPU 실행 1회에서 전체 329.5초 뒤 회색 중립화 영역이 결과에 남고 새 의상이 반영되지 않았습니다. 마스크 밖 변경은 0픽셀이었지만 품질은 실패했습니다.
+- 원인: 참조 이미지 좌표의 Human-Agnostic 이미지를 CatVTON 인물 입력으로 사용해 내부 마스킹과 겹쳤고, 실제 생성 후보 768×1344와 참조 승인 자료 936×2048의 좌표도 달랐습니다.
+- 선택: 기준 후보를 먼저 생성하고 같은 후보에서 신체 비교·마스크 승인·CatVTON을 순서대로 실행합니다. CatVTON 인물 입력은 `generated_candidate` 원본이며 Human-Agnostic 이미지는 검토 자료로만 유지합니다.
+- 기존 의상 차단: 탐지된 기존 의상 제거율은 100.000%, 잔여는 0픽셀이어야 합니다. 잔여 1픽셀 이상이면 10번째 화면에 위치를 표시하고 승인 버튼을 비활성화합니다.
+- 좌표 차단: 후보·Human-Agnostic·승인 마스크 크기가 하나라도 다르면 임의 리사이즈하지 않고 GPU 실행 전에 중단합니다.
+- 검증: 의상·신체 비교 집중 검사 27개 통과, 0개 실패, 1.74초이며 Python 파일 5개 구문 검사와 GUI import 1회를 통과했습니다. 수정 경로의 실제 GPU 실행은 0회입니다.
+- 공식 근거: https://github.com/Zheng-Chong/CatVTON/blob/main/app.py 및 https://github.com/Zheng-Chong/CatVTON/blob/main/model/pipeline.py

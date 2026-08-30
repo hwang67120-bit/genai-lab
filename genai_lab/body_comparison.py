@@ -85,6 +85,23 @@ class HumanAgnosticImageCandidate:
 
 
 @dataclass(frozen=True)
+class OriginalClothingRemovalVerification:
+    """탐지된 기존 의상이 변경 영역 밖에 남았는지 검사한 결과."""
+
+    remaining_clothing_mask: Image.Image
+    detected_clothing_pixel_count: int
+    removed_clothing_pixel_count: int
+    remaining_clothing_pixel_count: int
+    removal_percent: float
+    passed: bool
+    reason_ko: str
+
+    def close(self) -> None:
+        """검토 화면에 사용하는 기존 의상 잔여 마스크를 해제한다."""
+        self.remaining_clothing_mask.close()
+
+
+@dataclass(frozen=True)
 class CharacterBodyComparisonCandidate:
     """신체·관절·변경 영역 분석이 끝난 사용자 승인 전 후보."""
 
@@ -93,6 +110,7 @@ class CharacterBodyComparisonCandidate:
     pose_preview_image: Image.Image
     mask_refinement: CharacterClothingMaskRefinement
     human_agnostic_candidate: HumanAgnosticImageCandidate
+    clothing_removal_verification: OriginalClothingRemovalVerification
     joint_coordinates: tuple[CharacterJointCoordinateCandidate, ...]
     model_ids: tuple[str, ...]
     detected_joint_count: int
@@ -100,12 +118,13 @@ class CharacterBodyComparisonCandidate:
     elapsed_seconds: float
 
     def close(self) -> None:
-        """GUI 검토에 사용한 PIL 이미지 8개를 모두 해제한다."""
+        """GUI 검토에 사용한 PIL 이미지를 모두 해제한다."""
         self.source_image.close()
         self.densepose_preview_image.close()
         self.pose_preview_image.close()
         self.mask_refinement.close()
         self.human_agnostic_candidate.close()
+        self.clothing_removal_verification.close()
 
 
 @dataclass(frozen=True)
@@ -119,6 +138,8 @@ class ConfirmedCharacterBodyComparison:
     neutralized_pixel_count: int
     neutralized_percent: float
     raw_mask_coverage_percent: float
+    remaining_clothing_pixel_count: int
+    clothing_removal_percent: float
     changed_pixel_count_outside_mask: int
     expansion_radius_pixels: int
     closing_radius_pixels: int
@@ -355,6 +376,81 @@ def create_human_agnostic_image_candidate(
     )
 
 
+def verify_original_clothing_removal(
+    raw_clothing_mask: Image.Image,
+    approved_change_mask: Image.Image,
+) -> OriginalClothingRemovalVerification:
+    """탐지된 기존 의상이 승인 변경 영역에 전부 포함됐는지 검사한다.
+
+    반환값:
+        기존 의상 탐지·포함·잔여 픽셀 수와 잔여 위치 마스크.
+
+    오류:
+        두 마스크 크기가 다르거나 기존 의상 탐지 픽셀이 0개면 중단한다.
+    """
+    if raw_clothing_mask.size != approved_change_mask.size:
+        raise CharacterBodyComparisonError(
+            "기존 의상 마스크와 승인 변경 마스크 크기가 다릅니다: "
+            f"기존 의상={raw_clothing_mask.size}, "
+            f"승인 영역={approved_change_mask.size}"
+        )
+
+    normalized_raw_mask = raw_clothing_mask.convert("L")
+    normalized_approved_mask = approved_change_mask.convert("L")
+    try:
+        raw_mask_array = (
+            np.asarray(normalized_raw_mask, dtype=np.uint8).copy() >= 128
+        )
+        approved_mask_array = (
+            np.asarray(normalized_approved_mask, dtype=np.uint8).copy() >= 128
+        )
+    finally:
+        normalized_raw_mask.close()
+        normalized_approved_mask.close()
+
+    detected_clothing_pixel_count = int(np.count_nonzero(raw_mask_array))
+    if detected_clothing_pixel_count == 0:
+        raise CharacterBodyComparisonError(
+            "기존 의상으로 탐지된 픽셀이 0개입니다."
+        )
+
+    removed_clothing_pixels = raw_mask_array & approved_mask_array
+    remaining_clothing_pixels = raw_mask_array & ~approved_mask_array
+    removed_clothing_pixel_count = int(
+        np.count_nonzero(removed_clothing_pixels)
+    )
+    remaining_clothing_pixel_count = int(
+        np.count_nonzero(remaining_clothing_pixels)
+    )
+    removal_percent = (
+        removed_clothing_pixel_count
+        / detected_clothing_pixel_count
+        * 100.0
+    )
+    passed = remaining_clothing_pixel_count == 0
+    reason_ko = (
+        "탐지된 기존 의상 전체가 변경 영역에 포함됐습니다."
+        if passed
+        else (
+            "기존 의상 일부가 변경 영역 밖에 남았습니다: "
+            f"{remaining_clothing_pixel_count:,}픽셀"
+        )
+    )
+
+    return OriginalClothingRemovalVerification(
+        remaining_clothing_mask=Image.fromarray(
+            np.where(remaining_clothing_pixels, 255, 0).astype(np.uint8),
+            mode="L",
+        ),
+        detected_clothing_pixel_count=detected_clothing_pixel_count,
+        removed_clothing_pixel_count=removed_clothing_pixel_count,
+        remaining_clothing_pixel_count=remaining_clothing_pixel_count,
+        removal_percent=removal_percent,
+        passed=passed,
+        reason_ko=reason_ko,
+    )
+
+
 def execute_character_body_comparison(
     character_image: Image.Image,
     clothing_type: str,
@@ -490,6 +586,18 @@ def execute_character_body_comparison(
         raise
 
     try:
+        clothing_removal_verification = verify_original_clothing_removal(
+            raw_clothing_mask=mask_refinement.raw_mask,
+            approved_change_mask=mask_refinement.safe_change_mask,
+        )
+    except Exception:
+        densepose_preview.close()
+        pose_preview.close()
+        mask_refinement.close()
+        human_agnostic_candidate.close()
+        raise
+
+    try:
         joint_coordinates = tuple(
             CharacterJointCoordinateCandidate(
                 joint_name=str(joint_payload["joint_name"]),
@@ -506,6 +614,7 @@ def execute_character_body_comparison(
             pose_preview_image=pose_preview,
             mask_refinement=mask_refinement,
             human_agnostic_candidate=human_agnostic_candidate,
+            clothing_removal_verification=clothing_removal_verification,
             joint_coordinates=joint_coordinates,
             model_ids=tuple(str(value) for value in pose_payload["model_ids"]),
             detected_joint_count=sum(
@@ -521,6 +630,7 @@ def execute_character_body_comparison(
         pose_preview.close()
         mask_refinement.close()
         human_agnostic_candidate.close()
+        clothing_removal_verification.close()
         raise CharacterBodyComparisonError(
             f"DWPose 관절 좌표 형식이 올바르지 않습니다: {error}"
         ) from error

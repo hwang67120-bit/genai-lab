@@ -9,6 +9,7 @@ from genai_lab.body_comparison import (
     calculate_mask_expansion_radius,
     create_human_agnostic_image_candidate,
     refine_character_clothing_change_mask,
+    verify_original_clothing_removal,
 )
 
 
@@ -133,3 +134,43 @@ def test_create_human_agnostic_image_rejects_empty_erasure_mask() -> None:
         source_image.close()
         erasure_mask.close()
         raw_mask.close()
+
+
+def test_verify_original_clothing_removal_passes_with_zero_remaining_pixels() -> None:
+    raw_mask = Image.new("L", (4, 4), 0)
+    approved_mask = Image.new("L", (4, 4), 0)
+    raw_mask.putpixel((1, 1), 255)
+    approved_mask.putpixel((1, 1), 255)
+
+    verification = verify_original_clothing_removal(raw_mask, approved_mask)
+    try:
+        assert verification.passed is True
+        assert verification.detected_clothing_pixel_count == 1
+        assert verification.removed_clothing_pixel_count == 1
+        assert verification.remaining_clothing_pixel_count == 0
+        assert verification.removal_percent == 100.0
+    finally:
+        verification.close()
+        raw_mask.close()
+        approved_mask.close()
+
+
+def test_verify_original_clothing_removal_blocks_remaining_pixel() -> None:
+    raw_mask = Image.new("L", (4, 4), 0)
+    approved_mask = Image.new("L", (4, 4), 0)
+    raw_mask.putpixel((1, 1), 255)
+    raw_mask.putpixel((2, 2), 255)
+    approved_mask.putpixel((1, 1), 255)
+
+    verification = verify_original_clothing_removal(raw_mask, approved_mask)
+    try:
+        assert verification.passed is False
+        assert verification.detected_clothing_pixel_count == 2
+        assert verification.removed_clothing_pixel_count == 1
+        assert verification.remaining_clothing_pixel_count == 1
+        assert verification.removal_percent == 50.0
+        assert verification.remaining_clothing_mask.getpixel((2, 2)) == 255
+    finally:
+        verification.close()
+        raw_mask.close()
+        approved_mask.close()

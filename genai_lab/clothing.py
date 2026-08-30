@@ -1,6 +1,7 @@
 """의상 참조 합성 결과가 캐릭터의 보호 영역을 바꾸지 못하게 제한한다."""
 
 from dataclasses import dataclass
+import json
 import os
 import subprocess
 import tempfile
@@ -13,7 +14,6 @@ from PIL import Image, ImageChops, ImageFilter, ImageOps, UnidentifiedImageError
 
 from genai_lab.body_comparison import (
     calculate_mask_expansion_radius,
-    refine_character_clothing_change_mask,
 )
 
 
@@ -36,6 +36,37 @@ class ClothingReferenceInput:
     category: ClothingCategory
     region_box_xyxy: tuple[int, int, int, int] | None = None
     approved_image: Image.Image | None = None
+
+
+@dataclass(frozen=True)
+class CharacterAgnosticApprovedInput:
+    """사용자가 승인한 기존 의상 제거 이미지와 정확한 변경 마스크."""
+
+    human_agnostic_image: Image.Image
+    approved_change_mask: Image.Image
+    clothing_type: str
+    approved_mask_pixel_count: int
+
+    def close(self) -> None:
+        """작업 스레드가 소유한 승인 이미지 2개를 해제한다."""
+        self.human_agnostic_image.close()
+        self.approved_change_mask.close()
+
+
+@dataclass(frozen=True)
+class CatVTONExecutionMetadata:
+    """별도 CatVTON 프로세스가 실제 사용한 입력 경계를 증명한다."""
+
+    mask_source: str
+    automasker_run_count: int
+    approved_image_width: int
+    approved_image_height: int
+    approved_mask_pixel_count: int
+    processed_mask_pixel_count: int
+    safety_check_enabled: bool
+    person_input_source: str
+    person_input_width: int
+    person_input_height: int
 
 
 @dataclass(frozen=True)
@@ -343,6 +374,7 @@ class CatVTONLocalSettings:
     guidance_scale: float
     mixed_precision: str
     timeout_seconds: int
+    safety_check_enabled: bool = False
     mask_expansion_ratio: float = 0.01
     minimum_mask_expansion_pixels: int = 5
     maximum_mask_expansion_pixels: int = 15
@@ -355,6 +387,7 @@ class CatVTONClothingTryOnResult:
 
     candidate: CharacterClothingTryOnCandidate
     clothing_change_mask: Image.Image
+    execution_metadata: CatVTONExecutionMetadata
 
 
 @dataclass(frozen=True)
@@ -373,6 +406,7 @@ class PreparedClothingTryOnEngine:
 def execute_catvton_clothing_try_on(
     base_character_image: Image.Image,
     clothing_reference_input: ClothingReferenceInput,
+    approved_agnostic_input: CharacterAgnosticApprovedInput,
     settings: CatVTONLocalSettings,
     seed: int,
 ) -> CatVTONClothingTryOnResult:
@@ -391,6 +425,14 @@ def execute_catvton_clothing_try_on(
     catvton_clothing_type = find_catvton_clothing_type(
         clothing_reference_input.category
     )
+    validate_character_agnostic_approved_input(
+        approved_agnostic_input,
+        expected_clothing_type=catvton_clothing_type,
+    )
+    validate_catvton_approved_coordinates(
+        base_character_image=base_character_image,
+        approved_agnostic_input=approved_agnostic_input,
+    )
     clothing_reference_image = load_clothing_reference_image(
         clothing_reference_input
     )
@@ -401,26 +443,27 @@ def execute_catvton_clothing_try_on(
         dir=settings.temporary_root,
     ) as temporary_directory_name:
         temporary_directory = Path(temporary_directory_name)
-        person_input_path = temporary_directory / "person.png"
+        person_input_path = temporary_directory / "base_character.png"
+        approved_mask_input_path = temporary_directory / "approved_change_mask.png"
         clothing_input_path = temporary_directory / "clothing.png"
         raw_output_path = temporary_directory / "raw_try_on.png"
         mask_output_path = temporary_directory / "clothing_mask.png"
         protection_output_path = temporary_directory / "identity_protection_mask.png"
+        metadata_output_path = temporary_directory / "execution_metadata.json"
 
         person_input_image = base_character_image.convert("RGB")
+        approved_mask_input_image = (
+            approved_agnostic_input.approved_change_mask.convert("L")
+        )
         try:
             person_input_image.save(person_input_path)
+            approved_mask_input_image.save(approved_mask_input_path)
         finally:
             person_input_image.close()
+            approved_mask_input_image.close()
         clothing_reference_image.save(clothing_input_path)
         clothing_reference_image.close()
 
-        runner_mask_expansion_radius = calculate_mask_expansion_radius(
-            (settings.width, settings.height),
-            settings.mask_expansion_ratio,
-            settings.minimum_mask_expansion_pixels,
-            settings.maximum_mask_expansion_pixels,
-        )
         command = [
             str(settings.python_executable),
             str(settings.runner_path),
@@ -428,6 +471,8 @@ def execute_catvton_clothing_try_on(
             str(settings.repository_path),
             "--person-image",
             str(person_input_path),
+            "--approved-change-mask",
+            str(approved_mask_input_path),
             "--clothing-image",
             str(clothing_input_path),
             "--clothing-type",
@@ -438,6 +483,8 @@ def execute_catvton_clothing_try_on(
             str(mask_output_path),
             "--output-protection-mask",
             str(protection_output_path),
+            "--output-metadata",
+            str(metadata_output_path),
             "--model-id",
             settings.model_id,
             "--base-model-id",
@@ -456,11 +503,9 @@ def execute_catvton_clothing_try_on(
             settings.mixed_precision,
             "--seed",
             str(seed),
-            "--mask-expansion-radius",
-            str(runner_mask_expansion_radius),
-            "--mask-closing-radius",
-            str(settings.mask_closing_radius_pixels),
         ]
+        if not settings.safety_check_enabled:
+            command.append("--skip-safety-check")
         execution_environment = os.environ.copy()
         execution_environment["HF_HOME"] = str(settings.cache_dir)
         try:
@@ -499,6 +544,7 @@ def execute_catvton_clothing_try_on(
             not raw_output_path.is_file()
             or not mask_output_path.is_file()
             or not protection_output_path.is_file()
+            or not metadata_output_path.is_file()
         ):
             raise CharacterClothingProtectionError(
                 "CatVTON 실행은 끝났지만 합성 이미지 또는 보호 마스크가 없습니다."
@@ -508,11 +554,20 @@ def execute_catvton_clothing_try_on(
             raw_try_on_image = opened_raw_image.convert("RGB").copy()
         with Image.open(mask_output_path) as opened_mask_image:
             clothing_change_mask = opened_mask_image.convert("L").copy()
+        validate_runner_mask_matches_approved_input(
+            clothing_change_mask,
+            approved_agnostic_input.approved_change_mask,
+        )
 
         with Image.open(protection_output_path) as opened_protection_image:
             identity_protection_mask = (
                 opened_protection_image.convert("L").copy()
             )
+        execution_metadata = load_catvton_execution_metadata(
+            metadata_output_path,
+            approved_agnostic_input,
+            expected_safety_check_enabled=settings.safety_check_enabled,
+        )
     original_size = base_character_image.size
     if raw_try_on_image.size != original_size:
         resized_raw_try_on_image = raw_try_on_image.resize(
@@ -536,21 +591,9 @@ def execute_catvton_clothing_try_on(
         )
         identity_protection_mask.close()
         identity_protection_mask = resized_identity_protection_mask
-    expansion_radius_pixels = calculate_mask_expansion_radius(
-        original_size,
-        settings.mask_expansion_ratio,
-        settings.minimum_mask_expansion_pixels,
-        settings.maximum_mask_expansion_pixels,
-    )
-    mask_refinement = refine_character_clothing_change_mask(
-        raw_clothing_mask=clothing_change_mask,
-        identity_protection_mask=identity_protection_mask,
-        expansion_radius_pixels=expansion_radius_pixels,
-        closing_radius_pixels=settings.mask_closing_radius_pixels,
-    )
     protection_plan = create_character_try_on_protection_plan(
-        mask_refinement.safe_change_mask,
-        mask_refinement.identity_protection_mask,
+        clothing_change_mask,
+        identity_protection_mask,
         boundary_blur_radius=4.0,
     )
     safe_clothing_change_mask = protection_plan.clothing_change_mask.copy()
@@ -575,12 +618,196 @@ def execute_catvton_clothing_try_on(
         protection_plan.clothing_change_mask.close()
         protection_plan.identity_protection_mask.close()
         protection_plan.boundary_blend_mask.close()
-        mask_refinement.close()
 
     return CatVTONClothingTryOnResult(
         candidate=try_on_candidate,
         clothing_change_mask=safe_clothing_change_mask,
+        execution_metadata=execution_metadata,
     )
+
+
+def count_binary_mask_pixels(mask_image: Image.Image) -> int:
+    """128 이상인 변경 허용 픽셀 수를 반환한다."""
+    normalized_mask = mask_image.convert("L")
+    try:
+        histogram = normalized_mask.histogram()
+        return sum(histogram[128:])
+    finally:
+        normalized_mask.close()
+
+
+def validate_character_agnostic_approved_input(
+    approved_input: CharacterAgnosticApprovedInput,
+    expected_clothing_type: str,
+) -> None:
+    """승인 이미지·마스크·의상 종류·픽셀 수가 같은 계약인지 검사한다."""
+    if (
+        approved_input.human_agnostic_image.size
+        != approved_input.approved_change_mask.size
+    ):
+        raise CharacterClothingProtectionError(
+            "승인 Human-Agnostic 이미지와 변경 마스크 크기가 다릅니다."
+        )
+    if approved_input.clothing_type != expected_clothing_type:
+        raise CharacterClothingProtectionError(
+            "승인 당시 의상 종류와 현재 의상 종류가 다릅니다."
+        )
+    actual_pixel_count = count_binary_mask_pixels(
+        approved_input.approved_change_mask
+    )
+    if actual_pixel_count == 0:
+        raise CharacterClothingProtectionError(
+            "승인된 의상 변경 픽셀이 0개입니다."
+        )
+    if actual_pixel_count != approved_input.approved_mask_pixel_count:
+        raise CharacterClothingProtectionError(
+            "승인 마스크 픽셀 수가 기록값과 다릅니다: "
+            f"실제={actual_pixel_count}, "
+            f"기록={approved_input.approved_mask_pixel_count}"
+        )
+
+
+def validate_catvton_approved_coordinates(
+    base_character_image: Image.Image,
+    approved_agnostic_input: CharacterAgnosticApprovedInput,
+) -> None:
+    """생성 후보와 승인 이미지·마스크가 같은 좌표인지 검사한다."""
+    expected_size = base_character_image.size
+    if approved_agnostic_input.human_agnostic_image.size != expected_size:
+        raise CharacterClothingProtectionError(
+            "생성 후보와 Human-Agnostic 이미지 크기가 다릅니다: "
+            f"후보={expected_size}, "
+            "승인 이미지="
+            f"{approved_agnostic_input.human_agnostic_image.size}"
+        )
+    if approved_agnostic_input.approved_change_mask.size != expected_size:
+        raise CharacterClothingProtectionError(
+            "생성 후보와 승인 마스크 크기가 다릅니다: "
+            f"후보={expected_size}, "
+            f"승인 마스크={approved_agnostic_input.approved_change_mask.size}"
+        )
+
+
+def validate_runner_mask_matches_approved_input(
+    runner_mask: Image.Image,
+    approved_mask: Image.Image,
+) -> None:
+    """실행기가 승인 마스크를 바꾸거나 다시 계산하지 않았는지 검사한다."""
+    if runner_mask.size != approved_mask.size:
+        raise CharacterClothingProtectionError(
+            "CatVTON 반환 마스크 크기가 승인 마스크와 다릅니다."
+        )
+    runner_binary = runner_mask.convert("L").point(
+        lambda pixel: 255 if pixel >= 128 else 0
+    )
+    approved_binary = approved_mask.convert("L").point(
+        lambda pixel: 255 if pixel >= 128 else 0
+    )
+    try:
+        if (
+            ImageChops.difference(runner_binary, approved_binary).getbbox()
+            is not None
+        ):
+            raise CharacterClothingProtectionError(
+                "CatVTON 반환 마스크가 사용자 승인 마스크와 다릅니다."
+            )
+    finally:
+        runner_binary.close()
+        approved_binary.close()
+
+
+def load_catvton_execution_metadata(
+    metadata_path: Path,
+    approved_input: CharacterAgnosticApprovedInput,
+    expected_safety_check_enabled: bool,
+) -> CatVTONExecutionMetadata:
+    """실행 기록을 읽고 AutoMasker 미실행과 승인 입력 사용을 검증한다."""
+    try:
+        metadata_payload = json.loads(
+            metadata_path.read_text(encoding="utf-8")
+        )
+        safety_check_enabled = metadata_payload["safety_check_enabled"]
+        if not isinstance(safety_check_enabled, bool):
+            raise TypeError(
+                "safety_check_enabled는 true 또는 false여야 합니다."
+            )
+        execution_metadata = CatVTONExecutionMetadata(
+            mask_source=str(metadata_payload["mask_source"]),
+            automasker_run_count=int(
+                metadata_payload["automasker_run_count"]
+            ),
+            approved_image_width=int(
+                metadata_payload["approved_image_width"]
+            ),
+            approved_image_height=int(
+                metadata_payload["approved_image_height"]
+            ),
+            approved_mask_pixel_count=int(
+                metadata_payload["approved_mask_pixel_count"]
+            ),
+            processed_mask_pixel_count=int(
+                metadata_payload["processed_mask_pixel_count"]
+            ),
+            safety_check_enabled=safety_check_enabled,
+            person_input_source=str(
+                metadata_payload["person_input_source"]
+            ),
+            person_input_width=int(metadata_payload["person_input_width"]),
+            person_input_height=int(metadata_payload["person_input_height"]),
+        )
+    except (
+        OSError,
+        KeyError,
+        TypeError,
+        ValueError,
+        json.JSONDecodeError,
+    ) as error:
+        raise CharacterClothingProtectionError(
+            f"CatVTON 실행 증명 기록을 읽지 못했습니다: {error}"
+        ) from error
+
+    expected_size = approved_input.human_agnostic_image.size
+    if execution_metadata.person_input_source != "generated_candidate":
+        raise CharacterClothingProtectionError(
+            "CatVTON 인물 입력이 실제 생성 후보가 아닙니다."
+        )
+    if (
+        execution_metadata.person_input_width,
+        execution_metadata.person_input_height,
+    ) != expected_size:
+        raise CharacterClothingProtectionError(
+            "CatVTON 인물 입력 크기 기록이 승인 좌표와 다릅니다."
+        )
+    if execution_metadata.mask_source != "user_approved":
+        raise CharacterClothingProtectionError(
+            "CatVTON이 사용자 승인 마스크를 사용하지 않았습니다."
+        )
+    if execution_metadata.automasker_run_count != 0:
+        raise CharacterClothingProtectionError(
+            "CatVTON 내부 AutoMasker가 다시 실행됐습니다."
+        )
+    if (
+        execution_metadata.approved_image_width,
+        execution_metadata.approved_image_height,
+    ) != expected_size:
+        raise CharacterClothingProtectionError(
+            "CatVTON 승인 이미지 크기 기록이 실제 입력과 다릅니다."
+        )
+    if (
+        execution_metadata.approved_mask_pixel_count
+        != approved_input.approved_mask_pixel_count
+    ):
+        raise CharacterClothingProtectionError(
+            "CatVTON 승인 마스크 픽셀 기록이 실제 입력과 다릅니다."
+        )
+    if (
+        execution_metadata.safety_check_enabled
+        is not expected_safety_check_enabled
+    ):
+        raise CharacterClothingProtectionError(
+            "CatVTON 안전 검사 실행 기록이 요청 설정과 다릅니다."
+        )
+    return execution_metadata
 
 
 def validate_catvton_local_settings(

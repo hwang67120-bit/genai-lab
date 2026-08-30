@@ -1,17 +1,19 @@
-"""GenAI Lab에서 CatVTON 공식 파이프라인을 한 번 실행하는 별도 프로세스."""
+"""사용자가 승인한 Human-Agnostic 입력으로 CatVTON을 실행한다."""
 
 import argparse
+import json
 import os
 from pathlib import Path
 import sys
 
-from PIL import Image
+from PIL import Image, ImageOps
 
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repository-path", required=True)
     parser.add_argument("--person-image", required=True)
+    parser.add_argument("--approved-change-mask", required=True)
     parser.add_argument("--clothing-image", required=True)
     parser.add_argument(
         "--clothing-type",
@@ -21,6 +23,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--output-image", required=True)
     parser.add_argument("--output-mask", required=True)
     parser.add_argument("--output-protection-mask", required=True)
+    parser.add_argument("--output-metadata", required=True)
     parser.add_argument("--model-id", required=True)
     parser.add_argument("--base-model-id", required=True)
     parser.add_argument("--cache-dir", required=True)
@@ -34,8 +37,7 @@ def parse_arguments() -> argparse.Namespace:
         required=True,
     )
     parser.add_argument("--seed", type=int, required=True)
-    parser.add_argument("--mask-expansion-radius", type=int, required=True)
-    parser.add_argument("--mask-closing-radius", type=int, required=True)
+    parser.add_argument("--skip-safety-check", action="store_true")
     return parser.parse_args()
 
 
@@ -45,8 +47,26 @@ def load_rgb_image(image_path: str) -> Image.Image:
         return opened_image.convert("RGB")
 
 
+def load_binary_mask(mask_path: str) -> Image.Image:
+    """승인 마스크를 0 또는 255 값의 독립 L 이미지로 반환한다."""
+    with Image.open(mask_path) as opened_image:
+        grayscale_mask = opened_image.convert("L")
+        try:
+            return grayscale_mask.point(
+                lambda pixel: 255 if pixel >= 128 else 0
+            )
+        finally:
+            grayscale_mask.close()
+
+
+def count_mask_pixels(mask_image: Image.Image) -> int:
+    """128 이상인 마스크 픽셀 수를 계산한다."""
+    histogram = mask_image.histogram()
+    return sum(histogram[128:])
+
+
 def main() -> None:
-    """공식 CatVTON 자동 마스크와 합성을 실행하고 두 이미지를 반환한다."""
+    """승인 이미지와 승인 마스크만 사용해 CatVTON 합성을 실행한다."""
     arguments = parse_arguments()
     repository_path = Path(arguments.repository_path).resolve()
     os.chdir(repository_path)
@@ -57,26 +77,59 @@ def main() -> None:
 
     truststore.inject_into_ssl()
     import torch
-    import numpy as np
-    import cv2
     from diffusers.image_processor import VaeImageProcessor
     from huggingface_hub import snapshot_download
 
-    from model.cloth_masker import (
-        ATR_MAPPING,
-        LIP_MAPPING,
-        AutoMasker,
-        part_mask_of,
-    )
     from model.pipeline import CatVTONPipeline
     from utils import init_weight_dtype, resize_and_crop, resize_and_padding
 
-    original_person_image = load_rgb_image(arguments.person_image)
-    original_size = original_person_image.size
+    source_person_image = load_rgb_image(arguments.person_image)
+    approved_change_mask = load_binary_mask(
+        arguments.approved_change_mask
+    )
+    person_input_size = source_person_image.size
+    approved_mask_size = approved_change_mask.size
+    if person_input_size != approved_mask_size:
+        source_person_image.close()
+        approved_change_mask.close()
+        raise RuntimeError(
+            "CatVTON 인물 이미지와 승인 마스크 좌표가 다릅니다: "
+            f"인물={person_input_size}, 마스크={approved_mask_size}"
+        )
+
+    approved_size = person_input_size
+    approved_mask_pixel_count = count_mask_pixels(approved_change_mask)
+    if approved_mask_pixel_count == 0:
+        source_person_image.close()
+        approved_change_mask.close()
+        raise RuntimeError("승인된 CatVTON 변경 픽셀이 0개입니다.")
+
     person_image = resize_and_crop(
-        original_person_image,
+        source_person_image,
         (arguments.width, arguments.height),
     )
+    resized_change_mask = resize_and_crop(
+        approved_change_mask,
+        (arguments.width, arguments.height),
+    )
+    grayscale_change_mask = resized_change_mask.convert("L")
+    try:
+        processed_change_mask = grayscale_change_mask.point(
+            lambda pixel: 255 if pixel >= 128 else 0
+        )
+    finally:
+        resized_change_mask.close()
+        grayscale_change_mask.close()
+    processed_mask_pixel_count = count_mask_pixels(processed_change_mask)
+    if processed_mask_pixel_count == 0:
+        source_person_image.close()
+        approved_change_mask.close()
+        person_image.close()
+        processed_change_mask.close()
+        raise RuntimeError(
+            "처리 크기로 변환한 승인 CatVTON 변경 픽셀이 0개입니다."
+        )
+
     original_clothing_image = load_rgb_image(arguments.clothing_image)
     try:
         clothing_image = resize_and_padding(
@@ -90,90 +143,22 @@ def main() -> None:
         repo_id=arguments.model_id,
         cache_dir=arguments.cache_dir,
     )
-    automatic_masker = AutoMasker(
-        densepose_ckpt=str(Path(checkpoint_path) / "DensePose"),
-        schp_ckpt=str(Path(checkpoint_path) / "SCHP"),
-        device="cuda",
-    )
-    automatic_mask_result = automatic_masker(
-        person_image,
-        arguments.clothing_type,
-    )
-    raw_clothing_mask = automatic_mask_result["mask"].convert("L")
-
-    # CharacterIdentityProtectionMask(캐릭터 신체 보호 마스크)
-    # - 포함: 얼굴, 머리카락, 노출된 팔·다리, 손·발과 장신구 영역.
-    # - 생성: CatVTON의 SCHP 사람 영역 분리 결과를 픽셀 규칙으로 결합한다.
-    # - 처리: 별도 LLM 호출 없이 분류 모델 결과만 사용한다.
-    # - 저장: 호출 프로세스의 임시 폴더에만 저장되고 작업 후 삭제된다.
-    # - 다음 사용처: 의상 합성이 신체·캐릭터 특징을 덮지 못하게 제한한다.
-    protected_parts = [
-        "Hat", "Hair", "Sunglasses", "Face", "Left-arm", "Right-arm",
-        "Left-leg", "Right-leg", "Left-shoe", "Right-shoe", "Glove",
-        "Bag", "Scarf",
-    ]
-    schp_lip_mask = np.asarray(automatic_mask_result["schp_lip"])
-    schp_atr_mask = np.asarray(automatic_mask_result["schp_atr"])
-    identity_protection_array = (
-        part_mask_of(protected_parts, schp_lip_mask, LIP_MAPPING)
-        | part_mask_of(protected_parts, schp_atr_mask, ATR_MAPPING)
-    )
-    identity_protection_mask = Image.fromarray(
-        (identity_protection_array > 0).astype(np.uint8) * 255
-    ).convert("L")
-
-    if not 5 <= arguments.mask_expansion_radius <= 15:
-        raise RuntimeError("CatVTON 마스크 팽창 반경은 5~15픽셀이어야 합니다.")
-    if not 1 <= arguments.mask_closing_radius <= 3:
-        raise RuntimeError("CatVTON 마스크 닫기 반경은 1~3픽셀이어야 합니다.")
-
-    raw_mask_array = np.where(
-        np.asarray(raw_clothing_mask, dtype=np.uint8) >= 128,
-        255,
-        0,
-    ).astype(np.uint8)
-    closing_kernel_size = arguments.mask_closing_radius * 2 + 1
-    closing_kernel = cv2.getStructuringElement(
-        cv2.MORPH_ELLIPSE,
-        (closing_kernel_size, closing_kernel_size),
-    )
-    closed_mask_array = cv2.morphologyEx(
-        raw_mask_array,
-        cv2.MORPH_CLOSE,
-        closing_kernel,
-        iterations=1,
-    )
-    expansion_kernel_size = arguments.mask_expansion_radius * 2 + 1
-    expansion_kernel = cv2.getStructuringElement(
-        cv2.MORPH_ELLIPSE,
-        (expansion_kernel_size, expansion_kernel_size),
-    )
-    expanded_mask_array = cv2.dilate(
-        closed_mask_array,
-        expansion_kernel,
-        iterations=1,
-    )
-    inference_mask_array = np.where(
-        identity_protection_array > 0,
-        0,
-        expanded_mask_array,
-    ).astype(np.uint8)
-    if int(np.count_nonzero(inference_mask_array)) == 0:
-        raise RuntimeError("신체 보호 영역을 제외한 CatVTON 변경 픽셀이 0개입니다.")
-    inference_clothing_mask = Image.fromarray(inference_mask_array, mode="L")
-
     mask_processor = VaeImageProcessor(
         vae_scale_factor=8,
         do_normalize=False,
         do_binarize=True,
         do_convert_grayscale=True,
     )
-    model_mask = mask_processor.blur(inference_clothing_mask, blur_factor=9)
+    model_mask = mask_processor.blur(
+        processed_change_mask,
+        blur_factor=9,
+    )
     pipeline = CatVTONPipeline(
         base_ckpt=arguments.base_model_id,
         attn_ckpt=checkpoint_path,
         attn_ckpt_version="mix",
         weight_dtype=init_weight_dtype(arguments.mixed_precision),
+        skip_safety_check=arguments.skip_safety_check,
         use_tf32=True,
         device="cuda",
     )
@@ -190,39 +175,42 @@ def main() -> None:
     )[0].convert("RGB")
 
     resized_output_image = result_image.resize(
-        original_size,
+        approved_size,
         Image.Resampling.LANCZOS,
     )
-    resized_output_mask = raw_clothing_mask.resize(
-        original_size,
-        Image.Resampling.NEAREST,
-    )
-    resized_protection_mask = identity_protection_mask.resize(
-        original_size,
-        Image.Resampling.NEAREST,
-    )
+    identity_protection_mask = ImageOps.invert(approved_change_mask)
+    metadata_payload = {
+        "mask_source": "user_approved",
+        "automasker_run_count": 0,
+        "approved_image_width": approved_size[0],
+        "approved_image_height": approved_size[1],
+        "approved_mask_pixel_count": approved_mask_pixel_count,
+        "processed_mask_pixel_count": processed_mask_pixel_count,
+        "clothing_type": arguments.clothing_type,
+        "safety_check_enabled": not arguments.skip_safety_check,
+        "person_input_source": "generated_candidate",
+        "person_input_width": approved_size[0],
+        "person_input_height": approved_size[1],
+    }
     try:
         resized_output_image.save(arguments.output_image)
-        resized_output_mask.save(arguments.output_mask)
-        resized_protection_mask.save(arguments.output_protection_mask)
+        approved_change_mask.save(arguments.output_mask)
+        identity_protection_mask.save(arguments.output_protection_mask)
+        Path(arguments.output_metadata).write_text(
+            json.dumps(metadata_payload, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
     finally:
         resized_output_image.close()
-        resized_output_mask.close()
-        resized_protection_mask.close()
-        original_person_image.close()
-        person_image.close()
-        clothing_image.close()
-        raw_clothing_mask.close()
-        inference_clothing_mask.close()
         identity_protection_mask.close()
+        source_person_image.close()
+        approved_change_mask.close()
+        person_image.close()
+        processed_change_mask.close()
+        clothing_image.close()
         model_mask.close()
         result_image.close()
-        for result_name in ("mask", "densepose", "schp_lip", "schp_atr"):
-            intermediate_image = automatic_mask_result.get(result_name)
-            if intermediate_image is not None:
-                intermediate_image.close()
 
 
 if __name__ == "__main__":
     main()
-

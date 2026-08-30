@@ -22,7 +22,10 @@ from run import (
     validate_config,
 )
 from genai_lab.model import prepare_pipeline
-from genai_lab.generator import generate_character_candidate
+from genai_lab.generator import (
+    apply_clothing_to_generated_candidate,
+    generate_character_candidate,
+)
 from genai_lab.body_comparison import (
     CharacterBodyComparisonCandidate,
     CharacterBodyComparisonSettings,
@@ -31,6 +34,7 @@ from genai_lab.body_comparison import (
 )
 from genai_lab.clothing import (
     CatVTONLocalSettings,
+    CharacterAgnosticApprovedInput,
     ClothingCategory,
     ClothingReferenceInput,
     find_catvton_clothing_type,
@@ -1185,6 +1189,10 @@ class CharacterBodyComparisonReviewDialog(QDialog):
 
         mask_refinement = comparison_candidate.mask_refinement
         agnostic_candidate = comparison_candidate.human_agnostic_candidate
+        removal_verification = (
+            comparison_candidate.clothing_removal_verification
+        )
+        self.removal_verification_passed = removal_verification.passed
         preview_grid = QGridLayout()
         preview_items = (
             ("1. 캐릭터 원본", comparison_candidate.source_image),
@@ -1198,6 +1206,10 @@ class CharacterBodyComparisonReviewDialog(QDialog):
             (
                 "9. Human-Agnostic Image 승인 후보",
                 agnostic_candidate.neutralized_image,
+            ),
+            (
+                "10. 기존 의상 잔여 영역",
+                removal_verification.remaining_clothing_mask,
             ),
         )
         for preview_index, (preview_title, preview_image) in enumerate(
@@ -1243,6 +1255,14 @@ class CharacterBodyComparisonReviewDialog(QDialog):
             f"({agnostic_candidate.neutralized_percent:.3f}%), "
             f"원본 마스크 포함률="
             f"{agnostic_candidate.raw_mask_coverage_percent:.3f}%, "
+            f"기존 의상 탐지="
+            f"{removal_verification.detected_clothing_pixel_count:,}px, "
+            f"제거 영역 포함="
+            f"{removal_verification.removed_clothing_pixel_count:,}px, "
+            f"기존 의상 잔여="
+            f"{removal_verification.remaining_clothing_pixel_count:,}px, "
+            f"기존 의상 제거율="
+            f"{removal_verification.removal_percent:.3f}%, "
             f"중립화 마스크 밖 변경="
             f"{agnostic_candidate.changed_pixel_count_outside_mask:,}px, "
             f"처리 시간={comparison_candidate.elapsed_seconds:.2f}초"
@@ -1252,6 +1272,11 @@ class CharacterBodyComparisonReviewDialog(QDialog):
 
         button_layout = QHBoxLayout()
         approve_button = QPushButton("Human-Agnostic Image와 변경 영역 승인")
+        approve_button.setEnabled(removal_verification.passed)
+        if not removal_verification.passed:
+            approve_button.setToolTip(
+                "기존 의상 잔여가 0픽셀이 아니므로 승인할 수 없습니다."
+            )
         reject_button = QPushButton("거절하고 다시 확인")
         approve_button.clicked.connect(self.approve_comparison)
         reject_button.clicked.connect(self.reject)
@@ -1261,6 +1286,13 @@ class CharacterBodyComparisonReviewDialog(QDialog):
 
     @Slot()
     def approve_comparison(self) -> None:
+        if not self.removal_verification_passed:
+            QMessageBox.warning(
+                self,
+                "기존 의상 제거 미완료",
+                "기존 의상 잔여가 0픽셀이 아니므로 CatVTON을 실행할 수 없습니다.",
+            )
+            return
         self.approved = True
         self.accept()
 
@@ -1552,6 +1584,8 @@ class GenerationWorker(QObject):
         run_log: GenerationRunLog,
         clothing_reference_input: ClothingReferenceInput | None,
         catvton_settings: CatVTONLocalSettings | None,
+        approved_agnostic_input: CharacterAgnosticApprovedInput | None,
+        existing_candidate: CharacterGenerationCandidate | None = None,
         pipeline=None,
     ):
         super().__init__()
@@ -1562,6 +1596,8 @@ class GenerationWorker(QObject):
         self.pipeline = pipeline
         self.clothing_reference_input = clothing_reference_input
         self.catvton_settings = catvton_settings
+        self.approved_agnostic_input = approved_agnostic_input
+        self.existing_candidate = existing_candidate
 
     @Slot()
     def run(self):
@@ -1588,17 +1624,36 @@ class GenerationWorker(QObject):
                 self.run_log.write_stage("모델 준비", "메모리에 있는 모델 재사용")
 
             generation_started_at = perf_counter()
-            self.status_changed.emit("이미지 생성 중...")
-            self.run_log.write_stage("이미지 생성", "후보 1번 생성 시작")
-            character_candidate = generate_character_candidate(
-                self.pipeline,
-                self.config,
-                self.generation_request,
-                self.current_dir,
-                self.run_log,
-                clothing_reference_input=self.clothing_reference_input,
-                catvton_settings=self.catvton_settings,
-            )
+            if self.existing_candidate is None:
+                self.status_changed.emit("기준 후보 이미지 생성 중...")
+                self.run_log.write_stage("이미지 생성", "기준 후보 1번 생성 시작")
+                character_candidate = generate_character_candidate(
+                    self.pipeline,
+                    self.config,
+                    self.generation_request,
+                    self.current_dir,
+                    self.run_log,
+                )
+            else:
+                if (
+                    self.clothing_reference_input is None
+                    or self.catvton_settings is None
+                    or self.approved_agnostic_input is None
+                ):
+                    raise ValueError("기존 후보 의상 적용 입력이 완성되지 않았습니다.")
+                self.status_changed.emit("승인된 의상을 기준 후보에 적용 중...")
+                if hasattr(self.pipeline, "maybe_free_model_hooks"):
+                    self.pipeline.maybe_free_model_hooks()
+                import torch
+
+                torch.cuda.empty_cache()
+                character_candidate = apply_clothing_to_generated_candidate(
+                    base_candidate=self.existing_candidate,
+                    clothing_reference_input=self.clothing_reference_input,
+                    catvton_settings=self.catvton_settings,
+                    approved_agnostic_input=self.approved_agnostic_input,
+                    run_log=self.run_log,
+                )
             self.run_log.write_stage(
                 "이미지 생성",
                 f"완료, 소요 시간={perf_counter() - generation_started_at:.1f}초",
@@ -1624,6 +1679,9 @@ class GenerationWorker(QObject):
             self.failed.emit(str(error), details_with_log, self.pipeline)
         finally:
             self.run_log.close()
+            if self.approved_agnostic_input is not None:
+                self.approved_agnostic_input.close()
+                self.approved_agnostic_input = None
 
 
 class GenAILabWindow(QMainWindow):
@@ -1661,6 +1719,7 @@ class GenAILabWindow(QMainWindow):
         self.clothing_region_measurements = ()
         self.approved_reference_image: ApprovedReferenceImage | None = None
         self.pending_character_candidate: CharacterGenerationCandidate | None = None
+        self.pending_clothing_base_candidate: CharacterGenerationCandidate | None = None
         self.candidate_is_approved = False
 
         # 현재 구현에서 실제 사용하는 입력은 캐릭터 기준 이미지 하나다.
@@ -2413,19 +2472,19 @@ class GenAILabWindow(QMainWindow):
             f"2. 의상 참조: {Path(self.outfit_path).name} "
             f"(WD14 태그 {len(approved_tag_names)}개 승인)"
         )
-        self.generate_button.setEnabled(False)
-        self.release_confirmed_character_body_comparison()
-        self.body_comparison_clothing_category = None
-        self.body_comparison_button.setEnabled(
+        self.generate_button.setEnabled(
             self.approved_reference_image is not None
         )
+        self.release_confirmed_character_body_comparison()
+        self.body_comparison_clothing_category = None
+        self.body_comparison_button.setEnabled(False)
         self.status_label.setText(
             "상태: WD14 의상 디자인 분석 승인 완료 - "
             f"후보={len(analysis_result.tag_candidates)}개, "
             f"승인={len(approved_tag_names)}개, "
             f"기준={analysis_result.score_threshold * 100.0:.1f}%, "
             f"시간={analysis_result.elapsed_seconds:.2f}초, "
-            "캐릭터 신체 비교 시작 버튼을 눌러 변경 영역을 확인하세요."
+            "후보 이미지 생성 시작 버튼을 눌러 기준 후보를 먼저 만드세요."
         )
 
     @Slot(str, str)
@@ -2460,16 +2519,31 @@ class GenAILabWindow(QMainWindow):
             self.confirmed_character_body_comparison.close()
         self.confirmed_character_body_comparison = None
 
+    def release_pending_clothing_base_candidate(self) -> None:
+        """의상 적용 전 메모리에 보관한 기준 후보를 해제한다."""
+        candidate = self.pending_clothing_base_candidate
+        if candidate is None:
+            return
+        candidate.image.close()
+        if candidate.original_generated_image is not None:
+            candidate.original_generated_image.close()
+        if candidate.before_clothing_image is not None:
+            candidate.before_clothing_image.close()
+        if candidate.clothing_change_mask is not None:
+            candidate.clothing_change_mask.close()
+        self.pending_clothing_base_candidate = None
+
     @Slot()
     def invalidate_character_body_comparison(self) -> None:
         """의상 종류가 바뀌면 이전 신체 비교 승인을 무효화한다."""
         self.release_confirmed_character_body_comparison()
         self.body_comparison_clothing_category = None
-        if self.outfit_path is not None:
-            self.generate_button.setEnabled(False)
-        self.body_comparison_button.setEnabled(
+        self.generate_button.setEnabled(
             self.confirmed_clothing_design is not None
             and self.approved_reference_image is not None
+        )
+        self.body_comparison_button.setEnabled(
+            self.pending_clothing_base_candidate is not None
         )
 
     @Slot()
@@ -2485,11 +2559,11 @@ class GenAILabWindow(QMainWindow):
                 "현재 캐릭터 신체와 관절을 분석하고 있습니다.",
             )
             return
-        if self.approved_reference_image is None:
+        if self.pending_clothing_base_candidate is None:
             QMessageBox.warning(
                 self,
                 "신체 비교 입력 오류",
-                "캐릭터 참조 이미지 승인을 먼저 완료하세요.",
+                "의상 적용 전 기준 후보 이미지를 먼저 생성하세요.",
             )
             return
         if self.confirmed_clothing_design is None or self.outfit_path is None:
@@ -2559,7 +2633,7 @@ class GenAILabWindow(QMainWindow):
         self.body_comparison_button.setEnabled(False)
         self.body_comparison_worker_thread = QThread(self)
         self.body_comparison_worker = CharacterBodyComparisonWorker(
-            character_image=self.approved_reference_image.image,
+            character_image=self.pending_clothing_base_candidate.image,
             clothing_type=clothing_type,
             settings=comparison_settings,
         )
@@ -2630,6 +2704,14 @@ class GenAILabWindow(QMainWindow):
                     neutralized_pixel_count=agnostic_candidate.neutralized_pixel_count,
                     neutralized_percent=agnostic_candidate.neutralized_percent,
                     raw_mask_coverage_percent=agnostic_candidate.raw_mask_coverage_percent,
+                    remaining_clothing_pixel_count=(
+                        comparison_candidate.clothing_removal_verification
+                        .remaining_clothing_pixel_count
+                    ),
+                    clothing_removal_percent=(
+                        comparison_candidate.clothing_removal_verification
+                        .removal_percent
+                    ),
                     changed_pixel_count_outside_mask=agnostic_candidate.changed_pixel_count_outside_mask,
                     expansion_radius_pixels=(
                         mask_refinement.expansion_radius_pixels
@@ -2662,8 +2744,13 @@ class GenAILabWindow(QMainWindow):
                 f"({mask_refinement.safe_change_percent:.3f}%), "
                 f"원본 마스크 포함률="
                 f"{agnostic_candidate.raw_mask_coverage_percent:.3f}%, "
+                f"기존 의상 잔여="
+                f"{comparison_candidate.clothing_removal_verification.remaining_clothing_pixel_count:,}px, "
+                f"기존 의상 제거율="
+                f"{comparison_candidate.clothing_removal_verification.removal_percent:.3f}%, "
                 f"영역 밖 변경={agnostic_candidate.changed_pixel_count_outside_mask}px"
             )
+            self.start_generation()
         finally:
             comparison_candidate.close()
 
@@ -2818,6 +2905,7 @@ class GenAILabWindow(QMainWindow):
         if self.pending_character_candidate is not None:
             QMessageBox.information(self, "안내", "현재 후보를 먼저 판단하세요.")
             return
+        self.release_pending_clothing_base_candidate()
         self.outfit_path = None
         self.pending_outfit_path = None
         self.release_clothing_mask_state()
@@ -2845,14 +2933,18 @@ class GenAILabWindow(QMainWindow):
                 quality_report,
             )
             preparation_result.original_image.close()
-            self.generate_button.setEnabled(self.outfit_path is None)
-            self.body_comparison_button.setEnabled(
-                self.outfit_path is not None
-                and self.confirmed_clothing_design is not None
+            self.generate_button.setEnabled(
+                self.outfit_path is None
+                or self.confirmed_clothing_design is not None
             )
+            self.body_comparison_button.setEnabled(False)
             self.status_label.setText(
                 "상태: 원본 참조 이미지 사용 가능 - "
-                + ("신체 비교 필요" if self.outfit_path else "생성 준비 완료")
+                + (
+                    "기준 후보 생성 필요"
+                    if self.outfit_path
+                    else "생성 준비 완료"
+                )
             )
             return
 
@@ -2866,14 +2958,18 @@ class GenAILabWindow(QMainWindow):
                 enhancement_candidate,
                 source_name,
             )
-            self.generate_button.setEnabled(self.outfit_path is None)
-            self.body_comparison_button.setEnabled(
-                self.outfit_path is not None
-                and self.confirmed_clothing_design is not None
+            self.generate_button.setEnabled(
+                self.outfit_path is None
+                or self.confirmed_clothing_design is not None
             )
+            self.body_comparison_button.setEnabled(False)
             self.status_label.setText(
                 "상태: 보정 참조 이미지 승인 - "
-                + ("신체 비교 필요" if self.outfit_path else "생성 준비 완료")
+                + (
+                    "기준 후보 생성 필요"
+                    if self.outfit_path
+                    else "생성 준비 완료"
+                )
             )
         else:
             self.approved_reference_image = None
@@ -2904,6 +3000,7 @@ class GenAILabWindow(QMainWindow):
         if self.approved_reference_image is not None:
             self.approved_reference_image.image.close()
         self.approved_reference_image = None
+        self.release_pending_clothing_base_candidate()
         self.release_confirmed_character_body_comparison()
         self.body_comparison_clothing_category = None
         self.body_comparison_button.setEnabled(False)
@@ -2933,18 +3030,13 @@ class GenAILabWindow(QMainWindow):
                 "참조 이미지 화질 확인과 보정 이미지 승인을 먼저 완료하세요.",
             )
             return
-        if self.outfit_path is not None:
+        if (
+            self.outfit_path is not None
+            and self.confirmed_character_body_comparison is not None
+        ):
             selected_clothing_category = ClothingCategory(
                 self.clothing_category_combo.currentData()
             )
-            if self.confirmed_character_body_comparison is None:
-                QMessageBox.information(
-                    self,
-                    "캐릭터 신체 비교 미승인",
-                    "캐릭터 신체 비교 시작 버튼을 누르고 Human-Agnostic Image를 "
-                    "포함한 9개 중간 결과를 승인하세요.",
-                )
-                return
             if self.body_comparison_clothing_category is not selected_clothing_category:
                 self.invalidate_character_body_comparison()
                 QMessageBox.information(
@@ -3023,7 +3115,11 @@ class GenAILabWindow(QMainWindow):
             )
             clothing_reference_input = None
             catvton_settings = None
-            if self.outfit_path:
+            approved_agnostic_input = None
+            if (
+                self.outfit_path
+                and self.confirmed_character_body_comparison is not None
+            ):
                 if (
                     not self.clothing_region_candidates
                     or not self.clothing_region_measurements
@@ -3045,6 +3141,23 @@ class GenAILabWindow(QMainWindow):
                     region_box_xyxy=None,
                     approved_image=(
                         self.pending_clothing_extraction.extracted_image
+                    ),
+                )
+                approved_agnostic_input = CharacterAgnosticApprovedInput(
+                    human_agnostic_image=(
+                        self.confirmed_character_body_comparison
+                        .approved_human_agnostic_image.copy()
+                    ),
+                    approved_change_mask=(
+                        self.confirmed_character_body_comparison
+                        .approved_change_mask.copy()
+                    ),
+                    clothing_type=(
+                        self.confirmed_character_body_comparison.clothing_type
+                    ),
+                    approved_mask_pixel_count=(
+                        self.confirmed_character_body_comparison
+                        .safe_change_pixel_count
                     ),
                 )
                 runner_path = Path(str(clothing_config["runner_path"]))
@@ -3078,6 +3191,12 @@ class GenAILabWindow(QMainWindow):
                     timeout_seconds=int(
                         clothing_config["timeout_seconds"]
                     ),
+                    safety_check_enabled=bool(
+                        clothing_config.get(
+                            "safety_check_enabled",
+                            False,
+                        )
+                    ),
                 )
                 run_log.write_stage(
                     "의상 참조 입력",
@@ -3093,7 +3212,12 @@ class GenAILabWindow(QMainWindow):
                         f"닫기 반경={catvton_settings.mask_closing_radius_pixels}px, "
                         "보호 영역과 겹쳐 차단한 픽셀="
                         f"{self.confirmed_character_body_comparison.attempted_protected_overlap_pixels:,}px, "
-                        "CatVTON 별도 환경 사용"
+                        "CatVTON 별도 환경 사용, "
+                        "마스크 출처=user_approved, AutoMasker 실행=0회, "
+                        "안전 검사="
+                        f"{'활성화' if catvton_settings.safety_check_enabled else '비활성화'}, "
+                        "승인 마스크 픽셀="
+                        f"{approved_agnostic_input.approved_mask_pixel_count:,}px"
                     ),
                 )
 
@@ -3125,6 +3249,8 @@ class GenAILabWindow(QMainWindow):
                 run_log,
                 clothing_reference_input,
                 catvton_settings,
+                approved_agnostic_input,
+                self.pending_clothing_base_candidate,
                 self.pipeline,
             )
             self.worker.moveToThread(self.worker_thread)
@@ -3140,6 +3266,11 @@ class GenAILabWindow(QMainWindow):
             self.worker_thread.start()
             run_log = None
         except Exception as error:
+            if (
+                "approved_agnostic_input" in locals()
+                and approved_agnostic_input is not None
+            ):
+                approved_agnostic_input.close()
             error_message = str(error)
             if run_log is not None:
                 run_log.write_failure(
@@ -3191,6 +3322,24 @@ class GenAILabWindow(QMainWindow):
                         "사용자가 부분 보정 전 이미지를 선택했습니다."
                     ),
                 )
+        if (
+            self.outfit_path is not None
+            and self.confirmed_character_body_comparison is None
+            and character_candidate.before_clothing_image is None
+        ):
+            self.pending_clothing_base_candidate = character_candidate
+            self.show_character_candidate(character_candidate)
+            self.body_comparison_button.setEnabled(True)
+            self.generate_button.setEnabled(False)
+            self.status_label.setText(
+                "상태: 기준 후보 생성 완료 - 같은 후보의 신체 비교 시작"
+            )
+            self.start_character_body_comparison()
+            return
+
+        if self.pending_clothing_base_candidate is not None:
+            self.pending_clothing_base_candidate = None
+
         if character_candidate.before_clothing_image is not None:
             clothing_dialog = ClothingTryOnComparisonDialog(
                 character_candidate,
@@ -3430,6 +3579,7 @@ class GenAILabWindow(QMainWindow):
             self.release_pending_candidate(
                 "상태: 앱 종료 - 저장하지 않은 후보를 메모리에서 해제했습니다."
             )
+        self.release_pending_clothing_base_candidate()
         self.release_clothing_mask_state()
         self.release_approved_reference_image()
         self.pipeline = None

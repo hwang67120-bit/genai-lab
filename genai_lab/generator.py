@@ -1,12 +1,15 @@
 """생성 요청을 한 장씩 처리한다."""
 
 import time
+from dataclasses import replace
+from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from genai_lab.clothing import (
     CatVTONLocalSettings,
+    CharacterAgnosticApprovedInput,
     CharacterClothingProtectionError,
     ClothingReferenceInput,
     execute_catvton_clothing_try_on,
@@ -38,6 +41,7 @@ def generate_character_candidate(
     run_log: GenerationRunLog | None = None,
     clothing_reference_input: ClothingReferenceInput | None = None,
     catvton_settings: CatVTONLocalSettings | None = None,
+    approved_agnostic_input: CharacterAgnosticApprovedInput | None = None,
 ) -> CharacterGenerationCandidate:
     """AI로 후보 한 장을 만들고 파일 저장 없이 메모리 객체로 반환한다.
 
@@ -139,6 +143,10 @@ def generate_character_candidate(
             clothing_verification_warning_ko = (
                 "의상 참조가 있지만 CatVTON 실행 설정이 없습니다."
             )
+        elif approved_agnostic_input is None:
+            clothing_verification_warning_ko = (
+                "의상 참조가 있지만 사용자 승인 Human-Agnostic 입력이 없습니다."
+            )
         else:
             if run_log is not None:
                 run_log.write_stage(
@@ -152,6 +160,7 @@ def generate_character_candidate(
                 clothing_try_on_result = execute_catvton_clothing_try_on(
                     base_character_image=generated_image,
                     clothing_reference_input=clothing_reference_input,
+                    approved_agnostic_input=approved_agnostic_input,
                     settings=catvton_settings,
                     seed=generation_request.seed,
                 )
@@ -174,7 +183,15 @@ def generate_character_candidate(
                         "의상 참조 합성",
                         (
                             "완료, 의상 영역 밖 변경 픽셀="
-                            f"{changed_pixel_count}"
+                            f"{changed_pixel_count}, "
+                            "마스크 출처="
+                            f"{clothing_try_on_result.execution_metadata.mask_source}, "
+                            "AutoMasker 실행="
+                            f"{clothing_try_on_result.execution_metadata.automasker_run_count}회, "
+                            "안전 검사="
+                            f"{'활성화' if clothing_try_on_result.execution_metadata.safety_check_enabled else '비활성화'}, "
+                            "승인 마스크 픽셀="
+                            f"{clothing_try_on_result.execution_metadata.approved_mask_pixel_count:,}px"
                         ),
                     )
             except (CharacterClothingProtectionError, OSError) as error:
@@ -319,6 +336,107 @@ def generate_character_candidate(
     )
 
 
+def apply_clothing_to_generated_candidate(
+    base_candidate: CharacterGenerationCandidate,
+    clothing_reference_input: ClothingReferenceInput,
+    catvton_settings: CatVTONLocalSettings,
+    approved_agnostic_input: CharacterAgnosticApprovedInput,
+    run_log: GenerationRunLog | None = None,
+) -> CharacterGenerationCandidate:
+    """이미 생성된 같은 후보에 승인 마스크와 의상을 적용한다."""
+    if run_log is not None:
+        run_log.write_stage(
+            "의상 참조 합성",
+            "생성 후보 원본과 같은 좌표의 승인 마스크로 CatVTON 시작",
+        )
+    clothing_try_on_result = execute_catvton_clothing_try_on(
+        base_character_image=base_candidate.image,
+        clothing_reference_input=clothing_reference_input,
+        approved_agnostic_input=approved_agnostic_input,
+        settings=catvton_settings,
+        seed=base_candidate.seed,
+    )
+    if run_log is not None:
+        metadata = clothing_try_on_result.execution_metadata
+        run_log.write_stage(
+            "의상 참조 합성",
+            (
+                "완료, 인물 입력=generated_candidate, "
+                f"입력 크기={metadata.person_input_width}x"
+                f"{metadata.person_input_height}, "
+                "의상 영역 밖 변경 픽셀="
+                f"{clothing_try_on_result.candidate.verification.changed_pixel_count_outside_clothing}, "
+                f"승인 마스크 픽셀={metadata.approved_mask_pixel_count:,}px"
+            ),
+        )
+    return replace(
+        base_candidate,
+        image=clothing_try_on_result.candidate.image,
+        before_clothing_image=base_candidate.image,
+        clothing_change_mask=clothing_try_on_result.clothing_change_mask,
+        clothing_reference_name=clothing_reference_input.image_path.name,
+        clothing_category=clothing_reference_input.category.value,
+        clothing_try_on_status="completed",
+        clothing_verification_warning_ko=(
+            clothing_try_on_result.candidate.verification.reason_ko
+        ),
+    )
+
+
+def apply_clothing_to_generated_candidate(
+    base_candidate: CharacterGenerationCandidate,
+    clothing_reference_input: ClothingReferenceInput,
+    catvton_settings: CatVTONLocalSettings,
+    approved_agnostic_input: CharacterAgnosticApprovedInput,
+    run_log: GenerationRunLog | None = None,
+) -> CharacterGenerationCandidate:
+    """이미 생성된 같은 후보에 승인 마스크와 의상을 적용한다.
+
+    반환값:
+        의상 적용 전 후보와 변경 마스크를 포함한 사용자 검토 후보.
+
+    오류:
+        좌표 불일치 또는 CatVTON 실행 실패 시 원본 후보를 유지하고 중단한다.
+    """
+    if run_log is not None:
+        run_log.write_stage(
+            "의상 참조 합성",
+            "생성 후보 원본과 같은 좌표의 승인 마스크로 CatVTON 시작",
+        )
+    clothing_try_on_result = execute_catvton_clothing_try_on(
+        base_character_image=base_candidate.image,
+        clothing_reference_input=clothing_reference_input,
+        approved_agnostic_input=approved_agnostic_input,
+        settings=catvton_settings,
+        seed=base_candidate.seed,
+    )
+    if run_log is not None:
+        metadata = clothing_try_on_result.execution_metadata
+        run_log.write_stage(
+            "의상 참조 합성",
+            (
+                "완료, 인물 입력=generated_candidate, "
+                f"입력 크기={metadata.person_input_width}x"
+                f"{metadata.person_input_height}, "
+                "의상 영역 밖 변경 픽셀="
+                f"{clothing_try_on_result.candidate.verification.changed_pixel_count_outside_clothing}, "
+                f"승인 마스크 픽셀={metadata.approved_mask_pixel_count:,}px"
+            ),
+        )
+    return replace(
+        base_candidate,
+        image=clothing_try_on_result.candidate.image,
+        before_clothing_image=base_candidate.image,
+        clothing_change_mask=clothing_try_on_result.clothing_change_mask,
+        clothing_reference_name=clothing_reference_input.image_path.name,
+        clothing_category=clothing_reference_input.category.value,
+        clothing_try_on_status="completed",
+        clothing_verification_warning_ko=(
+            clothing_try_on_result.candidate.verification.reason_ko
+        ),
+    )
+
+
 def generate_images(
     pipeline,
     config: dict[str, Any],
@@ -418,4 +536,3 @@ def generate_images(
     result["finished_at"] = datetime.now().astimezone().isoformat()
     refresh_summary(result)
     write_json(result_path, result)
-

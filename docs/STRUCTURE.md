@@ -18,7 +18,7 @@
 | `gui_main.py` | 화면, 입력, 크기·문장·시드 준비와 작업 연결 | 사용자 입력과 데이터 가공이 섞여 있음 |
 | `genai_lab/model.py` | 모델과 GPU 준비 | 모델 실행을 돕는 역할로 유지 가능 |
 | `genai_lab/style.py` | 기준 이미지 준비 | 모델 실행을 돕는 역할로 유지 가능 |
-| `genai_lab/body_comparison.py` | SCHP·DensePose·DWPose 결과 계약, 의상 제거 마스크와 Human-Agnostic 후보 생성 | 승인 이미지·마스크의 CatVTON 입력 연결은 다음 단계 |
+| `genai_lab/body_comparison.py` | 같은 생성 후보의 SCHP·DensePose·DWPose 결과, 의상 제거 마스크, 잔여 0픽셀 검사와 Human-Agnostic 검토 자료 생성 | SCHP 미탐지 조각은 사용자 10번째 화면 검토 필요 |
 | `genai_lab/clothing.py` | CatVTON 별도 실행, 의상 허용 영역과 신체 보호 검사 | 합성 실패 시 기본 후보로 복구 |
 | `genai_lab/clothing_reference.py` | 의상 입력 정규화, 영역 최대 8개 선택, SAM2 구성 변환, 0~255 알파 마스크 합치기, 원본 RGB 추출과 작은 공백 판정 | 흰 와이셔츠 수동 확인 1건, 체감 약 99%, 자동 정확도 아님 |
 | `genai_lab/clothing_analysis.py` | WD14 모델·CSV 캐시 준비, 투명 의상 전처리, CPU ONNX 추론과 일반 태그 후보 생성 | 모델 378,536,310바이트, 35.0% 이상 최대 30개, 시험 추론 1회 3.735초 |

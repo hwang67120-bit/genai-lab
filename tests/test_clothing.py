@@ -1,9 +1,11 @@
 from dataclasses import dataclass
+import json
 
 import pytest
 from PIL import Image, ImageDraw
 
 from genai_lab.clothing import (
+    CharacterAgnosticApprovedInput,
     CharacterClothingProtectionError,
     CharacterClothingTryOnRequest,
     ClothingCategory,
@@ -12,6 +14,10 @@ from genai_lab.clothing import (
     create_character_try_on_protection_plan,
     find_catvton_clothing_type,
     load_clothing_reference_image,
+    load_catvton_execution_metadata,
+    validate_character_agnostic_approved_input,
+    validate_catvton_approved_coordinates,
+    validate_runner_mask_matches_approved_input,
 )
 
 
@@ -35,6 +41,122 @@ def create_mask(
     mask_image = Image.new("L", size, 0)
     ImageDraw.Draw(mask_image).rectangle(rectangle, fill=255)
     return mask_image
+
+
+def test_approved_agnostic_input_accepts_matching_mask_contract() -> None:
+    approved_mask = create_mask((8, 8), (2, 2, 5, 5))
+    approved_input = CharacterAgnosticApprovedInput(
+        human_agnostic_image=Image.new("RGB", (8, 8), (127, 127, 127)),
+        approved_change_mask=approved_mask,
+        clothing_type="upper",
+        approved_mask_pixel_count=16,
+    )
+
+    validate_character_agnostic_approved_input(approved_input, "upper")
+
+
+def test_approved_agnostic_input_rejects_recorded_pixel_mismatch() -> None:
+    approved_input = CharacterAgnosticApprovedInput(
+        human_agnostic_image=Image.new("RGB", (8, 8), (127, 127, 127)),
+        approved_change_mask=create_mask((8, 8), (2, 2, 5, 5)),
+        clothing_type="upper",
+        approved_mask_pixel_count=15,
+    )
+
+    with pytest.raises(
+        CharacterClothingProtectionError,
+        match="픽셀 수",
+    ):
+        validate_character_agnostic_approved_input(approved_input, "upper")
+
+
+def test_runner_mask_must_equal_user_approved_mask() -> None:
+    approved_mask = create_mask((8, 8), (2, 2, 5, 5))
+    changed_runner_mask = create_mask((8, 8), (1, 1, 5, 5))
+
+    with pytest.raises(
+        CharacterClothingProtectionError,
+        match="승인 마스크와 다릅니다",
+    ):
+        validate_runner_mask_matches_approved_input(
+            changed_runner_mask,
+            approved_mask,
+        )
+
+
+def test_catvton_metadata_confirms_disabled_safety_check(tmp_path) -> None:
+    metadata_path = tmp_path / "execution_metadata.json"
+    metadata_path.write_text(
+        json.dumps(
+            {
+                "mask_source": "user_approved",
+                "automasker_run_count": 0,
+                "approved_image_width": 8,
+                "approved_image_height": 8,
+                "approved_mask_pixel_count": 16,
+                "processed_mask_pixel_count": 64,
+                "safety_check_enabled": False,
+                "person_input_source": "generated_candidate",
+                "person_input_width": 8,
+                "person_input_height": 8,
+            }
+        ),
+        encoding="utf-8",
+    )
+    approved_input = CharacterAgnosticApprovedInput(
+        human_agnostic_image=Image.new("RGB", (8, 8), "gray"),
+        approved_change_mask=create_mask((8, 8), (2, 2, 5, 5)),
+        clothing_type="upper",
+        approved_mask_pixel_count=16,
+    )
+
+    execution_metadata = load_catvton_execution_metadata(
+        metadata_path,
+        approved_input,
+        expected_safety_check_enabled=False,
+    )
+
+    assert execution_metadata.safety_check_enabled is False
+    assert execution_metadata.person_input_source == "generated_candidate"
+
+
+def test_catvton_metadata_rejects_unexpected_safety_check_state(
+    tmp_path,
+) -> None:
+    metadata_path = tmp_path / "execution_metadata.json"
+    metadata_path.write_text(
+        json.dumps(
+            {
+                "mask_source": "user_approved",
+                "automasker_run_count": 0,
+                "approved_image_width": 8,
+                "approved_image_height": 8,
+                "approved_mask_pixel_count": 16,
+                "processed_mask_pixel_count": 64,
+                "safety_check_enabled": True,
+                "person_input_source": "generated_candidate",
+                "person_input_width": 8,
+                "person_input_height": 8,
+            }
+        ),
+        encoding="utf-8",
+    )
+    approved_input = CharacterAgnosticApprovedInput(
+        human_agnostic_image=Image.new("RGB", (8, 8), "gray"),
+        approved_change_mask=create_mask((8, 8), (2, 2, 5, 5)),
+        clothing_type="upper",
+        approved_mask_pixel_count=16,
+    )
+
+    with pytest.raises(
+        CharacterClothingProtectionError,
+        match="안전 검사 실행 기록",
+    ):
+        load_catvton_execution_metadata(
+            metadata_path,
+            approved_input,
+            expected_safety_check_enabled=False,
+        )
 
 
 def test_clothing_try_on_changes_only_allowed_clothing_pixels() -> None:
@@ -152,3 +274,37 @@ def test_clothing_reference_uses_only_approved_region(tmp_path) -> None:
         assert clothing_reference_image.getpixel((0, 0)) == (0, 0, 255)
     finally:
         clothing_reference_image.close()
+
+
+def test_catvton_coordinates_accept_same_generated_candidate_size() -> None:
+    base_image = Image.new("RGB", (8, 12), "white")
+    approved_input = CharacterAgnosticApprovedInput(
+        human_agnostic_image=Image.new("RGB", (8, 12), "gray"),
+        approved_change_mask=Image.new("L", (8, 12), 255),
+        clothing_type="overall",
+        approved_mask_pixel_count=96,
+    )
+    try:
+        validate_catvton_approved_coordinates(base_image, approved_input)
+    finally:
+        base_image.close()
+        approved_input.close()
+
+
+def test_catvton_coordinates_reject_reference_sized_mask() -> None:
+    base_image = Image.new("RGB", (8, 12), "white")
+    approved_input = CharacterAgnosticApprovedInput(
+        human_agnostic_image=Image.new("RGB", (10, 16), "gray"),
+        approved_change_mask=Image.new("L", (10, 16), 255),
+        clothing_type="overall",
+        approved_mask_pixel_count=160,
+    )
+    try:
+        with pytest.raises(
+            CharacterClothingProtectionError,
+            match="Human-Agnostic 이미지 크기가 다릅니다",
+        ):
+            validate_catvton_approved_coordinates(base_image, approved_input)
+    finally:
+        base_image.close()
+        approved_input.close()

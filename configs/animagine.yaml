@@ -84,6 +84,7 @@ character_body_comparison:
 
 clothing_try_on:
   enabled: true
+  safety_check_enabled: false
   python_executable: D:/genai-cache/catvton-venv/Scripts/python.exe
   repository_path: D:/genai-cache/tools/CatVTON
   runner_path: scripts/catvton_runner.py

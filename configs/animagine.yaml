@@ -75,12 +75,12 @@ character_body_comparison:
   width: 576
   height: 1024
   timeout_seconds: 1800
-  pose_device: cpu
-  minimum_pose_confidence: 0.30
   mask_expansion_ratio: 0.01
   minimum_mask_expansion_pixels: 5
   maximum_mask_expansion_pixels: 15
   mask_closing_radius_pixels: 2
+  foreground_model_id: isnet-anime
+  foreground_expansion_pixels: 15
 
 pose_reference_estimation:
   python_executable: D:/genai-cache/catvton-venv/Scripts/python.exe
@@ -91,6 +91,18 @@ pose_reference_estimation:
   pose_device: cpu
   minimum_pose_confidence: 0.30
 
+# DWPose 실패·품질 미달 때 마지막 사용자 승인 자세를 재승인 후 사용한다.
+pose_fallback:
+  enabled: true
+  library_root: D:/genai-cache/genai-lab/approved-poses
+  default_pose_id: last-approved
+  minimum_detected_joint_count: 8
+  require_shoulder: true
+  require_hip: true
+  require_knee: true
+  require_ankle: true
+  require_user_approval: true
+
 pose_control:
   enabled: true
   model_id: xinsir/controlnet-openpose-sdxl-1.0
@@ -98,6 +110,15 @@ pose_control:
   guidance_start: 0.00
   guidance_end: 0.80
   original_image_change_strength: 0.35
+
+# 실제 결과 3건을 먼저 확보하는 임시 관측 전용 정책이다.
+# 자세 일치 품질은 기록만 하며 생성·의상 합성을 추가로 차단하지 않는다.
+pose_result_policy:
+  mode: observe_only
+  target_sample_count: 3
+  block_on_pose_mismatch: false
+  switch_to_text_to_image: false
+  use_identity_crop: false
 
 clothing_try_on:
   enabled: true
@@ -113,12 +134,40 @@ clothing_try_on:
   height: 1024
   inference_steps: 30
   guidance_scale: 2.5
+  mask_blur_factor: 9
   mixed_precision: bf16
   timeout_seconds: 1800
   mask_expansion_ratio: 0.01
   mask_expansion_min_pixels: 5
   mask_expansion_max_pixels: 15
   mask_closing_radius: 2
+
+garment_inpaint:
+  enabled: true
+  python_executable: D:/genai-cache/venv/Scripts/python.exe
+  runner_path: scripts/garment_inpaint_runner.py
+  temporary_root: D:/genai-cache/temp/garment-inpaint
+  benchmark_root: outputs/debug_benchmark
+  cache_dir: D:/genai-cache/huggingface
+  base_model_id: diffusers/stable-diffusion-xl-1.0-inpainting-0.1
+  model_variant: fp16
+  adapter_repository: h94/IP-Adapter
+  adapter_subfolder: sdxl_models
+  adapter_weight: ip-adapter-plus_sdxl_vit-h.safetensors
+  adapter_image_encoder_subfolder: models/image_encoder
+  strength: 0.90
+  inference_steps: 28
+  guidance_scale: 5.5
+  ip_adapter_scale: 0.80
+  padding_mask_crop: 64
+  mask_threshold: 128
+  garment_board_size: 1024
+  garment_board_outer_padding: 32
+  garment_board_cell_padding: 16
+  garment_board_minimum_component_pixels: 16
+  garment_board_maximum_components: 8
+  timeout_seconds: 1800
+  dtype: float16
 
 
 detail_correction:

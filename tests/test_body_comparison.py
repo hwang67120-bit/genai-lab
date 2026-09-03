@@ -35,13 +35,17 @@ def test_refine_mask_closes_hole_expands_edge_and_protects_body() -> None:
     raw_mask_array[31:33, 31:33] = 0
     protection_mask_array = np.zeros((64, 64), dtype=np.uint8)
     protection_mask_array[18:24, 18:24] = 255
+    foreground_mask_array = np.full((64, 64), 255, dtype=np.uint8)
 
     raw_mask = Image.fromarray(raw_mask_array, mode="L")
     protection_mask = Image.fromarray(protection_mask_array, mode="L")
+    foreground_mask = Image.fromarray(foreground_mask_array, mode="L")
     refinement = refine_character_clothing_change_mask(
         raw_clothing_mask=raw_mask,
         identity_protection_mask=protection_mask,
+        character_foreground_mask=foreground_mask,
         expansion_radius_pixels=5,
+        foreground_expansion_pixels=15,
         closing_radius_pixels=2,
     )
     try:
@@ -54,21 +58,55 @@ def test_refine_mask_closes_hole_expands_edge_and_protects_body() -> None:
         refinement.close()
         raw_mask.close()
         protection_mask.close()
+        foreground_mask.close()
 
 
 def test_refine_mask_rejects_expansion_outside_fixed_range() -> None:
     raw_mask = Image.new("L", (32, 32), 255)
     protection_mask = Image.new("L", (32, 32), 0)
+    foreground_mask = Image.new("L", (32, 32), 255)
     try:
         with pytest.raises(CharacterBodyComparisonError, match="5~15픽셀"):
             refine_character_clothing_change_mask(
                 raw_clothing_mask=raw_mask,
                 identity_protection_mask=protection_mask,
+                character_foreground_mask=foreground_mask,
                 expansion_radius_pixels=4,
             )
     finally:
         raw_mask.close()
         protection_mask.close()
+        foreground_mask.close()
+
+
+def test_refine_mask_rejects_clothing_outside_character_foreground() -> None:
+    raw_mask_array = np.zeros((128, 128), dtype=np.uint8)
+    raw_mask_array[50:78, 50:78] = 255
+    raw_mask_array[5:10, 5:10] = 255
+    foreground_mask_array = np.zeros((128, 128), dtype=np.uint8)
+    foreground_mask_array[40:88, 40:88] = 255
+
+    raw_mask = Image.fromarray(raw_mask_array, mode="L")
+    protection_mask = Image.new("L", (128, 128), 0)
+    foreground_mask = Image.fromarray(foreground_mask_array, mode="L")
+    refinement = refine_character_clothing_change_mask(
+        raw_clothing_mask=raw_mask,
+        identity_protection_mask=protection_mask,
+        character_foreground_mask=foreground_mask,
+        expansion_radius_pixels=5,
+        foreground_expansion_pixels=15,
+        closing_radius_pixels=2,
+    )
+    try:
+        assert refinement.safe_change_mask.getpixel((64, 64)) == 255
+        assert refinement.safe_change_mask.getpixel((7, 7)) == 0
+        assert refinement.outside_foreground_rejected_pixel_count > 0
+        assert refinement.foreground_expansion_pixels == 15
+    finally:
+        refinement.close()
+        raw_mask.close()
+        protection_mask.close()
+        foreground_mask.close()
 
 
 def test_create_human_agnostic_image_neutralizes_only_approved_mask() -> None:
@@ -139,10 +177,14 @@ def test_create_human_agnostic_image_rejects_empty_erasure_mask() -> None:
 def test_verify_original_clothing_removal_passes_with_zero_remaining_pixels() -> None:
     raw_mask = Image.new("L", (4, 4), 0)
     approved_mask = Image.new("L", (4, 4), 0)
+    protection_mask = Image.new("L", (4, 4), 0)
+    foreground_mask = Image.new("L", (4, 4), 255)
     raw_mask.putpixel((1, 1), 255)
     approved_mask.putpixel((1, 1), 255)
 
-    verification = verify_original_clothing_removal(raw_mask, approved_mask)
+    verification = verify_original_clothing_removal(
+        raw_mask, approved_mask, protection_mask, foreground_mask
+    )
     try:
         assert verification.passed is True
         assert verification.detected_clothing_pixel_count == 1
@@ -153,16 +195,22 @@ def test_verify_original_clothing_removal_passes_with_zero_remaining_pixels() ->
         verification.close()
         raw_mask.close()
         approved_mask.close()
+        protection_mask.close()
+        foreground_mask.close()
 
 
 def test_verify_original_clothing_removal_blocks_remaining_pixel() -> None:
     raw_mask = Image.new("L", (4, 4), 0)
     approved_mask = Image.new("L", (4, 4), 0)
+    protection_mask = Image.new("L", (4, 4), 0)
+    foreground_mask = Image.new("L", (4, 4), 255)
     raw_mask.putpixel((1, 1), 255)
     raw_mask.putpixel((2, 2), 255)
     approved_mask.putpixel((1, 1), 255)
 
-    verification = verify_original_clothing_removal(raw_mask, approved_mask)
+    verification = verify_original_clothing_removal(
+        raw_mask, approved_mask, protection_mask, foreground_mask
+    )
     try:
         assert verification.passed is False
         assert verification.detected_clothing_pixel_count == 2
@@ -174,3 +222,71 @@ def test_verify_original_clothing_removal_blocks_remaining_pixel() -> None:
         verification.close()
         raw_mask.close()
         approved_mask.close()
+        protection_mask.close()
+        foreground_mask.close()
+
+
+def test_verify_original_clothing_removal_reports_protection_conflict() -> None:
+    raw_mask = Image.new("L", (4, 4), 0)
+    approved_mask = Image.new("L", (4, 4), 0)
+    protection_mask = Image.new("L", (4, 4), 0)
+    foreground_mask = Image.new("L", (4, 4), 255)
+    raw_mask.putpixel((1, 1), 255)
+    raw_mask.putpixel((2, 2), 255)
+    protection_mask.putpixel((1, 1), 255)
+    approved_mask.putpixel((2, 2), 255)
+
+    verification = verify_original_clothing_removal(
+        raw_mask, approved_mask, protection_mask, foreground_mask
+    )
+    try:
+        assert verification.passed is False
+        assert verification.status == "needs_review"
+        assert verification.detected_clothing_pixel_count == 2
+        assert verification.protected_overlap_pixel_count == 1
+        assert verification.verifiable_clothing_pixel_count == 2
+        assert verification.removed_clothing_pixel_count == 1
+        assert verification.remaining_clothing_pixel_count == 1
+        assert verification.removal_percent == 50.0
+        assert verification.protected_conflict_mask.getpixel((1, 1)) == 255
+    finally:
+        verification.close()
+        raw_mask.close()
+        approved_mask.close()
+        protection_mask.close()
+        foreground_mask.close()
+
+
+def test_verify_original_clothing_removal_excludes_outside_foreground() -> None:
+    raw_mask = Image.new("L", (4, 4), 0)
+    approved_mask = Image.new("L", (4, 4), 0)
+    protection_mask = Image.new("L", (4, 4), 0)
+    foreground_mask = Image.new("L", (4, 4), 0)
+    raw_mask.putpixel((1, 1), 255)
+    raw_mask.putpixel((3, 3), 255)
+    approved_mask.putpixel((1, 1), 255)
+    foreground_mask.putpixel((1, 1), 255)
+
+    verification = verify_original_clothing_removal(
+        raw_mask,
+        approved_mask,
+        protection_mask,
+        foreground_mask,
+    )
+    try:
+        assert verification.passed is True
+        assert verification.detected_clothing_pixel_count == 2
+        assert verification.outside_foreground_pixel_count == 1
+        assert verification.outside_foreground_percent == 50.0
+        assert verification.protected_overlap_pixel_count == 0
+        assert verification.verifiable_clothing_pixel_count == 1
+        assert verification.removed_clothing_pixel_count == 1
+        assert verification.remaining_clothing_pixel_count == 0
+        assert verification.removal_percent == 100.0
+        assert verification.outside_foreground_mask.getpixel((3, 3)) == 255
+    finally:
+        verification.close()
+        raw_mask.close()
+        approved_mask.close()
+        protection_mask.close()
+        foreground_mask.close()

@@ -97,6 +97,7 @@ def generate_character_candidate(
     )
     if approved_pose_estimation is not None:
         pose_config = config.get("pose_control", {})
+        pose_result_policy = config.get("pose_result_policy", {})
         if not pose_config.get("enabled", False):
             raise RuntimeError(
                 "승인 자세가 있지만 설정 'pose_control.enabled'가 꺼져 있습니다."
@@ -117,6 +118,20 @@ def generate_character_candidate(
             pose_config["original_image_change_strength"]
         )
         if run_log is not None:
+            run_log.write_stage(
+                "임시 자세 결과 정책",
+                (
+                    f"모드={pose_result_policy.get('mode', 'observe_only')}, "
+                    f"목표 표본={pose_result_policy.get('target_sample_count', 3)}건, "
+                    "자세 불일치 차단="
+                    f"{int(bool(pose_result_policy.get('block_on_pose_mismatch', False)))}회, "
+                    "Text2Img 전환="
+                    f"{'사용' if pose_result_policy.get('switch_to_text_to_image', False) else '미사용'}, "
+                    "IP-Adapter 크롭="
+                    f"{'사용' if pose_result_policy.get('use_identity_crop', False) else '미사용'}, "
+                    "기존 Img2Img·전체 참조 IP-Adapter 유지"
+                ),
+            )
             run_log.write_stage(
                 "자세 제어 입력",
                 (
@@ -201,6 +216,9 @@ def generate_character_candidate(
 
     before_clothing_image = None
     clothing_change_mask = None
+    raw_clothing_try_on_image = None
+    clothing_difference_image = None
+    clothing_effect_metrics = None
     clothing_try_on_status = "not_requested"
     clothing_verification_warning_ko = None
     if clothing_reference_input is not None:
@@ -236,9 +254,23 @@ def generate_character_candidate(
                 clothing_change_mask = (
                     clothing_try_on_result.clothing_change_mask
                 )
-                clothing_try_on_status = "completed"
+                raw_clothing_try_on_image = (
+                    clothing_try_on_result.raw_try_on_image
+                )
+                clothing_difference_image = (
+                    clothing_try_on_result.difference_image
+                )
+                clothing_effect_metrics = clothing_try_on_result.effect_metrics
+                clothing_try_on_status = (
+                    "no_effect"
+                    if clothing_effect_metrics.no_effect
+                    else "completed"
+                )
                 clothing_verification_warning_ko = (
-                    clothing_try_on_result.candidate.verification.reason_ko
+                    "CatVTON 최종 합성의 승인 영역 안 변경이 0px입니다. "
+                    "원시 출력과 차이맵을 확인하세요."
+                    if clothing_effect_metrics.no_effect
+                    else clothing_try_on_result.candidate.verification.reason_ko
                 )
                 if run_log is not None:
                     changed_pixel_count = (
@@ -257,7 +289,16 @@ def generate_character_candidate(
                             "안전 검사="
                             f"{'활성화' if clothing_try_on_result.execution_metadata.safety_check_enabled else '비활성화'}, "
                             "승인 마스크 픽셀="
-                            f"{clothing_try_on_result.execution_metadata.approved_mask_pixel_count:,}px"
+                            f"{clothing_try_on_result.execution_metadata.approved_mask_pixel_count:,}px, "
+                            "원시 model_mask 안 변경="
+                            f"{clothing_effect_metrics.raw_changed_inside_model_mask:,}px, "
+                            "최종 승인 영역 안 변경="
+                            f"{clothing_effect_metrics.final_changed_inside_approved_mask:,}px, "
+                            "보호 합성 제거="
+                            f"{clothing_effect_metrics.discarded_by_protection_pixels:,}px, "
+                            "승인 영역 RGB L1 평균="
+                            f"{clothing_effect_metrics.mean_rgb_l1_inside:.4f}, "
+                            f"상태={clothing_try_on_status}"
                         ),
                     )
             except (CharacterClothingProtectionError, OSError) as error:
@@ -371,6 +412,9 @@ def generate_character_candidate(
         ),
         clothing_try_on_status=clothing_try_on_status,
         clothing_verification_warning_ko=clothing_verification_warning_ko,
+        raw_clothing_try_on_image=raw_clothing_try_on_image,
+        clothing_difference_image=clothing_difference_image,
+        clothing_effect_metrics=clothing_effect_metrics,
         reference_image_name=generation_request.reference_image_name,
         reference_enhancement_applied=(
             generation_request.reference_enhancement_applied
@@ -425,6 +469,16 @@ def apply_clothing_to_generated_candidate(
         settings=catvton_settings,
         seed=base_candidate.seed,
     )
+    effect_metrics = clothing_try_on_result.effect_metrics
+    clothing_try_on_status = (
+        "no_effect" if effect_metrics.no_effect else "completed"
+    )
+    verification_message = (
+        "CatVTON 최종 합성의 승인 영역 안 변경이 0px입니다. "
+        "원시 출력과 차이맵을 확인하세요."
+        if effect_metrics.no_effect
+        else clothing_try_on_result.candidate.verification.reason_ko
+    )
     if run_log is not None:
         metadata = clothing_try_on_result.execution_metadata
         run_log.write_stage(
@@ -440,7 +494,18 @@ def apply_clothing_to_generated_candidate(
                 f"{metadata.clothing_alpha_coverage_percent:.3f}%, "
                 "의상 영역 밖 변경 픽셀="
                 f"{clothing_try_on_result.candidate.verification.changed_pixel_count_outside_clothing}, "
-                f"승인 마스크 픽셀={metadata.approved_mask_pixel_count:,}px"
+                f"승인 마스크 픽셀={metadata.approved_mask_pixel_count:,}px, "
+                f"model_mask 출처={metadata.model_mask_source}, "
+                f"model_mask 픽셀={metadata.model_mask_pixel_count:,}px, "
+                "원시 model_mask 안 변경="
+                f"{effect_metrics.raw_changed_inside_model_mask:,}px, "
+                "최종 승인 영역 안 변경="
+                f"{effect_metrics.final_changed_inside_approved_mask:,}px, "
+                "보호 합성 제거="
+                f"{effect_metrics.discarded_by_protection_pixels:,}px, "
+                "승인 영역 RGB L1 평균="
+                f"{effect_metrics.mean_rgb_l1_inside:.4f}, "
+                f"상태={clothing_try_on_status}"
             ),
         )
     return replace(
@@ -448,66 +513,13 @@ def apply_clothing_to_generated_candidate(
         image=clothing_try_on_result.candidate.image,
         before_clothing_image=base_candidate.image,
         clothing_change_mask=clothing_try_on_result.clothing_change_mask,
+        raw_clothing_try_on_image=clothing_try_on_result.raw_try_on_image,
+        clothing_difference_image=clothing_try_on_result.difference_image,
+        clothing_effect_metrics=effect_metrics,
         clothing_reference_name=clothing_reference_input.image_path.name,
         clothing_category=clothing_reference_input.category.value,
-        clothing_try_on_status="completed",
-        clothing_verification_warning_ko=(
-            clothing_try_on_result.candidate.verification.reason_ko
-        ),
-    )
-
-
-def apply_clothing_to_generated_candidate(
-    base_candidate: CharacterGenerationCandidate,
-    clothing_reference_input: ClothingReferenceInput,
-    catvton_settings: CatVTONLocalSettings,
-    approved_agnostic_input: CharacterAgnosticApprovedInput,
-    run_log: GenerationRunLog | None = None,
-) -> CharacterGenerationCandidate:
-    """이미 생성된 같은 후보에 승인 마스크와 의상을 적용한다.
-
-    반환값:
-        의상 적용 전 후보와 변경 마스크를 포함한 사용자 검토 후보.
-
-    오류:
-        좌표 불일치 또는 CatVTON 실행 실패 시 원본 후보를 유지하고 중단한다.
-    """
-    if run_log is not None:
-        run_log.write_stage(
-            "의상 참조 합성",
-            "생성 후보 원본과 같은 좌표의 승인 마스크로 CatVTON 시작",
-        )
-    clothing_try_on_result = execute_catvton_clothing_try_on(
-        base_character_image=base_candidate.image,
-        clothing_reference_input=clothing_reference_input,
-        approved_agnostic_input=approved_agnostic_input,
-        settings=catvton_settings,
-        seed=base_candidate.seed,
-    )
-    if run_log is not None:
-        metadata = clothing_try_on_result.execution_metadata
-        run_log.write_stage(
-            "의상 참조 합성",
-            (
-                "완료, 인물 입력=generated_candidate, "
-                f"입력 크기={metadata.person_input_width}x"
-                f"{metadata.person_input_height}, "
-                "의상 영역 밖 변경 픽셀="
-                f"{clothing_try_on_result.candidate.verification.changed_pixel_count_outside_clothing}, "
-                f"승인 마스크 픽셀={metadata.approved_mask_pixel_count:,}px"
-            ),
-        )
-    return replace(
-        base_candidate,
-        image=clothing_try_on_result.candidate.image,
-        before_clothing_image=base_candidate.image,
-        clothing_change_mask=clothing_try_on_result.clothing_change_mask,
-        clothing_reference_name=clothing_reference_input.image_path.name,
-        clothing_category=clothing_reference_input.category.value,
-        clothing_try_on_status="completed",
-        clothing_verification_warning_ko=(
-            clothing_try_on_result.candidate.verification.reason_ko
-        ),
+        clothing_try_on_status=clothing_try_on_status,
+        clothing_verification_warning_ko=verification_message,
     )
 
 

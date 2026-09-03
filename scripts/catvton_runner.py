@@ -8,12 +8,18 @@ import sys
 
 from PIL import Image, ImageOps
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
+
+from genai_lab.image_digest import calculate_image_pixel_sha256
+
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repository-path", required=True)
     parser.add_argument("--person-image", required=True)
     parser.add_argument("--approved-change-mask", required=True)
+    parser.add_argument("--approved-model-mask", required=True)
     parser.add_argument("--clothing-image", required=True)
     parser.add_argument("--clothing-source-width", type=int, required=True)
     parser.add_argument("--clothing-source-height", type=int, required=True)
@@ -46,6 +52,11 @@ def parse_arguments() -> argparse.Namespace:
     )
     parser.add_argument("--seed", type=int, required=True)
     parser.add_argument("--skip-safety-check", action="store_true")
+    parser.add_argument("--mask-blur-factor", type=int, default=9)
+    parser.add_argument("--expected-person-sha256")
+    parser.add_argument("--expected-binary-mask-sha256")
+    parser.add_argument("--expected-model-mask-sha256")
+    parser.add_argument("--expected-clothing-sha256")
     return parser.parse_args()
 
 
@@ -67,6 +78,12 @@ def load_binary_mask(mask_path: str) -> Image.Image:
             grayscale_mask.close()
 
 
+def load_grayscale_mask(mask_path: str) -> Image.Image:
+    """0~255 블러 값을 보존한 독립 L 마스크를 반환한다."""
+    with Image.open(mask_path) as opened_image:
+        return opened_image.convert("L")
+
+
 def count_mask_pixels(mask_image: Image.Image) -> int:
     """128 이상인 마스크 픽셀 수를 계산한다."""
     histogram = mask_image.histogram()
@@ -85,7 +102,6 @@ def main() -> None:
 
     truststore.inject_into_ssl()
     import torch
-    from diffusers.image_processor import VaeImageProcessor
     from huggingface_hub import snapshot_download
 
     from model.pipeline import CatVTONPipeline
@@ -138,6 +154,29 @@ def main() -> None:
             "처리 크기로 변환한 승인 CatVTON 변경 픽셀이 0개입니다."
         )
 
+    model_mask = load_grayscale_mask(arguments.approved_model_mask)
+    expected_model_mask_size = (arguments.width, arguments.height)
+    if model_mask.size != expected_model_mask_size:
+        source_person_image.close()
+        approved_change_mask.close()
+        person_image.close()
+        processed_change_mask.close()
+        model_mask.close()
+        raise RuntimeError(
+            "승인 CatVTON model_mask 처리 크기가 다릅니다: "
+            f"승인={model_mask.size}, 설정={expected_model_mask_size}"
+        )
+    model_mask_pixel_count = int(
+        sum(model_mask.histogram()[1:])
+    )
+    if model_mask_pixel_count == 0:
+        source_person_image.close()
+        approved_change_mask.close()
+        person_image.close()
+        processed_change_mask.close()
+        model_mask.close()
+        raise RuntimeError("승인 CatVTON model_mask가 0픽셀입니다.")
+
     original_clothing_image = load_rgb_image(arguments.clothing_image)
     clothing_input_size = original_clothing_image.size
     clothing_input_pixel_count = (
@@ -151,6 +190,7 @@ def main() -> None:
         approved_change_mask.close()
         person_image.close()
         processed_change_mask.close()
+        model_mask.close()
         original_clothing_image.close()
         raise RuntimeError(
             "의상 조건 이미지가 승인 추출본보다 클 수 없습니다: "
@@ -165,6 +205,7 @@ def main() -> None:
         approved_change_mask.close()
         person_image.close()
         processed_change_mask.close()
+        model_mask.close()
         original_clothing_image.close()
         raise RuntimeError(
             "의상 알파 픽셀 수가 조건 이미지 범위를 벗어났습니다: "
@@ -184,6 +225,7 @@ def main() -> None:
         approved_change_mask.close()
         person_image.close()
         processed_change_mask.close()
+        model_mask.close()
         original_clothing_image.close()
         raise RuntimeError(
             "의상 알파 점유율 기록이 실제 조건 이미지와 다릅니다: "
@@ -198,19 +240,41 @@ def main() -> None:
     finally:
         original_clothing_image.close()
 
+    actual_hashes = {
+        "person": calculate_image_pixel_sha256(person_image, "RGB"),
+        "binary_mask": calculate_image_pixel_sha256(
+            processed_change_mask, "L"
+        ),
+        "model_mask": calculate_image_pixel_sha256(model_mask, "L"),
+        "clothing": calculate_image_pixel_sha256(clothing_image, "RGB"),
+    }
+    expected_hashes = {
+        "person": arguments.expected_person_sha256,
+        "binary_mask": arguments.expected_binary_mask_sha256,
+        "model_mask": arguments.expected_model_mask_sha256,
+        "clothing": arguments.expected_clothing_sha256,
+    }
+    missing_expected_hashes = tuple(
+        name for name, value in expected_hashes.items() if not value
+    )
+    if missing_expected_hashes:
+        raise RuntimeError(
+            "승인된 CatVTON Preflight 해시가 없습니다: "
+            f"{missing_expected_hashes}"
+        )
+    mismatched_hashes = tuple(
+        name
+        for name, expected_value in expected_hashes.items()
+        if actual_hashes[name] != expected_value
+    )
+    if mismatched_hashes:
+        raise RuntimeError(
+            "승인한 CatVTON Preflight 입력과 실제 모델 입력이 다릅니다: "
+            f"{mismatched_hashes}"
+        )
     checkpoint_path = snapshot_download(
         repo_id=arguments.model_id,
         cache_dir=arguments.cache_dir,
-    )
-    mask_processor = VaeImageProcessor(
-        vae_scale_factor=8,
-        do_normalize=False,
-        do_binarize=True,
-        do_convert_grayscale=True,
-    )
-    model_mask = mask_processor.blur(
-        processed_change_mask,
-        blur_factor=9,
     )
     pipeline = CatVTONPipeline(
         base_ckpt=arguments.base_model_id,
@@ -245,6 +309,8 @@ def main() -> None:
         "approved_image_height": approved_size[1],
         "approved_mask_pixel_count": approved_mask_pixel_count,
         "processed_mask_pixel_count": processed_mask_pixel_count,
+        "model_mask_pixel_count": model_mask_pixel_count,
+        "model_mask_source": "user_approved_preflight",
         "clothing_type": arguments.clothing_type,
         "safety_check_enabled": not arguments.skip_safety_check,
         "person_input_source": "generated_candidate",
@@ -258,6 +324,10 @@ def main() -> None:
         "clothing_alpha_coverage_percent": (
             measured_clothing_coverage_percent
         ),
+        "person_sha256": actual_hashes["person"],
+        "binary_mask_sha256": actual_hashes["binary_mask"],
+        "model_mask_sha256": actual_hashes["model_mask"],
+        "clothing_sha256": actual_hashes["clothing"],
     }
     try:
         resized_output_image.save(arguments.output_image)

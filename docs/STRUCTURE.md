@@ -12,26 +12,44 @@
 
 ## 현재 파일의 역할
 
+2026-09-03 추가 모듈: `target_masks.py`는 기준 캐릭터에 묶인 교체/특수 보호 승인 자료, `target_mask_review.py`는 기존 SAM2 선택 UI와 작업자를 연결하는 스크롤 승인창, `inpaint_quality.py`는 GPU 없는 중립색 잔여 후보 측정을 담당합니다. GUI 6/8에서 두 역할 선택 후 기존 신체·Human-Agnostic 승인을 이어갑니다.
+
 | 위치 | 현재 역할 | 현재 확인된 문제 |
 |---|---|---|
 | `run.py` | 명령 실행의 설정 검사와 전체 순서 | GUI 흐름과 동시에 고치지 않고 기존 시험 경로로 유지 |
-| `gui_main.py` | 화면, 입력, 크기·문장·시드 준비와 작업 연결 | 사용자 입력과 데이터 가공이 섞여 있음 |
+| `gui_main.py` | 입력 경로 등록, 사용자 승인 창과 기존 Worker 신호 연결 | 파일 선택 시 AI를 실행하지 않고 전체 생성 버튼 이후에만 Worker 시작 |
+| `genai_lab/workflow.py` | 활성 8단계, 현재 위치, 실패 위치와 재시도 횟수 관리 | 이미지와 모델을 소유하지 않는 GUI 임시 상태 |
 | `genai_lab/model.py` | 자세 승인 유무에 따라 일반 SDXL 또는 SDXL ControlNet Image-to-Image 모델과 GPU 준비 | 두 종류를 동시에 유지하지 않고 요청과 다른 기존 모델은 재사용하지 않음 |
 | `genai_lab/style.py` | 기준 이미지 준비 | 모델 실행을 돕는 역할로 유지 가능 |
 | `genai_lab/pose_reference.py` | 자세 원본 PNG·JPEG 규칙 검사와 첫 사용자 승인 | AI 호출 0회, 파일 저장 0개 |
 | `genai_lab/pose_estimation.py` | DWPose 검토 결과·승인 결과와 생성 크기 ControlNet 지도 준비 | 비율 유지, 자르기 0px, 빈 뼈대 지도 차단 |
+| `genai_lab/pose_fallback.py` | 마지막 승인 자세 PNG 2개·JSON 1개 저장, 관절 품질·SHA-256 검증과 독립 복사 | 임의 자세 선택 0회, 재승인 전 ControlNet 호출 0회 |
 | `scripts/pose_reference_runner.py` | 별도 CPU 환경에서 몸 관절 18개와 표준 OpenPose 지도 생성 | ControlNet과 이미지 생성은 호출하지 않음 |
-| `genai_lab/body_comparison.py` | 같은 생성 후보의 SCHP·DensePose·DWPose 결과, 의상 제거 마스크, 잔여 0픽셀 검사와 Human-Agnostic 검토 자료 생성 | SCHP 미탐지 조각은 사용자 10번째 화면 검토 필요 |
+| `genai_lab/body_comparison.py` | 같은 생성 후보의 SCHP·DensePose·isnet-anime 결과, 외곽 제한 의상 마스크, 외곽 안 잔여 0픽셀 검사와 Human-Agnostic 검토 자료 생성 | 외곽 밖 SCHP 오탐과 외곽 안 잔여를 분리 검토 |
+| `genai_lab/catvton_preflight.py` | 전처리 전 입력 5개·입력 SHA-256 3개와 공식 CatVTON 전처리·침범 분류 결과 9개·모델 입력 SHA-256 4개를 수집 | 보정 전 침범과 금지 영역 제한 후 최종 침범을 구분 |
+| `genai_lab/guardrails.py` | Human-Agnostic 수치를 `PASS·WARNING·BLOCK` 결과로 바꾸고 승인 가능 여부를 한 곳에서 계산 | 보정 전 제거된 침범은 WARNING, 최종 침범은 BLOCK |
+| `genai_lab/image_digest.py` | 이미지 모드·크기·픽셀 바이트 SHA-256 계산 | GUI 승인본과 실행기 입력 동일성 검증 |
 | `genai_lab/clothing.py` | CatVTON 별도 실행, 의상 허용 영역과 신체 보호 검사 | 합성 실패 시 기본 후보로 복구 |
+| `genai_lab/try_on_metrics.py` | CatVTON 원시 출력·최종 보호 합성의 영역별 변경 픽셀과 4배 차이맵 계산 | 최종 승인 영역 안 0픽셀 변경을 `no_effect`로 분류 |
+| `genai_lab/garment_warp.py` | 같은 캔버스의 의상 RGBA와 최소 5개 대응점을 OpenCV TPS로 변형 | 좌표 자동 추출과 생성 모델 연결 전 독립 PoC |
+| `genai_lab/garment_landmarks.py` | 승인 알파의 연결요소별 상·중·하단 좌우 6점과 노이즈 수치 추출 | 관절 좌표가 아닌 `mask_geometry_v1`; 복수 조각 단일 TPS 차단 |
+| `genai_lab/character_target_landmarks.py` | DWPose 의미 Y축을 생성 캔버스로 투영하고 승인 변경 마스크 안 TPS 목표 6점 추출 | 상의·하의·드레스·전신 의상만 지원; GUI 연결 전 독립 PoC |
+| `genai_lab/garment_component_matching.py` | 복수 의상 조각의 정규화 위치를 상체·하체·전신·좌우 신발 슬롯으로 제안 | 규칙 적합도만 산출하고 사용자 승인 전 TPS 자동 실행 차단 |
+| `genai_lab/garment_warp_review.py` | 조각별 TPS, 원시 통합, 마스크 밖 침범, 보호 결과와 오버레이 승인 후보 생성 | 진단·비교 자산이며 자동 생성 흐름 호출 0회 |
+| `genai_lab/garment_lineart.py` | 승인 TPS 의상의 외곽선·내부 디테일을 분리하고 ControlNet RGB 승인 후보 생성 | 진단·비교 자산이며 자동 생성 흐름 호출 0회 |
+| `genai_lab/garment_reference_board.py` | 승인 RGBA를 OpenCV 연결요소로 분리하고 IP-Adapter Plus용 1024px 참조 보드 구성 | 최대 8조각, 원본 변경 0px, 실제 보드 공개 |
+| `genai_lab/garment_inpaint.py` | `GarmentGenerationEngine`, 승인 Human-Agnostic 시작 이미지·별도 2D Inpaint 실행·영구 벤치마크·승인 마스크 보호 합성 | 원시 출력 직접 채택 금지, GUI 7/8 실행 단계 |
 | `genai_lab/clothing_reference.py` | 의상 입력 정규화, 영역 최대 8개 선택, SAM2 구성 변환, 0~255 알파 마스크 합치기, 원본 RGB 추출과 작은 공백 판정 | 흰 와이셔츠 수동 확인 1건, 체감 약 99%, 자동 정확도 아님 |
 | `genai_lab/clothing_analysis.py` | WD14 모델·CSV 캐시 준비, 투명 의상 전처리, CPU ONNX 추론과 일반 태그 후보 생성 | 모델 378,536,310바이트, 35.0% 이상 최대 30개, 시험 추론 1회 3.735초 |
 | `genai_lab/generator.py` | 모델 실행과 메모리 후보 반환 | Animagine·CatVTON·부분 보정 실행 순서 담당 |
 | `genai_lab/result.py` | 승인된 후보의 PNG와 JSON 기록 | 사용자 저장 승인 전에는 실행하지 않음 |
+| `scripts/catvton_preflight_runner.py` | CatVTON 공식 resize·padding·VAE mask blur만 별도 환경에서 실행 | 모델 다운로드·GPU 추론 0회 |
+| `scripts/garment_inpaint_runner.py` | 실제 SDXL Inpaint·IP-Adapter Plus를 별도 GPU 프로세스에서 실행하고 6단계 진행률 기록 | 모델 입력 PNG 3개·감사 PNG 1개·JSONL 최대 1개, 프로세스 종료 시 모델·GPU 캐시 해제 |
 | `configs/base.yaml` | 비교용 SD 1.5 설정 | 기존 명령 시험을 위해 유지 |
 | `configs/animagine.yaml` | GUI에서 사용하는 Animagine 설정 | 데이터 가공 블록이 읽어서 실행 준비 요청에 반영 |
 | `inputs/prompts.csv` | 명령 실행용 요청 목록 | GUI의 사용자 입력으로 사용하지 않음 |
 | `outputs` | 결과 저장 위치 | 승인된 PNG와 JSON만 남기는 구조로 변경 예정 |
-| `docs` | 범위, 흐름, 결정, 문제 해결과 수치·증거 작성 규칙 | 구현 전에 역할 경계를 합의하고 측정값과 근거를 같은 형식으로 남기기 위해 유지 |
+| `docs` | 범위, 흐름, 구현 계약, 결정, 문제 해결과 수치·증거 작성 규칙 | `IMPLEMENTATION_CONTRACT.md`에서 공식 기능 우선·직접 작성 범위·시나리오형 흐름을 구현 전에 확인 |
 | `tests` | 자동 확인 | 블록 경계가 다시 섞이지 않는지 확인 |
 
 ## 하향식 적용 후의 목표 역할

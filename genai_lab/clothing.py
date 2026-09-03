@@ -15,6 +15,12 @@ from PIL import Image, ImageChops, ImageFilter, ImageOps, UnidentifiedImageError
 from genai_lab.body_comparison import (
     calculate_mask_expansion_radius,
 )
+from genai_lab.image_digest import calculate_image_pixel_sha256
+from genai_lab.try_on_metrics import (
+    TryOnEffectMetricsResult,
+    create_try_on_difference_image,
+    measure_try_on_effect_metrics,
+)
 
 
 class ClothingCategory(str, Enum):
@@ -46,11 +52,18 @@ class CharacterAgnosticApprovedInput:
     approved_change_mask: Image.Image
     clothing_type: str
     approved_mask_pixel_count: int
+    approved_model_mask: Image.Image | None = None
+    preflight_person_sha256: str | None = None
+    preflight_binary_mask_sha256: str | None = None
+    preflight_model_mask_sha256: str | None = None
+    preflight_clothing_sha256: str | None = None
 
     def close(self) -> None:
-        """작업 스레드가 소유한 승인 이미지 2개를 해제한다."""
+        """작업 스레드가 소유한 승인 이미지와 마스크를 해제한다."""
         self.human_agnostic_image.close()
         self.approved_change_mask.close()
+        if self.approved_model_mask is not None:
+            self.approved_model_mask.close()
 
 
 @dataclass(frozen=True)
@@ -63,6 +76,8 @@ class CatVTONExecutionMetadata:
     approved_image_height: int
     approved_mask_pixel_count: int
     processed_mask_pixel_count: int
+    model_mask_pixel_count: int | None
+    model_mask_source: str | None
     safety_check_enabled: bool
     person_input_source: str
     person_input_width: int
@@ -73,6 +88,10 @@ class CatVTONExecutionMetadata:
     clothing_input_height: int
     clothing_alpha_pixel_count: int
     clothing_alpha_coverage_percent: float
+    person_sha256: str | None = None
+    binary_mask_sha256: str | None = None
+    model_mask_sha256: str | None = None
+    clothing_sha256: str | None = None
 
 
 @dataclass(frozen=True)
@@ -145,6 +164,36 @@ def load_clothing_reference_image(
     ).image
 
 
+def composite_catvton_input_on_white_background(
+    source_image: Image.Image,
+) -> Image.Image:
+    """CatVTON 입력의 투명 영역을 흰색으로 합성한 RGB 이미지를 반환한다."""
+    has_transparency = (
+        source_image.mode in {"RGBA", "LA"}
+        or (
+            source_image.mode == "P"
+            and "transparency" in source_image.info
+        )
+    )
+    if not has_transparency:
+        return source_image.convert("RGB")
+
+    rgba_image = source_image.convert("RGBA")
+    white_background = Image.new(
+        "RGBA",
+        rgba_image.size,
+        (255, 255, 255, 255),
+    )
+    try:
+        return Image.alpha_composite(
+            white_background,
+            rgba_image,
+        ).convert("RGB")
+    finally:
+        rgba_image.close()
+        white_background.close()
+
+
 def prepare_catvton_clothing_condition_image(
     clothing_reference_input: ClothingReferenceInput,
 ) -> CatVTONClothingConditionImage:
@@ -204,7 +253,14 @@ def prepare_catvton_clothing_condition_image(
     try:
         with Image.open(image_path) as opened_image:
             opened_image.load()
-            normalized_image = ImageOps.exif_transpose(opened_image).convert("RGB")
+            oriented_image = ImageOps.exif_transpose(opened_image)
+            try:
+                normalized_image = composite_catvton_input_on_white_background(
+                    oriented_image
+                )
+            finally:
+                if oriented_image is not opened_image:
+                    oriented_image.close()
             region_box = clothing_reference_input.region_box_xyxy
             if region_box is None:
                 width, height = normalized_image.size
@@ -449,6 +505,7 @@ class CatVTONLocalSettings:
     minimum_mask_expansion_pixels: int = 5
     maximum_mask_expansion_pixels: int = 15
     mask_closing_radius_pixels: int = 2
+    mask_blur_factor: int = 9
 
 
 @dataclass(frozen=True)
@@ -458,6 +515,9 @@ class CatVTONClothingTryOnResult:
     candidate: CharacterClothingTryOnCandidate
     clothing_change_mask: Image.Image
     execution_metadata: CatVTONExecutionMetadata
+    raw_try_on_image: Image.Image
+    difference_image: Image.Image
+    effect_metrics: TryOnEffectMetricsResult
 
 
 @dataclass(frozen=True)
@@ -503,6 +563,18 @@ def execute_catvton_clothing_try_on(
         base_character_image=base_character_image,
         approved_agnostic_input=approved_agnostic_input,
     )
+    approved_model_mask = approved_agnostic_input.approved_model_mask
+    if approved_model_mask is None:
+        raise CharacterClothingProtectionError(
+            "사용자가 승인한 최종 CatVTON model_mask가 없습니다."
+        )
+    expected_model_mask_size = (settings.width, settings.height)
+    if approved_model_mask.size != expected_model_mask_size:
+        raise CharacterClothingProtectionError(
+            "승인한 최종 CatVTON model_mask 처리 크기가 다릅니다: "
+            f"승인={approved_model_mask.size}, "
+            f"설정={expected_model_mask_size}"
+        )
     clothing_condition = prepare_catvton_clothing_condition_image(
         clothing_reference_input
     )
@@ -516,6 +588,9 @@ def execute_catvton_clothing_try_on(
         temporary_directory = Path(temporary_directory_name)
         person_input_path = temporary_directory / "base_character.png"
         approved_mask_input_path = temporary_directory / "approved_change_mask.png"
+        approved_model_mask_input_path = (
+            temporary_directory / "approved_model_mask.png"
+        )
         clothing_input_path = temporary_directory / "clothing.png"
         raw_output_path = temporary_directory / "raw_try_on.png"
         mask_output_path = temporary_directory / "clothing_mask.png"
@@ -526,12 +601,17 @@ def execute_catvton_clothing_try_on(
         approved_mask_input_image = (
             approved_agnostic_input.approved_change_mask.convert("L")
         )
+        approved_model_mask_input_image = approved_model_mask.convert("L")
         try:
             person_input_image.save(person_input_path)
             approved_mask_input_image.save(approved_mask_input_path)
+            approved_model_mask_input_image.save(
+                approved_model_mask_input_path
+            )
         finally:
             person_input_image.close()
             approved_mask_input_image.close()
+            approved_model_mask_input_image.close()
         clothing_reference_image.save(clothing_input_path)
         clothing_reference_image.close()
 
@@ -544,6 +624,8 @@ def execute_catvton_clothing_try_on(
             str(person_input_path),
             "--approved-change-mask",
             str(approved_mask_input_path),
+            "--approved-model-mask",
+            str(approved_model_mask_input_path),
             "--clothing-image",
             str(clothing_input_path),
             "--clothing-source-width",
@@ -556,6 +638,14 @@ def execute_catvton_clothing_try_on(
             f"{clothing_condition.alpha_coverage_percent:.6f}",
             "--clothing-type",
             catvton_clothing_type,
+            "--expected-person-sha256",
+            str(approved_agnostic_input.preflight_person_sha256 or ""),
+            "--expected-binary-mask-sha256",
+            str(approved_agnostic_input.preflight_binary_mask_sha256 or ""),
+            "--expected-model-mask-sha256",
+            str(approved_agnostic_input.preflight_model_mask_sha256 or ""),
+            "--expected-clothing-sha256",
+            str(approved_agnostic_input.preflight_clothing_sha256 or ""),
             "--output-image",
             str(raw_output_path),
             "--output-mask",
@@ -578,6 +668,8 @@ def execute_catvton_clothing_try_on(
             str(settings.inference_steps),
             "--guidance-scale",
             str(settings.guidance_scale),
+            "--mask-blur-factor",
+            str(settings.mask_blur_factor),
             "--mixed-precision",
             settings.mixed_precision,
             "--seed",
@@ -676,6 +768,7 @@ def execute_catvton_clothing_try_on(
         boundary_blur_radius=4.0,
     )
     safe_clothing_change_mask = protection_plan.clothing_change_mask.copy()
+    raw_try_on_review_image = raw_try_on_image.copy()
     try_on_clothing_reference_image = load_clothing_reference_image(
         clothing_reference_input
     )
@@ -689,6 +782,21 @@ def execute_catvton_clothing_try_on(
             ),
             protection_plan,
         )
+        effect_metrics = measure_try_on_effect_metrics(
+            base_person=base_character_image,
+            raw_try_on_image=raw_try_on_image,
+            final_person=try_on_candidate.image,
+            approved_change_mask=approved_agnostic_input.approved_change_mask,
+            model_mask=approved_model_mask,
+        )
+        difference_image = create_try_on_difference_image(
+            base_character_image,
+            try_on_candidate.image,
+        )
+    except Exception:
+        raw_try_on_review_image.close()
+        safe_clothing_change_mask.close()
+        raise
     finally:
         raw_try_on_image.close()
         try_on_clothing_reference_image.close()
@@ -702,6 +810,9 @@ def execute_catvton_clothing_try_on(
         candidate=try_on_candidate,
         clothing_change_mask=safe_clothing_change_mask,
         execution_metadata=execution_metadata,
+        raw_try_on_image=raw_try_on_review_image,
+        difference_image=difference_image,
+        effect_metrics=effect_metrics,
     )
 
 
@@ -744,6 +855,22 @@ def validate_character_agnostic_approved_input(
             f"실제={actual_pixel_count}, "
             f"기록={approved_input.approved_mask_pixel_count}"
         )
+    if approved_input.preflight_model_mask_sha256:
+        if approved_input.approved_model_mask is None:
+            raise CharacterClothingProtectionError(
+                "Preflight 해시는 있지만 승인된 최종 model_mask가 없습니다."
+            )
+        actual_model_mask_sha256 = calculate_image_pixel_sha256(
+            approved_input.approved_model_mask,
+            "L",
+        )
+        if (
+            actual_model_mask_sha256
+            != approved_input.preflight_model_mask_sha256
+        ):
+            raise CharacterClothingProtectionError(
+                "승인된 최종 model_mask의 SHA-256이 Preflight와 다릅니다."
+            )
 
 
 def validate_catvton_approved_coordinates(
@@ -827,6 +954,16 @@ def load_catvton_execution_metadata(
             processed_mask_pixel_count=int(
                 metadata_payload["processed_mask_pixel_count"]
             ),
+            model_mask_pixel_count=(
+                int(metadata_payload["model_mask_pixel_count"])
+                if metadata_payload.get("model_mask_pixel_count") is not None
+                else None
+            ),
+            model_mask_source=(
+                str(metadata_payload["model_mask_source"])
+                if metadata_payload.get("model_mask_source") is not None
+                else None
+            ),
             safety_check_enabled=safety_check_enabled,
             person_input_source=str(
                 metadata_payload["person_input_source"]
@@ -851,6 +988,10 @@ def load_catvton_execution_metadata(
             clothing_alpha_coverage_percent=float(
                 metadata_payload["clothing_alpha_coverage_percent"]
             ),
+            person_sha256=metadata_payload.get("person_sha256"),
+            binary_mask_sha256=metadata_payload.get("binary_mask_sha256"),
+            model_mask_sha256=metadata_payload.get("model_mask_sha256"),
+            clothing_sha256=metadata_payload.get("clothing_sha256"),
         )
     except (
         OSError,
@@ -917,6 +1058,21 @@ def load_catvton_execution_metadata(
         raise CharacterClothingProtectionError(
             "CatVTON 내부 AutoMasker가 다시 실행됐습니다."
         )
+    if approved_input.approved_model_mask is not None:
+        if execution_metadata.model_mask_source != "user_approved_preflight":
+            raise CharacterClothingProtectionError(
+                "CatVTON이 사용자 승인 Preflight model_mask를 사용하지 않았습니다."
+            )
+        expected_model_mask_pixel_count = int(
+            sum(approved_input.approved_model_mask.histogram()[1:])
+        )
+        if (
+            execution_metadata.model_mask_pixel_count
+            != expected_model_mask_pixel_count
+        ):
+            raise CharacterClothingProtectionError(
+                "CatVTON model_mask 픽셀 기록이 승인 입력과 다릅니다."
+            )
     if (
         execution_metadata.approved_image_width,
         execution_metadata.approved_image_height,
@@ -937,6 +1093,22 @@ def load_catvton_execution_metadata(
     ):
         raise CharacterClothingProtectionError(
             "CatVTON 안전 검사 실행 기록이 요청 설정과 다릅니다."
+        )
+    expected_hashes = (
+        approved_input.preflight_person_sha256,
+        approved_input.preflight_binary_mask_sha256,
+        approved_input.preflight_model_mask_sha256,
+        approved_input.preflight_clothing_sha256,
+    )
+    actual_hashes = (
+        execution_metadata.person_sha256,
+        execution_metadata.binary_mask_sha256,
+        execution_metadata.model_mask_sha256,
+        execution_metadata.clothing_sha256,
+    )
+    if any(expected_hashes) and actual_hashes != expected_hashes:
+        raise CharacterClothingProtectionError(
+            "승인된 Preflight 해시와 CatVTON 실행 기록의 입력 해시가 다릅니다."
         )
     return execution_metadata
 
@@ -992,6 +1164,10 @@ def validate_catvton_local_settings(
     if not 1 <= settings.mask_closing_radius_pixels <= 3:
         raise CharacterClothingProtectionError(
             "CatVTON 마스크 닫기 반경은 1~3픽셀이어야 합니다."
+        )
+    if not 0 <= settings.mask_blur_factor <= 64:
+        raise CharacterClothingProtectionError(
+            "CatVTON 마스크 블러 값은 0~64여야 합니다."
         )
 
 

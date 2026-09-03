@@ -8,6 +8,8 @@ from typing import Any
 
 from PIL import Image
 
+from genai_lab.try_on_metrics import TryOnEffectMetricsResult
+
 
 @dataclass(frozen=True)
 class CharacterGenerationCandidate:
@@ -48,6 +50,9 @@ class CharacterGenerationCandidate:
     elapsed_seconds: float
     peak_vram_bytes: int
     generated_at: str
+    raw_clothing_try_on_image: Image.Image | None = None
+    clothing_difference_image: Image.Image | None = None
+    clothing_effect_metrics: TryOnEffectMetricsResult | None = None
 
 
 @dataclass(frozen=True)
@@ -168,6 +173,11 @@ def save_approved_character_candidate(
         "clothing_try_on_status": character_candidate.clothing_try_on_status,
         "clothing_verification_warning_ko": (
             character_candidate.clothing_verification_warning_ko
+        ),
+        "clothing_effect_metrics": (
+            character_candidate.clothing_effect_metrics.to_dict()
+            if character_candidate.clothing_effect_metrics is not None
+            else None
         ),
         "detected_face_count": character_candidate.detected_face_count,
         "detected_hand_count": character_candidate.detected_hand_count,

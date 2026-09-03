@@ -1,3 +1,4 @@
+import gc
 import sys
 import os
 import traceback
@@ -7,12 +8,13 @@ from pathlib import Path
 from time import perf_counter
 
 from PIL import Image
-from PySide6.QtCore import QObject, QPoint, QRect, Qt, QThread, Signal, Slot
+import torch
+from PySide6.QtCore import QObject, QPoint, QRect, Qt, QThread, QTimer, Signal, Slot
 from PySide6.QtGui import QColor, QImage, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QFileDialog, QMessageBox, QComboBox,
-    QCheckBox, QDialog, QScrollArea, QGridLayout,
+    QCheckBox, QDialog, QScrollArea, QGridLayout, QGroupBox,
 )
 
 from run import (
@@ -26,18 +28,32 @@ from genai_lab.generator import (
     apply_clothing_to_generated_candidate,
     generate_character_candidate,
 )
+from genai_lab.guardrails import (
+    GuardSeverity,
+    create_human_agnostic_guard_decision,
+)
 from genai_lab.body_comparison import (
     CharacterBodyComparisonCandidate,
     CharacterBodyComparisonSettings,
     ConfirmedCharacterBodyComparison,
     execute_character_body_comparison,
 )
+from genai_lab.catvton_preflight import (
+    CatVTONInputSnapshot,
+    CatVTONPreflightCandidate,
+    CatVTONPreflightSettings,
+    create_catvton_input_snapshot,
+    execute_catvton_preflight,
+)
+from genai_lab.target_masks import ApprovedTargetMasks
+from genai_lab.target_mask_review import TargetMaskReviewDialog
 from genai_lab.clothing import (
     CatVTONLocalSettings,
     CharacterAgnosticApprovedInput,
     ClothingCategory,
     ClothingReferenceInput,
     find_catvton_clothing_type,
+    prepare_catvton_clothing_condition_image,
 )
 from genai_lab.clothing_reference import (
     ClothingCombinedMaskCandidate,
@@ -96,6 +112,42 @@ from genai_lab.pose_estimation import (
     PoseReferenceEstimationSettings,
     approve_pose_estimation_candidate,
     execute_pose_reference_estimation,
+    prepare_pose_control_input,
+)
+from genai_lab.pose_fallback import (
+    PoseFallbackError,
+    PoseFallbackSettings,
+    SavedApprovedPose,
+    evaluate_pose_quality,
+    load_default_approved_pose,
+    save_default_approved_pose,
+)
+from genai_lab.garment_landmarks import extract_garment_mask_landmarks
+from genai_lab.character_target_landmarks import (
+    extract_character_target_landmarks,
+)
+from genai_lab.garment_component_matching import (
+    GarmentComponentMatchResult,
+    propose_garment_component_matches,
+)
+from genai_lab.garment_warp_review import (
+    GarmentWarpApprovedInput,
+    GarmentWarpReviewCandidate,
+    approve_garment_tps_warp_review,
+    create_garment_tps_warp_review,
+)
+from genai_lab.garment_lineart import (
+    GarmentLineartApprovedInput,
+    GarmentLineartReviewCandidate,
+    approve_garment_lineart_review,
+    create_garment_lineart_review,
+)
+from genai_lab.garment_inpaint import (
+    GarmentInpaintProgress,
+    GarmentInpaintReviewCandidate,
+    GarmentInpaintSettings,
+    approve_garment_inpaint_review,
+    execute_garment_inpaint,
 )
 
 from genai_lab.result import (
@@ -106,6 +158,10 @@ from genai_lab.run_log import (
     GenerationRunLog,
     create_generation_run_log,
     find_recovery_action,
+)
+from genai_lab.workflow import (
+    GenerationWorkflowContext,
+    GenerationWorkflowStage,
 )
 
 
@@ -622,14 +678,26 @@ class CharacterBodyComparisonWorker(QObject):
         character_image: Image.Image,
         clothing_type: str,
         settings: CharacterBodyComparisonSettings,
+        clothing_reference_input: ClothingReferenceInput,
+        preflight_settings: CatVTONPreflightSettings,
+        approved_target_masks: ApprovedTargetMasks | None = None,
     ) -> None:
         super().__init__()
         self.character_image = character_image.copy()
         self.clothing_type = clothing_type
         self.settings = settings
+        self.clothing_reference_input = clothing_reference_input
+        self.preflight_settings = preflight_settings
+        self.approved_target_masks = (
+            approved_target_masks.copy() if approved_target_masks is not None else None
+        )
 
     @Slot()
     def run(self) -> None:
+        comparison_candidate = None
+        clothing_condition = None
+        input_snapshot = None
+        preflight_candidate = None
         try:
             self.status_changed.emit(
                 "SCHP·DensePose 신체 영역과 DWPose 관절 18개 분석 중..."
@@ -638,12 +706,63 @@ class CharacterBodyComparisonWorker(QObject):
                 self.character_image,
                 self.clothing_type,
                 self.settings,
+                approved_target_masks=self.approved_target_masks,
             )
-            self.completed.emit(comparison_candidate)
+            self.status_changed.emit(
+                "CatVTON 실제 모델 입력 Preflight 변환 중..."
+            )
+            clothing_condition = prepare_catvton_clothing_condition_image(
+                self.clothing_reference_input
+            )
+            input_snapshot = create_catvton_input_snapshot(
+                person_image=comparison_candidate.source_image,
+                approved_change_mask=(
+                    comparison_candidate.mask_refinement.safe_change_mask
+                ),
+                clothing_condition_image=clothing_condition.image,
+                identity_protection_mask=(
+                    comparison_candidate.mask_refinement.identity_protection_mask
+                ),
+                expanded_foreground_mask=(
+                    comparison_candidate.mask_refinement.expanded_foreground_mask
+                ),
+            )
+            preflight_candidate = execute_catvton_preflight(
+                person_image=comparison_candidate.source_image,
+                approved_change_mask=(
+                    comparison_candidate.mask_refinement.safe_change_mask
+                ),
+                clothing_condition_image=clothing_condition.image,
+                identity_protection_mask=(
+                    comparison_candidate.mask_refinement.identity_protection_mask
+                ),
+                expanded_foreground_mask=(
+                    comparison_candidate.mask_refinement.expanded_foreground_mask
+                ),
+                settings=self.preflight_settings,
+            )
+            self.completed.emit(
+                (comparison_candidate, input_snapshot, preflight_candidate)
+            )
+            comparison_candidate = None
+            input_snapshot = None
+            preflight_candidate = None
         except Exception as error:
             self.failed.emit(str(error), traceback.format_exc())
         finally:
+            if comparison_candidate is not None:
+                comparison_candidate.close()
+            if preflight_candidate is not None:
+                preflight_candidate.close()
+            if input_snapshot is not None:
+                input_snapshot.close()
+            if clothing_condition is not None:
+                clothing_condition.image.close()
+            if self.clothing_reference_input.approved_image is not None:
+                self.clothing_reference_input.approved_image.close()
             self.character_image.close()
+            if self.approved_target_masks is not None:
+                self.approved_target_masks.close()
 
 
 class PoseReferenceEstimationWorker(QObject):
@@ -1223,53 +1342,190 @@ class ClothingDesignAnalysisReviewDialog(QDialog):
 
 
 class CharacterBodyComparisonReviewDialog(QDialog):
-    """신체·관절·마스크 보정 중간 결과를 모두 보여준다."""
+    """신체 보호 영역과 마스크 보정 중간 결과를 스크롤로 보여준다."""
 
     def __init__(
         self,
         comparison_candidate: CharacterBodyComparisonCandidate,
+        input_snapshot: CatVTONInputSnapshot,
+        preflight_candidate: CatVTONPreflightCandidate,
         parent=None,
     ) -> None:
         super().__init__(parent)
-        self.setWindowTitle("캐릭터 신체 비교와 착의 마스크 확인")
-        self.resize(1400, 900)
+        self.setWindowTitle("캐릭터 의상 변경 마스크 확인")
+        available_geometry = self.screen().availableGeometry()
+        self.resize(
+            min(1400, max(700, available_geometry.width() - 80)),
+            min(900, max(500, available_geometry.height() - 80)),
+        )
         self.approved = False
 
         layout = QVBoxLayout(self)
         guide_label = QLabel(
-            "DWPose 좌표와 DensePose는 AI 추정 후보입니다. 마스크 보정 뒤 "
+            "isnet-anime 캐릭터 외곽, DensePose와 신체 보호 영역은 AI 추정 "
+            "후보입니다. 마스크 보정 뒤 "
             "Clothing Region Erasure와 Inpainting Mask Neutralization으로 만든 "
-            "Human-Agnostic Image를 확인하세요. 승인 전에는 CatVTON을 "
-            "실행하지 않습니다."
+            "Human-Agnostic Image를 확인하세요. 다음 Inpaint에 전달하는 것은 "
+            "10번 Human-Agnostic과 8번 승인 변경 마스크입니다. "
+            "13~21번은 CatVTON 호환 전처리 진단이며 현재 Inpaint 마스크를 대체하지 않습니다. "
+            "승인 전에는 의상 생성을 실행하지 않습니다."
         )
         guide_label.setWordWrap(True)
         layout.addWidget(guide_label)
 
+        scroll_area = QScrollArea(self)
+        scroll_area.setWidgetResizable(True)
+        scroll_content = QWidget()
+        content_layout = QVBoxLayout(scroll_content)
+
         mask_refinement = comparison_candidate.mask_refinement
+        foreground_candidate = comparison_candidate.foreground_candidate
         agnostic_candidate = comparison_candidate.human_agnostic_candidate
         removal_verification = (
             comparison_candidate.clothing_removal_verification
         )
-        self.removal_verification_passed = removal_verification.passed
+        self.guard_decision = create_human_agnostic_guard_decision(
+            remaining_clothing_pixel_count=(
+                removal_verification.remaining_clothing_pixel_count
+            ),
+            removal_percent=removal_verification.removal_percent,
+            removal_status=removal_verification.status,
+            protected_clothing_overlap_pixel_count=removal_verification.protected_overlap_pixel_count,
+            input_change_mask_pixel_count=input_snapshot.change_mask_pixel_count,
+            input_protected_overlap_pixel_count=(
+                input_snapshot.protected_overlap_pixel_count
+            ),
+            input_outside_foreground_pixel_count=(
+                input_snapshot.outside_foreground_pixel_count
+            ),
+            processed_mask_pixel_count=(
+                preflight_candidate.processed_mask_pixel_count
+            ),
+            model_mask_pixel_count=preflight_candidate.model_mask_pixel_count,
+            soft_overlap_pixel_count=(
+                preflight_candidate.soft_overlap_pixel_count
+            ),
+            hard_overlap_pixel_count=(
+                preflight_candidate.hard_overlap_pixel_count
+            ),
+            final_protected_overlap_pixel_count=(
+                preflight_candidate.protected_overlap_pixel_count
+            ),
+            final_outside_foreground_pixel_count=(
+                preflight_candidate.outside_foreground_pixel_count
+            ),
+        )
+
+        input_group = QGroupBox("A. CatVTON 전처리 전 입력 5개")
+        input_group_layout = QVBoxLayout(input_group)
+        input_preview_grid = QGridLayout()
+        input_preview_items = (
+            ("입력 1. 기준 캐릭터 원본", input_snapshot.person_image),
+            (
+                "입력 2. 실제 변경 마스크 원천",
+                input_snapshot.approved_change_mask,
+            ),
+            (
+                "입력 3. 추출된 참조 의상",
+                input_snapshot.clothing_condition_image,
+            ),
+            (
+                "입력 4. 변경 금지 보호 영역",
+                input_snapshot.identity_protection_mask,
+            ),
+            (
+                "입력 5. 캐릭터 외곽 허용 범위",
+                input_snapshot.expanded_foreground_mask,
+            ),
+        )
+        for preview_index, (preview_title, preview_image) in enumerate(
+            input_preview_items
+        ):
+            preview_label = ClothingMaskReviewDialog.create_preview_label(
+                preview_title
+            )
+            preview_label.setMinimumSize(300, 320)
+            ClothingMaskReviewDialog.set_preview_image(
+                preview_label,
+                preview_image,
+            )
+            input_preview_grid.addWidget(
+                preview_label,
+                preview_index // 4,
+                preview_index % 4,
+            )
+        input_group_layout.addLayout(input_preview_grid)
+        input_measurement_label = QLabel(
+            f"캐릭터 좌표={input_snapshot.person_image.width}x"
+            f"{input_snapshot.person_image.height}, "
+            f"참조 의상 크기="
+            f"{input_snapshot.clothing_condition_image.width}x"
+            f"{input_snapshot.clothing_condition_image.height}, "
+            f"변경 마스크={input_snapshot.change_mask_pixel_count:,}px, "
+            f"보호 영역 침범="
+            f"{input_snapshot.protected_overlap_pixel_count:,}px, "
+            f"캐릭터 외곽 밖 침범="
+            f"{input_snapshot.outside_foreground_pixel_count:,}px, "
+            f"입력 판정={input_snapshot.reason_ko}"
+        )
+        input_measurement_label.setWordWrap(True)
+        input_group_layout.addWidget(input_measurement_label)
+        input_hash_label = QLabel(
+            f"입력 SHA-256: 캐릭터={input_snapshot.person_sha256}, "
+            f"변경 마스크={input_snapshot.change_mask_sha256}, "
+            f"참조 의상={input_snapshot.clothing_sha256}"
+        )
+        input_hash_label.setWordWrap(True)
+        input_group_layout.addWidget(input_hash_label)
+        content_layout.addWidget(input_group)
+
+        processing_group = QGroupBox("B. 실제 적용 마스크와 호환 전처리 진단 구분")
+        processing_group_layout = QVBoxLayout(processing_group)
         preview_grid = QGridLayout()
         preview_items = (
             ("1. 캐릭터 원본", comparison_candidate.source_image),
-            ("2. DensePose 신체 표면", comparison_candidate.densepose_preview_image),
-            ("3. DWPose 관절 18개", comparison_candidate.pose_preview_image),
-            ("4. CatVTON 원본 마스크", mask_refinement.raw_mask),
-            ("5. 구멍 닫기 후", mask_refinement.closed_mask),
-            ("6. 외곽 팽창 후", mask_refinement.expanded_mask),
-            ("7. 보호 영역 차감 후", mask_refinement.safe_change_mask),
-            ("8. 신체 보호 영역", mask_refinement.identity_protection_mask),
+            ("2. 캐릭터 전체 외곽", mask_refinement.character_foreground_mask),
+            ("3. 캐릭터 외곽 확장", mask_refinement.expanded_foreground_mask),
+            ("4. DensePose 신체 표면", comparison_candidate.densepose_preview_image),
+            (f"5. 실제 교체 영역 원천: {comparison_candidate.mask_source}", mask_refinement.raw_mask),
+            ("6. 구멍 닫기 후", mask_refinement.closed_mask),
+            ("7. 의상 외곽 팽창 후", mask_refinement.expanded_mask),
+            ("8. 캐릭터 외곽·보호 제한 후", mask_refinement.safe_change_mask),
+            ("9. 신체 보호 영역", mask_refinement.identity_protection_mask),
             (
-                "9. Human-Agnostic Image 승인 후보",
+                "10. Human-Agnostic Image 승인 후보",
                 agnostic_candidate.neutralized_image,
             ),
             (
-                "10. 기존 의상 잔여 영역",
+                "11. 캐릭터 외곽 밖 SCHP 오탐",
+                removal_verification.outside_foreground_mask,
+            ),
+            (
+                "12. 캐릭터 외곽 안의 기존 의상 잔여",
                 removal_verification.remaining_clothing_mask,
             ),
+            ("13. 실제 처리 크기 Person 입력", preflight_candidate.processed_person_image),
+            ("14. resize·이분화 후 승인 마스크", preflight_candidate.processed_binary_mask),
+            (
+                "15. blur 직후 원본 마스크",
+                preflight_candidate.raw_blurred_mask_image,
+            ),
+            ("16. 1~127 약한 침범", preflight_candidate.soft_overlap_mask),
+            ("17. 128~255 강한 침범", preflight_candidate.hard_overlap_mask),
+            (
+                "18. 금지 영역 제한 후 실제 model_mask",
+                preflight_candidate.model_mask_image,
+            ),
+            ("19. padding 후 참조 의상 입력", preflight_candidate.processed_clothing_image),
+            ("20. 최종 model_mask의 보호 영역 침범", preflight_candidate.protected_overlap_mask),
+            ("21. 최종 model_mask의 캐릭터 외곽 밖 침범", preflight_candidate.outside_foreground_mask),
         )
+        if removal_verification.protected_conflict_mask is not None:
+            preview_items += (("22. 교체 의상·보호 충돌 (재선택 필요)",
+                               removal_verification.protected_conflict_mask),)
+        if comparison_candidate.automatic_change_mask is not None:
+            preview_items += (("23. AutoMasker 진단 후보 (적용 안 함)",
+                               comparison_candidate.automatic_change_mask),)
         for preview_index, (preview_title, preview_image) in enumerate(
             preview_items
         ):
@@ -1286,22 +1542,16 @@ class CharacterBodyComparisonReviewDialog(QDialog):
                 preview_index // 4,
                 preview_index % 4,
             )
-        layout.addLayout(preview_grid)
+        processing_group_layout.addLayout(preview_grid)
 
-        minimum_joint_score = min(
-            (
-                coordinate.confidence_score
-                for coordinate in comparison_candidate.joint_coordinates
-                if coordinate.detected
-            ),
-            default=0.0,
-        )
         measurement_label = QLabel(
             f"모델={comparison_candidate.model_ids}, "
-            f"관절 전체={len(comparison_candidate.joint_coordinates)}개, "
-            f"탐지={comparison_candidate.detected_joint_count}개, "
-            f"미탐지={comparison_candidate.missing_joint_count}개, "
-            f"탐지 관절 최저 점수={minimum_joint_score * 100.0:.1f}%, "
+            f"캐릭터 외곽={foreground_candidate.foreground_pixel_count:,}px "
+            f"({foreground_candidate.foreground_percent:.3f}%), "
+            f"외곽 AI 시간={foreground_candidate.elapsed_seconds:.2f}초, "
+            f"외곽 팽창={mask_refinement.foreground_expansion_pixels}px, "
+            f"캐릭터 외부에서 제거="
+            f"{mask_refinement.outside_foreground_rejected_pixel_count:,}px, "
             f"닫기 반경={mask_refinement.closing_radius_pixels}px, "
             f"팽창 반경={mask_refinement.expansion_radius_pixels}px, "
             f"팽창 중 보호 영역 접촉="
@@ -1315,25 +1565,101 @@ class CharacterBodyComparisonReviewDialog(QDialog):
             f"{agnostic_candidate.raw_mask_coverage_percent:.3f}%, "
             f"기존 의상 탐지="
             f"{removal_verification.detected_clothing_pixel_count:,}px, "
-            f"제거 영역 포함="
+            f"캐릭터 외곽 밖 SCHP 오탐="
+            f"{removal_verification.outside_foreground_pixel_count:,}px "
+            f"({removal_verification.outside_foreground_percent:.3f}%), "
+            f"신체 보호 겹침="
+            f"{removal_verification.protected_overlap_pixel_count:,}px, "
+            f"제거 검증 대상="
+            f"{removal_verification.verifiable_clothing_pixel_count:,}px, "
+            f"검증 대상 포함="
             f"{removal_verification.removed_clothing_pixel_count:,}px, "
-            f"기존 의상 잔여="
+            f"캐릭터 외곽 안 잔여="
             f"{removal_verification.remaining_clothing_pixel_count:,}px, "
             f"기존 의상 제거율="
-            f"{removal_verification.removal_percent:.3f}%, "
+            f"{removal_verification.removal_percent if removal_verification.removal_percent is not None else '계산 불가'}, "
+            f"범위 판정={removal_verification.status}: {removal_verification.reason_ko}, "
             f"중립화 마스크 밖 변경="
             f"{agnostic_candidate.changed_pixel_count_outside_mask:,}px, "
+            f"Preflight 크기={preflight_candidate.width}x{preflight_candidate.height}, "
+            f"이분화 마스크={preflight_candidate.processed_mask_pixel_count:,}px, "
+            f"blur={preflight_candidate.blur_factor}, "
+            f"실제 model_mask={preflight_candidate.model_mask_pixel_count:,}px, "
+            f"약한 침범(1~127)="
+            f"{preflight_candidate.soft_overlap_pixel_count:,}px, "
+            f"강한 침범(128~255)="
+            f"{preflight_candidate.hard_overlap_pixel_count:,}px, "
+            f"금지 영역에서 제거="
+            f"{preflight_candidate.removed_pixel_count:,}px, "
+            f"보호 영역 침범={preflight_candidate.protected_overlap_pixel_count:,}px, "
+            f"캐릭터 외곽 밖 침범={preflight_candidate.outside_foreground_pixel_count:,}px, "
+            f"Preflight 판정={preflight_candidate.reason_ko}, "
             f"처리 시간={comparison_candidate.elapsed_seconds:.2f}초"
         )
         measurement_label.setWordWrap(True)
-        layout.addWidget(measurement_label)
+        processing_group_layout.addWidget(measurement_label)
+        content_layout.addWidget(processing_group)
+
+        guard_group = QGroupBox("C. Human-Agnostic 승인 가드레일 판정")
+        guard_group_layout = QVBoxLayout(guard_group)
+        severity_labels = {
+            GuardSeverity.PASS: "PASS",
+            GuardSeverity.WARNING: "WARNING",
+            GuardSeverity.BLOCK: "BLOCK",
+        }
+        for guard_result in self.guard_decision.results:
+            measured_text = (
+                "계산 불가"
+                if guard_result.measured_value is None
+                else f"{guard_result.measured_value:,}{guard_result.unit}"
+            )
+            threshold_text = (
+                "계산 불가"
+                if guard_result.threshold_value is None
+                else f"{guard_result.threshold_value:,}{guard_result.unit}"
+            )
+            corrected_text = (
+                "해당 없음"
+                if guard_result.corrected_value is None
+                else f"{guard_result.corrected_value:,}{guard_result.unit}"
+            )
+            guard_label = QLabel(
+                f"[{severity_labels[guard_result.severity]}] "
+                f"{guard_result.code} | 측정={measured_text}, "
+                f"기준={threshold_text}, 보정 후={corrected_text} | "
+                f"{guard_result.message_ko}"
+            )
+            guard_label.setWordWrap(True)
+            guard_group_layout.addWidget(guard_label)
+
+        guard_summary_label = QLabel(
+            f"가드레일 합계: PASS={len(self.guard_decision.passed_results)}개, "
+            f"WARNING={len(self.guard_decision.warning_results)}개, "
+            f"BLOCK={len(self.guard_decision.blocking_results)}개, "
+            "최종 승인 가능="
+            f"{'YES' if self.guard_decision.approval_enabled else 'NO'}"
+        )
+        guard_summary_label.setWordWrap(True)
+        guard_group_layout.addWidget(guard_summary_label)
+        content_layout.addWidget(guard_group)
+        scroll_area.setWidget(scroll_content)
+        layout.addWidget(scroll_area, 1)
 
         button_layout = QHBoxLayout()
         approve_button = QPushButton("Human-Agnostic Image와 변경 영역 승인")
-        approve_button.setEnabled(removal_verification.passed)
-        if not removal_verification.passed:
+        approve_button.setEnabled(self.guard_decision.approval_enabled)
+        if not self.guard_decision.approval_enabled:
             approve_button.setToolTip(
-                "기존 의상 잔여가 0픽셀이 아니므로 승인할 수 없습니다."
+                "\n".join(
+                    f"[{result.code}] {result.message_ko} "
+                    f"복구: {result.recovery_action_ko}"
+                    for result in self.guard_decision.blocking_results
+                )
+            )
+        elif self.guard_decision.warning_results:
+            approve_button.setToolTip(
+                "보정 전 경고가 있지만 최종 BLOCK은 0개입니다. "
+                "표시된 보정 결과를 확인한 뒤 승인할 수 있습니다."
             )
         reject_button = QPushButton("거절하고 다시 확인")
         approve_button.clicked.connect(self.approve_comparison)
@@ -1344,11 +1670,17 @@ class CharacterBodyComparisonReviewDialog(QDialog):
 
     @Slot()
     def approve_comparison(self) -> None:
-        if not self.removal_verification_passed:
+        if not self.guard_decision.approval_enabled:
+            blocking_details = "\n".join(
+                f"- [{result.code}] {result.message_ko}\n"
+                f"  복구: {result.recovery_action_ko}"
+                for result in self.guard_decision.blocking_results
+            )
             QMessageBox.warning(
                 self,
-                "기존 의상 제거 미완료",
-                "기존 의상 잔여가 0픽셀이 아니므로 CatVTON을 실행할 수 없습니다.",
+                "Human-Agnostic 승인 차단",
+                "최종 BLOCK 항목이 있어 실행할 수 없습니다.\n"
+                f"{blocking_details}",
             )
             return
         self.approved = True
@@ -1601,6 +1933,72 @@ class PoseEstimationApprovalDialog(QDialog):
         self.accept()
 
 
+class PoseFallbackApprovalDialog(QDialog):
+    """DWPose 실패 원본과 저장된 승인 자세를 비교해 재승인을 받는다."""
+
+    def __init__(
+        self,
+        failed_source_image: Image.Image,
+        saved_pose: SavedApprovedPose,
+        failure_reason: str,
+        parent=None,
+    ) -> None:
+        super().__init__(parent)
+        self.is_approved = False
+        self.setWindowTitle("저장된 자세 폴백 확인")
+        self.resize(1080, 760)
+        layout = QVBoxLayout(self)
+        information_label = QLabel(
+            "요청한 자세는 DWPose 품질 기준을 통과하지 못했습니다.\n"
+            f"실패 원인={failure_reason}\n"
+            f"폴백 자세 ID={saved_pose.pose_id}, "
+            f"관절={saved_pose.approved_pose.detected_joint_count}/18개, "
+            f"기준={saved_pose.approved_pose.minimum_pose_confidence * 100.0:.1f}%, "
+            f"SHA-256={saved_pose.control_map_sha256[:12]}, "
+            f"저장 시각={saved_pose.saved_at}\n"
+            "승인 전 ControlNet 호출은 0회이며, 승인하면 요청 자세 대신 "
+            "저장된 자세가 적용됩니다."
+        )
+        information_label.setWordWrap(True)
+        layout.addWidget(information_label)
+
+        comparison_layout = QHBoxLayout()
+        for title, image in (
+            ("1. 추출 실패 자세 원본", failed_source_image),
+            ("2. 저장된 승인 자세 원본", saved_pose.source_preview_image),
+            ("3. 저장된 ControlNet 뼈대", saved_pose.approved_pose.control_map_image),
+        ):
+            column = QVBoxLayout()
+            column.addWidget(QLabel(title))
+            image_label = QLabel()
+            image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            image_label.setPixmap(
+                create_pil_image_pixmap(image).scaled(
+                    330,
+                    560,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+            )
+            column.addWidget(image_label)
+            comparison_layout.addLayout(column)
+        layout.addLayout(comparison_layout)
+
+        button_layout = QHBoxLayout()
+        approve_button = QPushButton("저장된 자세를 적용하고 계속")
+        reject_button = QPushButton("거절하고 자세 다시 선택")
+        approve_button.clicked.connect(self.approve_fallback)
+        reject_button.clicked.connect(self.reject)
+        button_layout.addWidget(approve_button)
+        button_layout.addWidget(reject_button)
+        layout.addLayout(button_layout)
+
+    @Slot()
+    def approve_fallback(self) -> None:
+        self.is_approved = True
+        self.accept()
+
+
 class DetailCorrectionComparisonDialog(QDialog):
     """보정 전후 후보를 비교하고 최종 후보로 사용할 이미지를 선택한다."""
 
@@ -1683,12 +2081,29 @@ class ClothingTryOnComparisonDialog(QDialog):
         super().__init__(parent)
         self.use_clothing_image = True
         self.setWindowTitle("의상 참조 합성 결과 비교")
-        self.resize(1100, 720)
+        self.resize(1180, 820)
         layout = QVBoxLayout(self)
+        metrics = character_candidate.clothing_effect_metrics
+        metrics_text = "효과 측정값 없음"
+        if metrics is not None:
+            metrics_text = (
+                "원시 model_mask 안 변경="
+                f"{metrics.raw_changed_inside_model_mask:,}px, "
+                "최종 승인 영역 안 변경="
+                f"{metrics.final_changed_inside_approved_mask:,}px, "
+                "보호 합성 제거="
+                f"{metrics.discarded_by_protection_pixels:,}px, "
+                "승인 영역 밖 변경="
+                f"{metrics.mask_leakage_pixels:,}px, "
+                "RGB L1 평균="
+                f"{metrics.mean_rgb_l1_inside:.4f}, "
+                f"no_effect={metrics.no_effect}"
+            )
         summary = QLabel(
             f"의상 참조={character_candidate.clothing_reference_name}, "
             f"종류={character_candidate.clothing_category}\n"
-            "마스크의 흰색 영역 안에서만 의상 합성 결과를 사용했습니다."
+            "마스크의 흰색 영역 안에서만 의상 합성 결과를 사용했습니다.\n"
+            f"{metrics_text}"
         )
         summary.setWordWrap(True)
         layout.addWidget(summary)
@@ -1699,32 +2114,47 @@ class ClothingTryOnComparisonDialog(QDialog):
             warning.setWordWrap(True)
             layout.addWidget(warning)
 
-        comparison_layout = QHBoxLayout()
+        comparison_layout = QGridLayout()
         comparison_images = (
             ("의상 적용 전", character_candidate.before_clothing_image),
+            ("CatVTON 원시 출력", character_candidate.raw_clothing_try_on_image),
             ("의상 변경 허용 영역", character_candidate.clothing_change_mask),
-            ("의상 적용 후", character_candidate.image),
+            ("최종 보호 합성", character_candidate.image),
+            ("변경 차이맵 (4배)", character_candidate.clothing_difference_image),
         )
+        visible_index = 0
         for title, image in comparison_images:
+            if image is None:
+                continue
             column = QVBoxLayout()
             column.addWidget(QLabel(title))
             image_label = QLabel()
             image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             image_label.setPixmap(
                 create_pil_image_pixmap(image).scaled(
-                    340,
-                    520,
+                    300,
+                    330,
                     Qt.AspectRatioMode.KeepAspectRatio,
                     Qt.TransformationMode.SmoothTransformation,
                 )
             )
             column.addWidget(image_label)
-            comparison_layout.addLayout(column)
+            comparison_layout.addLayout(
+                column,
+                visible_index // 3,
+                visible_index % 3,
+            )
+            visible_index += 1
         layout.addLayout(comparison_layout)
 
         button_layout = QHBoxLayout()
         clothing_button = QPushButton("의상 적용본 사용")
         original_button = QPushButton("의상 적용 전 후보 사용")
+        if metrics is not None and metrics.no_effect:
+            clothing_button.setEnabled(False)
+            clothing_button.setToolTip(
+                "최종 승인 영역 안 변경이 0px이므로 적용본을 승인할 수 없습니다."
+            )
         clothing_button.clicked.connect(self.choose_clothing_image)
         original_button.clicked.connect(self.choose_original_image)
         button_layout.addWidget(clothing_button)
@@ -1741,6 +2171,453 @@ class ClothingTryOnComparisonDialog(QDialog):
         self.use_clothing_image = False
         self.accept()
 
+
+
+def add_image_review_grid(
+    parent_layout: QVBoxLayout,
+    preview_items: tuple[tuple[str, Image.Image], ...],
+    columns: int = 3,
+) -> None:
+    """검토 이미지를 3열 스크롤 그리드에 배치한다."""
+    grid = QGridLayout()
+    for index, (title, image) in enumerate(preview_items):
+        label = ClothingMaskReviewDialog.create_preview_label(title)
+        label.setMinimumSize(280, 300)
+        ClothingMaskReviewDialog.set_preview_image(label, image)
+        grid.addWidget(label, index // columns, index % columns)
+    parent_layout.addLayout(grid)
+
+
+class GarmentTpsReviewDialog(QDialog):
+    """TPS 조각 대응·좌표·승인 마스크 제한 결과 6개를 공개한다."""
+
+    def __init__(
+        self,
+        candidate: GarmentWarpReviewCandidate,
+        source_garment: Image.Image,
+        component_matches: GarmentComponentMatchResult,
+        parent=None,
+    ) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("의상 조각 대응과 TPS 좌표 승인")
+        available = self.screen().availableGeometry()
+        self.resize(
+            min(1180, max(760, available.width() - 80)),
+            min(860, max(560, available.height() - 80)),
+        )
+        self.approved = False
+        layout = QVBoxLayout(self)
+        scroll = QScrollArea(self)
+        scroll.setWidgetResizable(True)
+        content = QWidget()
+        content_layout = QVBoxLayout(content)
+        add_image_review_grid(
+            content_layout,
+            (
+                ("1. 추출 의상 원본", source_garment),
+                ("2. 승인 변경 마스크", candidate.approved_mask_preview),
+                ("3. TPS 원본 합성", candidate.raw_combined_rgba),
+                ("4. 승인 영역 밖 알파", candidate.outside_approved_mask),
+                ("5. 영역 제한 TPS", candidate.protected_combined_rgba),
+                ("6. 캐릭터 위 좌표 오버레이", candidate.overlay_preview),
+            ),
+        )
+        proposal_lines = ", ".join(
+            f"조각 {proposal.source_component_index}→{proposal.target_slot.value}"
+            f"({proposal.rule_fit_score:.3f})"
+            for proposal in component_matches.proposals
+        )
+        metrics = QLabel(
+            f"조각={candidate.component_count}개, "
+            f"모호={candidate.ambiguous_component_count}개, "
+            f"공유 슬롯={candidate.shared_target_slot_component_count}개, "
+            f"조각 겹침={candidate.component_hard_overlap_pixels:,}px, "
+            f"승인 밖 soft={candidate.outside_soft_alpha_pixels:,}px, "
+            f"승인 밖 hard={candidate.outside_hard_alpha_pixels:,}px, "
+            f"보호 후 승인 밖={candidate.protected_outside_alpha_pixels:,}px, "
+            f"자동 저장={candidate.automatic_save_count}개, "
+            f"시간={candidate.elapsed_seconds:.3f}초\n대응: {proposal_lines}"
+        )
+        metrics.setWordWrap(True)
+        content_layout.addWidget(metrics)
+        scroll.setWidget(content)
+        layout.addWidget(scroll)
+        buttons = QHBoxLayout()
+        approve = QPushButton("조각 대응과 TPS 승인")
+        reject = QPushButton("거절하고 중지")
+        approve.setEnabled(
+            candidate.component_count >= 1
+            and candidate.protected_outside_alpha_pixels == 0
+            and candidate.automatic_save_count == 0
+        )
+        approve.clicked.connect(self._approve)
+        reject.clicked.connect(self.reject)
+        buttons.addWidget(approve)
+        buttons.addWidget(reject)
+        layout.addLayout(buttons)
+
+    @Slot()
+    def _approve(self) -> None:
+        self.approved = True
+        self.accept()
+
+
+class GarmentLineartReviewDialog(QDialog):
+    """TPS 의상에서 추출한 Lineart 제어 입력 6개를 공개한다."""
+
+    def __init__(
+        self,
+        candidate: GarmentLineartReviewCandidate,
+        parent=None,
+    ) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("의상 Lineart 제어 입력 승인")
+        available = self.screen().availableGeometry()
+        self.resize(
+            min(1180, max(760, available.width() - 80)),
+            min(860, max(560, available.height() - 80)),
+        )
+        self.approved = False
+        layout = QVBoxLayout(self)
+        scroll = QScrollArea(self)
+        scroll.setWidgetResizable(True)
+        content = QWidget()
+        content_layout = QVBoxLayout(content)
+        add_image_review_grid(
+            content_layout,
+            (
+                ("1. 흰 배경 TPS 의상", candidate.white_background_garment_preview),
+                ("2. 외곽선", candidate.outer_boundary_mask),
+                ("3. 내부 디테일", candidate.internal_detail_mask),
+                ("4. 결합 선 마스크", candidate.combined_edge_mask),
+                ("5. ControlNet 입력", candidate.control_image),
+                ("6. 선 오버레이", candidate.overlay_preview),
+            ),
+        )
+        metrics = QLabel(
+            f"의상 알파={candidate.visible_alpha_pixels:,}px, "
+            f"외곽선={candidate.raw_outer_boundary_pixels:,}px, "
+            f"내부선={candidate.raw_internal_detail_pixels:,}px, "
+            f"최종선={candidate.total_edge_pixels:,}px, "
+            f"밀도={candidate.edge_density_percent:.3f}%, "
+            f"승인 밖 원시선={candidate.raw_edge_pixels_outside_approved_mask:,}px, "
+            f"보호 후 승인 밖={candidate.protected_edge_pixels_outside_approved_mask:,}px, "
+            f"자동 저장={candidate.automatic_save_count}개, "
+            f"시간={candidate.elapsed_seconds:.3f}초"
+        )
+        metrics.setWordWrap(True)
+        content_layout.addWidget(metrics)
+        scroll.setWidget(content)
+        layout.addWidget(scroll)
+        buttons = QHBoxLayout()
+        approve = QPushButton("Lineart 입력 승인")
+        reject = QPushButton("거절하고 중지")
+        approve.setEnabled(
+            candidate.total_edge_pixels >= candidate.settings.minimum_edge_pixels
+            and candidate.protected_edge_pixels_outside_approved_mask == 0
+            and candidate.alpha_consistency_mismatch_pixels == 0
+            and candidate.automatic_save_count == 0
+        )
+        approve.clicked.connect(self._approve)
+        reject.clicked.connect(self.reject)
+        buttons.addWidget(approve)
+        buttons.addWidget(reject)
+        layout.addLayout(buttons)
+
+    @Slot()
+    def _approve(self) -> None:
+        self.approved = True
+        self.accept()
+
+
+class GarmentInpaintReviewDialog(QDialog):
+    """생성 입력·결과 8개와 중립색 잔여 진단을 공개한다."""
+
+    def __init__(
+        self,
+        candidate: GarmentInpaintReviewCandidate,
+        parent=None,
+    ) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("2D 의상 Inpaint 결과 승인")
+        available = self.screen().availableGeometry()
+        self.resize(
+            min(1180, max(760, available.width() - 80)),
+            min(860, max(560, available.height() - 80)),
+        )
+        self.approved = False
+        layout = QVBoxLayout(self)
+        scroll = QScrollArea(self)
+        scroll.setWidgetResizable(True)
+        content = QWidget()
+        content_layout = QVBoxLayout(content)
+        add_image_review_grid(
+            content_layout,
+            (
+                ("1. 기준 캐릭터", candidate.base_character_preview),
+                ("2. Human-Agnostic 시작 이미지", candidate.human_agnostic_preview),
+                ("3. 승인 Inpaint 마스크", candidate.approved_mask_preview),
+                ("4. 승인 의상 원본", candidate.garment_reference_preview),
+                (
+                    "5. IP-Adapter Plus 실제 참조 보드",
+                    candidate.garment_reference_board_preview,
+                ),
+                ("6. 모델 원시 출력", candidate.raw_inpaint_output),
+                ("7. 승인 영역 보호 출력", candidate.protected_output),
+                ("8. 기준 대비 차이 ×4", candidate.difference_preview),
+            ),
+        )
+        residual = candidate.neutral_residual
+        if residual is not None:
+            add_image_review_grid(content_layout, (
+                ("9. 중립색 잔여 의심 영역 (흰색, 경고 전용)", residual.mask),
+            ))
+            percent = (
+                "계산 불가" if residual.suspected_percent is None
+                else f"{residual.suspected_percent:.2f}%"
+            )
+            warning = QLabel(
+                f"중립색 잔여 후보={residual.suspected_pixel_count:,}/"
+                f"{residual.evaluated_pixel_count:,}px ({percent}). "
+                "시작 이미지와 결과가 모두 중립색 근처인 영역입니다. "
+                "실제 회색 의상일 수도 있으므로 생성 실패로 단정하거나 승인을 차단하지 않습니다."
+            )
+            warning.setWordWrap(True)
+            content_layout.addWidget(warning)
+        metrics = QLabel(
+            f"하드 마스크={candidate.inpaint_mask_pixels:,}px, "
+            f"소프트 마스크={candidate.inpaint_soft_mask_pixels:,}px, "
+            f"원시 출력 내부 변경={candidate.raw_changed_inside_mask_pixels:,}px, "
+            f"Human-Agnostic 대비 내부 변경="
+            f"{candidate.raw_changed_from_initial_inside_mask_pixels:,}px, "
+            f"보호 출력 내부 변경={candidate.protected_changed_inside_mask_pixels:,}px, "
+            f"보호 출력 외부 변경={candidate.protected_changed_outside_mask_pixels:,}px, "
+            f"평균 RGB L1={candidate.mean_rgb_l1_inside_mask:.3f}, "
+            f"의상 조각={candidate.garment_retained_component_count}/"
+            f"{candidate.garment_source_component_count}개, "
+            f"참조 보드 점유={candidate.garment_board_occupied_pixel_count:,}px, "
+            f"자동 저장={candidate.automatic_save_count}개, "
+            f"벤치마크 파일={candidate.benchmark_file_count}개, "
+            f"벤치마크 경로={candidate.benchmark_directory}, "
+            f"파이프라인 로딩="
+            f"{candidate.execution_metrics.pipeline_load_seconds:.3f}초, "
+            f"IP-Adapter 로딩="
+            f"{candidate.execution_metrics.ip_adapter_load_seconds:.3f}초, "
+            f"Diffusion="
+            f"{candidate.execution_metrics.diffusion_seconds:.3f}초, "
+            f"출력 저장="
+            f"{candidate.execution_metrics.output_save_seconds:.3f}초, "
+            f"실행기 전체="
+            f"{candidate.execution_metrics.runner_total_seconds:.3f}초, "
+            f"부모 전체="
+            f"{candidate.execution_metrics.parent_total_seconds:.3f}초, "
+            f"진행 이벤트="
+            f"{candidate.execution_metrics.progress_event_count}개, "
+            f"잘못된 이벤트="
+            f"{candidate.execution_metrics.invalid_progress_event_count}개, "
+            f"Heartbeat="
+            f"{candidate.execution_metrics.heartbeat_count}회, "
+            f"기존 전체 시간={candidate.elapsed_seconds:.3f}초"
+        )
+        metrics.setWordWrap(True)
+        content_layout.addWidget(metrics)
+        scroll.setWidget(content)
+        layout.addWidget(scroll)
+        buttons = QHBoxLayout()
+        approve = QPushButton("2D 의상 합성 승인")
+        reject = QPushButton("거절하고 중지")
+        approve.setEnabled(
+            candidate.protected_changed_inside_mask_pixels > 0
+            and candidate.raw_changed_from_initial_inside_mask_pixels > 0
+            and candidate.protected_changed_outside_mask_pixels == 0
+            and candidate.automatic_save_count == 0
+        )
+        approve.clicked.connect(self._approve)
+        reject.clicked.connect(self.reject)
+        buttons.addWidget(approve)
+        buttons.addWidget(reject)
+        layout.addLayout(buttons)
+
+    @Slot()
+    def _approve(self) -> None:
+        self.approved = True
+        self.accept()
+
+
+class GarmentGeometryWorker(QObject):
+    """승인된 입력 복사본으로 좌표 추출·조각 대응·TPS 후보를 만든다."""
+
+    status_changed = Signal(str)
+    completed = Signal(object)
+    failed = Signal(str, str)
+
+    def __init__(
+        self,
+        garment_rgba: Image.Image,
+        base_character: Image.Image,
+        approved_change_mask: Image.Image,
+        approved_pose: PoseEstimationApprovedInput,
+        clothing_category: ClothingCategory,
+    ) -> None:
+        super().__init__()
+        self.garment_rgba = garment_rgba.copy()
+        self.base_character = base_character.copy()
+        self.approved_change_mask = approved_change_mask.copy()
+        self.approved_pose = PoseEstimationApprovedInput(
+            control_map_image=approved_pose.control_map_image.copy(),
+            joint_coordinates=approved_pose.joint_coordinates,
+            detected_joint_count=approved_pose.detected_joint_count,
+            missing_joint_count=approved_pose.missing_joint_count,
+            minimum_pose_confidence=approved_pose.minimum_pose_confidence,
+            model_ids=approved_pose.model_ids,
+        )
+        self.clothing_category = clothing_category
+
+    @Slot()
+    def run(self) -> None:
+        prepared_pose = None
+        try:
+            self.status_changed.emit("의상 조각·캐릭터 목표 좌표·TPS 계산 중...")
+            source_mask = self.garment_rgba.getchannel("A")
+            try:
+                source_landmarks = extract_garment_mask_landmarks(source_mask)
+            finally:
+                source_mask.close()
+            prepared_pose = prepare_pose_control_input(
+                self.approved_pose,
+                self.base_character.width,
+                self.base_character.height,
+            )
+            target_landmarks = extract_character_target_landmarks(
+                self.approved_pose.joint_coordinates,
+                prepared_pose,
+                self.approved_change_mask,
+                self.clothing_category,
+            )
+            component_matches = propose_garment_component_matches(
+                source_landmarks,
+                self.clothing_category,
+            )
+            review = create_garment_tps_warp_review(
+                self.garment_rgba,
+                self.base_character,
+                self.approved_change_mask,
+                source_landmarks,
+                target_landmarks,
+                component_matches,
+            )
+            self.completed.emit((review, component_matches))
+        except Exception as error:
+            self.failed.emit(str(error), traceback.format_exc())
+        finally:
+            if prepared_pose is not None:
+                prepared_pose.close()
+            self.garment_rgba.close()
+            self.base_character.close()
+            self.approved_change_mask.close()
+            self.approved_pose.close()
+
+
+def build_garment_inpaint_prompts(
+    base_prompt: str,
+    base_negative_prompt: str,
+    design_tags: tuple[str, ...],
+) -> tuple[str, str]:
+    """앱이 넣은 기존 의상 유지 토큰만 제외하고 새 의상 조건을 만든다."""
+    blocked_positive = {"matching outfit and colors"}
+    blocked_negative = {"different outfit", "mismatched colors"}
+
+    def split_tokens(text: str) -> list[str]:
+        return [token.strip() for token in text.split(",") if token.strip()]
+
+    def unique_tokens(tokens: list[str]) -> list[str]:
+        result: list[str] = []
+        seen: set[str] = set()
+        for token in tokens:
+            key = token.casefold()
+            if key not in seen:
+                seen.add(key)
+                result.append(token)
+        return result
+
+    base_positive_tokens = [
+        token for token in split_tokens(base_prompt)
+        if token.casefold() not in blocked_positive
+    ]
+    garment_priority_tokens = [
+        tag.strip() for tag in design_tags if tag.strip()
+    ]
+    garment_priority_tokens.extend((
+        "reference garment",
+        "preserve garment color pattern seams accessories",
+    ))
+    positive_tokens = garment_priority_tokens + base_positive_tokens
+    negative_tokens = [
+        token for token in split_tokens(base_negative_prompt)
+        if token.casefold() not in blocked_negative
+    ]
+    return (
+        ", ".join(unique_tokens(positive_tokens)),
+        ", ".join(unique_tokens(negative_tokens)),
+    )
+
+
+class GarmentInpaintWorker(QObject):
+    """Human-Agnostic 승인본을 별도 2D Inpaint 프로세스에 전달한다."""
+
+    status_changed = Signal(str)
+    progress_changed = Signal(object)
+    completed = Signal(object)
+    failed = Signal(str, str)
+
+    def __init__(
+        self,
+        base_character: Image.Image,
+        approved_human_agnostic_image: Image.Image,
+        approved_change_mask: Image.Image,
+        garment_reference: Image.Image,
+        prompt: str,
+        negative_prompt: str,
+        seed: int,
+        settings: GarmentInpaintSettings,
+    ) -> None:
+        super().__init__()
+        self.base_character = base_character.copy()
+        self.approved_human_agnostic_image = (
+            approved_human_agnostic_image.copy()
+        )
+        self.approved_change_mask = approved_change_mask.copy()
+        self.garment_reference = garment_reference.copy()
+        self.prompt = prompt
+        self.negative_prompt = negative_prompt
+        self.seed = seed
+        self.settings = settings
+
+    @Slot()
+    def run(self) -> None:
+        try:
+            self.status_changed.emit(
+                "SDXL Inpaint + IP-Adapter Plus 의상 생성 중..."
+            )
+            result = execute_garment_inpaint(
+                self.base_character,
+                self.approved_human_agnostic_image,
+                self.approved_change_mask,
+                self.garment_reference,
+                self.prompt,
+                self.negative_prompt,
+                self.seed,
+                self.settings,
+                progress_callback=self.progress_changed.emit,
+            )
+            self.completed.emit(result)
+        except Exception as error:
+            self.failed.emit(str(error), traceback.format_exc())
+        finally:
+            self.base_character.close()
+            self.approved_human_agnostic_image.close()
+            self.approved_change_mask.close()
+            self.garment_reference.close()
 
 
 class GenerationWorker(QObject):
@@ -1904,6 +2781,7 @@ class GenAILabWindow(QMainWindow):
         self.config = None
         self.worker = None
         self.worker_thread = None
+        self.garment_inpaint_start_deferred = False
         self.reference_worker = None
         self.reference_worker_thread = None
         self.outfit_worker = None
@@ -1916,6 +2794,10 @@ class GenAILabWindow(QMainWindow):
         self.body_comparison_worker_thread = None
         self.pose_estimation_worker = None
         self.pose_estimation_worker_thread = None
+        self.garment_geometry_worker = None
+        self.garment_geometry_worker_thread = None
+        self.garment_inpaint_worker = None
+        self.garment_inpaint_worker_thread = None
         self.confirmed_character_body_comparison: ConfirmedCharacterBodyComparison | None = None
         self.body_comparison_clothing_category: ClothingCategory | None = None
         self.pending_clothing_source: NormalizedClothingSource | None = None
@@ -1933,7 +2815,13 @@ class GenAILabWindow(QMainWindow):
         self.approved_pose_estimation: PoseEstimationApprovedInput | None = None
         self.pending_character_candidate: CharacterGenerationCandidate | None = None
         self.pending_clothing_base_candidate: CharacterGenerationCandidate | None = None
+        self.approved_garment_warp: GarmentWarpApprovedInput | None = None
+        self.approved_garment_lineart: GarmentLineartApprovedInput | None = None
         self.candidate_is_approved = False
+        self.workflow_context: GenerationWorkflowContext | None = None
+        self.approval_dialog_open = False
+        self.selected_outfit_path: Path | None = None
+        self.selected_pose_path: Path | None = None
 
         # 현재 구현에서 실제 사용하는 입력은 캐릭터 기준 이미지 하나다.
         self.style_path = None
@@ -1949,22 +2837,22 @@ class GenAILabWindow(QMainWindow):
         # 1. 원본 캐릭터 기준 이미지 선택 UI
         style_layout = QHBoxLayout()
         self.style_label = QLabel("1. 원본 캐릭터 기준 이미지: 선택되지 않음")
-        style_button = QPushButton("이미지 선택")
-        style_button.clicked.connect(lambda: self.select_image("style"))
+        self.style_button = QPushButton("이미지 선택")
+        self.style_button.clicked.connect(lambda: self.select_image("style"))
         style_layout.addWidget(self.style_label)
-        style_layout.addWidget(style_button)
+        style_layout.addWidget(self.style_button)
         layout.addLayout(style_layout)
 
         # 의상 참조는 CatVTON 별도 환경으로 전달하고 보호 마스크로 제한한다.
         outfit_layout = QHBoxLayout()
         self.outfit_label = QLabel("2. 의상 참조: 선택하지 않음")
-        outfit_button = QPushButton("의상 이미지 선택")
-        outfit_button.clicked.connect(lambda: self.select_image("outfit"))
-        clear_outfit_button = QPushButton("의상 선택 해제")
-        clear_outfit_button.clicked.connect(self.clear_outfit_reference)
-        outfit_layout.addWidget(clear_outfit_button)
+        self.outfit_button = QPushButton("의상 이미지 선택")
+        self.outfit_button.clicked.connect(lambda: self.select_image("outfit"))
+        self.clear_outfit_button = QPushButton("의상 선택 해제")
+        self.clear_outfit_button.clicked.connect(self.clear_outfit_reference)
+        outfit_layout.addWidget(self.clear_outfit_button)
         outfit_layout.addWidget(self.outfit_label)
-        outfit_layout.addWidget(outfit_button)
+        outfit_layout.addWidget(self.outfit_button)
         layout.addLayout(outfit_layout)
         clothing_type_layout = QHBoxLayout()
         clothing_type_layout.addWidget(QLabel("의상 종류:"))
@@ -1979,6 +2867,7 @@ class GenAILabWindow(QMainWindow):
         self.body_comparison_button.clicked.connect(
             self.start_character_body_comparison
         )
+        self.body_comparison_button.setVisible(False)
         self.clothing_category_combo.currentIndexChanged.connect(
             self.invalidate_character_body_comparison
         )
@@ -1992,12 +2881,13 @@ class GenAILabWindow(QMainWindow):
         self.pose_estimation_button.clicked.connect(
             self.start_pose_reference_estimation
         )
-        clear_pose_button = QPushButton("자세 선택 해제")
-        clear_pose_button.clicked.connect(self.clear_pose_reference)
+        self.pose_estimation_button.setVisible(False)
+        self.clear_pose_button = QPushButton("자세 선택 해제")
+        self.clear_pose_button.clicked.connect(self.clear_pose_reference)
         pose_layout.addWidget(self.pose_label)
         pose_layout.addWidget(self.pose_button)
         pose_layout.addWidget(self.pose_estimation_button)
-        pose_layout.addWidget(clear_pose_button)
+        pose_layout.addWidget(self.clear_pose_button)
         layout.addLayout(pose_layout)
 
         framing_layout = QHBoxLayout()
@@ -2016,7 +2906,7 @@ class GenAILabWindow(QMainWindow):
         )
         self.framing_help.setWordWrap(True)
         layout.addWidget(self.framing_help)
-        self.generate_button = QPushButton("후보 이미지 생성 시작")
+        self.generate_button = QPushButton("전체 이미지 생성 시작")
         self.generate_button.setEnabled(False)
         self.generate_button.clicked.connect(self.start_generation)
         layout.addWidget(self.generate_button)
@@ -2060,6 +2950,13 @@ class GenAILabWindow(QMainWindow):
         layout.addLayout(save_decision_layout)
 
     def select_image(self, target_type):
+        if self.workflow_context is not None and self.workflow_context.active:
+            QMessageBox.information(
+                self,
+                "자동 작업 실행 중",
+                "현재 자동 작업이 끝나거나 실패한 뒤 입력 이미지를 변경하세요.",
+            )
+            return
         if (
             self.reference_worker_thread is not None
             and self.reference_worker_thread.isRunning()
@@ -2125,14 +3022,55 @@ class GenAILabWindow(QMainWindow):
             file_name = os.path.basename(file_path)
             if target_type == "style":
                 self.style_path = file_path
-                self.style_label.setText(f"1. 원본 캐릭터 기준 이미지: {file_name}")
-                self.start_reference_preparation(Path(file_path))
+                self.release_approved_reference_image()
+                self.release_pending_clothing_base_candidate()
+                self.release_confirmed_character_body_comparison()
+                self.style_label.setText(
+                    f"1. 원본 캐릭터 기준 이미지: {file_name} (등록)"
+                )
 
             elif target_type == "outfit":
-                self.start_outfit_region_preparation(Path(file_path))
+                self.release_pending_clothing_base_candidate()
+                self.release_clothing_mask_state()
+                self.selected_outfit_path = Path(file_path)
+                self.outfit_path = None
+                self.pending_outfit_path = None
+                self.clothing_region_candidates = ()
+                self.clothing_source_size = None
+                self.clothing_region_measurements = ()
+                self.outfit_label.setText(
+                    f"2. 의상 참조: {file_name} (등록)"
+                )
 
             elif target_type == "pose":
-                self.review_pose_reference(Path(file_path))
+                self.release_approved_pose_reference()
+                self.release_approved_pose_estimation()
+                self.selected_pose_path = Path(file_path)
+                self.pose_label.setText(f"3. 자세 참조: {file_name} (등록)")
+
+            self.workflow_context = None
+            self.update_input_ready_status()
+
+    def update_input_ready_status(self) -> None:
+        """등록된 입력 수와 전체 자동 실행 가능 여부를 표시한다."""
+        registered_input_count = sum(
+            (
+                self.style_path is not None,
+                self.selected_outfit_path is not None,
+                self.selected_pose_path is not None,
+            )
+        )
+        self.generate_button.setEnabled(self.style_path is not None)
+        self.generate_button.setText("전체 이미지 생성 시작")
+        self.status_label.setText(
+            "상태: 입력 등록 "
+            f"{registered_input_count}/3개 - "
+            + (
+                "전체 이미지 생성 시작 버튼을 누르세요."
+                if self.style_path is not None
+                else "캐릭터 기준 이미지는 필수입니다."
+            )
+        )
 
     def review_pose_reference(self, image_path: Path) -> None:
         """자세 원본과 수치를 공개하고 승인된 복사본만 보관한다."""
@@ -2146,7 +3084,7 @@ class GenAILabWindow(QMainWindow):
             return
 
         dialog = PoseReferenceApprovalDialog(review_candidate, self)
-        dialog.exec()
+        self.execute_approval_dialog(dialog)
         if dialog.is_approved:
             approved_pose_reference = approve_pose_reference_candidate(
                 review_candidate
@@ -2163,11 +3101,14 @@ class GenAILabWindow(QMainWindow):
             )
             self.status_label.setText(
                 "상태: 자세 참조 입력 승인 완료 - "
-                "관절 추출과 생성 적용은 다음 단계"
+                "DWPose 관절 추출을 자동으로 시작합니다."
             )
+            if self.workflow_context is not None and self.workflow_context.active:
+                self.start_pose_reference_estimation()
         else:
-            self.status_label.setText(
-                "상태: 새 자세 참조 입력 거절 - 기존 승인 상태 유지"
+            self.pause_generation_workflow(
+                GenerationWorkflowStage.POSE_ESTIMATING,
+                "자세 참조 입력 승인이 취소되었습니다.",
             )
         review_candidate.close()
 
@@ -2177,11 +3118,14 @@ class GenAILabWindow(QMainWindow):
         if self.pending_character_candidate is not None:
             QMessageBox.information(self, "안내", "현재 후보를 먼저 판단하세요.")
             return
+        self.release_approved_garment_inputs()
         self.release_approved_pose_reference()
         self.release_approved_pose_estimation()
+        self.selected_pose_path = None
+        self.workflow_context = None
         self.pose_estimation_button.setEnabled(False)
         self.pose_label.setText("3. 자세 참조: 선택하지 않음")
-        self.status_label.setText("상태: 자세 참조 선택 해제")
+        self.update_input_ready_status()
 
     def release_approved_pose_reference(self) -> None:
         """이전 승인 자세 이미지의 메모리 복사본을 해제한다."""
@@ -2191,9 +3135,103 @@ class GenAILabWindow(QMainWindow):
 
     def release_approved_pose_estimation(self) -> None:
         """이전 승인 뼈대 지도 복사본을 메모리에서 해제한다."""
+        self.release_approved_garment_inputs()
         if self.approved_pose_estimation is not None:
             self.approved_pose_estimation.close()
             self.approved_pose_estimation = None
+
+    def get_pose_fallback_settings(self) -> PoseFallbackSettings:
+        """설정 파일의 저장 자세 폴백 수치를 하나의 계약 객체로 만든다."""
+        current_dir = Path(__file__).resolve().parent
+        if self.config is None:
+            self.config = load_yaml(current_dir / "configs" / "animagine.yaml")
+        fallback_config = self.config.get("pose_fallback", {})
+        library_root = Path(str(fallback_config.get(
+            "library_root",
+            "D:/genai-cache/genai-lab/approved-poses",
+        )))
+        if not library_root.is_absolute():
+            library_root = current_dir / library_root
+        return PoseFallbackSettings(
+            library_root=library_root,
+            enabled=bool(fallback_config.get("enabled", True)),
+            default_pose_id=str(fallback_config.get(
+                "default_pose_id", "last-approved"
+            )),
+            minimum_detected_joint_count=int(fallback_config.get(
+                "minimum_detected_joint_count", 8
+            )),
+            require_shoulder=bool(fallback_config.get(
+                "require_shoulder", True
+            )),
+            require_hip=bool(fallback_config.get("require_hip", True)),
+            require_knee=bool(fallback_config.get("require_knee", True)),
+            require_ankle=bool(fallback_config.get("require_ankle", True)),
+            require_user_approval=bool(fallback_config.get(
+                "require_user_approval", True
+            )),
+        )
+
+    def offer_saved_pose_fallback(
+        self,
+        failure_reason: str,
+        failed_source_image: Image.Image,
+    ) -> tuple[str, str]:
+        """검증된 마지막 승인 자세를 공개하고 승인되면 현재 자세로 교체한다."""
+        settings = self.get_pose_fallback_settings()
+        if not settings.enabled:
+            return ("unavailable", "저장 자세 폴백이 설정에서 비활성화됨")
+        try:
+            saved_pose = load_default_approved_pose(settings)
+        except PoseFallbackError as error:
+            return ("unavailable", str(error))
+
+        try:
+            dialog = PoseFallbackApprovalDialog(
+                failed_source_image=failed_source_image,
+                saved_pose=saved_pose,
+                failure_reason=failure_reason,
+                parent=self,
+            )
+            self.execute_approval_dialog(dialog)
+            if not dialog.is_approved:
+                return ("rejected", "사용자가 저장 자세 폴백을 거절함")
+            self.release_approved_pose_estimation()
+            self.approved_pose_estimation = saved_pose.copy_approved_pose()
+            self.pose_estimation_button.setEnabled(True)
+            self.pose_label.setText(
+                "3. 자세 참조: 저장 자세 승인 "
+                f"{saved_pose.approved_pose.detected_joint_count}/18개"
+            )
+            self.status_label.setText(
+                "상태: 저장 자세 폴백 승인 완료 - "
+                f"ID={saved_pose.pose_id}, "
+                f"관절={saved_pose.approved_pose.detected_joint_count}/18개, "
+                f"SHA-256={saved_pose.control_map_sha256[:12]}, "
+                "ControlNet 기준 후보 생성을 자동으로 이어갑니다."
+            )
+            return ("approved", "")
+        finally:
+            saved_pose.close()
+
+    def save_last_approved_pose(
+        self,
+        approved_pose: PoseEstimationApprovedInput,
+        source_preview_image: Image.Image,
+    ) -> tuple[bool, str]:
+        """현재 사용자 승인 자세를 다음 실패에 사용할 단일 슬롯에 저장한다."""
+        settings = self.get_pose_fallback_settings()
+        if not settings.enabled:
+            return (False, "저장 자세 폴백이 설정에서 비활성화됨")
+        try:
+            digest = save_default_approved_pose(
+                approved_pose=approved_pose,
+                source_preview_image=source_preview_image,
+                settings=settings,
+            )
+        except PoseFallbackError as error:
+            return (False, str(error))
+        return (True, digest)
 
     @Slot()
     def start_pose_reference_estimation(self) -> None:
@@ -2277,6 +3315,9 @@ class GenAILabWindow(QMainWindow):
         self.pose_estimation_worker_thread.finished.connect(
             self.clear_pose_estimation_worker
         )
+        self.pose_estimation_worker_thread.finished.connect(
+            self.resume_generation_workflow
+        )
         self.pose_estimation_worker_thread.start()
 
     @Slot(object)
@@ -2285,18 +3326,54 @@ class GenAILabWindow(QMainWindow):
         review_candidate: PoseEstimationReviewCandidate,
     ) -> None:
         """DWPose 중간 결과 3개를 공개하고 사용자 승인을 받는다."""
-        dialog = PoseEstimationApprovalDialog(review_candidate, self)
         try:
-            dialog.exec()
+            fallback_settings = self.get_pose_fallback_settings()
+            quality = evaluate_pose_quality(
+                review_candidate,
+                fallback_settings,
+            )
+            if not quality.accepted:
+                failure_reason = "; ".join(quality.rejection_reasons)
+                fallback_status, fallback_details = (
+                    self.offer_saved_pose_fallback(
+                        failure_reason=failure_reason,
+                        failed_source_image=review_candidate.source_image,
+                    )
+                )
+                if fallback_status == "approved":
+                    return
+                self.pose_estimation_button.setEnabled(True)
+                self.pause_generation_workflow(
+                    GenerationWorkflowStage.POSE_ESTIMATING,
+                    "DWPose 자세 품질 미달 및 저장 자세 미적용",
+                )
+                if fallback_status == "unavailable":
+                    QMessageBox.warning(
+                        self,
+                        "저장 자세 폴백 불가",
+                        f"요청 자세 실패: {failure_reason}\n\n"
+                        f"폴백 불가: {fallback_details}\n\n"
+                        "품질 기준을 통과한 자세를 1회 승인하면 이후 "
+                        "마지막 승인 자세로 폴백할 수 있습니다.",
+                    )
+                return
+
+            dialog = PoseEstimationApprovalDialog(review_candidate, self)
+            self.execute_approval_dialog(dialog)
             if not dialog.is_approved:
                 self.pose_estimation_button.setEnabled(True)
-                self.status_label.setText(
-                    "상태: DWPose 관절 결과 거절 - 자세를 다시 선택하세요"
+                self.pause_generation_workflow(
+                    GenerationWorkflowStage.POSE_ESTIMATING,
+                    "DWPose 관절 결과 승인이 취소되었습니다.",
                 )
                 return
             self.release_approved_pose_estimation()
             self.approved_pose_estimation = approve_pose_estimation_candidate(
                 review_candidate
+            )
+            pose_saved, save_details = self.save_last_approved_pose(
+                approved_pose=self.approved_pose_estimation,
+                source_preview_image=review_candidate.source_image,
             )
             self.pose_estimation_button.setEnabled(True)
             self.pose_label.setText(
@@ -2308,7 +3385,9 @@ class GenAILabWindow(QMainWindow):
                 f"탐지={review_candidate.detected_joint_count}/18개, "
                 f"누락={review_candidate.missing_joint_count}/18개, "
                 f"시간={review_candidate.elapsed_seconds:.2f}초, "
-                "ControlNet 적용은 다음 단계"
+                f"폴백 저장={'완료' if pose_saved else '실패'}, "
+                f"저장 근거={save_details[:12] if pose_saved else save_details}, "
+                "ControlNet 기준 후보 생성을 자동으로 이어갑니다."
             )
         finally:
             review_candidate.close()
@@ -2321,13 +3400,33 @@ class GenAILabWindow(QMainWindow):
     ) -> None:
         """DWPose 실패 원인과 재시도 행동을 표시한다."""
         self.pose_estimation_button.setEnabled(True)
+        if self.approved_pose_reference is not None:
+            fallback_status, fallback_details = self.offer_saved_pose_fallback(
+                failure_reason=message,
+                failed_source_image=self.approved_pose_reference.image,
+            )
+            if fallback_status == "approved":
+                return
+            if fallback_status == "rejected":
+                self.pause_generation_workflow(
+                    GenerationWorkflowStage.POSE_ESTIMATING,
+                    "저장 자세 폴백이 사용자에게 거절되었습니다.",
+                )
+                return
+        else:
+            fallback_details = "승인 자세 원본이 메모리에 없음"
         self.status_label.setText(f"상태: DWPose 관절 추출 실패 ({message})")
+        self.pause_generation_workflow(
+            GenerationWorkflowStage.POSE_ESTIMATING,
+            f"DWPose 관절 추출 실패: {message}",
+        )
         dialog = QMessageBox(self)
         dialog.setIcon(QMessageBox.Icon.Critical)
         dialog.setWindowTitle("DWPose 관절 추출 실패")
         dialog.setText(message)
         dialog.setInformativeText(
-            "승인 자세 이미지는 유지합니다. 다른 자세를 선택하거나 다시 실행하세요."
+            "승인 자세 이미지는 유지합니다. 다른 자세를 선택하거나 다시 실행하세요.\n"
+            f"저장 자세 폴백 불가 사유: {fallback_details}"
         )
         dialog.setDetailedText(details)
         dialog.exec()
@@ -2436,7 +3535,7 @@ class GenAILabWindow(QMainWindow):
             detection_warning=detection_warning,
             parent=self,
         )
-        review_dialog.exec()
+        self.execute_approval_dialog(review_dialog)
         selected_candidates = review_dialog.selected_candidates
         if not selected_candidates or self.pending_outfit_path is None:
             normalized_source.image.close()
@@ -2447,6 +3546,10 @@ class GenAILabWindow(QMainWindow):
             self.clothing_region_measurements = ()
             self.outfit_label.setText("2. 의상 참조: 선택하지 않음")
             self.status_label.setText("상태: 의상 영역 승인이 취소되었습니다.")
+            self.pause_generation_workflow(
+                GenerationWorkflowStage.CLOTHING_MASKING,
+                "의상 영역 승인이 취소되었습니다.",
+            )
             self.generate_button.setEnabled(
                 self.approved_reference_image is not None
             )
@@ -2472,17 +3575,13 @@ class GenAILabWindow(QMainWindow):
             selected_candidates,
         )
 
-    def start_clothing_mask_extraction(
-        self,
-        normalized_source: NormalizedClothingSource,
-        approved_regions: tuple[ClothingRegionCandidate, ...],
-    ) -> None:
-        """승인 영역 최대 8개를 입력으로 SAM2 후보 생성을 시작한다."""
+    def read_clothing_mask_settings(self) -> ClothingMaskExtractionSettings:
+        """참조 의상과 기준 캐릭터 선택이 같은 SAM2 설정을 사용한다."""
         current_dir = Path(__file__).resolve().parent
         if self.config is None:
             self.config = load_yaml(current_dir / "configs" / "animagine.yaml")
         mask_config = self.config.get("clothing_mask_extraction", {})
-        mask_settings = ClothingMaskExtractionSettings(
+        return ClothingMaskExtractionSettings(
             model_id=str(
                 mask_config.get("model_id", "facebook/sam2.1-hiera-tiny")
             ),
@@ -2504,6 +3603,13 @@ class GenAILabWindow(QMainWindow):
             ),
         )
 
+    def start_clothing_mask_extraction(
+        self,
+        normalized_source: NormalizedClothingSource,
+        approved_regions: tuple[ClothingRegionCandidate, ...],
+    ) -> None:
+        """승인 영역 최대 8개를 입력으로 SAM2 후보 생성을 시작한다."""
+        mask_settings = self.read_clothing_mask_settings()
         self.mask_worker_thread = QThread(self)
         self.mask_worker = ClothingMaskExtractionWorker(
             normalized_source=normalized_source,
@@ -2540,7 +3646,7 @@ class GenAILabWindow(QMainWindow):
             extraction_result=extraction_result,
             parent=self,
         )
-        review_dialog.exec()
+        self.execute_approval_dialog(review_dialog)
         selected_candidates = review_dialog.selected_candidates
         if not selected_candidates:
             retry_requested = review_dialog.retry_region_selection
@@ -2559,6 +3665,10 @@ class GenAILabWindow(QMainWindow):
                 )
             else:
                 self.status_label.setText("상태: 의상 마스크 선택 취소")
+            self.pause_generation_workflow(
+                GenerationWorkflowStage.CLOTHING_MASKING,
+                "의상 마스크 후보 선택이 완료되지 않았습니다.",
+            )
             return
 
         combined_mask = combine_clothing_mask_candidates(
@@ -2570,7 +3680,7 @@ class GenAILabWindow(QMainWindow):
             combined_mask=combined_mask,
             parent=self,
         )
-        combined_review_dialog.exec()
+        self.execute_approval_dialog(combined_review_dialog)
         if not combined_review_dialog.approved:
             retry_requested = combined_review_dialog.retry_region_selection
             combined_mask.mask_image.close()
@@ -2587,6 +3697,10 @@ class GenAILabWindow(QMainWindow):
                 "상태: 의상 영역 재선택 요청 - 의상 이미지를 다시 선택하세요."
                 if retry_requested
                 else "상태: 합친 의상 마스크 승인 취소"
+            )
+            self.pause_generation_workflow(
+                GenerationWorkflowStage.CLOTHING_MASKING,
+                "합친 의상 마스크 승인이 완료되지 않았습니다.",
             )
             return
 
@@ -2636,6 +3750,10 @@ class GenAILabWindow(QMainWindow):
                 "원본 의상 픽셀 추출 실패",
                 str(error),
             )
+            self.pause_generation_workflow(
+                GenerationWorkflowStage.CLOTHING_MASKING,
+                f"원본 의상 픽셀 추출 실패: {error}",
+            )
             return
 
         pixel_review_dialog = ClothingPixelExtractionReviewDialog(
@@ -2645,7 +3763,7 @@ class GenAILabWindow(QMainWindow):
             extraction_settings=pixel_settings,
             parent=self,
         )
-        pixel_review_dialog.exec()
+        self.execute_approval_dialog(pixel_review_dialog)
         if not pixel_review_dialog.approved:
             retry_requested = pixel_review_dialog.retry_mask_selection
             pixel_extraction_candidate.extracted_image.close()
@@ -2664,6 +3782,10 @@ class GenAILabWindow(QMainWindow):
                 "상태: 의상 마스크 재선택 요청 - 의상 이미지를 다시 선택하세요."
                 if retry_requested
                 else "상태: 원본 의상 픽셀 추출 승인 취소"
+            )
+            self.pause_generation_workflow(
+                GenerationWorkflowStage.CLOTHING_MASKING,
+                "원본 의상 픽셀 추출 승인이 완료되지 않았습니다.",
             )
             return
 
@@ -2725,6 +3847,10 @@ class GenAILabWindow(QMainWindow):
             self.approved_reference_image is not None
         )
         self.status_label.setText(f"상태: SAM2 의상 마스크 생성 실패 ({message})")
+        self.pause_generation_workflow(
+            GenerationWorkflowStage.CLOTHING_MASKING,
+            f"SAM2 의상 마스크 생성 실패: {message}",
+        )
         dialog = QMessageBox(self)
         dialog.setIcon(QMessageBox.Icon.Critical)
         dialog.setWindowTitle("SAM2 의상 마스크 생성 실패")
@@ -2737,6 +3863,7 @@ class GenAILabWindow(QMainWindow):
         extraction_result: ClothingMaskExtractionResult | None = None,
     ) -> None:
         """보관 중인 의상 원본·마스크·픽셀 추출 이미지를 메모리에서 해제한다."""
+        self.release_approved_garment_inputs()
         result_to_release = extraction_result or self.clothing_mask_result
         if result_to_release is not None:
             self.close_extraction_result_masks(result_to_release)
@@ -2855,6 +3982,9 @@ class GenAILabWindow(QMainWindow):
             self.design_worker_thread.deleteLater
         )
         self.design_worker_thread.finished.connect(self.clear_design_worker)
+        self.design_worker_thread.finished.connect(
+            self.resume_generation_workflow
+        )
         self.design_worker_thread.start()
 
     @Slot(object)
@@ -2871,7 +4001,7 @@ class GenAILabWindow(QMainWindow):
             analysis_result=analysis_result,
             parent=self,
         )
-        review_dialog.exec()
+        self.execute_approval_dialog(review_dialog)
         if not review_dialog.approved:
             self.outfit_path = None
             self.pending_outfit_path = None
@@ -2884,6 +4014,10 @@ class GenAILabWindow(QMainWindow):
                 self.approved_reference_image is not None
             )
             self.status_label.setText("상태: WD14 의상 분석 승인 취소")
+            self.pause_generation_workflow(
+                GenerationWorkflowStage.CLOTHING_ANALYZING,
+                "WD14 의상 디자인 분석 승인이 취소되었습니다.",
+            )
             return
 
         approved_tag_names = review_dialog.approved_tag_names
@@ -2903,6 +4037,10 @@ class GenAILabWindow(QMainWindow):
         )
         self.generate_button.setEnabled(
             self.approved_reference_image is not None
+            and not (
+                self.workflow_context is not None
+                and self.workflow_context.active
+            )
         )
         self.release_confirmed_character_body_comparison()
         self.body_comparison_clothing_category = None
@@ -2913,7 +4051,7 @@ class GenAILabWindow(QMainWindow):
             f"승인={len(approved_tag_names)}개, "
             f"기준={analysis_result.score_threshold * 100.0:.1f}%, "
             f"시간={analysis_result.elapsed_seconds:.2f}초, "
-            "후보 이미지 생성 시작 버튼을 눌러 기준 후보를 먼저 만드세요."
+            "다음 자동 단계를 준비합니다."
         )
 
     @Slot(str, str)
@@ -2925,6 +4063,10 @@ class GenAILabWindow(QMainWindow):
         """WD14 실패 원인과 재시도 행동을 표시하고 CatVTON을 차단한다."""
         self.generate_button.setEnabled(False)
         self.status_label.setText(f"상태: WD14 의상 디자인 분석 실패 ({message})")
+        self.pause_generation_workflow(
+            GenerationWorkflowStage.CLOTHING_ANALYZING,
+            f"WD14 의상 디자인 분석 실패: {message}",
+        )
         dialog = QMessageBox(self)
         dialog.setIcon(QMessageBox.Icon.Critical)
         dialog.setWindowTitle("WD14 의상 디자인 분석 실패")
@@ -2944,9 +4086,19 @@ class GenAILabWindow(QMainWindow):
 
     def release_confirmed_character_body_comparison(self) -> None:
         """승인된 중립화 이미지와 변경 마스크를 메모리에서 해제한다."""
+        self.release_approved_garment_inputs()
         if self.confirmed_character_body_comparison is not None:
             self.confirmed_character_body_comparison.close()
         self.confirmed_character_body_comparison = None
+
+    def release_approved_garment_inputs(self) -> None:
+        """TPS와 Lineart 승인 입력 4개 이미지를 메모리에서 해제한다."""
+        if self.approved_garment_lineart is not None:
+            self.approved_garment_lineart.close()
+        self.approved_garment_lineart = None
+        if self.approved_garment_warp is not None:
+            self.approved_garment_warp.close()
+        self.approved_garment_warp = None
 
     def release_pending_clothing_base_candidate(self) -> None:
         """의상 적용 전 메모리에 보관한 기준 후보를 해제한다."""
@@ -2960,11 +4112,16 @@ class GenAILabWindow(QMainWindow):
             candidate.before_clothing_image.close()
         if candidate.clothing_change_mask is not None:
             candidate.clothing_change_mask.close()
+        if candidate.raw_clothing_try_on_image is not None:
+            candidate.raw_clothing_try_on_image.close()
+        if candidate.clothing_difference_image is not None:
+            candidate.clothing_difference_image.close()
         self.pending_clothing_base_candidate = None
 
     @Slot()
     def invalidate_character_body_comparison(self) -> None:
         """의상 종류가 바뀌면 이전 신체 비교 승인을 무효화한다."""
+        self.release_approved_garment_inputs()
         self.release_confirmed_character_body_comparison()
         self.body_comparison_clothing_category = None
         self.generate_button.setEnabled(
@@ -2976,8 +4133,27 @@ class GenAILabWindow(QMainWindow):
         )
 
     @Slot()
+    def review_target_character_masks(
+        self, source: Image.Image,
+    ) -> ApprovedTargetMasks | None:
+        """기준 후보의 실제 교체 영역과 특수 보호를 승인받는다."""
+        dialog = TargetMaskReviewDialog(
+            source, self.read_clothing_mask_settings(),
+            ClothingRegionReviewDialog, ClothingMaskReviewDialog,
+            ClothingMaskExtractionWorker, create_pil_image_pixmap, self,
+        )
+        try:
+            accepted = self.execute_approval_dialog(dialog)
+            if accepted == QDialog.DialogCode.Accepted and dialog.approved_masks:
+                return dialog.approved_masks.copy()
+            return None
+        finally:
+            dialog.close_images()
+
     def start_character_body_comparison(self) -> None:
         """승인 캐릭터에 SCHP·DensePose·DWPose 신체 비교를 시작한다."""
+        if self.approval_dialog_open:
+            return
         if (
             self.body_comparison_worker_thread is not None
             and self.body_comparison_worker_thread.isRunning()
@@ -3000,6 +4176,13 @@ class GenAILabWindow(QMainWindow):
                 self,
                 "신체 비교 입력 오류",
                 "의상 픽셀 추출과 WD14 태그 승인을 먼저 완료하세요.",
+            )
+            return
+        if self.pending_clothing_extraction is None:
+            QMessageBox.warning(
+                self,
+                "신체 비교 입력 오류",
+                "승인된 의상 픽셀 추출본이 없습니다.",
             )
             return
 
@@ -3038,10 +4221,6 @@ class GenAILabWindow(QMainWindow):
             width=int(body_config.get("width", 576)),
             height=int(body_config.get("height", 1024)),
             timeout_seconds=int(body_config.get("timeout_seconds", 1800)),
-            pose_device=str(body_config.get("pose_device", "cpu")),
-            minimum_pose_confidence=float(
-                body_config.get("minimum_pose_confidence", 0.30)
-            ),
             mask_expansion_ratio=float(
                 body_config.get("mask_expansion_ratio", 0.01)
             ),
@@ -3054,6 +4233,41 @@ class GenAILabWindow(QMainWindow):
             mask_closing_radius_pixels=int(
                 body_config.get("mask_closing_radius_pixels", 2)
             ),
+            foreground_model_id=str(
+                body_config.get("foreground_model_id", "isnet-anime")
+            ),
+            foreground_expansion_pixels=int(
+                body_config.get("foreground_expansion_pixels", 15)
+            ),
+        )
+
+        clothing_config = self.config.get("clothing_try_on", {})
+        preflight_settings = CatVTONPreflightSettings(
+            python_executable=Path(str(clothing_config["python_executable"])),
+            repository_path=Path(str(clothing_config["repository_path"])),
+            runner_path=current_dir / "scripts" / "catvton_preflight_runner.py",
+            temporary_root=Path(str(clothing_config["temporary_root"])),
+            cache_dir=Path(str(clothing_config["cache_dir"])),
+            width=int(clothing_config["width"]),
+            height=int(clothing_config["height"]),
+            timeout_seconds=int(clothing_config["timeout_seconds"]),
+            mask_blur_factor=int(clothing_config.get("mask_blur_factor", 9)),
+        )
+        approved_target_masks = self.review_target_character_masks(
+            self.pending_clothing_base_candidate.image,
+        )
+        if approved_target_masks is None:
+            self.pause_generation_workflow(
+                GenerationWorkflowStage.BODY_MASKING,
+                "기존 의상·특수 보호 선택을 취소했습니다. 다시 시도할 수 있습니다.",
+            )
+            return
+        preflight_clothing_input = ClothingReferenceInput(
+            image_path=Path(self.outfit_path),
+            category=clothing_category,
+            approved_image=(
+                self.pending_clothing_extraction.extracted_image.copy()
+            ),
         )
 
         self.release_confirmed_character_body_comparison()
@@ -3065,7 +4279,11 @@ class GenAILabWindow(QMainWindow):
             character_image=self.pending_clothing_base_candidate.image,
             clothing_type=clothing_type,
             settings=comparison_settings,
+            clothing_reference_input=preflight_clothing_input,
+            preflight_settings=preflight_settings,
+            approved_target_masks=approved_target_masks,
         )
+        approved_target_masks.close()
         self.body_comparison_worker.moveToThread(
             self.body_comparison_worker_thread
         )
@@ -3096,25 +4314,34 @@ class GenAILabWindow(QMainWindow):
         self.body_comparison_worker_thread.finished.connect(
             self.clear_body_comparison_worker
         )
+        self.body_comparison_worker_thread.finished.connect(
+            self.resume_generation_workflow
+        )
         self.body_comparison_worker_thread.start()
 
     @Slot(object)
     def character_body_comparison_completed(
         self,
-        comparison_candidate: CharacterBodyComparisonCandidate,
+        completed_result: object,
     ) -> None:
-        """신체·관절·마스크 8개 중간 결과를 공개하고 승인을 받는다."""
+        """신체 마스크와 CatVTON 실제 전처리 입력을 공개하고 승인받는다."""
+        comparison_candidate, input_snapshot, preflight_candidate = completed_result
         comparison_dialog = CharacterBodyComparisonReviewDialog(
             comparison_candidate,
+            input_snapshot,
+            preflight_candidate,
             self,
         )
         try:
-            comparison_dialog.exec()
+            self.execute_approval_dialog(comparison_dialog)
             if not comparison_dialog.approved:
                 self.release_confirmed_character_body_comparison()
                 self.generate_button.setEnabled(False)
                 self.body_comparison_button.setEnabled(True)
-                self.status_label.setText("상태: Human-Agnostic Image 승인 취소")
+                self.pause_generation_workflow(
+                    GenerationWorkflowStage.BODY_MASKING,
+                    "Human-Agnostic Image와 변경 영역 승인이 취소되었습니다.",
+                )
                 return
 
             mask_refinement = comparison_candidate.mask_refinement
@@ -3129,10 +4356,21 @@ class GenAILabWindow(QMainWindow):
                         agnostic_candidate.neutralized_image.copy()
                     ),
                     approved_change_mask=mask_refinement.safe_change_mask.copy(),
+                    approved_model_mask=(
+                        preflight_candidate.model_mask_image.copy()
+                    ),
                     neutral_rgb=agnostic_candidate.neutral_rgb,
                     neutralized_pixel_count=agnostic_candidate.neutralized_pixel_count,
                     neutralized_percent=agnostic_candidate.neutralized_percent,
                     raw_mask_coverage_percent=agnostic_candidate.raw_mask_coverage_percent,
+                    outside_foreground_pixel_count=(
+                        comparison_candidate.clothing_removal_verification
+                        .outside_foreground_pixel_count
+                    ),
+                    outside_foreground_percent=(
+                        comparison_candidate.clothing_removal_verification
+                        .outside_foreground_percent
+                    ),
                     remaining_clothing_pixel_count=(
                         comparison_candidate.clothing_removal_verification
                         .remaining_clothing_pixel_count
@@ -3153,35 +4391,57 @@ class GenAILabWindow(QMainWindow):
                         mask_refinement.safe_change_pixel_count
                     ),
                     safe_change_percent=mask_refinement.safe_change_percent,
-                    detected_joint_count=(
-                        comparison_candidate.detected_joint_count
-                    ),
-                    missing_joint_count=(
-                        comparison_candidate.missing_joint_count
-                    ),
                     model_ids=comparison_candidate.model_ids,
+                    preflight_person_sha256=preflight_candidate.person_sha256,
+                    preflight_binary_mask_sha256=(
+                        preflight_candidate.binary_mask_sha256
+                    ),
+                    preflight_model_mask_sha256=(
+                        preflight_candidate.model_mask_sha256
+                    ),
+                    preflight_clothing_sha256=(
+                        preflight_candidate.clothing_sha256
+                    ),
+                    preflight_protected_overlap_pixel_count=(
+                        preflight_candidate.protected_overlap_pixel_count
+                    ),
+                    preflight_outside_foreground_pixel_count=(
+                        preflight_candidate.outside_foreground_pixel_count
+                    ),
+                    preflight_soft_overlap_pixel_count=(
+                        preflight_candidate.soft_overlap_pixel_count
+                    ),
+                    preflight_hard_overlap_pixel_count=(
+                        preflight_candidate.hard_overlap_pixel_count
+                    ),
+                    preflight_removed_pixel_count=(
+                        preflight_candidate.removed_pixel_count
+                    ),
                 )
             )
             self.generate_button.setEnabled(True)
             self.body_comparison_button.setEnabled(True)
             self.status_label.setText(
                 "상태: Human-Agnostic Image 승인 완료 - "
-                f"관절={comparison_candidate.detected_joint_count}/18개, "
                 f"닫기={mask_refinement.closing_radius_pixels}px, "
                 f"팽창={mask_refinement.expansion_radius_pixels}px, "
                 f"변경={mask_refinement.safe_change_pixel_count:,}px "
                 f"({mask_refinement.safe_change_percent:.3f}%), "
                 f"원본 마스크 포함률="
                 f"{agnostic_candidate.raw_mask_coverage_percent:.3f}%, "
+                f"외곽 밖 SCHP 오탐="
+                f"{comparison_candidate.clothing_removal_verification.outside_foreground_pixel_count:,}px "
+                f"({comparison_candidate.clothing_removal_verification.outside_foreground_percent:.3f}%), "
                 f"기존 의상 잔여="
                 f"{comparison_candidate.clothing_removal_verification.remaining_clothing_pixel_count:,}px, "
                 f"기존 의상 제거율="
                 f"{comparison_candidate.clothing_removal_verification.removal_percent:.3f}%, "
                 f"영역 밖 변경={agnostic_candidate.changed_pixel_count_outside_mask}px"
             )
-            self.start_generation()
         finally:
             comparison_candidate.close()
+            input_snapshot.close()
+            preflight_candidate.close()
 
     @Slot(str, str)
     def character_body_comparison_failed(
@@ -3194,6 +4454,10 @@ class GenAILabWindow(QMainWindow):
         self.generate_button.setEnabled(False)
         self.body_comparison_button.setEnabled(True)
         self.status_label.setText(f"상태: 캐릭터 신체 비교 실패 ({message})")
+        self.pause_generation_workflow(
+            GenerationWorkflowStage.BODY_MASKING,
+            f"캐릭터 신체 비교 실패: {message}",
+        )
         dialog = QMessageBox(self)
         dialog.setIcon(QMessageBox.Icon.Critical)
         dialog.setWindowTitle("캐릭터 신체 비교 실패")
@@ -3210,6 +4474,481 @@ class GenAILabWindow(QMainWindow):
         self.body_comparison_worker = None
         self.body_comparison_worker_thread = None
 
+    def start_garment_geometry_preparation(self) -> None:
+        """승인 4종 입력으로 조각 대응과 TPS 검토 후보를 1회 만든다."""
+        if (
+            self.garment_geometry_worker_thread is not None
+            and self.garment_geometry_worker_thread.isRunning()
+        ):
+            return
+        if (
+            self.pending_clothing_base_candidate is None
+            or self.pending_clothing_extraction is None
+            or self.confirmed_character_body_comparison is None
+        ):
+            self.pause_generation_workflow(
+                GenerationWorkflowStage.GARMENT_GEOMETRY,
+                "TPS 입력이 없습니다: 기준 후보·추출 의상·승인 변경 마스크가 필요합니다.",
+            )
+            return
+        if self.approved_pose_estimation is None:
+            self.pause_generation_workflow(
+                GenerationWorkflowStage.GARMENT_GEOMETRY,
+                "의상 좌표를 추측하지 않습니다. DWPose 자세 승인이 필요합니다.",
+            )
+            return
+        self.release_approved_garment_inputs()
+        clothing_category = ClothingCategory(
+            self.clothing_category_combo.currentData()
+        )
+        self.garment_geometry_worker_thread = QThread(self)
+        self.garment_geometry_worker = GarmentGeometryWorker(
+            self.pending_clothing_extraction.extracted_image,
+            self.pending_clothing_base_candidate.image,
+            self.confirmed_character_body_comparison.approved_change_mask,
+            self.approved_pose_estimation,
+            clothing_category,
+        )
+        self.garment_geometry_worker.moveToThread(
+            self.garment_geometry_worker_thread
+        )
+        self.garment_geometry_worker_thread.started.connect(
+            self.garment_geometry_worker.run
+        )
+        self.garment_geometry_worker.status_changed.connect(
+            self.show_worker_status
+        )
+        self.garment_geometry_worker.completed.connect(
+            self.garment_geometry_completed
+        )
+        self.garment_geometry_worker.failed.connect(
+            self.garment_geometry_failed
+        )
+        self.garment_geometry_worker.completed.connect(
+            self.garment_geometry_worker_thread.quit
+        )
+        self.garment_geometry_worker.failed.connect(
+            self.garment_geometry_worker_thread.quit
+        )
+        self.garment_geometry_worker_thread.finished.connect(
+            self.garment_geometry_worker.deleteLater
+        )
+        self.garment_geometry_worker_thread.finished.connect(
+            self.garment_geometry_worker_thread.deleteLater
+        )
+        self.garment_geometry_worker_thread.finished.connect(
+            self.clear_garment_geometry_worker
+        )
+        self.garment_geometry_worker_thread.finished.connect(
+            self.resume_generation_workflow
+        )
+        self.garment_geometry_worker_thread.start()
+
+    @Slot(object)
+    def garment_geometry_completed(self, completed_result: object) -> None:
+        review_candidate, component_matches = completed_result
+        dialog = GarmentTpsReviewDialog(
+            review_candidate,
+            self.pending_clothing_extraction.extracted_image,
+            component_matches,
+            self,
+        )
+        try:
+            self.execute_approval_dialog(dialog)
+            if not dialog.approved:
+                self.release_approved_garment_inputs()
+                self.pause_generation_workflow(
+                    GenerationWorkflowStage.GARMENT_GEOMETRY,
+                    "사용자가 조각 대응 또는 TPS 좌표 후보를 거절했습니다.",
+                )
+                return
+            self.approved_garment_warp = approve_garment_tps_warp_review(
+                review_candidate
+            )
+            self.status_label.setText(
+                "상태: 진단용 TPS 의상 워핑 - "
+                f"TPS 승인, 조각={review_candidate.component_count}개, "
+                f"승인 밖={review_candidate.protected_outside_alpha_pixels:,}px"
+            )
+        except Exception as error:
+            self.release_approved_garment_inputs()
+            self.pause_generation_workflow(
+                GenerationWorkflowStage.GARMENT_GEOMETRY,
+                f"TPS 승인 실패: {error}",
+            )
+            QMessageBox.critical(self, "TPS 승인 실패", str(error))
+        finally:
+            review_candidate.close()
+
+    @Slot(str, str)
+    def garment_geometry_failed(self, message: str, details: str) -> None:
+        self.release_approved_garment_inputs()
+        self.pause_generation_workflow(
+            GenerationWorkflowStage.GARMENT_GEOMETRY,
+            f"의상 좌표/TPS 실패: {message}",
+        )
+        dialog = QMessageBox(self)
+        dialog.setIcon(QMessageBox.Icon.Critical)
+        dialog.setWindowTitle("의상 좌표/TPS 실패")
+        dialog.setText(message)
+        dialog.setDetailedText(details)
+        dialog.exec()
+
+    @Slot()
+    def clear_garment_geometry_worker(self) -> None:
+        self.garment_geometry_worker = None
+        self.garment_geometry_worker_thread = None
+
+    def review_garment_lineart(self) -> None:
+        """TPS 승인본에서 만든 6개 Lineart 중간 자료를 승인받는다."""
+        if (
+            self.approved_garment_warp is None
+            or self.confirmed_character_body_comparison is None
+        ):
+            self.pause_generation_workflow(
+                GenerationWorkflowStage.GARMENT_LINEART,
+                "Lineart 입력이 없습니다: TPS와 변경 마스크 승인이 필요합니다.",
+            )
+            return
+        review_candidate = None
+        try:
+            review_candidate = create_garment_lineart_review(
+                self.approved_garment_warp,
+                self.confirmed_character_body_comparison.approved_change_mask,
+            )
+            dialog = GarmentLineartReviewDialog(review_candidate, self)
+            self.execute_approval_dialog(dialog)
+            if not dialog.approved:
+                self.pause_generation_workflow(
+                    GenerationWorkflowStage.GARMENT_LINEART,
+                    "사용자가 Lineart 제어 입력을 거절했습니다.",
+                )
+                return
+            self.approved_garment_lineart = approve_garment_lineart_review(
+                review_candidate
+            )
+            self.status_label.setText(
+                "상태: 진단용 Garment Lineart - "
+                f"Lineart 승인, 선={review_candidate.total_edge_pixels:,}px, "
+                f"승인 밖={review_candidate.protected_edge_pixels_outside_approved_mask:,}px"
+            )
+        except Exception as error:
+            self.pause_generation_workflow(
+                GenerationWorkflowStage.GARMENT_LINEART,
+                f"Lineart 생성/승인 실패: {error}",
+            )
+            QMessageBox.critical(self, "Lineart 실패", str(error))
+        finally:
+            if review_candidate is not None:
+                review_candidate.close()
+
+    def create_garment_inpaint_settings(self) -> GarmentInpaintSettings:
+        """YAML 수치를 경로 해석 뒤 Stage 5 설정 계약으로 변환한다."""
+        current_dir = Path(__file__).resolve().parent
+        if self.config is None:
+            self.config = load_yaml(current_dir / "configs" / "animagine.yaml")
+        section = self.config.get("garment_inpaint", {})
+
+        def resolved_path(key: str, default: str) -> Path:
+            path = Path(str(section.get(key, default)))
+            return path if path.is_absolute() else current_dir / path
+
+        return GarmentInpaintSettings(
+            python_executable=resolved_path(
+                "python_executable",
+                "D:/genai-cache/venv/Scripts/python.exe",
+            ),
+            runner_path=resolved_path(
+                "runner_path",
+                "scripts/garment_inpaint_runner.py",
+            ),
+            temporary_root=resolved_path(
+                "temporary_root",
+                "D:/genai-cache/temp/garment-inpaint",
+            ),
+            benchmark_root=resolved_path(
+                "benchmark_root",
+                "outputs/debug_benchmark",
+            ),
+            cache_dir=resolved_path(
+                "cache_dir",
+                "D:/genai-cache/huggingface",
+            ),
+            base_model_id=str(section.get(
+                "base_model_id",
+                "diffusers/stable-diffusion-xl-1.0-inpainting-0.1",
+            )),
+            model_variant=str(section.get("model_variant", "fp16")),
+            adapter_repository=str(
+                section.get("adapter_repository", "h94/IP-Adapter")
+            ),
+            adapter_subfolder=str(section.get("adapter_subfolder", "sdxl_models")),
+            adapter_weight=str(
+                section.get(
+                    "adapter_weight",
+                    "ip-adapter-plus_sdxl_vit-h.safetensors",
+                )
+            ),
+            adapter_image_encoder_subfolder=str(
+                section.get(
+                    "adapter_image_encoder_subfolder",
+                    "models/image_encoder",
+                )
+            ),
+            strength=float(section.get("strength", 0.90)),
+            inference_steps=int(section.get("inference_steps", 28)),
+            guidance_scale=float(section.get("guidance_scale", 5.5)),
+            ip_adapter_scale=float(section.get("ip_adapter_scale", 0.80)),
+            padding_mask_crop=int(section.get("padding_mask_crop", 64)),
+            mask_threshold=int(section.get("mask_threshold", 128)),
+            garment_board_size=int(section.get("garment_board_size", 1024)),
+            garment_board_outer_padding=int(
+                section.get("garment_board_outer_padding", 32)
+            ),
+            garment_board_cell_padding=int(
+                section.get("garment_board_cell_padding", 16)
+            ),
+            garment_board_minimum_component_pixels=int(
+                section.get("garment_board_minimum_component_pixels", 16)
+            ),
+            garment_board_maximum_components=int(
+                section.get("garment_board_maximum_components", 8)
+            ),
+            timeout_seconds=int(section.get("timeout_seconds", 1800)),
+            dtype=str(section.get("dtype", "float16")),
+        )
+
+    def start_garment_inpaint(self) -> None:
+        """Human-Agnostic 승인본과 의상 참조로 GPU 작업을 1회 시작한다."""
+        if (
+            self.garment_inpaint_worker_thread is not None
+            and self.garment_inpaint_worker_thread.isRunning()
+        ):
+            return
+        if self.worker_thread is not None and self.worker_thread.isRunning():
+            if not self.garment_inpaint_start_deferred:
+                self.garment_inpaint_start_deferred = True
+                self.status_label.setText(
+                    "상태: 7/8 시작 전 Step 5 작업자 종료 대기 중..."
+                )
+                QTimer.singleShot(
+                    100,
+                    self.continue_garment_inpaint_after_generation_worker,
+                )
+            return
+        if (
+            self.pending_clothing_base_candidate is None
+            or self.pending_clothing_extraction is None
+            or self.confirmed_character_body_comparison is None
+        ):
+            self.pause_generation_workflow(
+                GenerationWorkflowStage.CLOTHING_COMPOSITING,
+                "2D Inpaint 승인 입력 4종 중 하나 이상이 없습니다.",
+            )
+            return
+        base = self.pending_clothing_base_candidate
+        tags = (
+            self.confirmed_clothing_design.design_tags
+            if self.confirmed_clothing_design is not None
+            else ()
+        )
+        prompt, negative_prompt = build_garment_inpaint_prompts(
+            base.prompt,
+            base.negative_prompt,
+            tuple(tags),
+        )
+        release_metrics = self.release_step5_pipeline()
+        settings = replace(
+            self.create_garment_inpaint_settings(),
+            neutral_rgb=self.confirmed_character_body_comparison.neutral_rgb,
+            step5_vram_before_allocated_mib=(
+                release_metrics["before_allocated_mib"]
+            ),
+            step5_vram_after_allocated_mib=(
+                release_metrics["after_allocated_mib"]
+            ),
+            step5_vram_after_reserved_mib=(
+                release_metrics["after_reserved_mib"]
+            ),
+        )
+        self.status_label.setText(
+            "상태: 7/8 Step 5 모델 해제 완료 - "
+            f"할당 {release_metrics['before_allocated_mib']:.1f}→"
+            f"{release_metrics['after_allocated_mib']:.1f}MiB, "
+            f"예약 {release_metrics['after_reserved_mib']:.1f}MiB"
+        )
+        self.garment_inpaint_worker_thread = QThread(self)
+        self.garment_inpaint_worker = GarmentInpaintWorker(
+            base.image,
+            self.confirmed_character_body_comparison.approved_human_agnostic_image,
+            self.confirmed_character_body_comparison.approved_change_mask,
+            self.pending_clothing_extraction.extracted_image,
+            prompt,
+            negative_prompt,
+            base.seed,
+            settings,
+        )
+        self.garment_inpaint_worker.moveToThread(
+            self.garment_inpaint_worker_thread
+        )
+        self.garment_inpaint_worker_thread.started.connect(
+            self.garment_inpaint_worker.run
+        )
+        self.garment_inpaint_worker.status_changed.connect(
+            self.show_worker_status
+        )
+        self.garment_inpaint_worker.progress_changed.connect(
+            self.show_garment_inpaint_progress
+        )
+        self.garment_inpaint_worker.completed.connect(
+            self.garment_inpaint_completed
+        )
+        self.garment_inpaint_worker.failed.connect(self.garment_inpaint_failed)
+        self.garment_inpaint_worker.completed.connect(
+            self.garment_inpaint_worker_thread.quit
+        )
+        self.garment_inpaint_worker.failed.connect(
+            self.garment_inpaint_worker_thread.quit
+        )
+        self.garment_inpaint_worker_thread.finished.connect(
+            self.garment_inpaint_worker.deleteLater
+        )
+        self.garment_inpaint_worker_thread.finished.connect(
+            self.garment_inpaint_worker_thread.deleteLater
+        )
+        self.garment_inpaint_worker_thread.finished.connect(
+            self.clear_garment_inpaint_worker
+        )
+        self.garment_inpaint_worker_thread.start()
+
+    @Slot()
+    def continue_garment_inpaint_after_generation_worker(self) -> None:
+        """Step 5 Worker 참조가 정리된 뒤 Step 9 시작을 한 번만 재개한다."""
+        if self.worker_thread is not None and self.worker_thread.isRunning():
+            QTimer.singleShot(
+                100,
+                self.continue_garment_inpaint_after_generation_worker,
+            )
+            return
+        self.garment_inpaint_start_deferred = False
+        self.start_garment_inpaint()
+
+    def release_step5_pipeline(self) -> dict[str, float]:
+        """Step 9 전에 GUI와 Worker가 보유한 Step 5 모델 참조를 해제한다."""
+        cuda_available = torch.cuda.is_available()
+        before_allocated = (
+            torch.cuda.memory_allocated() if cuda_available else 0
+        )
+        pipeline = self.pipeline
+        self.pipeline = None
+
+        if (
+            self.worker is not None
+            and getattr(self.worker, "pipeline", None) is pipeline
+        ):
+            self.worker.pipeline = None
+
+        if pipeline is not None:
+            if hasattr(pipeline, "maybe_free_model_hooks"):
+                pipeline.maybe_free_model_hooks()
+            if hasattr(pipeline, "remove_all_hooks"):
+                pipeline.remove_all_hooks()
+            del pipeline
+
+        gc.collect()
+        if cuda_available:
+            torch.cuda.synchronize()
+            torch.cuda.empty_cache()
+            after_allocated = torch.cuda.memory_allocated()
+            after_reserved = torch.cuda.memory_reserved()
+        else:
+            after_allocated = 0
+            after_reserved = 0
+
+        mib = 1024**2
+        return {
+            "before_allocated_mib": before_allocated / mib,
+            "after_allocated_mib": after_allocated / mib,
+            "after_reserved_mib": after_reserved / mib,
+        }
+
+    @Slot(object)
+    def garment_inpaint_completed(
+        self,
+        review_candidate: GarmentInpaintReviewCandidate,
+    ) -> None:
+        dialog = GarmentInpaintReviewDialog(review_candidate, self)
+        try:
+            self.execute_approval_dialog(dialog)
+            if not dialog.approved:
+                self.pause_generation_workflow(
+                    GenerationWorkflowStage.CLOTHING_COMPOSITING,
+                    "사용자가 2D 의상 Inpaint 결과를 거절했습니다.",
+                )
+                return
+            approved = approve_garment_inpaint_review(review_candidate)
+            base = self.pending_clothing_base_candidate
+            if base is None:
+                approved.close()
+                raise RuntimeError("Inpaint 승인 시 기준 후보가 없습니다.")
+            change_mask = (
+                self.confirmed_character_body_comparison.approved_change_mask.copy()
+            )
+            final_candidate = replace(
+                base,
+                image=approved.image,
+                before_clothing_image=None,
+                clothing_change_mask=change_mask,
+                clothing_reference_name=(
+                    Path(self.outfit_path).name if self.outfit_path else None
+                ),
+                clothing_category=self.clothing_category_combo.currentData(),
+                clothing_try_on_status="completed_2d_inpaint",
+                clothing_verification_warning_ko=None,
+                raw_clothing_try_on_image=None,
+                clothing_difference_image=None,
+                clothing_effect_metrics=None,
+            )
+            self.release_pending_clothing_base_candidate()
+            self.release_approved_garment_inputs()
+            self.release_confirmed_character_body_comparison()
+            self.pending_character_candidate = final_candidate
+            self.candidate_is_approved = False
+            self.show_character_candidate(final_candidate)
+            self.approve_candidate_button.setEnabled(True)
+            self.reject_candidate_button.setEnabled(True)
+            self.open_original_size_button.setEnabled(True)
+            self.move_generation_workflow(
+                GenerationWorkflowStage.FINAL_REVIEW,
+                "2D 의상 후보 최종 승인 대기 - 자동 저장 0개",
+            )
+        except Exception as error:
+            self.pause_generation_workflow(
+                GenerationWorkflowStage.CLOTHING_COMPOSITING,
+                f"2D Inpaint 승인 실패: {error}",
+            )
+            QMessageBox.critical(self, "2D Inpaint 승인 실패", str(error))
+        finally:
+            review_candidate.close()
+
+    @Slot(str, str)
+    def garment_inpaint_failed(self, message: str, details: str) -> None:
+        self.pause_generation_workflow(
+            GenerationWorkflowStage.CLOTHING_COMPOSITING,
+            f"2D 의상 Inpaint 실패: {message}",
+        )
+        dialog = QMessageBox(self)
+        dialog.setIcon(QMessageBox.Icon.Critical)
+        dialog.setWindowTitle("2D 의상 Inpaint 실패")
+        dialog.setText(message)
+        dialog.setDetailedText(details)
+        dialog.exec()
+
+    @Slot()
+    def clear_garment_inpaint_worker(self) -> None:
+        self.garment_inpaint_worker = None
+        self.garment_inpaint_worker_thread = None
+
     @Slot(str, str)
     def outfit_region_preparation_failed(
         self,
@@ -3225,6 +4964,10 @@ class GenAILabWindow(QMainWindow):
         self.outfit_label.setText("2. 의상 참조: 선택하지 않음")
         self.generate_button.setEnabled(
             self.approved_reference_image is not None
+        )
+        self.pause_generation_workflow(
+            GenerationWorkflowStage.CLOTHING_MASKING,
+            f"의상 이미지 준비 실패: {message}",
         )
         dialog = QMessageBox(self)
         dialog.setIcon(QMessageBox.Icon.Critical)
@@ -3265,8 +5008,11 @@ class GenAILabWindow(QMainWindow):
         except Exception as error:
             self.status_label.setText(f"상태: 참조 이미지 설정 오류 ({error})")
             QMessageBox.critical(self, "참조 이미지 설정 오류", str(error))
+            self.pause_generation_workflow(
+                GenerationWorkflowStage.REFERENCE_PREPARING,
+                f"참조 이미지 설정 오류: {error}",
+            )
             return
-
         self.reference_worker_thread = QThread(self)
         self.reference_worker = ReferencePreparationWorker(
             reference_path,
@@ -3289,6 +5035,9 @@ class GenAILabWindow(QMainWindow):
         )
         self.reference_worker_thread.finished.connect(
             self.clear_reference_worker
+        )
+        self.reference_worker_thread.finished.connect(
+            self.resume_generation_workflow
         )
         self.reference_worker_thread.start()
 
@@ -3335,6 +5084,8 @@ class GenAILabWindow(QMainWindow):
             QMessageBox.information(self, "안내", "현재 후보를 먼저 판단하세요.")
             return
         self.release_pending_clothing_base_candidate()
+        self.selected_outfit_path = None
+        self.workflow_context = None
         self.outfit_path = None
         self.pending_outfit_path = None
         self.release_clothing_mask_state()
@@ -3343,7 +5094,7 @@ class GenAILabWindow(QMainWindow):
         self.clothing_region_measurements = ()
         self.generate_button.setEnabled(self.approved_reference_image is not None)
         self.outfit_label.setText("2. 의상 참조: 선택하지 않음")
-        self.status_label.setText("상태: 의상 참조 선택 해제")
+        self.update_input_ready_status()
 
     @Slot(object)
     def reference_preparation_completed(
@@ -3381,7 +5132,7 @@ class GenAILabWindow(QMainWindow):
             enhancement_candidate,
             self,
         )
-        comparison_dialog.exec()
+        self.execute_approval_dialog(comparison_dialog)
         if comparison_dialog.use_enhanced_image:
             self.approved_reference_image = approve_enhanced_reference_image(
                 enhancement_candidate,
@@ -3403,8 +5154,9 @@ class GenAILabWindow(QMainWindow):
         else:
             self.approved_reference_image = None
             self.generate_button.setEnabled(False)
-            self.status_label.setText(
-                "상태: 보정 이미지 거절 - 다른 참조 이미지를 선택하세요"
+            self.pause_generation_workflow(
+                GenerationWorkflowStage.REFERENCE_PREPARING,
+                "보정 이미지 승인이 취소되었습니다.",
             )
 
         preparation_result.original_image.close()
@@ -3417,6 +5169,10 @@ class GenAILabWindow(QMainWindow):
         self.release_approved_reference_image()
         self.generate_button.setEnabled(False)
         self.status_label.setText(f"상태: 참조 이미지 준비 실패 ({message})")
+        self.pause_generation_workflow(
+            GenerationWorkflowStage.REFERENCE_PREPARING,
+            f"참조 이미지 준비 실패: {message}",
+        )
         dialog = QMessageBox(self)
         dialog.setIcon(QMessageBox.Icon.Critical)
         dialog.setWindowTitle("참조 이미지 준비 실패")
@@ -3440,7 +5196,197 @@ class GenAILabWindow(QMainWindow):
         self.reference_worker = None
         self.reference_worker_thread = None
 
-    def start_generation(self):
+    def start_generation(self) -> None:
+        """등록 입력으로 자동 실행을 시작하거나 실패 단계부터 재시도한다."""
+        if self.pending_character_candidate is not None:
+            QMessageBox.information(
+                self,
+                "안내",
+                "현재 후보의 승인 또는 거절을 먼저 선택하세요.",
+            )
+            return
+        if not self.style_path:
+            QMessageBox.warning(self, "입력 오류", "캐릭터 기준 이미지를 선택하세요.")
+            return
+
+        if self.workflow_context is None:
+            self.workflow_context = GenerationWorkflowContext(
+                character_image_path=Path(self.style_path),
+                clothing_image_path=self.selected_outfit_path,
+                pose_image_path=self.selected_pose_path,
+            )
+        elif self.workflow_context.current_stage is GenerationWorkflowStage.FAILED:
+            self.workflow_context.retry()
+        elif self.workflow_context.active:
+            QMessageBox.information(
+                self,
+                "자동 작업 실행 중",
+                "현재 단계가 끝나면 다음 단계가 자동으로 시작됩니다.",
+            )
+            return
+        else:
+            self.workflow_context = GenerationWorkflowContext(
+                character_image_path=Path(self.style_path),
+                clothing_image_path=self.selected_outfit_path,
+                pose_image_path=self.selected_pose_path,
+            )
+
+        self.set_workflow_input_buttons_enabled(False)
+        self.generate_button.setEnabled(False)
+        self.advance_generation_workflow()
+
+    def execute_approval_dialog(self, dialog: QDialog) -> int:
+        """승인 창을 동시에 1개만 열고 닫힌 뒤 자동 흐름을 1회 재개한다."""
+        if self.approval_dialog_open:
+            return int(QDialog.DialogCode.Rejected)
+        self.approval_dialog_open = True
+        try:
+            return int(dialog.exec())
+        finally:
+            self.approval_dialog_open = False
+            QTimer.singleShot(0, self.resume_generation_workflow)
+
+    def advance_generation_workflow(self) -> None:
+        """완료된 승인 상태를 확인하고 다음 작업 하나만 자동 시작한다."""
+        if self.approval_dialog_open:
+            return
+        workflow_context = self.workflow_context
+        if workflow_context is None:
+            return
+        if any(
+            thread is not None and thread.isRunning()
+            for thread in (
+                self.reference_worker_thread,
+                self.outfit_worker_thread,
+                self.mask_worker_thread,
+                self.design_worker_thread,
+                self.pose_estimation_worker_thread,
+                self.body_comparison_worker_thread,
+                self.garment_geometry_worker_thread,
+                self.garment_inpaint_worker_thread,
+                self.worker_thread,
+            )
+        ):
+            return
+
+        if self.approved_reference_image is None:
+            self.move_generation_workflow(
+                GenerationWorkflowStage.REFERENCE_PREPARING,
+                "캐릭터 기준 이미지 화질 확인",
+            )
+            self.start_reference_preparation(
+                workflow_context.character_image_path
+            )
+            return
+
+        if (
+            workflow_context.clothing_image_path is not None
+            and self.confirmed_clothing_design is None
+        ):
+            if self.pending_clothing_extraction is not None:
+                self.move_generation_workflow(
+                    GenerationWorkflowStage.CLOTHING_ANALYZING,
+                    "WD14 의상 디자인 분석",
+                )
+                self.start_clothing_design_analysis()
+            else:
+                self.move_generation_workflow(
+                    GenerationWorkflowStage.CLOTHING_MASKING,
+                    "의상 영역 탐지와 SAM2 마스크 생성",
+                )
+                self.start_outfit_region_preparation(
+                    workflow_context.clothing_image_path
+                )
+            return
+
+        if (
+            workflow_context.pose_image_path is not None
+            and self.approved_pose_estimation is None
+        ):
+            self.move_generation_workflow(
+                GenerationWorkflowStage.POSE_ESTIMATING,
+                "DWPose 관절 18개 추출",
+            )
+            if self.approved_pose_reference is None:
+                self.review_pose_reference(workflow_context.pose_image_path)
+            else:
+                self.start_pose_reference_estimation()
+            return
+
+        if self.pending_clothing_base_candidate is not None:
+            if self.confirmed_character_body_comparison is None:
+                self.move_generation_workflow(
+                    GenerationWorkflowStage.BODY_MASKING,
+                    "생성 후보 신체와 기존 의상 마스크 추출",
+                )
+                self.start_character_body_comparison()
+            else:
+                self.move_generation_workflow(
+                    GenerationWorkflowStage.CLOTHING_COMPOSITING,
+                    "Human-Agnostic + SDXL Inpaint + IP-Adapter Plus 의상 생성",
+                )
+                self.start_garment_inpaint()
+            return
+
+        self.move_generation_workflow(
+            GenerationWorkflowStage.BASE_GENERATING,
+            "ControlNet 기준 후보 생성",
+        )
+        self._start_model_generation()
+
+    @Slot()
+    def resume_generation_workflow(self) -> None:
+        """Worker가 완전히 종료된 뒤 보관된 승인 상태에서 다음 단계를 찾는다."""
+        if (
+            self.approval_dialog_open
+            or self.workflow_context is None
+            or not self.workflow_context.active
+        ):
+            return
+        self.advance_generation_workflow()
+
+    def move_generation_workflow(
+        self,
+        stage: GenerationWorkflowStage,
+        detail: str,
+    ) -> None:
+        """자동 진행 위치와 활성 8단계 수치를 GUI에 표시한다."""
+        if self.workflow_context is None:
+            return
+        self.workflow_context.move_to(stage)
+        current_step, total_steps = self.workflow_context.progress
+        self.status_label.setText(
+            f"상태: 전체 진행 {current_step}/{total_steps} - {detail}"
+        )
+
+    def pause_generation_workflow(
+        self,
+        failed_stage: GenerationWorkflowStage,
+        reason: str,
+    ) -> None:
+        """성공한 이전 결과를 유지하고 실패·취소 위치에서 자동 진행을 멈춘다."""
+        if self.workflow_context is None:
+            return
+        self.workflow_context.fail(failed_stage)
+        current_step, total_steps = self.workflow_context.progress
+        self.set_workflow_input_buttons_enabled(True)
+        self.generate_button.setEnabled(self.style_path is not None)
+        self.generate_button.setText("실패 단계 다시 시도")
+        self.status_label.setText(
+            f"상태: 전체 진행 {current_step}/{total_steps} 중지 - {reason}"
+        )
+
+    def set_workflow_input_buttons_enabled(self, enabled: bool) -> None:
+        """자동 실행 중 입력 3개와 화면 범위 변경을 잠근다."""
+        self.style_button.setEnabled(enabled)
+        self.outfit_button.setEnabled(enabled)
+        self.clear_outfit_button.setEnabled(enabled)
+        self.pose_button.setEnabled(enabled)
+        self.clear_pose_button.setEnabled(enabled)
+        self.clothing_category_combo.setEnabled(enabled)
+        self.framing_combo.setEnabled(enabled)
+
+    def _start_model_generation(self):
         if self.pending_character_candidate is not None:
             QMessageBox.information(
                 self,
@@ -3598,6 +5544,26 @@ class GenAILabWindow(QMainWindow):
                         self.confirmed_character_body_comparison
                         .safe_change_pixel_count
                     ),
+                    approved_model_mask=(
+                        self.confirmed_character_body_comparison
+                        .approved_model_mask.copy()
+                    ),
+                    preflight_person_sha256=(
+                        self.confirmed_character_body_comparison
+                        .preflight_person_sha256
+                    ),
+                    preflight_binary_mask_sha256=(
+                        self.confirmed_character_body_comparison
+                        .preflight_binary_mask_sha256
+                    ),
+                    preflight_model_mask_sha256=(
+                        self.confirmed_character_body_comparison
+                        .preflight_model_mask_sha256
+                    ),
+                    preflight_clothing_sha256=(
+                        self.confirmed_character_body_comparison
+                        .preflight_clothing_sha256
+                    ),
                 )
                 runner_path = Path(str(clothing_config["runner_path"]))
                 if not runner_path.is_absolute():
@@ -3636,6 +5602,9 @@ class GenAILabWindow(QMainWindow):
                             False,
                         )
                     ),
+                    mask_blur_factor=int(
+                        clothing_config.get("mask_blur_factor", 9)
+                    ),
                 )
                 run_log.write_stage(
                     "의상 참조 입력",
@@ -3653,6 +5622,13 @@ class GenAILabWindow(QMainWindow):
                         f"{self.confirmed_character_body_comparison.attempted_protected_overlap_pixels:,}px, "
                         "CatVTON 별도 환경 사용, "
                         "마스크 출처=user_approved, AutoMasker 실행=0회, "
+                        "model_mask 출처=user_approved_preflight, "
+                        "약한 침범="
+                        f"{self.confirmed_character_body_comparison.preflight_soft_overlap_pixel_count:,}px, "
+                        "강한 침범="
+                        f"{self.confirmed_character_body_comparison.preflight_hard_overlap_pixel_count:,}px, "
+                        "금지 영역 제거="
+                        f"{self.confirmed_character_body_comparison.preflight_removed_pixel_count:,}px, "
                         "안전 검사="
                         f"{'활성화' if catvton_settings.safety_check_enabled else '비활성화'}, "
                         "승인 마스크 픽셀="
@@ -3753,11 +5729,54 @@ class GenAILabWindow(QMainWindow):
                 run_log.close()
             self.generate_button.setEnabled(True)
             self.status_label.setText(f"상태: 설정 오류 ({error})")
+            failed_stage = (
+                self.workflow_context.current_stage
+                if self.workflow_context is not None
+                and self.workflow_context.current_stage
+                is not GenerationWorkflowStage.FAILED
+                else GenerationWorkflowStage.BASE_GENERATING
+            )
+            self.pause_generation_workflow(
+                failed_stage,
+                f"생성 요청 준비 실패: {error}",
+            )
             QMessageBox.critical(self, "설정 오류", error_message)
 
     @Slot(str)
     def show_worker_status(self, message):
         self.status_label.setText(f"상태: {message}")
+
+    @Slot(object)
+    def show_garment_inpaint_progress(
+        self,
+        progress: GarmentInpaintProgress,
+    ) -> None:
+        phase_labels = {
+            "runner_started": "실행기 시작",
+            "pipeline_loading": "Animagine XL 파이프라인 로딩",
+            "ip_adapter_loading": "IP-Adapter 로딩",
+            "diffusion_running": "Diffusion 추론",
+            "output_saving": "결과 변환·저장",
+            "completed": "Inpaint 실행 완료",
+        }
+        callback_text = (
+            f"콜백={progress.current_step}회"
+            if progress.current_step is not None
+            else "콜백=0회"
+        )
+        configured_text = (
+            f"설정={progress.configured_steps}단계"
+            if progress.configured_steps is not None
+            else "설정=28단계"
+        )
+        self.status_label.setText(
+            "상태: 7/8 "
+            f"{phase_labels.get(progress.phase, progress.phase)} | "
+            f"{callback_text} | {configured_text} | "
+            f"단계 경과={progress.phase_elapsed_seconds:.1f}초 | "
+            f"전체 경과={progress.total_elapsed_seconds:.1f}초 | "
+            "제한=1,800초"
+        )
 
     @Slot(object, object)
     def generation_completed(
@@ -3771,7 +5790,7 @@ class GenAILabWindow(QMainWindow):
                 character_candidate,
                 self,
             )
-            dialog_result = comparison_dialog.exec()
+            dialog_result = self.execute_approval_dialog(comparison_dialog)
             use_corrected_image = (
                 dialog_result == QDialog.DialogCode.Accepted
                 and comparison_dialog.use_corrected_image
@@ -3805,6 +5824,10 @@ class GenAILabWindow(QMainWindow):
             self.status_label.setText(
                 "상태: 기준 후보 생성 완료 - 같은 후보의 신체 비교 시작"
             )
+            self.move_generation_workflow(
+                GenerationWorkflowStage.BODY_MASKING,
+                "생성 후보 신체와 기존 의상 마스크 추출",
+            )
             self.start_character_body_comparison()
             return
 
@@ -3816,7 +5839,7 @@ class GenAILabWindow(QMainWindow):
                 character_candidate,
                 self,
             )
-            dialog_result = clothing_dialog.exec()
+            dialog_result = self.execute_approval_dialog(clothing_dialog)
             use_clothing_image = (
                 dialog_result == QDialog.DialogCode.Accepted
                 and clothing_dialog.use_clothing_image
@@ -3825,20 +5848,32 @@ class GenAILabWindow(QMainWindow):
                 character_candidate.before_clothing_image.close()
                 if character_candidate.clothing_change_mask is not None:
                     character_candidate.clothing_change_mask.close()
+                if character_candidate.raw_clothing_try_on_image is not None:
+                    character_candidate.raw_clothing_try_on_image.close()
+                if character_candidate.clothing_difference_image is not None:
+                    character_candidate.clothing_difference_image.close()
                 character_candidate = replace(
                     character_candidate,
                     before_clothing_image=None,
                     clothing_change_mask=None,
+                    raw_clothing_try_on_image=None,
+                    clothing_difference_image=None,
                 )
             else:
                 character_candidate.image.close()
                 if character_candidate.clothing_change_mask is not None:
                     character_candidate.clothing_change_mask.close()
+                if character_candidate.raw_clothing_try_on_image is not None:
+                    character_candidate.raw_clothing_try_on_image.close()
+                if character_candidate.clothing_difference_image is not None:
+                    character_candidate.clothing_difference_image.close()
                 character_candidate = replace(
                     character_candidate,
                     image=character_candidate.before_clothing_image,
                     before_clothing_image=None,
                     clothing_change_mask=None,
+                    raw_clothing_try_on_image=None,
+                    clothing_difference_image=None,
                     clothing_try_on_status="rejected_by_user",
                     clothing_verification_warning_ko=(
                         "사용자가 의상 적용 전 후보를 선택했습니다."
@@ -3862,8 +5897,9 @@ class GenAILabWindow(QMainWindow):
         self.show_character_candidate(character_candidate)
         self.approve_candidate_button.setEnabled(True)
         self.reject_candidate_button.setEnabled(True)
-        self.status_label.setText(
-            "상태: 후보 검토 대기 - 아직 파일로 저장되지 않았습니다."
+        self.move_generation_workflow(
+            GenerationWorkflowStage.FINAL_REVIEW,
+            "최종 후보 승인 대기 - 자동 저장 0개",
         )
 
     def show_character_candidate(
@@ -3999,6 +6035,16 @@ class GenAILabWindow(QMainWindow):
                 self.pending_character_candidate.before_clothing_image.close()
             if self.pending_character_candidate.clothing_change_mask is not None:
                 self.pending_character_candidate.clothing_change_mask.close()
+            if (
+                self.pending_character_candidate.raw_clothing_try_on_image
+                is not None
+            ):
+                self.pending_character_candidate.raw_clothing_try_on_image.close()
+            if (
+                self.pending_character_candidate.clothing_difference_image
+                is not None
+            ):
+                self.pending_character_candidate.clothing_difference_image.close()
         self.pending_character_candidate = None
         self.candidate_is_approved = False
         self.candidate_preview.clear()
@@ -4008,7 +6054,12 @@ class GenAILabWindow(QMainWindow):
         self.save_candidate_button.setEnabled(False)
         self.discard_candidate_button.setEnabled(False)
         self.open_original_size_button.setEnabled(False)
+        if self.workflow_context is not None:
+            self.workflow_context.move_to(GenerationWorkflowStage.COMPLETED)
+        self.workflow_context = None
+        self.set_workflow_input_buttons_enabled(True)
         self.generate_button.setEnabled(True)
+        self.generate_button.setText("전체 이미지 생성 시작")
         self.status_label.setText(status_message)
 
     @Slot(str, str, object)
@@ -4016,6 +6067,17 @@ class GenAILabWindow(QMainWindow):
         self.pipeline = pipeline
         self.generate_button.setEnabled(True)
         self.status_label.setText(f"상태: 이미지 생성 실패 ({message})")
+        failed_stage = (
+            self.workflow_context.current_stage
+            if self.workflow_context is not None
+            and self.workflow_context.current_stage
+            is not GenerationWorkflowStage.FAILED
+            else GenerationWorkflowStage.BASE_GENERATING
+        )
+        self.pause_generation_workflow(
+            failed_stage,
+            f"이미지 생성 실패: {message}",
+        )
         dialog = QMessageBox(self)
         dialog.setIcon(QMessageBox.Icon.Critical)
         dialog.setWindowTitle("이미지 생성 실패")
@@ -4034,6 +6096,8 @@ class GenAILabWindow(QMainWindow):
                 self.design_worker_thread,
                 self.body_comparison_worker_thread,
                 self.pose_estimation_worker_thread,
+                self.garment_geometry_worker_thread,
+                self.garment_inpaint_worker_thread,
                 self.worker_thread,
             )
             if thread is not None and thread.isRunning()
@@ -4052,6 +6116,7 @@ class GenAILabWindow(QMainWindow):
                 "상태: 앱 종료 - 저장하지 않은 후보를 메모리에서 해제했습니다."
             )
         self.release_pending_clothing_base_candidate()
+        self.release_approved_garment_inputs()
         self.release_clothing_mask_state()
         self.release_approved_reference_image()
         self.release_approved_pose_reference()

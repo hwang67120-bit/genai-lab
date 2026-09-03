@@ -27,6 +27,14 @@ class RecordingPipeline:
         )
 
 
+class RecordingRunLog:
+    def __init__(self) -> None:
+        self.stages: list[tuple[str, str]] = []
+
+    def write_stage(self, stage: str, detail: str) -> None:
+        self.stages.append((stage, detail))
+
+
 def test_generation_passes_approved_pose_to_controlnet(monkeypatch) -> None:
     import torch
 
@@ -86,14 +94,23 @@ def test_generation_passes_approved_pose_to_controlnet(monkeypatch) -> None:
             "guidance_end": 0.80,
             "original_image_change_strength": 0.35,
         },
+        "pose_result_policy": {
+            "mode": "observe_only",
+            "target_sample_count": 3,
+            "block_on_pose_mismatch": False,
+            "switch_to_text_to_image": False,
+            "use_identity_crop": False,
+        },
         "detail_correction": {"enabled": False},
     }
     pipeline = RecordingPipeline()
+    run_log = RecordingRunLog()
     candidate = generate_character_candidate(
         pipeline=pipeline,
         config=config,
         generation_request=generation_request,
         project_root=Path("."),
+        run_log=run_log,
         approved_pose_estimation=approved_pose,
     )
     try:
@@ -105,6 +122,17 @@ def test_generation_passes_approved_pose_to_controlnet(monkeypatch) -> None:
         assert pipeline.arguments["strength"] == 0.35
         assert candidate.pose_control_status == "applied"
         assert candidate.pose_control_model_id == "test-controlnet"
+        policy_logs = [
+            detail
+            for stage, detail in run_log.stages
+            if stage == "임시 자세 결과 정책"
+        ]
+        assert len(policy_logs) == 1
+        assert "모드=observe_only" in policy_logs[0]
+        assert "목표 표본=3건" in policy_logs[0]
+        assert "자세 불일치 차단=0회" in policy_logs[0]
+        assert "Text2Img 전환=미사용" in policy_logs[0]
+        assert "IP-Adapter 크롭=미사용" in policy_logs[0]
     finally:
         candidate.image.close()
         approved_pose.close()

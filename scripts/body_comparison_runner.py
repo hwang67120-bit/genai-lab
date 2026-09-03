@@ -1,4 +1,4 @@
-"""CatVTON 신체 분리와 DWPose 관절 분석을 한 번 실행한다."""
+"""CatVTON의 SCHP·DensePose로 기준 후보의 의상·신체 영역을 분석한다."""
 
 import argparse
 import json
@@ -7,21 +7,7 @@ from pathlib import Path
 import sys
 from time import perf_counter
 
-from PIL import Image, ImageDraw
-
-
-BODY_JOINT_NAMES = (
-    "nose", "neck", "right_shoulder", "right_elbow", "right_wrist",
-    "left_shoulder", "left_elbow", "left_wrist", "right_hip",
-    "right_knee", "right_ankle", "left_hip", "left_knee", "left_ankle",
-    "right_eye", "left_eye", "right_ear", "left_ear",
-)
-
-BODY_BONES = (
-    (1, 2), (2, 3), (3, 4), (1, 5), (5, 6), (6, 7),
-    (1, 8), (8, 9), (9, 10), (1, 11), (11, 12), (12, 13),
-    (0, 1), (0, 14), (14, 16), (0, 15), (15, 17),
-)
+from PIL import Image
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -35,14 +21,14 @@ def parse_arguments() -> argparse.Namespace:
     )
     parser.add_argument("--output-raw-mask", required=True)
     parser.add_argument("--output-protection-mask", required=True)
+    parser.add_argument("--output-foreground-mask", required=True)
     parser.add_argument("--output-densepose", required=True)
-    parser.add_argument("--output-pose-preview", required=True)
-    parser.add_argument("--output-pose-json", required=True)
+    parser.add_argument("--output-metadata-json", required=True)
     parser.add_argument("--cache-dir", required=True)
     parser.add_argument("--width", type=int, required=True)
     parser.add_argument("--height", type=int, required=True)
-    parser.add_argument("--pose-device", choices=("cpu",), required=True)
-    parser.add_argument("--minimum-pose-confidence", type=float, required=True)
+    parser.add_argument("--foreground-model-id", default="isnet-anime")
+    parser.add_argument("--explicit-target-masks", action="store_true")
     return parser.parse_args()
 
 
@@ -52,134 +38,93 @@ def load_rgb_image(image_path: str) -> Image.Image:
         return opened_image.convert("RGB")
 
 
-def create_pose_preview_and_coordinates(
-    source_image: Image.Image,
-    pose_detector,
-    minimum_confidence: float,
-    include_openpose_control_map: bool = False,
-):
-    """DWPose를 1회 실행해 관절 좌표·확인 그림·선택적 표준 지도를 만든다."""
+def extract_anime_character_foreground_mask(
+    person_image: Image.Image,
+    model_id: str,
+    model_cache_dir: Path,
+) -> Image.Image:
+    """공식 isnetis ONNX로 캐릭터 전체 외곽의 알파 마스크를 반환한다."""
+    if model_id != "isnet-anime":
+        raise RuntimeError(
+            "지원하지 않는 캐릭터 외곽 모델입니다: " f"{model_id}"
+        )
+
     import numpy as np
+    import onnxruntime as ort
+    from huggingface_hub import hf_hub_download
 
-    normalized_source_image = source_image.convert("RGB")
-    try:
-        source_array = np.asarray(
-            normalized_source_image,
-            dtype=np.uint8,
-        ).copy()
-    finally:
-        normalized_source_image.close()
-    candidates, scores = pose_detector.pose_estimation(source_array)
-    if candidates.ndim != 3 or scores.ndim != 2 or candidates.shape[0] == 0:
-        raise RuntimeError("DWPose가 사람 관절 후보를 1명도 찾지 못했습니다.")
-
-    body_scores = scores[:, :18]
-    selected_person_index = int(np.argmax(np.mean(body_scores, axis=1)))
-    selected_candidates = candidates[selected_person_index, :18]
-    selected_scores = scores[selected_person_index, :18]
-
-    preview_image = source_image.convert("RGB")
-    preview_draw = ImageDraw.Draw(preview_image)
-    for start_index, end_index in BODY_BONES:
-        if (
-            selected_scores[start_index] >= minimum_confidence
-            and selected_scores[end_index] >= minimum_confidence
-        ):
-            preview_draw.line(
-                (
-                    (
-                        float(selected_candidates[start_index][0]),
-                        float(selected_candidates[start_index][1]),
-                    ),
-                    (
-                        float(selected_candidates[end_index][0]),
-                        float(selected_candidates[end_index][1]),
-                    ),
-                ),
-                fill=(0, 255, 0),
-                width=4,
-            )
-
-    joint_coordinates = []
-    for joint_index, joint_name in enumerate(BODY_JOINT_NAMES):
-        x_value = float(selected_candidates[joint_index][0])
-        y_value = float(selected_candidates[joint_index][1])
-        confidence_score = float(selected_scores[joint_index])
-        detected = confidence_score >= minimum_confidence
-        preview_color = (0, 220, 0) if detected else (255, 80, 80)
-        preview_draw.ellipse(
-            (x_value - 5, y_value - 5, x_value + 5, y_value + 5),
-            fill=preview_color,
-        )
-        joint_coordinates.append(
-            {
-                "joint_name": joint_name,
-                "x": x_value,
-                "y": y_value,
-                "confidence_score": confidence_score,
-                "detected": detected,
-            }
-        )
-    if not include_openpose_control_map:
-        return preview_image, joint_coordinates
-
-    from easy_dwpose.draw import draw_openpose
-
-    selected_all_candidates = candidates[
-        selected_person_index:selected_person_index + 1
-    ].copy()
-    selected_all_scores = scores[
-        selected_person_index:selected_person_index + 1
-    ].copy()
-    image_height, image_width = source_array.shape[:2]
-    selected_all_candidates[..., 0] /= float(image_width)
-    selected_all_candidates[..., 1] /= float(image_height)
-    body_candidates = selected_all_candidates[:, :18].reshape(18, 2)
-    body_scores = selected_all_scores[:, :18].copy()
-    for joint_index in range(18):
-        body_scores[0][joint_index] = (
-            joint_index
-            if body_scores[0][joint_index] >= minimum_confidence
-            else -1
-        )
-    openpose_payload = {
-        "bodies": body_candidates,
-        "body_scores": body_scores,
-        "hands": np.vstack(
-            [
-                selected_all_candidates[:, 92:113],
-                selected_all_candidates[:, 113:],
-            ]
-        ),
-        "hands_scores": np.vstack(
-            [
-                selected_all_scores[:, 92:113],
-                selected_all_scores[:, 113:],
-            ]
-        ),
-        "faces": selected_all_candidates[:, 24:92],
-        "faces_scores": selected_all_scores[:, 24:92],
-    }
-    control_map_array = draw_openpose(
-        openpose_payload,
-        height=image_height,
-        width=image_width,
-        include_face=True,
-        include_hands=True,
+    model_path = hf_hub_download(
+        repo_id="skytnt/anime-seg",
+        filename="isnetis.onnx",
+        cache_dir=model_cache_dir,
     )
-    control_map_image = Image.fromarray(control_map_array).convert("RGB")
-    return preview_image, joint_coordinates, control_map_image
+    foreground_session = ort.InferenceSession(
+        model_path,
+        providers=["CPUExecutionProvider"],
+    )
+    input_shape = foreground_session.get_inputs()[0].shape
+    model_height = int(input_shape[2])
+    model_width = int(input_shape[3])
+    scale = min(
+        model_width / person_image.width,
+        model_height / person_image.height,
+    )
+    content_width = max(1, round(person_image.width * scale))
+    content_height = max(1, round(person_image.height * scale))
+    content_left = (model_width - content_width) // 2
+    content_top = (model_height - content_height) // 2
+    resized_image = person_image.resize(
+        (content_width, content_height),
+        Image.Resampling.LANCZOS,
+    )
+    model_canvas = Image.new("RGB", (model_width, model_height), (0, 0, 0))
+    try:
+        model_canvas.paste(resized_image, (content_left, content_top))
+        model_input = np.asarray(model_canvas, dtype=np.float32)
+        model_input = (
+            model_input[:, :, ::-1]
+            .transpose((2, 0, 1))[None, :, :, :]
+            / 255.0
+        )
+        predicted_mask = foreground_session.run(
+            [foreground_session.get_outputs()[0].name],
+            {foreground_session.get_inputs()[0].name: model_input},
+        )[0]
+        predicted_mask = np.squeeze(predicted_mask)
+        predicted_mask = np.clip(predicted_mask, 0.0, 1.0)
+        model_mask = Image.fromarray(
+            (predicted_mask * 255.0).round().astype(np.uint8),
+            mode="L",
+        )
+        try:
+            content_mask = model_mask.crop(
+                (
+                    content_left,
+                    content_top,
+                    content_left + content_width,
+                    content_top + content_height,
+                )
+            )
+            try:
+                return content_mask.resize(
+                    person_image.size,
+                    Image.Resampling.LANCZOS,
+                )
+            finally:
+                content_mask.close()
+        finally:
+            model_mask.close()
+    finally:
+        resized_image.close()
+        model_canvas.close()
 
 
 def main() -> None:
-    """신체 분리 3개 결과와 DWPose 관절 좌표를 임시 파일로 반환한다."""
+    """기준 후보에서 의상 마스크·신체 보호 영역·DensePose를 반환한다."""
     arguments = parse_arguments()
     started_at = perf_counter()
     repository_path = Path(arguments.repository_path).resolve()
     cache_dir = Path(arguments.cache_dir).resolve()
-    pose_cache_directory = cache_dir / "easy-dwpose"
-    pose_cache_directory.mkdir(parents=True, exist_ok=True)
-
     os.environ["HF_HOME"] = str(cache_dir)
     sys.path.insert(0, str(repository_path))
 
@@ -193,28 +138,41 @@ def main() -> None:
     )
     from utils import resize_and_crop
 
-    try:
-        from easy_dwpose import DWposeDetector
-    except ImportError as error:
-        raise RuntimeError(
-            "DWPose 관절 분석용 easy-dwpose가 없습니다. "
-            "CatVTON 전용 Python에 easy-dwpose와 onnxruntime을 설치하세요."
-        ) from error
-
     original_person_image = None
     resized_person_image = None
     raw_mask = None
     identity_protection_mask = None
+    character_foreground_mask = None
     densepose_preview = None
-    pose_preview = None
     automatic_mask_result = None
-    previous_directory = Path.cwd()
     try:
         original_person_image = load_rgb_image(arguments.person_image)
         original_size = original_person_image.size
         resized_person_image = resize_and_crop(
             original_person_image,
             (arguments.width, arguments.height),
+        )
+
+        foreground_started_at = perf_counter()
+        character_foreground_mask = extract_anime_character_foreground_mask(
+            resized_person_image,
+            arguments.foreground_model_id,
+            cache_dir,
+        )
+        foreground_elapsed_seconds = perf_counter() - foreground_started_at
+        foreground_mask_array = np.asarray(
+            character_foreground_mask,
+            dtype=np.uint8,
+        )
+        foreground_pixel_count = int(
+            np.count_nonzero(foreground_mask_array >= 128)
+        )
+        if foreground_pixel_count == 0:
+            raise RuntimeError(
+                "isnet-anime이 캐릭터 외곽 픽셀을 찾지 못했습니다."
+            )
+        foreground_percent = (
+            foreground_pixel_count / foreground_mask_array.size * 100.0
         )
 
         checkpoint_path = snapshot_download(
@@ -238,6 +196,10 @@ def main() -> None:
             "Left-leg", "Right-leg", "Left-shoe", "Right-shoe", "Glove",
             "Bag", "Scarf",
         ]
+        if arguments.explicit_target_masks:
+            # 교체 범위는 별도 사용자 승인 SAM2 마스크가 제한한다.
+            # 신발을 무조건 보호하지 않되 얼굴·머리는 계속 보호한다.
+            protected_parts = ["Hat", "Hair", "Sunglasses", "Face"]
         schp_lip_mask = np.asarray(automatic_mask_result["schp_lip"])
         schp_atr_mask = np.asarray(automatic_mask_result["schp_atr"])
         identity_protection_array = (
@@ -247,15 +209,6 @@ def main() -> None:
         identity_protection_mask = Image.fromarray(
             (identity_protection_array > 0).astype(np.uint8) * 255
         ).convert("L")
-
-        os.chdir(pose_cache_directory)
-        pose_detector = DWposeDetector(device=arguments.pose_device)
-        pose_preview, joint_coordinates = create_pose_preview_and_coordinates(
-            original_person_image,
-            pose_detector,
-            arguments.minimum_pose_confidence,
-        )
-        os.chdir(previous_directory)
 
         resized_output = raw_mask.resize(
             original_size,
@@ -273,6 +226,26 @@ def main() -> None:
             resized_output.save(arguments.output_protection_mask)
         finally:
             resized_output.close()
+        resized_output = character_foreground_mask.resize(
+            original_size,
+            Image.Resampling.LANCZOS,
+        )
+        try:
+            resized_foreground_array = np.asarray(
+                resized_output,
+                dtype=np.uint8,
+            )
+            foreground_pixel_count = int(
+                np.count_nonzero(resized_foreground_array >= 128)
+            )
+            foreground_percent = (
+                foreground_pixel_count
+                / resized_foreground_array.size
+                * 100.0
+            )
+            resized_output.save(arguments.output_foreground_mask)
+        finally:
+            resized_output.close()
         resized_output = densepose_preview.resize(
             original_size,
             Image.Resampling.NEAREST,
@@ -281,16 +254,18 @@ def main() -> None:
             resized_output.save(arguments.output_densepose)
         finally:
             resized_output.close()
-        pose_preview.save(arguments.output_pose_preview)
-        Path(arguments.output_pose_json).write_text(
+        Path(arguments.output_metadata_json).write_text(
             json.dumps(
                 {
                     "model_ids": [
                         "zhengchong/CatVTON:SCHP+DensePose",
-                        "RedHash/DWPose:yolox_l+dw-ll_ucoco_384",
+                        arguments.foreground_model_id,
                     ],
-                    "minimum_pose_confidence": arguments.minimum_pose_confidence,
-                    "joint_coordinates": joint_coordinates,
+                    "foreground_model_id": arguments.foreground_model_id,
+                    "explicit_target_masks": arguments.explicit_target_masks,
+                    "foreground_pixel_count": foreground_pixel_count,
+                    "foreground_percent": foreground_percent,
+                    "foreground_elapsed_seconds": foreground_elapsed_seconds,
                     "elapsed_seconds": perf_counter() - started_at,
                 },
                 ensure_ascii=False,
@@ -299,10 +274,10 @@ def main() -> None:
             encoding="utf-8",
         )
     finally:
-        os.chdir(previous_directory)
         for image in (
             original_person_image, resized_person_image, raw_mask,
-            identity_protection_mask, densepose_preview, pose_preview,
+            identity_protection_mask, character_foreground_mask,
+            densepose_preview,
         ):
             if image is not None:
                 image.close()

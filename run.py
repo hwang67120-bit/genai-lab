@@ -249,6 +249,10 @@ def validate_config(config: dict[str, Any]) -> None:
                     "0.15~0.60이어야 합니다."
                 )
 
+    pose_result_policy = config.get("pose_result_policy")
+    if pose_result_policy is not None:
+        validate_pose_result_policy_config(pose_result_policy)
+
     reference_quality = config.get("reference_quality")
     if reference_quality is not None:
         if not isinstance(reference_quality, dict):
@@ -283,6 +287,29 @@ def validate_config(config: dict[str, Any]) -> None:
 
     require_value(paths, "prompts_file", "paths")
     require_value(paths, "output_dir", "paths")
+
+
+def validate_pose_result_policy_config(policy: dict[str, Any]) -> None:
+    """결과 우선 임시 자세 정책이 관측 전용인지 검사한다."""
+    if not isinstance(policy, dict):
+        raise AppError("설정 'pose_result_policy'는 항목 묶음이어야 합니다.")
+    if policy.get("mode") != "observe_only":
+        raise AppError(
+            "임시 정책 'pose_result_policy.mode'는 observe_only여야 합니다."
+        )
+    if policy.get("target_sample_count") != 3:
+        raise AppError(
+            "임시 정책 'pose_result_policy.target_sample_count'는 3이어야 합니다."
+        )
+    for key in (
+        "block_on_pose_mismatch",
+        "switch_to_text_to_image",
+        "use_identity_crop",
+    ):
+        if policy.get(key) is not False:
+            raise AppError(
+                f"임시 관측 정책 'pose_result_policy.{key}'는 false여야 합니다."
+            )
 
 
 def validate_reference_quality_config(

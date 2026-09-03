@@ -290,6 +290,32 @@ def test_clothing_reference_uses_only_approved_region(tmp_path) -> None:
         clothing_reference_image.close()
 
 
+def test_catvton_fallback_transparent_png_uses_white_background(
+    tmp_path,
+) -> None:
+    clothing_path = tmp_path / "transparent-clothing.png"
+    source_image = Image.new("RGBA", (2, 1), (0, 0, 255, 255))
+    source_image.putpixel((0, 0), (255, 0, 0, 0))
+    source_image.save(clothing_path, format="PNG")
+    source_image.close()
+
+    condition = prepare_catvton_clothing_condition_image(
+        ClothingReferenceInput(
+            image_path=clothing_path,
+            category=ClothingCategory.TOP,
+        )
+    )
+
+    try:
+        assert condition.image.mode == "RGB"
+        assert condition.image.getpixel((0, 0)) == (255, 255, 255)
+        assert condition.image.getpixel((1, 0)) == (0, 0, 255)
+        assert condition.alpha_pixel_count == 2
+        assert condition.alpha_coverage_percent == 100.0
+    finally:
+        condition.image.close()
+
+
 def test_catvton_condition_crops_transparent_approved_margin() -> None:
     approved_image = Image.new("RGBA", (12, 10), (0, 0, 0, 0))
     ImageDraw.Draw(approved_image).rectangle(

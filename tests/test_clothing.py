@@ -17,6 +17,7 @@ from genai_lab.clothing import (
     load_clothing_reference_image,
     load_catvton_execution_metadata,
     prepare_catvton_clothing_condition_image,
+    resolve_clothing_category_from_tags,
     validate_character_agnostic_approved_input,
     validate_catvton_approved_coordinates,
     validate_runner_mask_matches_approved_input,
@@ -391,3 +392,17 @@ def test_catvton_coordinates_reject_reference_sized_mask() -> None:
     finally:
         base_image.close()
         approved_input.close()
+
+
+@pytest.mark.parametrize(
+    ("tags", "expected"),
+    [
+        (("blazer", "mini skirt"), ClothingCategory.FULL_BODY_OUTFIT),
+        (("jacket",), ClothingCategory.TOP),
+        (("leggings",), ClothingCategory.BOTTOM),
+        (("dress",), ClothingCategory.DRESS),
+        (("blue", "gold trim"), None),
+    ],
+)
+def test_resolve_clothing_category_from_current_approved_tags(tags, expected):
+    assert resolve_clothing_category_from_tags(tags) == expected

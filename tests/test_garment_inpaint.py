@@ -50,6 +50,14 @@ def _settings(tmp_path):
     )
 
 
+def _body_pose(size=(32, 32)) -> Image.Image:
+    pose = Image.new("RGB", size, "black")
+    pose_array = np.asarray(pose, dtype=np.uint8).copy()
+    pose_array[4:28, 15:17] = (0, 255, 0)
+    pose.close()
+    return Image.fromarray(pose_array, mode="RGB")
+
+
 def _success(command, **kwargs):
     output = Path(command[command.index("--output-image") + 1])
     width = int(command[command.index("--width") + 1])
@@ -81,20 +89,53 @@ def _close(inputs):
         item.close()
 
 
+def test_custom_resolution_forwarding_metadata_and_original_protection(tmp_path, monkeypatch):
+    inputs = _inputs((768, 1344))
+    def run(command, **kwargs):
+        assert command[command.index('--inference-width') + 1] == '512'
+        # Runner input artifacts remain source-sized for auditing.
+        with Image.open(command[command.index('--initial-image') + 1]) as initial:
+            assert initial.size == (768, 1344)
+        return _success(command, **kwargs)
+    monkeypatch.setattr('genai_lab.garment_inpaint.subprocess.run', run)
+    candidate = execute_garment_inpaint(
+        *inputs, prompt='blue jacket', negative_prompt='blurred', seed=42,
+        settings=replace(_settings(tmp_path), inference_width=512),
+    )
+    try:
+        metadata = json.loads((candidate.benchmark_directory / 'metadata.json').read_text(encoding='utf-8'))
+        assert metadata['inference_size'] == [512, 896]
+        assert metadata['effective_padding_mask_crop'] is None
+        assert candidate.protected_output.size == (768, 1344)
+        assert candidate.protected_changed_outside_mask_pixels == 0
+    finally:
+        candidate.close()
+        _close(inputs)
+
+
 def test_execution_protects_outside_and_exposes_eight_previews(
     tmp_path, monkeypatch
 ):
     inputs = _inputs()
+    composite_array = np.asarray(inputs[2], dtype=np.uint8).copy()
+    composite_array[8:24, 6] = 128
+    composite_mask = Image.fromarray(composite_array)
     monkeypatch.setattr("genai_lab.garment_inpaint.subprocess.run", _success)
     candidate = execute_garment_inpaint(
         *inputs, prompt="blue tailored jacket", negative_prompt="blurred",
         seed=42, settings=_settings(tmp_path),
+        composite_mask=composite_mask,
     )
     try:
         assert candidate.raw_changed_outside_mask_pixels > 0
         assert candidate.protected_changed_outside_mask_pixels == 0
         assert candidate.protected_changed_inside_mask_pixels > 0
-        assert candidate.benchmark_file_count == 10
+        assert candidate.inpaint_soft_mask_pixels == 16
+        assert candidate.protected_output.getpixel((6, 8)) not in {
+            (10, 20, 30), (245, 245, 245),
+        }
+        assert candidate.protected_output.getpixel((5, 8)) == (245, 245, 245)
+        assert candidate.benchmark_file_count == 11
         assert candidate.benchmark_directory.is_dir()
         assert (candidate.benchmark_directory / "raw_output_A.png").is_file()
         assert (candidate.benchmark_directory / "protected_output.png").is_file()
@@ -104,10 +145,12 @@ def test_execution_protects_outside_and_exposes_eight_previews(
             )
         )
         assert metadata["status"] == "completed"
-        assert metadata["schema_version"] == 4
+        assert metadata["schema_version"] == 6
         assert metadata["initial_image_source"] == "approved_human_agnostic"
         assert metadata["tps_rgb_composite_enabled"] is False
         assert metadata["garment_controlnet_enabled"] is False
+        assert metadata["body_pose_controlnet_enabled"] is False
+        assert metadata["body_pose_controlnet"] is None
         assert metadata["base_model_id"] == (
             "diffusers/stable-diffusion-xl-1.0-inpainting-0.1"
         )
@@ -124,6 +167,7 @@ def test_execution_protects_outside_and_exposes_eight_previews(
         ] == 1
         assert metadata["seed"] == 42
         assert metadata["input_files"]["mask"]["sha256"]
+        assert metadata["input_files"]["composite_mask"]["sha256"]
         assert metadata["input_files"]["garment_board"]["sha256"]
         assert metadata["audit_files"]["garment_source"]["sha256"]
         assert candidate.automatic_save_count == 0
@@ -135,6 +179,7 @@ def test_execution_protects_outside_and_exposes_eight_previews(
         assert candidate.garment_board_occupied_pixel_count > 0
     finally:
         candidate.close()
+        composite_mask.close()
         _close(inputs)
 
 
@@ -204,11 +249,104 @@ def test_runner_command_uses_no_tps_lineart_or_controlnet(tmp_path, monkeypatch)
             captured.index("--adapter-image-encoder-subfolder") + 1
         ] == "models/image_encoder"
         assert "--prompt-record-file" in captured
+        assert captured[captured.index("--operation") + 1] == (
+            "garment_inpaint"
+        )
         assert captured[captured.index("--garment-image") + 1].endswith(
             "garment_board.png"
         )
     finally:
         candidate.close()
+        _close(inputs)
+
+
+def test_body_restoration_operation_is_forwarded_without_changing_masks(
+    tmp_path, monkeypatch
+):
+    inputs = _inputs()
+    captured: list[str] = []
+    body_pose = _body_pose()
+
+    def capture(command, **kwargs):
+        captured.extend(command)
+        return _success(command, **kwargs)
+
+    monkeypatch.setattr("genai_lab.garment_inpaint.subprocess.run", capture)
+    candidate = execute_garment_inpaint(
+        *inputs,
+        prompt="same character, neutral base layer, bare legs",
+        negative_prompt="stockings, boots",
+        seed=1,
+        settings=replace(_settings(tmp_path), operation="body_restoration"),
+        body_pose_control_image=body_pose,
+    )
+    try:
+        assert captured[captured.index("--operation") + 1] == (
+            "body_restoration"
+        )
+        metadata = json.loads(
+            (candidate.benchmark_directory / "metadata.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        assert metadata["operation"] == "body_restoration"
+        assert metadata["body_pose_controlnet_enabled"] is True
+        assert metadata["body_pose_controlnet"] == {
+            "model_id": "xinsir/controlnet-openpose-sdxl-1.0",
+            "conditioning_scale": 0.65,
+            "guidance_start": 0.0,
+            "guidance_end": 0.8,
+        }
+        assert metadata["input_files"]["body_pose_control"]["sha256"]
+        assert "--body-pose-control-image" in captured
+        assert "--body-pose-controlnet-model-id" in captured
+        assert "--body-pose-conditioning-scale" in captured
+        assert "--body-pose-guidance-start" in captured
+        assert "--body-pose-guidance-end" in captured
+        assert candidate.body_pose_control_preview is not None
+        assert candidate.body_pose_control_preview.getbbox() is not None
+        assert candidate.protected_changed_outside_mask_pixels == 0
+    finally:
+        candidate.close()
+        body_pose.close()
+        _close(inputs)
+
+
+def test_body_restoration_without_original_pose_is_blocked_before_process(
+    tmp_path,
+) -> None:
+    inputs = _inputs()
+    try:
+        with pytest.raises(GarmentInpaintError, match="DWPose ControlNet"):
+            execute_garment_inpaint(
+                *inputs,
+                prompt="same character body",
+                negative_prompt="clothing",
+                seed=1,
+                settings=replace(
+                    _settings(tmp_path),
+                    operation="body_restoration",
+                ),
+            )
+    finally:
+        _close(inputs)
+
+
+def test_garment_inpaint_rejects_body_restoration_pose_input(tmp_path) -> None:
+    inputs = _inputs()
+    body_pose = _body_pose()
+    try:
+        with pytest.raises(GarmentInpaintError, match="일반 의상 합성"):
+            execute_garment_inpaint(
+                *inputs,
+                prompt="jacket",
+                negative_prompt="",
+                seed=1,
+                settings=_settings(tmp_path),
+                body_pose_control_image=body_pose,
+            )
+    finally:
+        body_pose.close()
         _close(inputs)
 
 
@@ -280,6 +418,7 @@ def test_missing_output_is_blocked(tmp_path, monkeypatch):
         {"inference_steps": 0},
         {"ip_adapter_scale": -0.1},
         {"dtype": "float32"},
+        {"operation": "unknown"},
     ],
 )
 def test_invalid_settings_are_blocked(tmp_path, change):
@@ -512,6 +651,7 @@ def test_progress_monitor_keeps_existing_subprocess_timeout(
         assert metadata["seed"] == 1
         assert (benchmark_directory / "initial.png").is_file()
         assert (benchmark_directory / "mask.png").is_file()
+        assert (benchmark_directory / "composite_mask.png").is_file()
         assert not (benchmark_directory / "lineart.png").exists()
         assert (benchmark_directory / "garment_source.png").is_file()
         assert (benchmark_directory / "garment_board.png").is_file()

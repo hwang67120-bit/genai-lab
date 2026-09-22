@@ -51,6 +51,8 @@ def test_full_body_input_becomes_model_ready_request(
     assert generation_request.reference_image.mode == "RGB"
     assert generation_request.reference_image_name == "character.png"
     assert generation_request.seed == 1234
+    assert generation_request.body_morphology.source_seed == 1234
+    assert generation_request.body_morphology.record()["gender_gate_input"] is False
     assert (generation_request.width, generation_request.height) == (768, 1344)
     assert "head to toe" in generation_request.prompt
     assert "feet visible" in generation_request.prompt

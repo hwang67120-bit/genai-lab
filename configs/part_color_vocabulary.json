@@ -1,0 +1,174 @@
+{
+  "version": "css_named_family_proposals_v1",
+  "method": "OpenCV Lab D65 Euclidean nearest family; experimental, not semantic truth",
+  "families": {
+    "blue": {
+      "ko": "파랑",
+      "samples": [
+        "navy",
+        "midnightblue",
+        "darkblue",
+        "mediumblue",
+        "blue",
+        "royalblue",
+        "cornflowerblue",
+        "steelblue",
+        "lightsteelblue",
+        "lightblue",
+        "skyblue",
+        "lightskyblue",
+        "powderblue",
+        "aliceblue",
+        "dodgerblue",
+        "deepskyblue"
+      ]
+    },
+    "purple": {
+      "ko": "보라",
+      "samples": [
+        "indigo",
+        "purple",
+        "rebeccapurple",
+        "blueviolet",
+        "darkviolet",
+        "mediumorchid",
+        "mediumpurple",
+        "slateblue",
+        "mediumslateblue",
+        "darkslateblue",
+        "lavender",
+        "plum",
+        "thistle"
+      ]
+    },
+    "red": {
+      "ko": "빨강",
+      "samples": [
+        "red",
+        "darkred",
+        "firebrick",
+        "crimson",
+        "indianred",
+        "salmon",
+        "lightcoral"
+      ]
+    },
+    "pink": {
+      "ko": "분홍",
+      "samples": [
+        "pink",
+        "lightpink",
+        "hotpink",
+        "deeppink",
+        "palevioletred",
+        "mediumvioletred"
+      ]
+    },
+    "orange": {
+      "ko": "주황",
+      "samples": [
+        "orange",
+        "darkorange",
+        "orangered",
+        "coral",
+        "tomato",
+        "lightsalmon"
+      ]
+    },
+    "yellow": {
+      "ko": "노랑",
+      "samples": [
+        "yellow",
+        "gold",
+        "khaki",
+        "darkkhaki",
+        "lightyellow",
+        "lemonchiffon",
+        "palegoldenrod"
+      ]
+    },
+    "brown": {
+      "ko": "갈색",
+      "samples": [
+        "brown",
+        "saddlebrown",
+        "sienna",
+        "chocolate",
+        "peru",
+        "tan",
+        "rosybrown",
+        "burlywood",
+        "wheat"
+      ]
+    },
+    "green": {
+      "ko": "초록",
+      "samples": [
+        "green",
+        "darkgreen",
+        "forestgreen",
+        "limegreen",
+        "lime",
+        "seagreen",
+        "mediumseagreen",
+        "springgreen",
+        "darkolivegreen",
+        "olive",
+        "olivedrab",
+        "lightgreen",
+        "palegreen"
+      ]
+    },
+    "cyan": {
+      "ko": "청록",
+      "samples": [
+        "teal",
+        "darkcyan",
+        "cyan",
+        "lightcyan",
+        "turquoise",
+        "mediumturquoise",
+        "aquamarine",
+        "mediumaquamarine",
+        "paleturquoise",
+        "cadetblue"
+      ]
+    },
+    "white": {
+      "ko": "흰색",
+      "samples": [
+        "white",
+        "ivory",
+        "snow",
+        "whitesmoke",
+        "floralwhite",
+        "ghostwhite",
+        "linen",
+        "seashell",
+        "oldlace",
+        "antiquewhite",
+        "beige"
+      ]
+    },
+    "gray": {
+      "ko": "회색",
+      "samples": [
+        "gray",
+        "darkgray",
+        "silver",
+        "lightgray",
+        "dimgray",
+        "slategray",
+        "lightslategray",
+        "gainsboro",
+        "darkslategray"
+      ]
+    },
+    "black": {
+      "ko": "검정",
+      "samples": [
+        "black"
+      ]
+    }
+  }
+}

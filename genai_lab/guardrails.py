@@ -210,12 +210,28 @@ def create_human_agnostic_guard_decision(
             message_ko="검사 대상이 없어 기존 의상 포함 여부를 계산할 수 없습니다.",
             recovery_action_ko="기준 캐릭터에서 교체할 기존 의상을 다시 선택하세요.",
         ))
-    results.append(_zero_required_result(
-        code="TARGET_CLOTHING_PROTECTION_CONFLICT", stage="original_clothing_removal",
+    results.append(GuardResult(
+        code="AUTOMATIC_PROTECTION_CONTACT",
+        stage="original_clothing_removal",
+        severity=(
+            GuardSeverity.WARNING
+            if protected_clothing_overlap_pixel_count
+            else GuardSeverity.PASS
+        ),
         measured_value=protected_clothing_overlap_pixel_count,
-        message_pass_ko="교체 의상과 보호 영역의 충돌이 없습니다.",
-        message_block_ko=f"교체 의상·보호 충돌 {protected_clothing_overlap_pixel_count:,}px를 다시 확인하세요.",
-        recovery_action_ko="충돌 미리보기를 보고 기존 의상·특수 보호 마스크를 재선택하세요.",
+        threshold_value=0,
+        unit="px",
+        corrected_value=0,
+        message_ko=(
+            "자동 신체 보호와 기존 의상의 접촉 픽셀은 제거 검사에서 "
+            f"제외했습니다: {protected_clothing_overlap_pixel_count:,}px"
+            if protected_clothing_overlap_pixel_count
+            else "자동 신체 보호와 기존 의상의 접촉이 없습니다."
+        ),
+        recovery_action_ko=(
+            "접촉 미리보기를 확인하세요. 최종 모델 마스크의 보호 침범은 "
+            "별도 0px 규칙으로 계속 차단합니다."
+        ),
     ))
     results.extend(
         create_catvton_preflight_guard_results(

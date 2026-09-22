@@ -65,6 +65,9 @@ clothing_design_analysis:
   execution_provider: CPUExecutionProvider
   score_threshold: 0.35
   maximum_tag_count: 30
+  # 전체 1회 + 겹치는 확대 2회. 1이면 확대 분석을 생략합니다.
+  detail_maximum_views: 3
+  detail_timeout_seconds: 120
 
 character_body_comparison:
   python_executable: D:/genai-cache/catvton-venv/Scripts/python.exe
@@ -120,27 +123,7 @@ pose_result_policy:
   switch_to_text_to_image: false
   use_identity_crop: false
 
-clothing_try_on:
-  enabled: true
-  safety_check_enabled: false
-  python_executable: D:/genai-cache/catvton-venv/Scripts/python.exe
-  repository_path: D:/genai-cache/tools/CatVTON
-  runner_path: scripts/catvton_runner.py
-  temporary_root: D:/genai-cache/temp/catvton
-  cache_dir: D:/genai-cache/huggingface
-  model_id: zhengchong/CatVTON
-  base_model_id: booksforcharlie/stable-diffusion-inpainting
-  width: 576
-  height: 1024
-  inference_steps: 30
-  guidance_scale: 2.5
-  mask_blur_factor: 9
-  mixed_precision: bf16
-  timeout_seconds: 1800
-  mask_expansion_ratio: 0.01
-  mask_expansion_min_pixels: 5
-  mask_expansion_max_pixels: 15
-  mask_closing_radius: 2
+# CatVTON 의상 합성 실행 설정은 제거됨. SCHP/DensePose 분석 환경은 유지.
 
 garment_inpaint:
   enabled: true
@@ -197,3 +180,482 @@ style:
 paths:
   prompts_file: inputs/prompts_animagine.csv
   output_dir: outputs
+
+garment_prompt_policy:
+  # 상세 구성품이 모두 승인된 경우에만 중복되는 포괄 의상 태그를 제거한다.
+  # 성별이나 체형은 이 규칙의 입력으로 사용하지 않는다.
+  redundant_ensemble_rules:
+    - remove: suit
+      when_groups_present:
+        - [jacket, blazer]
+        - [shirt, blouse]
+        - [skirt, pants, trousers, shorts]
+
+# 모델 호출 형식이 달라지는 실험 기능. false에서는 기존 77토큰 경로만 사용한다.
+# true로 바꾼 뒤 UI에 표시된 청크/실제 프롬프트를 다시 승인해야 한다.
+long_prompt_embedding:
+  enabled: false
+  maximum_chunks: 2
+  policy_version: sdxl_dual_encoder_phrase_chunks_v1
+
+# 후보들이 같은 구도와 인상을 유지하도록 CPU 기준 latent를 공유한다.
+common_candidate_latents:
+  # Img2Img는 승인 RGB를 VAE로 인코딩해야 하므로 T2I용 사전 latent를 사용하지 않는다.
+  enabled: false
+  correlation: 0.88
+  # 기본 후보가 모두 실패했을 때 추가 후보는 붕괴 구도를 반복하지 않도록 더 독립적으로 만든다.
+  retry_correlation: 0.35
+  variation_seed_offset: 10000
+
+# Base Img2Img에는 승인 캐릭터 RGB와 정체성/헤어 시각 참조만 전달한다.
+# 의상은 선택 후보의 출력 좌표를 다시 분석한 뒤 의상 전용 Inpaint에서 적용한다.
+staged_reference_generation:
+  enabled: true
+  base_references: [identity, hair]
+  correction_order: [garment, ears, tail, hair]
+  garment:
+    enabled: true
+    reference_scale: 0.45
+    inpaint_strength: 0.40
+    inference_steps: 10
+    guidance_scale: 5.5
+    minimum_similarity_improvement: 0.0
+    mask_padding_pixels: 2
+    timeout_seconds: 300
+    # 생성된 Base 좌표 내부에서만 Soft 조건을 사용한다.
+    feather_radius: 10
+    target_growth_pixels: 12
+    soft_boundary_strength: 0.50
+    # 유사도 부족은 결과 폐기 대신 미세 조정 진단으로 반환한다.
+    reject_similarity_regression: false
+
+# 승인된 최대 시도 수 안에서 정상 기본 후보 2개가 모이면 생성을 중단하고,
+# 가장 유사한 후보 하나에만 귀꼬리 국소 보정을 실행한다.
+candidate_pipeline:
+  enabled: true
+  # 손상·명백한 구조 오염만 반환을 막는다. 성별 분류는 진단으로만 기록한다.
+  # 유사도·색상·부위 차이는 퍼센트 진단 후 미세 조정 대상으로 반환한다.
+  return_policy: hard_safety_only
+  target_valid_candidates: 2
+  repair_best_candidate_only: true
+  reject_failed_post_audit: true
+  # 단계별 필수 구성요소 중 하나라도 이 값보다 낮으면 다음 latent로 재시도한다.
+  minimum_component_similarity: 0.65
+  require_all_similarity_scores: true
+  # Base 후보 자체에서 다시 검출한 좌표만 사용한다. 참조 이미지 마스크 좌표는
+  # 생성된 Base 후보에 원본 좌표로 재사용하지 않는다.
+  output_coordinate_similarity: true
+  # Base는 실제로 전달된 얼굴과 헤어만 승인한다. 의상은 2차 국소 보정 후 검사한다.
+  base_similarity_components: [character, hair]
+  # 최종 결과는 재검출 좌표에서 얼굴헤어의상전체 인상을 모두 검사한다.
+  final_similarity_components: [character, hair, garment, vibe]
+  # 성별 점수만으로 새 시드를 열지 않는다.
+  gender_retry_attempts: 0
+  # 유사도 부족만으로 새 latent를 반복하지 않는다. 통과 후보의 낮은
+  # 항목을 진단해 같은 후보의 후속 미세 조정으로 넘긴다.
+  quality_retry_attempts: 0
+
+# 기계적으로 정상이어도 승인 동물 종의상 구조와 명시적으로 충돌하면
+# CLIP 순위 계산 전에 다음 후보로 넘긴다.
+candidate_semantic_gate:
+  enabled: true
+  enforce_gender: false
+  conflict_threshold: 0.45
+  minimum_margin: 0.10
+  novel_garment_threshold: 0.55
+
+# OpenPose 이전 Animagine Base 첫 패스에만 적용하는 정면 체형 기준.
+# 캐릭터·헤어 IP-Adapter와 분리된 Canny ControlNet 채널을 사용한다.
+body_proportion_presets:
+  enabled: true
+  status: animagine_base_connected
+  asset_root: inputs/body_proportion_presets/v3
+  family_count: 4
+  preset_count: 6
+  application_stage: animagine_base_only
+  openpose_used: false
+  user_selection_required: true
+  model_id: xinsir/controlnet-canny-sdxl-1.0
+  local_files_only: true
+  conditioning_scale: 0.42
+  guidance_start: 0.00
+  guidance_end: 0.72
+
+# 요청에 봉인된 체형 벡터와 출력 외곽의 관측 가능한 3개 지표만 비교한다.
+# 진단 기록이며 반환 차단·재시드·후보 순위에는 사용하지 않는다.
+body_morphology_similarity:
+  enabled: true
+  background_color_distance: 22.0
+  minimum_observable_components: 3
+  band_half_height_ratio: 0.02
+
+# 모든 후보의 유사도 계산 전과 국소 보정 후 공간 구조를 검사한다.
+# 거대한 머리 위 분리 객체나 지나치게 작은 캐릭터는 수동 검토 후보로도 승격하지 않는다.
+candidate_structure_gate:
+  enabled: true
+  background_color_distance: 22.0
+  minimum_primary_height_ratio: 0.42
+  minimum_primary_bbox_area_ratio: 0.055
+  # 세로로 좁고 거의 완전한 볼록 외곽은 타원 프레임/캡슐 오염으로 차단한다.
+  maximum_tall_component_aspect_ratio: 0.38
+  maximum_tall_component_solidity: 0.97
+  minimum_component_area_ratio: 0.001
+  overhead_component_area_ratio: 0.10
+  overhead_component_width_ratio: 0.24
+  upper_band_fraction: 0.32
+  maximum_upper_width_ratio: 2.50
+  minimum_upper_canvas_width_ratio: 0.48
+
+# 최종 latent와 RGB 출력의 수치/픽셀 손상만 판정한다. 캐릭터 의미 품질은 판정하지 않는다.
+generated_image_integrity:
+  enabled: true
+  retry_count: 1
+  retry_final_latent_failure: true
+  retry_decoded_rgb_failure: true
+  continue_after_corruption: true
+  preserve_corrupted_image: true
+  high_jump_difference: 80.0
+  maximum_adjacent_difference: 12.0
+  maximum_high_jump_ratio: 0.03
+  maximum_laplacian_variance: 1500.0
+  maximum_extreme_pixel_ratio: 0.05
+  minimum_failed_checks: 3
+  reject_adjacent_and_extreme_pair: true
+
+# SCHP 얼굴이 비거나 측정하기에 너무 작을 때만 캐시된 얼굴 검출 ROI를 사용한다.
+# ROI는 semantic segmentation이 아니며, 면적 검증을 통과한 한 개의 얼굴만 허용한다.
+reference_face_observation:
+  enabled: true
+  detector_repository: Bingsu/adetailer
+  model: face_yolov8s.pt
+  cache_dir: D:/genai-cache/huggingface
+  minimum_confidence: 0.30
+  minimum_area_ratio: 0.0005
+  maximum_area_ratio: 0.12
+  parser_minimum_area_ratio: 0.002
+
+# 원본과 생성 좌표 양쪽에서 같은 DINO+SAM2 head/hair silhouette를 관찰한다.
+# 얼굴 픽셀이 일부 포함될 수 있어 A6 측정에만 쓰며 생성 조건에는 주입하지 않는다.
+reference_hair_observation:
+  enabled: true
+  detector_model_id: IDEA-Research/grounding-dino-tiny
+  sam_model_id: facebook/sam2.1-hiera-tiny
+  cache_dir: D:/genai-cache/huggingface
+  query: "hair. hairstyle."
+  box_threshold: 0.25
+  mask_threshold: 0.80
+  minimum_area_ratio: 0.001
+  maximum_area_ratio: 0.20
+  maximum_candidates: 8
+
+# 원본과 Base에서 독립 검출한 마스크가 측정 가능한지 먼저 검사한다.
+# 핵심 부위가 너무 작거나 일관성 검토가 필요하면 Native 정밀화로 진행하지 않는다.
+reference_base_mask_validation:
+  block_on_review: true
+  face:
+    minimum_pixels: 64
+    minimum_canvas_area_ratio: 0.0005
+  hair:
+    minimum_pixels: 128
+    minimum_canvas_area_ratio: 0.0015
+  identity:
+    minimum_pixels: 128
+    minimum_canvas_area_ratio: 0.0015
+  foreground:
+    minimum_pixels: 256
+    minimum_canvas_area_ratio: 0.01
+  garment:
+    minimum_pixels: 128
+    minimum_canvas_area_ratio: 0.001
+
+reference_analysis:
+  # 헤어 분석 전용 마스크만 복구한다. 생성용 얼굴의상귀꼬리 조건은 변경하지 않는다.
+  hair_mask_refinement:
+    enabled: true
+    minimum_hair_pixels: 256
+    minimum_retained_ratio: 0.55
+    maximum_missing_ratio: 0.04
+    protection_padding_pixels: 2
+    hole_inspection_radius: 4
+    retry_close_radii: [0, 2, 4]
+  # 얼굴·귀·장식을 제거한 헤어 RGB를 독립 IP-Adapter 슬롯으로 전달한다.
+  hair_visual_reference:
+    enabled: true
+    reference_scale: 0.60
+    padding_ratio: 0.15
+    neutral_background: [128, 128, 128]
+  # 정밀화에 성공한 헤어만 얼굴 좌표 기준의 다중 관찰 영역으로 분석한다.
+  hair_detail_analysis:
+    enabled: true
+    minimum_region_pixels: 128
+    maximum_detail_tags: 6
+    maximum_tags_per_group: 2
+    score_threshold: 0.35
+    timeout_seconds: 120.0
+    front_width_ratio: 1.0
+    front_bottom_ratio: 0.55
+    side_inner_ratio: 0.35
+    side_bottom_ratio: 0.35
+    # 절대 픽셀이 아니라 얼굴 높이에 대한 헤어 마스크 끝점 비율이다.
+    length_boundary_margin_pixels: 2
+    very_short_max_face_heights: 0.0
+    short_max_face_heights: 0.4
+    medium_max_face_heights: 1.0
+    long_max_face_heights: 2.5
+    very_long_max_face_heights: 4.0
+  # 정상 후보 중 최상위 한 장에서만 실행한다. 헤어 크롭 외 IP-Adapter 입력은
+  # 전달하지 않으며 얼굴동물귀머리장식 보호 영역을 최종 마스크에서 제외한다.
+  # 승인된 앞머리와 옆머리는 서로 겹치지 않는 출력 좌표 ROI만 보정한다.
+  # 색상질감만 전체 헤어 보정 후보이며, 길이묶음구조는 Pass 1 재생성 권고로 보류한다.
+  hair_error_correction:
+    # Hard paste 기반 구형 보정은 비합성 계약에서 실행하지 않는다.
+    enabled: false
+    minimum_similarity: 0.68
+    minimum_improvement: 0.01
+    hair_reference_scale: 0.55
+    inpaint_strength: 0.45
+    inference_steps: 10
+    guidance_scale: 5.5
+    mask_padding_pixels: 3
+    protection_padding_pixels: 3
+    timeout_seconds: 300
+    # Inpaint 경계 띠만 완화하고 얼굴귀장식 및 외부 픽셀은 정확히 복원한다.
+    boundary_guard:
+      enabled: true
+      boundary_width_pixels: 8
+      feather_radius_pixels: 4
+      diagnostic_channel_difference: 3
+      # VAE 전체 재구성 변화는 우선 기록만 하고 최종 합성에서 원본으로 복원한다.
+      maximum_raw_outside_changed_ratio: 1.0
+      seam_mean_difference_max: 12.0
+      seam_p95_difference_max: 32.0
+      seam_changed_ratio_max: 0.35
+      require_exact_protected_pixels: true
+      require_exact_outside_pixels: true
+    # 기준 RGB와 보정 전후 동일 좌표의 마스크를 함께 검증한다.
+    promotion_gate:
+      enabled: true
+      minimum_color_similarity: 0.80
+      minimum_shape_iou: 0.65
+      maximum_length_change_ratio: 0.20
+      maximum_area_change_ratio: 0.25
+  # 단일 기준 이미지에 관측되지 않은 측면/후면 헤어를 Inpaint로 추측하지 않는다.
+  hair_view_gate:
+    enabled: true
+    score_threshold: 0.35
+    minimum_margin: 0.08
+  # 원본 위치 기반 귀·꼬리 RGB 연결 실험. 입력 승인 필요, 자세 고정 아님.
+  part_detection:
+    enabled: true
+    conditioning_mode: source_regions_experiment
+    # 부분 겹침은 유지/검토. 거의 의상인 후보와 전체 헤어를 덮는 후보만 제외.
+    # 관측과 별개인 실험 제안. 사용자 입력 승인 전에는 생성기에 연결하지 않음.
+    proposal_policy: experimental_overlap_v2
+    part_queries:
+      - {name: human_ears, query: "human ears. person ears.", hair_context: false}
+      - {name: animal_ears, query: "animal ears.", hair_context: true}
+      - {name: tail, query: "tail.", hair_context: false}
+      # 헤어 분석 마스크에서만 제외하며 생성용 IP-Adapter 참조에는 연결하지 않는다.
+      - {name: hair_accessory, query: "hair ornament. hair accessory. hair clip.", hair_context: true}
+    minimum_hair_overlap: 0.50
+    garment_dominance: 0.90
+    # 꼬리로 검출됐더라도 승인 의상과 75% 이상 겹치면 소매·하의 오검출로 차단한다.
+    tail_maximum_garment_overlap: 0.75
+    broad_hair_coverage: 0.50
+    box_threshold: 0.35
+    mask_threshold: 0.80
+    scale: 0.35
+    # 전경 대비 과대한 소부위는 원시 후보만 기록하고 자동 조건화하지 않는다.
+    maximum_foreground_area_ratios:
+      human_ears: 0.12
+      animal_ears: 0.25
+      tail: 0.60
+      hair_accessory: 0.20
+    # 검출 결과를 바꾸지 않는 관측 전용 공간 진단이다.
+    diagnostics:
+      enabled: true
+      mode: observe_only
+      head_fallback_bottom_ratio: 0.55
+      head_context_expansion_ratio: 0.15
+      minimum_head_overlap_ratio: 0.50
+      tail_fallback_left_ratio: 0.15
+      tail_fallback_top_ratio: 0.45
+      tail_fallback_right_ratio: 0.85
+      tail_fallback_bottom_ratio: 0.78
+      tail_context_expansion_ratio: 0.10
+      minimum_tail_anchor_overlap_ratio: 0.02
+      identical_minimum_smaller_overlap_ratio: 0.90
+      identical_minimum_iou: 0.60
+    # 오프라인 검증에서만 실행한다. 생성·SAM2 승인 마스크에는 연결하지 않는다.
+    accessory_observations:
+      enabled: true
+      analysis_scope: offline_reference_validation
+      mode: observe_only
+      tile_grid_size: 2
+      tile_overlap_ratio: 0.25
+      model_short_edge: 800
+      model_max_long_edge: 1333
+      minimum_cluster_iou: 0.10
+      maximum_normalized_center_distance: 0.35
+      minimum_localized_views: 2
+      maximum_candidates_per_view_label: 8
+      save_view_images: true
+      query_groups:
+        - {name: animal_ears, query: "animal ears."}
+        - {name: costume_ears, query: "costume ears. animal ear headband."}
+        - {name: hair_accessory, query: "hair ornament. hairpin. hair clip. hair tie. hair ribbon."}
+        - {name: headphones, query: "headphones. headset."}
+        - {name: hat, query: "hat. cap. headwear."}
+    # 귀 RGB/색상 측정은 원본 마스크를 유지하고 생성용 지역 마스크만 보강한다.
+    # Diffusers IP-Adapter mask 축소 뒤 남는 셀 수로 최소 반경을 자동 선택한다.
+    generation_region_strengthening:
+      enabled: true
+      parts:
+        ears:
+          strong_threshold: 0.10
+          middle_queries: 252
+          minimum_middle_cells: 2
+          coarse_queries: 66
+          minimum_coarse_cells: 1
+          maximum_area_growth: 2.0
+          maximum_radius_ratio: 0.02
+  color_analysis_enabled: true
+  # 색상 이름은 귀·꼬리 제한 마스크 보정에만 사용한다.
+  # 전체 캐릭터·의상 생성 프롬프트에는 연결하지 않는다.
+  part_color_text:
+    # 색상 문구는 공유 프롬프트에 넣지 않는다. 사용자가 승인한 부위만
+    # 출력 색상 계약과 국소 보정/반환 금지 조건으로 사용한다.
+    enabled: true
+    part_names: [human_ears, animal_ears, tail]
+    vocabulary_path: configs/part_color_vocabulary.json
+    max_distance: 22.0
+    minimum_margin: 1.5
+    minimum_area_ratio: 0.10
+    minimum_coverage: 0.85
+    maximum_colors: 3
+    dark_lightness: 45.0
+    light_lightness: 80.0
+  garment_reference_mode: full_garment
+  # 사람 귀·동물 귀·꼬리·헤어 장식 4개 독립 쿼리의 콜드 실행 예산.
+  part_analysis_timeout_seconds: 300
+  preparation_timeout_seconds: 1800
+  # 후보마다 새로 시작. 공통 준비/이전 후보/유사도 계산 시간은 차감하지 않음.
+  generation_timeout_seconds: 1800
+  # 추가 추론 없이 기존 28스텝 안에서 참조 영향만 순차 전환한다.
+  # 화면에서 승인한 얼굴/의상 강도와 헤어/부위 기본 강도에 아래 배율을 적용한다.
+  reference_step_schedule:
+    enabled: true
+    phases:
+      - end_ratio: 0.35
+        scale_factors: {identity: 1.00, hair: 0.85, ears: 0.15, tail: 0.30, garment: 1.00}
+      - end_ratio: 0.70
+        scale_factors: {identity: 0.93, hair: 1.00, ears: 0.71, tail: 0.86, garment: 0.93}
+      - end_ratio: 1.00
+        scale_factors: {identity: 0.79, hair: 0.80, ears: 1.57, tail: 1.43, garment: 0.67}
+  # 1차 SDXL 결과를 RGB로 왕복하지 않고 latent 상태에서 저노이즈 Img2Img로 정밀화한다.
+  # 768x1344와 8GB VRAM에서 먼저 검증하므로 확대는 끄고, 같은 모델 구성요소를 재사용한다.
+  latent_refinement:
+    enabled: false
+    inference_steps: 10
+    strength: 0.25
+    guidance_scale: 5.5
+    latent_scale_factor: 1.0
+  # 완성 후보에서 다시 검출된 동물귀와 꼬리를 순서대로 독립 보정한다.
+  # 사람형 귀는 얼굴 보호 마스크에 포함하고 독립 보정 대상으로 사용하지 않는다.
+  # 미검출은 부재로 단정하지 않고 원본 후보를 유지한다.
+  part_error_correction:
+    # 동물귀·꼬리는 보호·진단만 유지하고 구형 Hard paste 보정은 실행하지 않는다.
+    enabled: false
+    part_names: [animal_ears, tail]
+    minimum_similarity: 0.60
+    minimum_improvement: 0.02
+    # Lab 팔레트 분포는 색 위치·줄무늬가 아니라 주요 색 분포만 비교한다.
+    maximum_color_distance: 18.0
+    minimum_color_improvement: 2.0
+    maximum_similarity_regression: 0.03
+    # 원본 참조보다 지나치게 넓은 출력 마스크는 중복병합 검출로 취급한다.
+    maximum_region_area_growth: 2.0
+    inpaint_strength: 0.30
+    inference_steps: 10
+    guidance_scale: 5.5
+    mask_padding_pixels: 4
+    # hard mask 내부로만 침식·페더링하며 hard 경계 밖 픽셀은 최종 복원한다.
+    mask_feather_pixels: 10
+    timeout_seconds: 300
+  # part_analyzer 주입 시 검증된 생성 좌표가 있는 부위별 참조를 연결할 수 있음.
+  # 색 측정은 확인용이며 생성 태그/오드아이를 자동 확정하지 않음.
+
+# 실험 경로: 분석 구현체를 연결하기 전까지 비활성 유지.
+# 참조 생성은 기존대로 사용 가능. 자동 기준점/가려짐 추측으로 대체하지 않음.
+scene_lineart:
+  enabled: false
+  model_id: TheMistoAI/MistoLine
+  extractor_output_white_lines: false
+  conditioning_scale: 0.50
+  guidance_end: 0.80
+  analysis_attempts: 2
+  timeout_seconds: 1800
+# GPU에서 실제 Base 게이트를 통과한 동일 입력 조합은 승인된 전체 이미지를 재사용한다.
+# visual_fingerprint가 다르면 자동으로 일반 생성 경로로 돌아간다.
+approved_base_replay:
+  # 자동 게이트 통과 후보는 사용자 승인 Base가 아니므로 재생하지 않는다.
+  enabled: false
+  manifest: approved-bases/bcfc90ef08980cb2e82b1b244cbca19e094a1dc42d3aa10c5d3f0d5350bef8f4/manifest.json
+
+# 새 GUI 주 경로. 기존 Animagine 의상 프롬프트와 원본 의상 인물 이미지를
+# Native 모델에 전달하지 않는다.
+native_pipeline_v2:
+  enabled: true
+  # 로컬 직접 편집 GPU 회귀에서 성별/의상 실패가 확인되어 기본값은 승인 Base로 복구했다.
+  # source_character_direct는 별도 실험에서만 명시적으로 활성화한다.
+  primary_route: approved_animagine_base
+  base_profile: character_only
+  base_garment_prompt_enabled: false
+  base_garment_adapter_enabled: false
+  native_garment_source: isolated_garment_board
+  reuse_animagine_prompt_in_native_stage: false
+  raw_garment_person_image_allowed: false
+# 승인 Base 이후 최종화기는 한 실행에서 정확히 하나만 선택한다.
+refinement_execution:
+  enabled: true
+  mode: flux_whole_image
+
+generation_run_context:
+  root: outputs/generation-runs
+  training_roots: [training-data, datasets]
+
+person_count_diagnostic:
+  enabled: true
+  expected_count: 1
+  detector_model_id: IDEA-Research/grounding-dino-tiny
+  cache_dir: D:/genai-cache/huggingface
+  box_threshold: 0.30
+  text_threshold: 0.25
+  minimum_area_ratio: 0.02
+  duplicate_iou: 0.65
+  blocking: false
+
+# 승인된 Base와 격리 의상 보드로 FLUX 전체 이미지를 한 번 정밀화한다.
+# 이미지 병합, hard paste, 마스크 합성 및 다른 생성 모델 폴백은 사용하지 않는다.
+# source_character_direct는 GPU 회귀 결과 때문에 실험 설정으로만 남긴다.
+native_refinement:
+  enabled: true
+  mode: gui_local_gpu
+  python_executable: D:/genai-cache/venv/Scripts/python.exe
+  runner_path: scripts/run_native_refinement.py
+  model_cache_dir: C:/Users/user/.cache/huggingface
+  allow_download: false
+  timeout_seconds: 3600
+  strategy: flux2_klein_only
+  engines: [flux2_klein]
+  candidate_policy: whole_image_native_output
+  image_merge_enabled: false
+  hard_paste_enabled: false
+  mask_composite_enabled: false
+  failed_candidates_returned: false
+  all_failed_action: keep_approved_base_and_seed
+  minimum_similarity: 0.65
+  minimum_color_similarity: 0.55
+  width: 320
+  height: 512
+  flux_steps: 4

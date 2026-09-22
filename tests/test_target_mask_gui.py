@@ -9,6 +9,7 @@ from PIL import Image
 from PySide6.QtCore import QObject, Signal, Slot
 from PySide6.QtWidgets import QApplication, QDialog, QHBoxLayout, QPushButton, QScrollArea, QVBoxLayout, QLabel
 
+from genai_lab.clothing import ClothingCategory
 from genai_lab.clothing_reference import (
     ClothingMaskExtractionResult, ClothingMaskExtractionSettings,
     ClothingMaskRegionCandidateGroup, ClothingMaskReviewCandidate, ClothingRegionCandidate,
@@ -214,3 +215,79 @@ def test_open_approval_prevents_reentrant_target_review(monkeypatch):
     window.approval_dialog_open = False
     window.close()
     APPLICATION.processEvents()
+
+
+def test_small_repair_uses_region_and_merges_only_after_review(monkeypatch):
+    class AcceptRepairDialog:
+        def __init__(self, source, clothing, candidate, pixmap, parent):
+            assert candidate.candidate_pixel_count == 1
+
+        def exec(self):
+            return QDialog.DialogCode.Accepted
+
+    monkeypatch.setattr(
+        "genai_lab.target_mask_review.LocalMaskRepairReviewDialog",
+        AcceptRepairDialog,
+    )
+    with Image.new("RGB", (64, 128), "white") as source:
+        dialog = TargetMaskReviewDialog(
+            source, ClothingMaskExtractionSettings(),
+            FakeRegionDialog, FakeMaskDialog, FakeWorker,
+            create_pil_image_pixmap,
+        )
+        dialog.clothing_mask.paste(255, (8, 8, 32, 40))
+        dialog.clothing_mask.putpixel((10, 10), 0)
+        dialog._no_special_protection()
+        try:
+            dialog._review_local_repair()
+            assert dialog.clothing_mask.getpixel((10, 10)) == 255
+        finally:
+            dialog.close_images()
+            dialog.close()
+            APPLICATION.processEvents()
+
+
+def test_additions_accumulate_and_exclusion_is_last_edit():
+    with Image.new("RGB", (64, 128), "white") as source:
+        dialog = make_dialog(source)
+        with Image.new("L", source.size, 0) as first, Image.new("L", source.size, 0) as second:
+            first.paste(255, (8, 8, 16, 16))
+            second.paste(255, (24, 24, 32, 32))
+            try:
+                dialog._apply_selection("clothing", first)
+                dialog._apply_selection("clothing", second)
+                assert dialog.clothing_mask.getpixel((10, 10)) == 255
+                assert dialog.clothing_mask.getpixel((26, 26)) == 255
+                dialog._apply_selection("exclude", first)
+                assert dialog.clothing_mask.getpixel((10, 10)) == 0
+                assert dialog.excluded_mask.getpixel((10, 10)) == 255
+                dialog._apply_selection("clothing", first)
+                assert dialog.clothing_mask.getpixel((10, 10)) == 255
+                assert dialog.excluded_mask.getpixel((10, 10)) == 0
+                dialog._no_special_protection()
+                dialog._reset_corrections()
+                assert dialog.approve_button.isEnabled()  # automatic mode needs no manual mask
+                dialog._approve()
+                assert dialog.approved_masks.use_automatic_base
+                assert dialog.approved_masks.layered_priority
+            finally:
+                dialog.close_images()
+                dialog.close()
+                APPLICATION.processEvents()
+
+
+def test_body_comparison_category_comes_from_current_approved_tags():
+    window = GenAILabWindow()
+    window.body_comparison_clothing_category = None
+    window.confirmed_clothing_design = SimpleNamespace(
+        design_tags=("blazer", "mini skirt"),
+    )
+    try:
+        assert (
+            window.resolve_body_comparison_clothing_category()
+            == ClothingCategory.FULL_BODY_OUTFIT
+        )
+    finally:
+        window.confirmed_clothing_design = None
+        window.close()
+        APPLICATION.processEvents()

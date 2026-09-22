@@ -1,5 +1,7 @@
 # 구조 설명
 
+> 현재 제품 목표와 실행 순서는 docs/FLOW.md가 유일한 활성 계약이다. 이 문서는 파일 책임을 설명하며 과거 실험 파일이 존재한다는 이유로 해당 경로를 활성화하지 않는다.
+
 ## 구조를 이렇게 보는 이유
 
 파일을 먼저 나누고 역할을 나중에 붙이면 같은 계산이 여러 위치에 생길 수 있습니다. GenAI Lab은 GUI 후보 생성 흐름을 네 블록으로 먼저 나누고, 각 블록의 입력과 출력을 정한 뒤 필요한 파일만 변경합니다.
@@ -12,7 +14,7 @@
 
 ## 현재 파일의 역할
 
-2026-09-03 추가 모듈: `target_masks.py`는 기준 캐릭터에 묶인 교체/특수 보호 승인 자료, `target_mask_review.py`는 기존 SAM2 선택 UI와 작업자를 연결하는 스크롤 승인창, `inpaint_quality.py`는 GPU 없는 중립색 잔여 후보 측정을 담당합니다. GUI 6/8에서 두 역할 선택 후 기존 신체·Human-Agnostic 승인을 이어갑니다.
+2026-09-05 마스크·복원 모듈: target_masks.py는 기준 캐릭터에 묶인 교체/특수 보호 승인 자료, target_mask_review.py는 기존 SAM2 선택 UI와 수동 내부 구멍 보조 경로, target_mask_repair.py는 SCHP 지지 기반 자동 MORPH_CLOSE·보호/외곽 제한·하드/소프트 Dual Mask를 담당합니다. body_comparison.py는 실제 중립화와 투명 구멍 증거를 만듭니다. body_restoration_masks.py는 `thin|normal|thick|unknown` 두께 계약과 기존 의상 제거 마스크/두꺼운 의상 내부 체형 힌트를 분리하고, original_body_pose.py는 기준 캐릭터 DWPose를 외부 자세와 분리해 승인·실행 직전 검증합니다. garment_inpaint.py와 scripts/garment_inpaint_runner.py는 operation 계약으로 의상 합성과 신체 복원을 구분하며, 현재 GUI의 body_restoration은 기준 캐릭터 OpenPose ControlNet만 연결하고 IP-Adapter와 외부 자세를 차단합니다. 하드 마스크는 모델 입력, 소프트 마스크는 최종 원본 보호 합성에만 사용합니다.
 
 | 위치 | 현재 역할 | 현재 확인된 문제 |
 |---|---|---|
@@ -49,7 +51,7 @@
 | `configs/animagine.yaml` | GUI에서 사용하는 Animagine 설정 | 데이터 가공 블록이 읽어서 실행 준비 요청에 반영 |
 | `inputs/prompts.csv` | 명령 실행용 요청 목록 | GUI의 사용자 입력으로 사용하지 않음 |
 | `outputs` | 결과 저장 위치 | 승인된 PNG와 JSON만 남기는 구조로 변경 예정 |
-| `docs` | 범위, 흐름, 구현 계약, 결정, 문제 해결과 수치·증거 작성 규칙 | `IMPLEMENTATION_CONTRACT.md`에서 공식 기능 우선·직접 작성 범위·시나리오형 흐름을 구현 전에 확인 |
+| docs | 활성 제품 흐름, 결정 기록, 문제 해결과 수치·증거 작성 규칙 | 구현 전 FLOW.md에서 현재 목표와 시나리오를 확인 |
 | `tests` | 자동 확인 | 블록 경계가 다시 섞이지 않는지 확인 |
 
 ## 하향식 적용 후의 목표 역할

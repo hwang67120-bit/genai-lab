@@ -52,9 +52,9 @@ def test_fully_protected_target_is_not_removed_even_if_mask_overlaps():
     with Image.new("L", (8, 8), 255) as full:
         result = verify_original_clothing_removal(full, full, full, full)
         try:
-            assert result.status == "needs_review"
-            assert result.removal_percent == 0
-            assert result.remaining_clothing_pixel_count == 64
+            assert result.status == "not_evaluable"
+            assert result.removal_percent is None
+            assert result.remaining_clothing_pixel_count == 0
         finally:
             result.close()
 
@@ -85,11 +85,19 @@ def test_execution_uses_selected_mask_and_keeps_auto_mask_diagnostic(tmp_path, m
                 image.save(command[command.index(flag) + 1])
         save("--output-raw-mask", "L", 255)
         save("--output-protection-mask", "L", 0)
-        save("--output-foreground-mask", "L", 255)
+        foreground_path = Path(
+            command[command.index("--output-foreground-mask") + 1]
+        )
+        with Image.new("L", (64, 64), 255) as foreground:
+            # Approved SAM contains this pixel, but the exact AI foreground
+            # rejects it. The later 15px diagnostic dilation includes it.
+            foreground.putpixel((20, 60), 0)
+            foreground.save(foreground_path)
         save("--output-densepose", "RGB", "black")
         Path(command[command.index("--output-metadata-json") + 1]).write_text(json.dumps({
-            "foreground_model_id": "isnet-anime", "foreground_pixel_count": 4096,
-            "foreground_percent": 100, "foreground_elapsed_seconds": 0,
+            "foreground_model_id": "isnet-anime", "foreground_pixel_count": 4095,
+            "foreground_percent": (4095 / 4096) * 100,
+            "foreground_elapsed_seconds": 0,
             "model_ids": ["test"], "elapsed_seconds": 0,
         }), encoding="utf-8")
         return subprocess.CompletedProcess(command, 0, "", "")
@@ -107,11 +115,16 @@ def test_execution_uses_selected_mask_and_keeps_auto_mask_diagnostic(tmp_path, m
         try:
             assert "--explicit-target-masks" in captured
             assert result.mask_source == "user_selected_target_sam2"
-            assert np.array_equal(np.asarray(result.mask_refinement.raw_mask), np.asarray(clothes))
+            assert result.mask_refinement.raw_mask.getpixel((20, 20)) == 255
+            assert result.mask_refinement.raw_mask.getpixel((20, 60)) == 0
+            assert result.automatic_mask_repair.original_mask.getpixel((20, 60)) == 255
+            assert result.automatic_mask_repair.removed_mask.getpixel((20, 60)) == 255
             assert result.automatic_change_mask.getpixel((0, 0)) == 255
-            assert result.human_agnostic_candidate.neutralized_image.getpixel((20, 60)) == (127, 127, 127)
+            assert result.human_agnostic_candidate.neutralized_image.getpixel((20, 60)) == (255, 255, 255)
             assert result.human_agnostic_candidate.neutralized_image.getpixel((35, 35)) == (255, 255, 255)
             assert result.clothing_removal_verification.passed
+            assert result.clothing_removal_verification.outside_foreground_pixel_count == 1
+            assert result.clothing_removal_verification.remaining_clothing_pixel_count == 0
         finally:
             result.close()
             approved.close()

@@ -11,6 +11,12 @@ import numpy as np
 from PIL import Image, UnidentifiedImageError
 
 from genai_lab.target_masks import ApprovedTargetMasks
+from genai_lab.mask_layers import MaskLayerResult, synthesize_mask_layers
+from genai_lab.removal_diagnostics import trace_removal, record_removal_event
+from genai_lab.target_mask_repair import (
+    AutoMaskRepairResult,
+    repair_sam_mask_automatically,
+)
 
 
 @dataclass(frozen=True)
@@ -31,6 +37,7 @@ class CharacterBodyComparisonSettings:
     mask_closing_radius_pixels: int = 2
     foreground_model_id: str = "isnet-anime"
     foreground_expansion_pixels: int = 15
+    face_reference_enabled: bool = False
 
 
 @dataclass(frozen=True)
@@ -83,16 +90,19 @@ class HumanAgnosticImageCandidate:
     """기존 의상 영역을 중립색으로 가린 사용자 승인 전 이미지."""
 
     neutralized_image: Image.Image
+    cutout_preview: Image.Image
     neutral_rgb: tuple[int, int, int]
     neutralized_pixel_count: int
     neutralized_percent: float
     raw_mask_pixel_count: int
     raw_mask_coverage_percent: float
     changed_pixel_count_outside_mask: int
+    inside_not_neutral_pixel_count: int
 
     def close(self) -> None:
-        """후보가 소유한 중립화 이미지 1개를 해제한다."""
+        """후보가 소유한 중립화 이미지와 투명 구멍 미리보기를 해제한다."""
         self.neutralized_image.close()
+        self.cutout_preview.close()
 
 
 @dataclass(frozen=True)
@@ -137,6 +147,8 @@ class CharacterBodyComparisonCandidate:
 
     mask_source: str = "automasker_candidate"
     automatic_change_mask: Image.Image | None = None
+    automatic_mask_repair: AutoMaskRepairResult | None = None
+    mask_layers: MaskLayerResult | None = None
 
     def close(self) -> None:
         """GUI 검토에 사용한 PIL 이미지를 모두 해제한다."""
@@ -148,6 +160,10 @@ class CharacterBodyComparisonCandidate:
         self.clothing_removal_verification.close()
         if self.automatic_change_mask is not None:
             self.automatic_change_mask.close()
+        if self.automatic_mask_repair is not None:
+            self.automatic_mask_repair.close()
+        if self.mask_layers is not None:
+            self.mask_layers.close()
 
 
 @dataclass(frozen=True)
@@ -157,6 +173,7 @@ class ConfirmedCharacterBodyComparison:
     clothing_type: str
     approved_human_agnostic_image: Image.Image
     approved_change_mask: Image.Image
+    approved_composite_mask: Image.Image
     approved_model_mask: Image.Image
     neutral_rgb: tuple[int, int, int]
     neutralized_pixel_count: int
@@ -182,12 +199,19 @@ class ConfirmedCharacterBodyComparison:
     preflight_soft_overlap_pixel_count: int
     preflight_hard_overlap_pixel_count: int
     preflight_removed_pixel_count: int
+    approved_foreground_mask: Image.Image | None = None
+    approved_protection_mask: Image.Image | None = None
 
     def close(self) -> None:
         """승인된 중립화 이미지와 원본·모델 교체 마스크를 해제한다."""
         self.approved_human_agnostic_image.close()
         self.approved_change_mask.close()
+        self.approved_composite_mask.close()
         self.approved_model_mask.close()
+        if self.approved_foreground_mask is not None:
+            self.approved_foreground_mask.close()
+        if self.approved_protection_mask is not None:
+            self.approved_protection_mask.close()
 
 
 class CharacterBodyComparisonError(RuntimeError):
@@ -219,6 +243,7 @@ def calculate_mask_expansion_radius(
     return max(minimum_pixels, min(maximum_pixels, calculated_pixels))
 
 
+@trace_removal("mask_refinement")
 def refine_character_clothing_change_mask(
     raw_clothing_mask: Image.Image,
     identity_protection_mask: Image.Image,
@@ -376,6 +401,7 @@ def refine_character_clothing_change_mask(
     )
 
 
+@trace_removal("neutralization")
 def create_human_agnostic_image_candidate(
     source_image: Image.Image,
     clothing_erasure_mask: Image.Image,
@@ -385,7 +411,7 @@ def create_human_agnostic_image_candidate(
     """승인 전 의상 영역을 RGB 중립색으로 바꾼 이미지를 만든다.
 
     반환값:
-        중립화 이미지와 원본 마스크 포함률·영역 밖 변경 픽셀 수.
+        중립화 이미지와 유효 교체 마스크 포함률·영역 밖 변경 픽셀 수.
 
     오류:
         이미지 크기나 RGB 값이 잘못됐거나 중립화할 픽셀이 0개면 중단한다.
@@ -433,6 +459,19 @@ def create_human_agnostic_image_candidate(
     neutralized_array[erasure_mask_array] = np.asarray(
         neutral_rgb, dtype=np.uint8
     )
+    neutral_array = np.asarray(neutral_rgb, dtype=np.uint8)
+    inside_not_neutral_pixels = (
+        erasure_mask_array
+        & np.any(neutralized_array != neutral_array, axis=2)
+    )
+    inside_not_neutral_pixel_count = int(
+        np.count_nonzero(inside_not_neutral_pixels)
+    )
+    if inside_not_neutral_pixel_count != 0:
+        raise CharacterBodyComparisonError(
+            "중립화 마스크 안에 중립색이 아닌 픽셀이 "
+            f"{inside_not_neutral_pixel_count:,}개 남았습니다."
+        )
     changed_pixel_array = np.any(neutralized_array != source_array, axis=2)
     changed_pixel_count_outside_mask = int(np.count_nonzero(
         changed_pixel_array & ~erasure_mask_array
@@ -453,17 +492,28 @@ def create_human_agnostic_image_candidate(
         if raw_mask_pixel_count > 0
         else 0.0
     )
+    cutout_array = np.empty(
+        (source_array.shape[0], source_array.shape[1], 4),
+        dtype=np.uint8,
+    )
+    cutout_array[:, :, :3] = source_array
+    cutout_array[:, :, 3] = np.where(
+        erasure_mask_array, 0, 255,
+    ).astype(np.uint8)
     return HumanAgnosticImageCandidate(
         neutralized_image=Image.fromarray(neutralized_array, mode="RGB"),
+        cutout_preview=Image.fromarray(cutout_array, mode="RGBA"),
         neutral_rgb=neutral_rgb,
         neutralized_pixel_count=neutralized_pixel_count,
         neutralized_percent=neutralized_pixel_count / total_pixel_count * 100.0,
         raw_mask_pixel_count=raw_mask_pixel_count,
         raw_mask_coverage_percent=raw_mask_coverage_percent,
         changed_pixel_count_outside_mask=changed_pixel_count_outside_mask,
+        inside_not_neutral_pixel_count=inside_not_neutral_pixel_count,
     )
 
 
+@trace_removal("selected_clothing_coverage")
 def verify_original_clothing_removal(
     raw_clothing_mask: Image.Image,
     approved_change_mask: Image.Image,
@@ -521,10 +571,10 @@ def verify_original_clothing_removal(
         raw_mask_array & foreground_mask_array & protection_mask_array
     )
     verifiable_clothing_pixels = (
-        raw_mask_array & foreground_mask_array
+        raw_mask_array & foreground_mask_array & ~protection_mask_array
     )
     removed_clothing_pixels = (
-        verifiable_clothing_pixels & approved_mask_array & ~protection_mask_array
+        verifiable_clothing_pixels & approved_mask_array
     )
     remaining_clothing_pixels = verifiable_clothing_pixels & ~removed_clothing_pixels
     outside_foreground_pixel_count = int(
@@ -544,6 +594,7 @@ def verify_original_clothing_removal(
     )
     classified_clothing_pixel_count = (
         outside_foreground_pixel_count
+        + protected_overlap_pixel_count
         + verifiable_clothing_pixel_count
     )
     if classified_clothing_pixel_count != detected_clothing_pixel_count:
@@ -567,18 +618,15 @@ def verify_original_clothing_removal(
     if not verifiable_clothing_pixel_count:
         status = "not_evaluable"
         reason_ko = "검사할 기존 의상 영역이 없습니다. 제거 완료가 아닌 계산 불가입니다."
-    elif protected_overlap_pixel_count:
-        status = "needs_review"
-        reason_ko = (
-            f"교체 의상과 보호 영역이 {protected_overlap_pixel_count:,}px 겹칩니다. "
-            "충돌 표시를 확인하고 교체·보호 마스크를 다시 선택하세요."
-        )
     elif remaining_clothing_pixel_count:
         status = "incomplete"
         reason_ko = f"교체할 기존 의상이 변경 영역에서 {remaining_clothing_pixel_count:,}px 누락됐습니다."
     else:
         status = "covered"
-        reason_ko = "검사 대상 의상이 변경 영역에 포함됐습니다. 생성 품질 완료를 뜻하지 않습니다."
+        reason_ko = (
+            "보호 영역 밖 검사 대상 의상이 변경 영역에 포함됐습니다. "
+            "생성 품질 완료를 뜻하지 않습니다."
+        )
     passed = status == "covered"
 
     return OriginalClothingRemovalVerification(
@@ -607,6 +655,7 @@ def verify_original_clothing_removal(
     )
 
 
+@trace_removal("clothing_removal_preprocessing")
 def execute_character_body_comparison(
     character_image: Image.Image,
     clothing_type: str,
@@ -622,6 +671,10 @@ def execute_character_body_comparison(
         로컬 임시 폴더에 중간 파일을 만들고 함수 종료 시 모두 제거한다.
     """
     validate_character_body_comparison_settings(settings)
+    layered = approved_target_masks is not None and approved_target_masks.layered_priority
+    face_hair_mask = None
+    face_reference_array = None
+    mask_layers = None
     if approved_target_masks is not None:
         approved_target_masks.validate_source(character_image)
     settings.temporary_root.mkdir(parents=True, exist_ok=True)
@@ -637,6 +690,8 @@ def execute_character_body_comparison(
         foreground_mask_path = temporary_directory / "foreground_mask.png"
         densepose_path = temporary_directory / "densepose.png"
         metadata_json_path = temporary_directory / "metadata.json"
+        face_hair_path = temporary_directory / "face_hair.png"
+        face_reference_path = temporary_directory / "face_reference.png"
 
         normalized_character_image = character_image.convert("RGB")
         try:
@@ -660,6 +715,15 @@ def execute_character_body_comparison(
         ]
         if approved_target_masks is not None:
             command.append("--explicit-target-masks")
+        if layered:
+            command.extend(["--layered-target-masks", "--output-face-hair-mask", str(face_hair_path)])
+            if settings.face_reference_enabled:
+                command.extend(['--output-face-reference-mask', str(face_reference_path)])
+        record_removal_event(
+            "analysis_runner", "start", timeout_seconds=settings.timeout_seconds,
+            width=settings.width, height=settings.height,
+            explicit_target_masks=approved_target_masks is not None,
+        )
         try:
             completed_process = subprocess.run(
                 command,
@@ -672,10 +736,24 @@ def execute_character_body_comparison(
                 check=False,
             )
         except (OSError, subprocess.TimeoutExpired) as error:
+            record_removal_event(
+                "analysis_runner", "failed", error_type=type(error).__name__,
+                error=str(error),
+            )
             raise CharacterBodyComparisonError(
                 f"캐릭터 신체 비교 별도 실행을 시작하지 못했습니다: {error}"
             ) from error
 
+        record_removal_event(
+            "analysis_runner", "returned", returncode=completed_process.returncode,
+            stdout_tail=completed_process.stdout[-2000:],
+            stderr_tail=completed_process.stderr[-2000:],
+            captured_tail_limit_characters=2000,
+        )
+        semantic_lines = [line for line in (completed_process.stdout + '\n' + completed_process.stderr).splitlines()
+                          if '[분류 마스크]' in line or '[얼굴·헤어 분리]' in line or '[얼굴 참조 분리]' in line]
+        if semantic_lines:
+            record_removal_event('semantic_labels', 'returned', diagnostics=semantic_lines)
         if completed_process.returncode != 0:
             execution_details = (
                 completed_process.stderr.strip()
@@ -691,6 +769,10 @@ def execute_character_body_comparison(
             densepose_path,
             metadata_json_path,
         )
+        if layered:
+            required_outputs += (face_hair_path,)
+            if settings.face_reference_enabled:
+                required_outputs += (face_reference_path,)
         missing_outputs = tuple(
             path.name for path in required_outputs if not path.is_file()
         )
@@ -709,6 +791,14 @@ def execute_character_body_comparison(
                 foreground_mask = opened_image.convert("L")
             with Image.open(densepose_path) as opened_image:
                 densepose_preview = opened_image.convert("RGB")
+            if layered:
+                with Image.open(face_hair_path) as opened_image:
+                    face_hair_mask = opened_image.convert("L")
+                if settings.face_reference_enabled:
+                    with Image.open(face_reference_path) as opened_image:
+                        if opened_image.size != character_image.size:
+                            raise ValueError('얼굴 참조 마스크 좌표 크기가 다릅니다.')
+                        face_reference_array = np.array(opened_image.convert('L'))
             metadata_payload = json.loads(
                 metadata_json_path.read_text(encoding="utf-8")
             )
@@ -751,12 +841,45 @@ def execute_character_body_comparison(
         protection_mask.close()
         foreground_mask.close()
         densepose_preview.close()
+        if face_hair_mask is not None:
+            face_hair_mask.close()
         raise CharacterBodyComparisonError(
             f"캐릭터 외곽 분석 기록 형식이 올바르지 않습니다: {error}"
         ) from error
 
     automatic_change_mask = None
-    if approved_target_masks is not None:
+    automatic_mask_repair = None
+    if layered:
+        automatic_change_mask = raw_mask
+        excluded = approved_target_masks.excluded_mask
+        empty_excluded = Image.new("L", character_image.size, 0) if excluded is None else None
+        try:
+            mask_layers = synthesize_mask_layers(
+                character_image, automatic_change_mask, protection_mask, face_hair_mask,
+                approved_target_masks.clothing_mask,
+                approved_target_masks.special_protection_mask,
+                excluded if excluded is not None else empty_excluded,
+                foreground_candidate.mask_image,
+                approved_target_masks.use_automatic_base,
+            )
+            raw_mask = mask_layers.images["final_mask"].copy()
+            if face_reference_array is not None:
+                mask_layers.images['face_reference'] = Image.fromarray(face_reference_array)
+            protection_mask.close()
+            protection_mask = mask_layers.images["effective_protection"].copy()
+        except Exception:
+            automatic_change_mask.close()
+            protection_mask.close()
+            foreground_candidate.close()
+            densepose_preview.close()
+            if mask_layers is not None:
+                mask_layers.close()
+            raise
+        finally:
+            face_hair_mask.close()
+            if empty_excluded is not None:
+                empty_excluded.close()
+    elif approved_target_masks is not None:
         automatic_change_mask = raw_mask
         raw_mask = approved_target_masks.clothing_mask.copy()
         merged_protection = np.maximum(
@@ -772,6 +895,17 @@ def execute_character_body_comparison(
         settings.maximum_mask_expansion_pixels,
     )
     try:
+        if approved_target_masks is not None:
+            automatic_mask_repair = repair_sam_mask_automatically(
+                sam_mask=raw_mask,
+                independent_clothing_hint=automatic_change_mask,
+                protection_mask=protection_mask,
+                character_foreground_mask=foreground_candidate.mask_image,
+                closing_radius_pixels=settings.mask_closing_radius_pixels,
+                feather_radius_pixels=2,
+            )
+            raw_mask.close()
+            raw_mask = automatic_mask_repair.inpaint_mask.copy()
         mask_refinement = refine_character_clothing_change_mask(
             raw_clothing_mask=raw_mask,
             identity_protection_mask=protection_mask,
@@ -788,10 +922,23 @@ def execute_character_body_comparison(
         foreground_candidate.close()
         if automatic_change_mask is not None:
             automatic_change_mask.close()
+        if automatic_mask_repair is not None:
+            automatic_mask_repair.close()
+        if mask_layers is not None:
+            mask_layers.close()
         raise
     finally:
         raw_mask.close()
         protection_mask.close()
+
+    # The repaired hard mask is the model input, while the original approved
+    # SAM mask remains the audit source.  This preserves evidence for pixels
+    # that automatic protection removed instead of silently rewriting history.
+    verification_raw_mask = (
+        mask_layers.images["requested_mask"] if mask_layers is not None else
+        automatic_mask_repair.original_mask if automatic_mask_repair is not None else
+        mask_refinement.raw_mask
+    )
 
     try:
         human_agnostic_candidate = create_human_agnostic_image_candidate(
@@ -805,15 +952,21 @@ def execute_character_body_comparison(
         mask_refinement.close()
         if automatic_change_mask is not None:
             automatic_change_mask.close()
+        if automatic_mask_repair is not None:
+            automatic_mask_repair.close()
+        if mask_layers is not None:
+            mask_layers.close()
         raise
 
     try:
         clothing_removal_verification = verify_original_clothing_removal(
-            raw_clothing_mask=mask_refinement.raw_mask,
+            raw_clothing_mask=verification_raw_mask,
             approved_change_mask=mask_refinement.safe_change_mask,
             identity_protection_mask=mask_refinement.identity_protection_mask,
             expanded_character_foreground_mask=(
-                mask_refinement.expanded_foreground_mask
+                foreground_candidate.mask_image
+                if automatic_mask_repair is not None
+                else mask_refinement.expanded_foreground_mask
             ),
         )
     except Exception:
@@ -823,6 +976,10 @@ def execute_character_body_comparison(
         human_agnostic_candidate.close()
         if automatic_change_mask is not None:
             automatic_change_mask.close()
+        if automatic_mask_repair is not None:
+            automatic_mask_repair.close()
+        if mask_layers is not None:
+            mask_layers.close()
         raise
 
     try:
@@ -837,8 +994,11 @@ def execute_character_body_comparison(
                 str(value) for value in metadata_payload["model_ids"]
             ),
             elapsed_seconds=float(metadata_payload["elapsed_seconds"]),
-            mask_source=("user_selected_target_sam2" if approved_target_masks else "automasker_candidate"),
+            mask_source=("automatic_with_user_layers" if layered else
+                         "user_selected_target_sam2" if approved_target_masks else "automasker_candidate"),
             automatic_change_mask=automatic_change_mask,
+            automatic_mask_repair=automatic_mask_repair,
+            mask_layers=mask_layers,
         )
     except (KeyError, TypeError, ValueError) as error:
         densepose_preview.close()
@@ -848,6 +1008,10 @@ def execute_character_body_comparison(
         clothing_removal_verification.close()
         if automatic_change_mask is not None:
             automatic_change_mask.close()
+        if automatic_mask_repair is not None:
+            automatic_mask_repair.close()
+        if mask_layers is not None:
+            mask_layers.close()
         raise CharacterBodyComparisonError(
             f"신체 마스크 분석 기록 형식이 올바르지 않습니다: {error}"
         ) from error

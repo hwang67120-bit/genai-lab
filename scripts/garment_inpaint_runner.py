@@ -7,10 +7,24 @@ from pathlib import Path
 from time import perf_counter
 
 from PIL import Image
+try:
+    from .generation_inputs import resolve_inference_size, prepare_prompt_for_clip
+except ImportError:
+    from generation_inputs import resolve_inference_size, prepare_prompt_for_clip
+
+try:
+    from .inpaint_runtime_probe import RuntimeProbe
+except ImportError:
+    from inpaint_runtime_probe import RuntimeProbe
 
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="2D garment inpaint runner")
+    parser.add_argument(
+        "--operation",
+        choices=("garment_inpaint", "body_restoration"),
+        default="garment_inpaint",
+    )
     for name in (
         "base-model-id", "adapter-repository",
         "adapter-subfolder", "adapter-weight",
@@ -23,6 +37,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--model-variant", required=True)
     parser.add_argument("--width", type=int, required=True)
     parser.add_argument("--height", type=int, required=True)
+    parser.add_argument("--inference-width", type=int, default=None)
     parser.add_argument("--strength", type=float, required=True)
     parser.add_argument("--inference-steps", type=int, required=True)
     parser.add_argument("--guidance-scale", type=float, required=True)
@@ -31,7 +46,25 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--seed", type=int, required=True)
     parser.add_argument("--dtype", choices=("float16", "bfloat16"), required=True)
     parser.add_argument("--progress-file", required=True)
+    parser.add_argument("--body-pose-control-image")
+    parser.add_argument("--body-pose-controlnet-model-id")
+    parser.add_argument("--body-pose-conditioning-scale", type=float)
+    parser.add_argument("--body-pose-guidance-start", type=float)
+    parser.add_argument("--body-pose-guidance-end", type=float)
     return parser.parse_args()
+
+
+
+
+def resize_inference_inputs(initial, mask, pose, size):
+    """동일 캔버스에서 RGB/자세는 연속색, 하드 마스크는 최근접으로 변환한다."""
+    if mask.size != initial.size or (pose is not None and pose.size != initial.size):
+        raise ValueError("초기 이미지·마스크·자세 크기가 다릅니다.")
+    return (
+        initial.resize(size, Image.Resampling.LANCZOS),
+        mask.resize(size, Image.Resampling.NEAREST),
+        pose.resize(size, Image.Resampling.BILINEAR) if pose is not None else None,
+    )
 
 
 def load_image_copy(path: str, mode: str) -> Image.Image:
@@ -39,61 +72,10 @@ def load_image_copy(path: str, mode: str) -> Image.Image:
         return opened.convert(mode).copy()
 
 
-def _token_count(tokenizer, text: str) -> int:
-    token_ids = tokenizer(
-        text,
-        add_special_tokens=True,
-        truncation=False,
-    )["input_ids"]
-    if token_ids and isinstance(token_ids[0], list):
-        token_ids = token_ids[0]
-    return len(token_ids)
 
 
-def _tokenizer_limit(tokenizer) -> int:
-    configured = int(getattr(tokenizer, "model_max_length", 77))
-    return configured if 2 <= configured < 100_000 else 77
 
 
-def prepare_prompt_for_clip(
-    text: str,
-    tokenizers: tuple,
-) -> tuple[str, dict[str, object]]:
-    """쉼표 단위 의미를 보존하며 모든 CLIP 토크나이저 한도에 맞춘다."""
-    usable_tokenizers = tuple(item for item in tokenizers if item is not None)
-    if not usable_tokenizers:
-        raise RuntimeError("SDXL CLIP 토크나이저를 찾을 수 없습니다.")
-    segments = tuple(part.strip() for part in text.split(",") if part.strip())
-    retained: list[str] = []
-    for segment in segments:
-        candidate = ", ".join((*retained, segment))
-        if all(
-            _token_count(tokenizer, candidate) <= _tokenizer_limit(tokenizer)
-            for tokenizer in usable_tokenizers
-        ):
-            retained.append(segment)
-        else:
-            break
-    effective = ", ".join(retained)
-    if text.strip() and not effective:
-        raise RuntimeError(
-            "프롬프트 첫 구문이 CLIP 최대 토큰 길이를 초과합니다."
-        )
-    limits = tuple(_tokenizer_limit(item) for item in usable_tokenizers)
-    original_counts = tuple(_token_count(item, text) for item in usable_tokenizers)
-    effective_counts = tuple(
-        _token_count(item, effective) for item in usable_tokenizers
-    )
-    return effective, {
-        "original": text,
-        "effective": effective,
-        "truncated": effective != text.strip(),
-        "tokenizer_limits": limits,
-        "original_token_counts": original_counts,
-        "effective_token_counts": effective_counts,
-        "retained_segment_count": len(retained),
-        "source_segment_count": len(segments),
-    }
 
 
 def validate_ip_adapter_dimensions(pipeline, adapter_weight: str) -> dict[str, int]:
@@ -157,7 +139,11 @@ def emit_progress(
 def main() -> None:
     arguments = parse_arguments()
     import torch
-    from diffusers import StableDiffusionXLInpaintPipeline
+    from diffusers import (
+        ControlNetModel,
+        StableDiffusionXLControlNetInpaintPipeline,
+        StableDiffusionXLInpaintPipeline,
+    )
 
     started_at = perf_counter()
     progress_path = Path(arguments.progress_file)
@@ -171,18 +157,53 @@ def main() -> None:
     )
     dtype = torch.float16 if arguments.dtype == "float16" else torch.bfloat16
     expected_size = (arguments.width, arguments.height)
+    inference_size = resolve_inference_size(expected_size, arguments.inference_width)
     initial = load_image_copy(arguments.initial_image, "RGB")
     mask = load_image_copy(arguments.mask_image, "L")
     garment = load_image_copy(arguments.garment_image, "RGB")
+    body_pose = None
+    body_pose_arguments = (
+        arguments.body_pose_control_image,
+        arguments.body_pose_controlnet_model_id,
+        arguments.body_pose_conditioning_scale,
+        arguments.body_pose_guidance_start,
+        arguments.body_pose_guidance_end,
+    )
+    if arguments.operation == "body_restoration":
+        if any(value is None for value in body_pose_arguments):
+            raise RuntimeError(
+                "body_restoration에는 DWPose ControlNet 인자 5개가 모두 필요합니다."
+            )
+        body_pose = load_image_copy(arguments.body_pose_control_image, "RGB")
+    elif any(value is not None for value in body_pose_arguments):
+        raise RuntimeError(
+            "garment_inpaint에는 신체 복원용 DWPose 인자를 전달할 수 없습니다."
+        )
     pipeline = None
+    controlnet = None
     generated = None
     result = None
+    probe = RuntimeProbe(progress_path.with_name("runtime_trace.jsonl"), torch)
     try:
-        for name, image in (("initial", initial), ("mask", mask)):
+        probe.wrap(ControlNetModel, "from_pretrained", "controlnet.load")
+        probe.wrap(StableDiffusionXLControlNetInpaintPipeline, "from_pretrained", "controlnet_inpaint.load")
+        probe.wrap(StableDiffusionXLInpaintPipeline, "from_pretrained", "inpaint.load")
+        size_inputs = [("initial", initial), ("mask", mask)]
+        if body_pose is not None:
+            size_inputs.append(("body_pose", body_pose))
+        for name, image in size_inputs:
             if image.size != expected_size:
                 raise RuntimeError(
                     f"{name} image size {image.size} != {expected_size}"
                 )
+        if inference_size != expected_size:
+            resized = resize_inference_inputs(initial, mask, body_pose, inference_size)
+            for old_image in (initial, mask, body_pose):
+                if old_image is not None:
+                    old_image.close()
+            initial, mask, body_pose = resized
+            if not mask.getbbox():
+                raise ValueError("축소 후 제거 마스크가 비었습니다. 더 큰 해상도를 선택하세요.")
         phase_started_at = perf_counter()
         emit_progress(
             progress_path,
@@ -191,13 +212,29 @@ def main() -> None:
             phase_started_at=phase_started_at,
             message="started",
         )
-        pipeline = StableDiffusionXLInpaintPipeline.from_pretrained(
-            arguments.base_model_id,
-            torch_dtype=dtype,
-            variant=arguments.model_variant,
-            cache_dir=arguments.cache_dir,
-            use_safetensors=True,
-        )
+        if arguments.operation == "body_restoration":
+            controlnet = ControlNetModel.from_pretrained(
+                arguments.body_pose_controlnet_model_id,
+                torch_dtype=dtype,
+                cache_dir=arguments.cache_dir,
+                use_safetensors=True,
+            )
+            pipeline = StableDiffusionXLControlNetInpaintPipeline.from_pretrained(
+                arguments.base_model_id,
+                controlnet=controlnet,
+                torch_dtype=dtype,
+                variant=arguments.model_variant,
+                cache_dir=arguments.cache_dir,
+                use_safetensors=True,
+            )
+        else:
+            pipeline = StableDiffusionXLInpaintPipeline.from_pretrained(
+                arguments.base_model_id,
+                torch_dtype=dtype,
+                variant=arguments.model_variant,
+                cache_dir=arguments.cache_dir,
+                use_safetensors=True,
+            )
         emit_progress(
             progress_path,
             phase="pipeline_loading",
@@ -213,27 +250,35 @@ def main() -> None:
             phase_started_at=phase_started_at,
             message="started",
         )
-        pipeline.load_ip_adapter(
-            arguments.adapter_repository,
-            subfolder=arguments.adapter_subfolder,
-            weight_name=arguments.adapter_weight,
-            image_encoder_folder=arguments.adapter_image_encoder_subfolder,
-            cache_dir=arguments.cache_dir,
-        )
-        adapter_dimensions = validate_ip_adapter_dimensions(
-            pipeline,
-            arguments.adapter_weight,
-        )
-        pipeline.set_ip_adapter_scale(arguments.ip_adapter_scale)
+        adapter_dimensions = None
+        if arguments.operation == "garment_inpaint":
+            pipeline.load_ip_adapter(
+                arguments.adapter_repository,
+                subfolder=arguments.adapter_subfolder,
+                weight_name=arguments.adapter_weight,
+                image_encoder_folder=arguments.adapter_image_encoder_subfolder,
+                cache_dir=arguments.cache_dir,
+            )
+            adapter_dimensions = validate_ip_adapter_dimensions(
+                pipeline,
+                arguments.adapter_weight,
+            )
+            pipeline.set_ip_adapter_scale(arguments.ip_adapter_scale)
         emit_progress(
             progress_path,
             phase="ip_adapter_loading",
             started_at=started_at,
             phase_started_at=phase_started_at,
-            message="completed",
+            message=(
+                "completed"
+                if arguments.operation == "garment_inpaint"
+                else "skipped_for_body_restoration"
+            ),
         )
+        probe.wrap(pipeline, "enable_model_cpu_offload", "pipeline.install_cpu_offload")
         pipeline.enable_model_cpu_offload()
         pipeline.enable_vae_tiling()
+        probe.attach_pipeline(pipeline)
         tokenizers = (pipeline.tokenizer, pipeline.tokenizer_2)
         effective_prompt, prompt_record = prepare_prompt_for_clip(
             arguments.prompt,
@@ -247,7 +292,22 @@ def main() -> None:
         prompt_record_path.write_text(
             json.dumps(
                 {
+                    "operation": arguments.operation,
                     "adapter_dimensions": adapter_dimensions,
+                    "body_pose_controlnet": (
+                        {
+                            "model_id": arguments.body_pose_controlnet_model_id,
+                            "conditioning_scale": (
+                                arguments.body_pose_conditioning_scale
+                            ),
+                            "guidance_start": arguments.body_pose_guidance_start,
+                            "guidance_end": arguments.body_pose_guidance_end,
+                        }
+                        if body_pose is not None
+                        else None
+                    ),
+                    "inference_size": inference_size,
+                    "output_size": expected_size,
                     "prompt": prompt_record,
                     "negative_prompt": negative_prompt_record,
                 },
@@ -289,21 +349,33 @@ def main() -> None:
             )
             return callback_kwargs
 
-        generated = pipeline(
+        generation_arguments = dict(
             prompt=effective_prompt,
             negative_prompt=effective_negative_prompt,
             image=initial,
             mask_image=mask,
-            ip_adapter_image=garment,
-            width=arguments.width,
-            height=arguments.height,
+            width=inference_size[0],
+            height=inference_size[1],
             strength=arguments.strength,
             num_inference_steps=arguments.inference_steps,
             guidance_scale=arguments.guidance_scale,
-            padding_mask_crop=arguments.padding_mask_crop,
+            padding_mask_crop=(arguments.padding_mask_crop if inference_size == expected_size else None),
             generator=generator,
             callback_on_step_end=report_diffusion_step,
-        ).images[0]
+        )
+        if arguments.operation == "garment_inpaint":
+            generation_arguments["ip_adapter_image"] = garment
+        else:
+            generation_arguments.update({
+                "control_image": body_pose,
+                "controlnet_conditioning_scale": (
+                    arguments.body_pose_conditioning_scale
+                ),
+                "control_guidance_start": arguments.body_pose_guidance_start,
+                "control_guidance_end": arguments.body_pose_guidance_end,
+            })
+        with probe.measure("pipeline.generate"):
+            generated = pipeline(**generation_arguments).images[0]
         emit_progress(
             progress_path,
             phase="diffusion_running",
@@ -322,6 +394,12 @@ def main() -> None:
             message="started",
         )
         result = generated.convert("RGB")
+        if result.size != inference_size:
+            raise RuntimeError(f"생성 결과 크기 {result.size} != 연산 크기 {inference_size}")
+        if result.size != expected_size:
+            restored_size = result.resize(expected_size, Image.Resampling.LANCZOS)
+            result.close()
+            result = restored_size
         output_path = Path(arguments.output_image)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         result.save(output_path)
@@ -342,7 +420,11 @@ def main() -> None:
             message="completed",
         )
     finally:
-        for image in (initial, mask, garment):
+        probe.detach()
+        probe.emit("start", "cleanup")
+        for image in (initial, mask, garment, body_pose):
+            if image is None:
+                continue
             image.close()
         if result is not None:
             result.close()
@@ -350,9 +432,13 @@ def main() -> None:
             generated.close()
         if pipeline is not None:
             del pipeline
+        if controlnet is not None:
+            del controlnet
         gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
+        probe.emit("completed", "cleanup")
+        probe.close()
 
 
 if __name__ == "__main__":

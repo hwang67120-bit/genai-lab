@@ -26,6 +26,8 @@ class ClothingDesignAnalysisSettings:
     execution_provider: str = "CPUExecutionProvider"
     score_threshold: float = 0.35
     maximum_tag_count: int = 30
+    detail_maximum_views: int = 3
+    detail_timeout_seconds: float = 120.0
 
 
 class ClothingDesignAnalysisError(RuntimeError):
@@ -44,107 +46,85 @@ def analyze_clothing_design(
     extraction_candidate: ClothingExtractionCandidate,
     settings: ClothingDesignAnalysisSettings,
 ) -> ClothingDesignAnalysisResult:
-    """추출 의상 한 장을 WD14로 실행해 사용자 검토용 일반 태그를 반환한다.
+    """승인된 의상만 다중 확대 분석한다. 캐릭터/눈 분석 경로는 변경하지 않는다."""
+    from genai_lab.garment_detail_analysis import analyze_garment_details
+    return analyze_garment_details(extraction_candidate.extracted_image, settings, WdTagSession)
 
-    반환값:
-        모델·장치·입력 크기·기준 점수와 일반 태그 후보 최대 30개.
 
-    오류:
-        의존성·모델 파일·라벨·모델 출력이 올바르지 않으면 한글 오류로 실패한다.
+class WdTagSession:
+    """Reusable WD session; keep unfiltered general scores, no softmax."""
 
-    부수 효과:
-        최초 실행 시 모델 1개와 CSV 1개를 캐시에 내려받지만 결과 파일은 저장하지 않는다.
-    """
-    _validate_analysis_settings(settings)
-    started_at = perf_counter()
-    model_path, label_path = download_wd14_model_files(settings)
-    tag_labels = load_wd14_tag_labels(label_path)
+    def __init__(self, settings: ClothingDesignAnalysisSettings):
+        _validate_analysis_settings(settings)
+        self.settings = settings
+        model_path, label_path = download_wd14_model_files(settings)
+        self.tag_labels = load_wd14_tag_labels(label_path)
+        try:
+            import onnxruntime as ort
+        except ImportError as error:
+            raise ClothingDesignAnalysisError("onnxruntime이 필요합니다.") from error
+        if settings.execution_provider not in ort.get_available_providers():
+            raise ClothingDesignAnalysisError("요청한 WD 실행 장치를 사용할 수 없습니다.")
+        self.session = ort.InferenceSession(str(model_path), providers=[settings.execution_provider])
+        inputs = self.session.get_inputs()
+        if len(inputs) != 1:
+            raise ClothingDesignAnalysisError("WD 입력 개수 오류")
+        self.model_input = inputs[0]
+        shape = self.model_input.shape
+        if (len(shape) != 4 or not isinstance(shape[1], int)
+                or shape[1] < 1 or shape[1] != shape[2] or shape[3] != 3):
+            raise ClothingDesignAnalysisError(f"WD 입력 크기 오류: {shape}")
+        self.model_input_size = shape[1]
 
-    try:
-        import onnxruntime as ort
-    except ImportError as error:
-        raise ClothingDesignAnalysisError(
-            "WD14 실행에 필요한 onnxruntime이 설치되지 않았습니다. "
-            "requirements.txt를 설치한 뒤 다시 실행하세요."
-        ) from error
-
-    available_providers = ort.get_available_providers()
-    if settings.execution_provider not in available_providers:
-        raise ClothingDesignAnalysisError(
-            "요청한 WD14 실행 장치를 사용할 수 없습니다. "
-            f"요청={settings.execution_provider}, "
-            f"사용 가능={available_providers}"
+    def analyze(self, image: Image.Image) -> ClothingDesignAnalysisResult:
+        if self.session is None:
+            raise ClothingDesignAnalysisError("WD 세션이 이미 종료되었습니다.")
+        started = perf_counter()
+        prepared = prepare_wd14_image(image, self.model_input_size)
+        outputs = self.session.run(None, {self.model_input.name: prepared})
+        if len(outputs) != 1:
+            raise ClothingDesignAnalysisError("WD 출력 개수 오류")
+        scores = np.asarray(outputs[0], dtype=np.float32)
+        if scores.shape != (1, len(self.tag_labels)):
+            raise ClothingDesignAnalysisError(f"WD 점수 배열 오류: {scores.shape}")
+        if not np.isfinite(scores).all() or (scores < 0).any() or (scores > 1).any():
+            raise ClothingDesignAnalysisError("WD 점수는 유한한 0~1 값이어야 합니다.")
+        scores = scores[0]
+        tags = build_general_tag_candidates(
+            self.tag_labels, scores, self.settings.score_threshold, self.settings.maximum_tag_count)
+        return ClothingDesignAnalysisResult(
+            model_id=self.settings.model_id,
+            execution_provider=self.settings.execution_provider,
+            input_width=image.width, input_height=image.height,
+            model_input_size=self.model_input_size,
+            score_threshold=self.settings.score_threshold,
+            total_label_count=len(self.tag_labels),
+            general_label_count=sum(label.category == 0 for label in self.tag_labels),
+            excluded_rating_label_count=sum(label.category == 9 for label in self.tag_labels),
+            excluded_character_label_count=sum(label.category == 4 for label in self.tag_labels),
+            tag_candidates=tags, elapsed_seconds=perf_counter() - started,
+            raw_general_scores=tuple((label.name, float(score))
+                                     for label, score in zip(self.tag_labels, scores)
+                                     if label.category == 0),
         )
 
-    session = ort.InferenceSession(
-        str(model_path),
-        providers=[settings.execution_provider],
-    )
-    model_input = session.get_inputs()[0]
-    input_shape = model_input.shape
-    if (
-        len(input_shape) != 4
-        or not isinstance(input_shape[1], int)
-        or input_shape[1] < 1
-        or input_shape[1] != input_shape[2]
-    ):
-        raise ClothingDesignAnalysisError(
-            "WD14 입력 크기를 확인할 수 없습니다. "
-            f"모델 입력={input_shape}"
-        )
-    model_input_size = int(input_shape[1])
-    prepared_image = prepare_wd14_image(
-        extraction_candidate.extracted_image,
-        model_input_size,
-    )
-    model_outputs = session.run(
-        None,
-        {model_input.name: prepared_image},
-    )
-    if len(model_outputs) != 1:
-        raise ClothingDesignAnalysisError(
-            "WD14 출력 개수가 올바르지 않습니다. "
-            f"예상=1개, 실제={len(model_outputs)}개"
-        )
-    model_scores = np.asarray(model_outputs[0], dtype=np.float32)
-    if model_scores.ndim != 2 or model_scores.shape[0] != 1:
-        raise ClothingDesignAnalysisError(
-            "WD14 점수 배열 크기가 올바르지 않습니다. "
-            f"실제={model_scores.shape}"
-        )
-    if model_scores.shape[1] != len(tag_labels):
-        raise ClothingDesignAnalysisError(
-            "WD14 라벨 수와 점수 수가 다릅니다. "
-            f"라벨={len(tag_labels)}개, 점수={model_scores.shape[1]}개"
-        )
+    def close(self):
+        self.session = None
 
-    tag_candidates = build_general_tag_candidates(
-        tag_labels=tag_labels,
-        model_scores=model_scores[0],
-        score_threshold=settings.score_threshold,
-        maximum_tag_count=settings.maximum_tag_count,
-    )
-    general_label_count = sum(
-        1 for label in tag_labels if label.category == 0
-    )
-    return ClothingDesignAnalysisResult(
-        model_id=settings.model_id,
-        execution_provider=settings.execution_provider,
-        input_width=extraction_candidate.extracted_image.width,
-        input_height=extraction_candidate.extracted_image.height,
-        model_input_size=model_input_size,
-        score_threshold=settings.score_threshold,
-        total_label_count=len(tag_labels),
-        general_label_count=general_label_count,
-        excluded_rating_label_count=sum(
-            1 for label in tag_labels if label.category == 9
-        ),
-        excluded_character_label_count=sum(
-            1 for label in tag_labels if label.category == 4
-        ),
-        tag_candidates=tag_candidates,
-        elapsed_seconds=perf_counter() - started_at,
-    )
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
+
+def analyze_image_tags(image: Image.Image, settings: ClothingDesignAnalysisSettings) -> ClothingDesignAnalysisResult:
+    """Compatibility entry point; one image, one session, original candidate filter."""
+    from dataclasses import replace
+    started = perf_counter()
+    with WdTagSession(settings) as session:
+        result = session.analyze(image)
+    return replace(result, elapsed_seconds=perf_counter() - started)
 
 
 def download_wd14_model_files(

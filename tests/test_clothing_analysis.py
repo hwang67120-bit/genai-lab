@@ -12,6 +12,42 @@ from genai_lab.clothing_analysis import (
 )
 
 
+@pytest.mark.parametrize('tag', ['1girl', '1boy', '6+girls', '2boys', '1other', 'male_focus', 'FEMALE', 'multiple_girls'])
+def test_garment_person_tags_excluded(tag):
+    from genai_lab.reference_tag_policy import excluded_garment_tag
+    assert excluded_garment_tag(tag)
+
+
+@pytest.mark.parametrize('tag', ['blue_jacket', 'high_heels', 'skirt', 'pants', 'white_shirt'])
+def test_garment_design_tags_remain(tag):
+    from genai_lab.reference_tag_policy import excluded_garment_tag
+    assert not excluded_garment_tag(tag)
+
+
+def test_generic_wd_image_analysis_accepts_character_source(monkeypatch, tmp_path):
+    import sys
+    from types import SimpleNamespace
+    import genai_lab.clothing_analysis as module
+    labels = [module.ClothingTagLabel('1boy', 0), module.ClothingTagLabel('blue_hair', 0)]
+    monkeypatch.setattr(module, 'download_wd14_model_files', lambda settings: (tmp_path/'model.onnx', tmp_path/'labels.csv'))
+    monkeypatch.setattr(module, 'load_wd14_tag_labels', lambda path: labels)
+    class Session:
+        def __init__(self, path, providers):
+            assert providers == ['CPUExecutionProvider']
+        def get_inputs(self):
+            return [SimpleNamespace(name='image', shape=[1, 32, 32, 3])]
+        def run(self, outputs, feed):
+            assert feed['image'].shape == (1, 32, 32, 3)
+            return [np.array([[.9, .8]], dtype=np.float32)]
+    monkeypatch.setitem(sys.modules, 'onnxruntime', SimpleNamespace(
+        InferenceSession=Session, get_available_providers=lambda: ['CPUExecutionProvider']))
+    image = Image.new('RGB', (64, 96), 'blue')
+    result = module.analyze_image_tags(image, module.ClothingDesignAnalysisSettings())
+    assert (result.input_width, result.input_height) == (64, 96)
+    assert [tag.tag_name for tag in result.tag_candidates] == ['1boy', 'blue_hair']
+    image.close()
+
+
 def test_wd14_labels_keep_numeric_categories(tmp_path: Path) -> None:
     label_path = tmp_path / "selected_tags.csv"
     label_path.write_text(

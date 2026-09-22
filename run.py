@@ -288,6 +288,15 @@ def validate_config(config: dict[str, Any]) -> None:
     require_value(paths, "prompts_file", "paths")
     require_value(paths, "output_dir", "paths")
 
+    from genai_lab.native_pipeline_contract import (
+        NativePipelineConfigurationError,
+        validate_native_pipeline_config,
+    )
+    try:
+        validate_native_pipeline_config(config)
+    except NativePipelineConfigurationError as error:
+        raise AppError(str(error)) from error
+
 
 def validate_pose_result_policy_config(policy: dict[str, Any]) -> None:
     """결과 우선 임시 자세 정책이 관측 전용인지 검사한다."""

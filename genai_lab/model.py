@@ -7,8 +7,25 @@ from typing import Any
 def prepare_pipeline(
     config: dict[str, Any],
     pose_control_enabled: bool = False,
+    body_proportion_preset_id: str | None = None,
 ):
     """기준 모델, 참조 그림 장치와 선택적인 자세 제어 모델을 준비한다."""
+    from genai_lab.reference_contract import validate_reference_mode
+    validate_reference_mode(config, pose_control_enabled)
+    from genai_lab.scene_generation import scene_settings
+    scene_config = scene_settings(config)
+    from genai_lab.body_proportion_presets import (
+        resolve_body_proportion_control,
+    )
+    body_settings = resolve_body_proportion_control(config)
+    body_control_requested = bool(
+        body_proportion_preset_id and body_settings.enabled
+        and not pose_control_enabled
+    )
+    if scene_config is not None and body_control_requested:
+        raise RuntimeError(
+            "장면 선화와 체형 프리셋 ControlNet은 동시에 사용할 수 없습니다."
+        )
     import torch
     from diffusers import (
         AutoPipelineForImage2Image,
@@ -42,7 +59,32 @@ def prepare_pipeline(
 
     print(f"모델 준비 중: {model['id']}")
     try:
-        if pose_control_enabled:
+        if scene_config is not None:
+            # Load on CPU; do not allocate the entire SDXL+ControlNet on CUDA first.
+            controlnet = ControlNetModel.from_pretrained(
+                scene_config['model_id'], variant='fp16', torch_dtype=torch.float16,
+                cache_dir=str(cache_dir), local_files_only=True)
+            pipeline = StableDiffusionXLControlNetImg2ImgPipeline.from_pretrained(
+                model['id'], controlnet=controlnet, torch_dtype=torch.float16,
+                cache_dir=str(cache_dir), use_safetensors=True, local_files_only=True)
+        elif body_control_requested:
+            print(f"체형 프리셋 제어 모델 준비 중: {body_settings.model_id}")
+            controlnet = ControlNetModel.from_pretrained(
+                body_settings.model_id,
+                torch_dtype=torch.float16,
+                cache_dir=str(cache_dir),
+                use_safetensors=True,
+                local_files_only=body_settings.local_files_only,
+            )
+            pipeline = StableDiffusionXLControlNetImg2ImgPipeline.from_pretrained(
+                model["id"],
+                controlnet=controlnet,
+                torch_dtype=torch.float16,
+                cache_dir=str(cache_dir),
+                use_safetensors=True,
+                local_files_only=body_settings.local_files_only,
+            )
+        elif pose_control_enabled:
             controlnet_model_id = str(pose_control["model_id"])
             print(f"자세 제어 모델 준비 중: {controlnet_model_id}")
             controlnet = ControlNetModel.from_pretrained(
@@ -90,11 +132,18 @@ def prepare_pipeline(
     if (
         generation.get("mode", "text_to_image") == "image_to_image"
         and not pose_control_enabled
+        and not body_control_requested
+        and scene_config is None
     ):
         print("원본 유지: 기존 모델을 이미지 수정 방식으로 전환")
         pipeline = AutoPipelineForImage2Image.from_pipe(pipeline)
 
     pipeline._genai_lab_pose_control_enabled = pose_control_enabled
+    pipeline._genai_lab_body_proportion_model_id = (
+        body_settings.model_id if body_control_requested else None
+    )
+    pipeline._genai_lab_scene_lineart_model_id = (
+        scene_config['model_id'] if scene_config is not None else None)
 
     if family == "sdxl":
         print("GPU 메모리 절약: 사용 중인 모델 부분만 GPU로 이동")

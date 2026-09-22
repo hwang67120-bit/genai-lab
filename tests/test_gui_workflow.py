@@ -15,7 +15,11 @@ from genai_lab.workflow import (
     GenerationWorkflowContext,
     GenerationWorkflowStage,
 )
-from gui_main import GenAILabWindow, build_garment_inpaint_prompts
+from gui_main import (
+    GenAILabWindow,
+    build_body_restoration_prompts,
+    build_garment_inpaint_prompts,
+)
 
 
 def create_window() -> tuple[QApplication, GenAILabWindow]:
@@ -63,7 +67,7 @@ def create_pose_review_candidate(
     )
 
 
-def test_automatic_workflow_starts_base_generation_without_optional_inputs(
+def test_reference_workflow_blocks_base_generation_without_outfit(
     monkeypatch,
 ) -> None:
     application, window = create_window()
@@ -82,11 +86,9 @@ def test_automatic_workflow_starts_base_generation_without_optional_inputs(
 
     window.advance_generation_workflow()
 
-    assert started_stages == ["base"]
-    assert (
-        window.workflow_context.current_stage
-        is GenerationWorkflowStage.BASE_GENERATING
-    )
+    assert started_stages == []
+    assert window.workflow_context.current_stage is GenerationWorkflowStage.FAILED
+    assert window.workflow_context.failed_stage is GenerationWorkflowStage.CLOTHING_MASKING
     close_window(window)
     application.processEvents()
 
@@ -118,9 +120,9 @@ def test_automatic_workflow_runs_clothing_before_pose(monkeypatch) -> None:
     application.processEvents()
 
 
-def test_automatic_workflow_runs_pose_after_clothing_approval(monkeypatch) -> None:
+def test_isolation_workflow_skips_pose_after_clothing_approval(monkeypatch) -> None:
     application, window = create_window()
-    reviewed_paths: list[Path] = []
+    started: list[str] = []
     pose_path = Path("pose.png")
     window.approved_reference_image = object()
     window.confirmed_clothing_design = object()
@@ -129,18 +131,14 @@ def test_automatic_workflow_runs_pose_after_clothing_approval(monkeypatch) -> No
         clothing_image_path=Path("clothing.png"),
         pose_image_path=pose_path,
     )
-    monkeypatch.setattr(
-        window,
-        "review_pose_reference",
-        lambda image_path: reviewed_paths.append(image_path),
-    )
+    monkeypatch.setattr(window, "_start_model_generation", lambda: started.append("base"))
 
     window.advance_generation_workflow()
 
-    assert reviewed_paths == [pose_path]
+    assert started == ["base"]
     assert (
         window.workflow_context.current_stage
-        is GenerationWorkflowStage.POSE_ESTIMATING
+        is GenerationWorkflowStage.BASE_GENERATING
     )
     window.confirmed_clothing_design = None
     close_window(window)
@@ -271,38 +269,8 @@ def test_approval_dialog_blocks_duplicate_resume_until_closed(monkeypatch) -> No
     application.processEvents()
 
 
-def test_clothing_workflow_starts_inpaint_after_body_approval(
-    monkeypatch,
-) -> None:
-    application, window = create_window()
-    started: list[str] = []
-    window.approved_reference_image = object()
-    window.confirmed_clothing_design = object()
-    window.confirmed_character_body_comparison = object()
-    window.pending_clothing_base_candidate = object()
-    window.workflow_context = GenerationWorkflowContext(
-        character_image_path=Path("character.png"),
-        clothing_image_path=Path("clothing.png"),
-        pose_image_path=None,
-    )
-    monkeypatch.setattr(
-        window,
-        "start_garment_inpaint",
-        lambda: started.append("inpaint"),
-    )
 
-    window.advance_generation_workflow()
 
-    assert started == ["inpaint"]
-    assert (
-        window.workflow_context.current_stage
-        is GenerationWorkflowStage.CLOTHING_COMPOSITING
-    )
-    window.confirmed_character_body_comparison = None
-    window.pending_clothing_base_candidate = None
-    window.confirmed_clothing_design = None
-    close_window(window)
-    application.processEvents()
 
 
 def test_garment_prompt_removes_only_app_outfit_preservation_conflicts() -> None:
@@ -325,6 +293,24 @@ def test_garment_prompt_removes_only_app_outfit_preservation_conflicts() -> None
     )
 
 
+def test_body_restoration_prompt_has_no_reference_garment_dependency() -> None:
+    prompt, negative_prompt = build_body_restoration_prompts(
+        "matching outfit and colors, blue cape",
+        "different character, low quality",
+    )
+
+    assert "reference garment" not in prompt
+    assert "matching outfit" not in prompt
+    assert "same character design" in prompt
+    assert "neutral base layer" not in prompt
+    assert "opaque basic one-piece covering torso and pelvis" in prompt
+    assert "preserve input colors" in prompt
+    assert "stockings" in negative_prompt
+    assert "boots" in negative_prompt
+    assert "different character" in negative_prompt
+    assert "different outfit" not in negative_prompt
+
+
 def test_garment_inpaint_settings_use_vit_h_image_encoder() -> None:
     application, window = create_window()
     try:
@@ -335,6 +321,12 @@ def test_garment_inpaint_settings_use_vit_h_image_encoder() -> None:
         assert settings.adapter_image_encoder_subfolder == (
             "models/image_encoder"
         )
+        assert settings.body_pose_controlnet_model_id == (
+            "xinsir/controlnet-openpose-sdxl-1.0"
+        )
+        assert settings.body_pose_conditioning_scale == 0.65
+        assert settings.body_pose_guidance_start == 0.0
+        assert settings.body_pose_guidance_end == 0.8
     finally:
         close_window(window)
         application.processEvents()
@@ -393,5 +385,27 @@ def test_step5_pipeline_release_clears_gui_and_worker_references(
         "after_reserved_mib": 0.0,
     }
     window.worker = None
+    close_window(window)
+    application.processEvents()
+
+
+def test_stale_synthesis_candidate_never_routes_to_restoration(monkeypatch):
+    monkeypatch.setattr('gui_main.CLOTHING_REFERENCE_GENERATION_MODE', False)
+    application, window = create_window()
+    started, paused = [], []
+    window.approved_reference_image = object()
+    window.confirmed_clothing_design = object()
+    window.pending_clothing_base_candidate = object()
+    window.workflow_context = GenerationWorkflowContext(
+        character_image_path=Path('character.png'), clothing_image_path=Path('clothing.png'),
+        pose_image_path=None)
+    monkeypatch.setattr(window, 'start_body_restoration', lambda: started.append('restoration'))
+    monkeypatch.setattr(window, 'start_original_body_pose_estimation', lambda: started.append('pose'))
+    monkeypatch.setattr(window, 'pause_generation_workflow', lambda *args: paused.append(args))
+    window.advance_generation_workflow()
+    assert not started
+    assert paused[0][0] is GenerationWorkflowStage.BASE_GENERATING
+    window.pending_clothing_base_candidate = None
+    window.confirmed_clothing_design = None
     close_window(window)
     application.processEvents()

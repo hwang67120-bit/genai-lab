@@ -133,6 +133,10 @@ def test_create_human_agnostic_image_neutralizes_only_approved_mask() -> None:
         assert candidate.raw_mask_pixel_count == 4
         assert candidate.raw_mask_coverage_percent == pytest.approx(75.0)
         assert candidate.changed_pixel_count_outside_mask == 0
+        assert candidate.inside_not_neutral_pixel_count == 0
+        assert candidate.cutout_preview.mode == "RGBA"
+        assert candidate.cutout_preview.getpixel((1, 1))[3] == 0
+        assert candidate.cutout_preview.getpixel((0, 0))[3] == 255
     finally:
         candidate.close()
         source_image.close()
@@ -226,7 +230,7 @@ def test_verify_original_clothing_removal_blocks_remaining_pixel() -> None:
         foreground_mask.close()
 
 
-def test_verify_original_clothing_removal_reports_protection_conflict() -> None:
+def test_verify_original_clothing_removal_excludes_protected_contact() -> None:
     raw_mask = Image.new("L", (4, 4), 0)
     approved_mask = Image.new("L", (4, 4), 0)
     protection_mask = Image.new("L", (4, 4), 0)
@@ -240,14 +244,14 @@ def test_verify_original_clothing_removal_reports_protection_conflict() -> None:
         raw_mask, approved_mask, protection_mask, foreground_mask
     )
     try:
-        assert verification.passed is False
-        assert verification.status == "needs_review"
+        assert verification.passed is True
+        assert verification.status == "covered"
         assert verification.detected_clothing_pixel_count == 2
         assert verification.protected_overlap_pixel_count == 1
-        assert verification.verifiable_clothing_pixel_count == 2
+        assert verification.verifiable_clothing_pixel_count == 1
         assert verification.removed_clothing_pixel_count == 1
-        assert verification.remaining_clothing_pixel_count == 1
-        assert verification.removal_percent == 50.0
+        assert verification.remaining_clothing_pixel_count == 0
+        assert verification.removal_percent == 100.0
         assert verification.protected_conflict_mask.getpixel((1, 1)) == 255
     finally:
         verification.close()

@@ -15,6 +15,7 @@ class GenerationWorkflowStage(str, Enum):
     POSE_ESTIMATING = "pose_estimating"
     BASE_GENERATING = "base_generating"
     BODY_MASKING = "body_masking"
+    BODY_RESTORING = "body_restoring"
     GARMENT_GEOMETRY = "garment_geometry"
     GARMENT_LINEART = "garment_lineart"
     CLOTHING_COMPOSITING = "clothing_compositing"
@@ -31,6 +32,7 @@ WORKFLOW_STAGE_PROGRESS: dict[GenerationWorkflowStage, tuple[int, int]] = {
     GenerationWorkflowStage.POSE_ESTIMATING: (4, 8),
     GenerationWorkflowStage.BASE_GENERATING: (5, 8),
     GenerationWorkflowStage.BODY_MASKING: (6, 8),
+    GenerationWorkflowStage.BODY_RESTORING: (7, 8),
     # TPS·Lineart는 활성 자동 경로가 아닌 진단용 상태로 보존한다.
     GenerationWorkflowStage.GARMENT_GEOMETRY: (6, 8),
     GenerationWorkflowStage.GARMENT_LINEART: (6, 8),
@@ -52,13 +54,26 @@ class GenerationWorkflowContext:
     failed_stage: GenerationWorkflowStage | None = None
     retry_count: int = 0
     active: bool = True
+    reference_generation: bool = False
 
     @property
     def progress(self) -> tuple[int, int]:
         """현재 단계 번호와 전체 활성 8단계를 반환한다."""
+        if self.reference_generation:
+            stage = self.failed_stage if self.current_stage is GenerationWorkflowStage.FAILED else self.current_stage
+            steps = {
+                GenerationWorkflowStage.INPUT_READY: 0,
+                GenerationWorkflowStage.REFERENCE_PREPARING: 1,
+                GenerationWorkflowStage.CLOTHING_MASKING: 2,
+                GenerationWorkflowStage.CLOTHING_ANALYZING: 3,
+                GenerationWorkflowStage.BASE_GENERATING: 4,
+                GenerationWorkflowStage.FINAL_REVIEW: 5,
+                GenerationWorkflowStage.COMPLETED: 5,
+            }
+            return steps.get(stage, 0), 5
         if self.current_stage is GenerationWorkflowStage.FAILED:
             if self.failed_stage is None:
-                return (0, 10)
+                return WORKFLOW_STAGE_PROGRESS[GenerationWorkflowStage.FAILED]
             return WORKFLOW_STAGE_PROGRESS[self.failed_stage]
         return WORKFLOW_STAGE_PROGRESS[self.current_stage]
 

@@ -276,6 +276,10 @@ class ClothingDesignAnalysisResult:
     excluded_character_label_count: int
     tag_candidates: tuple[ClothingDesignTagCandidate, ...]
     elapsed_seconds: float
+    raw_general_scores: tuple[tuple[str, float], ...] = ()
+    eye_color_report: dict | None = None
+    garment_detail_report: dict | None = None
+    hair_detail_report: dict | None = None
 
 
 @dataclass(frozen=True)

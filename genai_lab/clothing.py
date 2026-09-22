@@ -3,8 +3,6 @@
 from dataclasses import dataclass
 import json
 import os
-import subprocess
-import tempfile
 
 from enum import Enum
 from pathlib import Path
@@ -540,279 +538,9 @@ def execute_catvton_clothing_try_on(
     settings: CatVTONLocalSettings,
     seed: int,
 ) -> CatVTONClothingTryOnResult:
-    """별도 CatVTON 프로세스를 실행하고 의상 허용 영역만 합성한다.
-
-    반환값:
-        마스크 밖 픽셀 불변 검사를 통과한 의상 후보와 확인용 마스크.
-
-    오류:
-        별도 환경이 없거나 CatVTON 실행·보호 검사에 실패하면 중단한다.
-
-    부수 효과:
-        로컬 임시 폴더에 입력과 중간 결과를 만들고 함수 종료 시 제거한다.
-    """
-    validate_catvton_local_settings(settings)
-    catvton_clothing_type = find_catvton_clothing_type(
-        clothing_reference_input.category
-    )
-    validate_character_agnostic_approved_input(
-        approved_agnostic_input,
-        expected_clothing_type=catvton_clothing_type,
-    )
-    validate_catvton_approved_coordinates(
-        base_character_image=base_character_image,
-        approved_agnostic_input=approved_agnostic_input,
-    )
-    approved_model_mask = approved_agnostic_input.approved_model_mask
-    if approved_model_mask is None:
-        raise CharacterClothingProtectionError(
-            "사용자가 승인한 최종 CatVTON model_mask가 없습니다."
-        )
-    expected_model_mask_size = (settings.width, settings.height)
-    if approved_model_mask.size != expected_model_mask_size:
-        raise CharacterClothingProtectionError(
-            "승인한 최종 CatVTON model_mask 처리 크기가 다릅니다: "
-            f"승인={approved_model_mask.size}, "
-            f"설정={expected_model_mask_size}"
-        )
-    clothing_condition = prepare_catvton_clothing_condition_image(
-        clothing_reference_input
-    )
-    clothing_reference_image = clothing_condition.image
-    settings.temporary_root.mkdir(parents=True, exist_ok=True)
-
-    with tempfile.TemporaryDirectory(
-        prefix="genai-lab-catvton-",
-        dir=settings.temporary_root,
-    ) as temporary_directory_name:
-        temporary_directory = Path(temporary_directory_name)
-        person_input_path = temporary_directory / "base_character.png"
-        approved_mask_input_path = temporary_directory / "approved_change_mask.png"
-        approved_model_mask_input_path = (
-            temporary_directory / "approved_model_mask.png"
-        )
-        clothing_input_path = temporary_directory / "clothing.png"
-        raw_output_path = temporary_directory / "raw_try_on.png"
-        mask_output_path = temporary_directory / "clothing_mask.png"
-        protection_output_path = temporary_directory / "identity_protection_mask.png"
-        metadata_output_path = temporary_directory / "execution_metadata.json"
-
-        person_input_image = base_character_image.convert("RGB")
-        approved_mask_input_image = (
-            approved_agnostic_input.approved_change_mask.convert("L")
-        )
-        approved_model_mask_input_image = approved_model_mask.convert("L")
-        try:
-            person_input_image.save(person_input_path)
-            approved_mask_input_image.save(approved_mask_input_path)
-            approved_model_mask_input_image.save(
-                approved_model_mask_input_path
-            )
-        finally:
-            person_input_image.close()
-            approved_mask_input_image.close()
-            approved_model_mask_input_image.close()
-        clothing_reference_image.save(clothing_input_path)
-        clothing_reference_image.close()
-
-        command = [
-            str(settings.python_executable),
-            str(settings.runner_path),
-            "--repository-path",
-            str(settings.repository_path),
-            "--person-image",
-            str(person_input_path),
-            "--approved-change-mask",
-            str(approved_mask_input_path),
-            "--approved-model-mask",
-            str(approved_model_mask_input_path),
-            "--clothing-image",
-            str(clothing_input_path),
-            "--clothing-source-width",
-            str(clothing_condition.source_size[0]),
-            "--clothing-source-height",
-            str(clothing_condition.source_size[1]),
-            "--clothing-alpha-pixel-count",
-            str(clothing_condition.alpha_pixel_count),
-            "--clothing-alpha-coverage-percent",
-            f"{clothing_condition.alpha_coverage_percent:.6f}",
-            "--clothing-type",
-            catvton_clothing_type,
-            "--expected-person-sha256",
-            str(approved_agnostic_input.preflight_person_sha256 or ""),
-            "--expected-binary-mask-sha256",
-            str(approved_agnostic_input.preflight_binary_mask_sha256 or ""),
-            "--expected-model-mask-sha256",
-            str(approved_agnostic_input.preflight_model_mask_sha256 or ""),
-            "--expected-clothing-sha256",
-            str(approved_agnostic_input.preflight_clothing_sha256 or ""),
-            "--output-image",
-            str(raw_output_path),
-            "--output-mask",
-            str(mask_output_path),
-            "--output-protection-mask",
-            str(protection_output_path),
-            "--output-metadata",
-            str(metadata_output_path),
-            "--model-id",
-            settings.model_id,
-            "--base-model-id",
-            settings.base_model_id,
-            "--cache-dir",
-            str(settings.cache_dir),
-            "--width",
-            str(settings.width),
-            "--height",
-            str(settings.height),
-            "--inference-steps",
-            str(settings.inference_steps),
-            "--guidance-scale",
-            str(settings.guidance_scale),
-            "--mask-blur-factor",
-            str(settings.mask_blur_factor),
-            "--mixed-precision",
-            settings.mixed_precision,
-            "--seed",
-            str(seed),
-        ]
-        if not settings.safety_check_enabled:
-            command.append("--skip-safety-check")
-        execution_environment = os.environ.copy()
-        execution_environment["HF_HOME"] = str(settings.cache_dir)
-        try:
-            completed_process = subprocess.run(
-                command,
-                cwd=settings.repository_path,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                timeout=settings.timeout_seconds,
-                check=False,
-                env=execution_environment,
-            )
-        except subprocess.TimeoutExpired as error:
-            raise CharacterClothingProtectionError(
-                "의상 합성 제한 시간을 초과했습니다. "
-                f"제한={settings.timeout_seconds}초"
-            ) from error
-        except OSError as error:
-            raise CharacterClothingProtectionError(
-                f"CatVTON 별도 실행을 시작하지 못했습니다: {error}"
-            ) from error
-
-        if completed_process.returncode != 0:
-            execution_details = (
-                completed_process.stderr.strip()
-                or completed_process.stdout.strip()
-                or "상세 출력 없음"
-            )
-            raise CharacterClothingProtectionError(
-                "CatVTON 의상 합성에 실패했습니다. "
-                f"별도 실행 출력: {execution_details}"
-            )
-        if (
-            not raw_output_path.is_file()
-            or not mask_output_path.is_file()
-            or not protection_output_path.is_file()
-            or not metadata_output_path.is_file()
-        ):
-            raise CharacterClothingProtectionError(
-                "CatVTON 실행은 끝났지만 합성 이미지 또는 보호 마스크가 없습니다."
-            )
-
-        with Image.open(raw_output_path) as opened_raw_image:
-            raw_try_on_image = opened_raw_image.convert("RGB").copy()
-        with Image.open(mask_output_path) as opened_mask_image:
-            clothing_change_mask = opened_mask_image.convert("L").copy()
-        validate_runner_mask_matches_approved_input(
-            clothing_change_mask,
-            approved_agnostic_input.approved_change_mask,
-        )
-
-        with Image.open(protection_output_path) as opened_protection_image:
-            identity_protection_mask = (
-                opened_protection_image.convert("L").copy()
-            )
-        execution_metadata = load_catvton_execution_metadata(
-            metadata_output_path,
-            approved_agnostic_input,
-            expected_safety_check_enabled=settings.safety_check_enabled,
-        )
-    original_size = base_character_image.size
-    if raw_try_on_image.size != original_size:
-        resized_raw_try_on_image = raw_try_on_image.resize(
-            original_size,
-            Image.Resampling.LANCZOS,
-        )
-        raw_try_on_image.close()
-        raw_try_on_image = resized_raw_try_on_image
-    if clothing_change_mask.size != original_size:
-        resized_clothing_change_mask = clothing_change_mask.resize(
-            original_size,
-            Image.Resampling.NEAREST,
-        )
-        clothing_change_mask.close()
-        clothing_change_mask = resized_clothing_change_mask
-
-    if identity_protection_mask.size != original_size:
-        resized_identity_protection_mask = identity_protection_mask.resize(
-            original_size,
-            Image.Resampling.NEAREST,
-        )
-        identity_protection_mask.close()
-        identity_protection_mask = resized_identity_protection_mask
-    protection_plan = create_character_try_on_protection_plan(
-        clothing_change_mask,
-        identity_protection_mask,
-        boundary_blur_radius=4.0,
-    )
-    safe_clothing_change_mask = protection_plan.clothing_change_mask.copy()
-    raw_try_on_review_image = raw_try_on_image.copy()
-    try_on_clothing_reference_image = load_clothing_reference_image(
-        clothing_reference_input
-    )
-    try:
-        try_on_candidate = apply_protected_clothing_try_on(
-            PreparedClothingTryOnEngine(raw_try_on_image),
-            CharacterClothingTryOnRequest(
-                base_character_image=base_character_image,
-                clothing_reference_image=try_on_clothing_reference_image,
-                clothing_category=clothing_reference_input.category,
-            ),
-            protection_plan,
-        )
-        effect_metrics = measure_try_on_effect_metrics(
-            base_person=base_character_image,
-            raw_try_on_image=raw_try_on_image,
-            final_person=try_on_candidate.image,
-            approved_change_mask=approved_agnostic_input.approved_change_mask,
-            model_mask=approved_model_mask,
-        )
-        difference_image = create_try_on_difference_image(
-            base_character_image,
-            try_on_candidate.image,
-        )
-    except Exception:
-        raw_try_on_review_image.close()
-        safe_clothing_change_mask.close()
-        raise
-    finally:
-        raw_try_on_image.close()
-        try_on_clothing_reference_image.close()
-        clothing_change_mask.close()
-        identity_protection_mask.close()
-        protection_plan.clothing_change_mask.close()
-        protection_plan.identity_protection_mask.close()
-        protection_plan.boundary_blend_mask.close()
-
-    return CatVTONClothingTryOnResult(
-        candidate=try_on_candidate,
-        clothing_change_mask=safe_clothing_change_mask,
-        execution_metadata=execution_metadata,
-        raw_try_on_image=raw_try_on_review_image,
-        difference_image=difference_image,
-        effect_metrics=effect_metrics,
+    """삭제된 합성 API의 호환 오류. 모델 로딩/파일 생성/프로세스 실행은 하지 않는다."""
+    raise CharacterClothingProtectionError(
+        "기존 CatVTON 의상 합성 기능은 제거되었습니다. 의상 디자인 참조 생성을 사용하세요."
     )
 
 
@@ -1169,6 +897,46 @@ def validate_catvton_local_settings(
         raise CharacterClothingProtectionError(
             "CatVTON 마스크 블러 값은 0~64여야 합니다."
         )
+
+
+def resolve_clothing_category_from_tags(
+    tags,
+) -> ClothingCategory | None:
+    """Map approved garment semantics to the legacy worker input, if clear."""
+    normalized = {
+        str(value).strip().lower().replace("_", " ")
+        for value in (tags or ())
+        if isinstance(value, str) and str(value).strip()
+    }
+
+    def contains(terms):
+        return any(
+            tag == term or tag.endswith(" " + term)
+            for tag in normalized
+            for term in terms
+        )
+
+    top = contains({
+        "shirt", "blouse", "jacket", "blazer", "coat", "sweater",
+        "cardigan", "hoodie", "vest", "top", "uniform",
+    })
+    bottom = contains({
+        "skirt", "mini skirt", "microskirt", "pants", "trousers",
+        "shorts", "leggings", "tights", "pantyhose", "stockings",
+        "thighhighs",
+    })
+    dress = contains({
+        "dress", "gown", "bodysuit", "leotard", "swimsuit",
+    })
+    if dress:
+        return ClothingCategory.DRESS
+    if top and bottom:
+        return ClothingCategory.FULL_BODY_OUTFIT
+    if top:
+        return ClothingCategory.TOP
+    if bottom:
+        return ClothingCategory.BOTTOM
+    return None
 
 
 def find_catvton_clothing_type(

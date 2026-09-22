@@ -8,6 +8,11 @@ from typing import Mapping
 
 from PIL import Image, UnidentifiedImageError
 
+from genai_lab.body_morphology import (
+    BodyMorphologyVector,
+    freeze_body_morphology,
+)
+
 
 class CharacterFramingType(str, Enum):
     """사용자가 선택할 수 있는 캐릭터 화면 범위."""
@@ -23,6 +28,7 @@ class CharacterGenerationInput:
 
     reference_image_path: Path
     framing_type: CharacterFramingType
+    body_proportion_preset_id: str | None = None
     approved_reference_image: Image.Image | None = None
     reference_enhancement_applied: bool = False
     reference_enhancement_model_id: str | None = None
@@ -74,6 +80,16 @@ class CharacterGenerationRequest:
     reference_image_strength: float
     model_id: str
     reference_adapter_id: str
+    body_proportion_preset_id: str | None = None
+    body_morphology: BodyMorphologyVector | None = None
+
+    def __post_init__(self) -> None:
+        if self.body_morphology is None:
+            object.__setattr__(
+                self, "body_morphology", freeze_body_morphology(self.seed)
+            )
+        elif not isinstance(self.body_morphology, BodyMorphologyVector):
+            raise ValueError("요청 체형 벡터 타입이 올바르지 않습니다.")
 
 
 class CharacterGenerationPreparationError(ValueError):
@@ -222,6 +238,9 @@ def prepare_character_generation_request(
         model_id=character_generation_settings.model_id,
         reference_adapter_id=(
             character_generation_settings.reference_adapter_id
+        ),
+        body_proportion_preset_id=(
+            character_generation_input.body_proportion_preset_id
         ),
     )
 

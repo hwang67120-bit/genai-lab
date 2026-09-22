@@ -34,10 +34,13 @@ class GuardDecisionTest(unittest.TestCase):
         self.assertFalse(decision.approval_enabled)
         self.assertIn("ORIGINAL_CLOTHING_NOT_EVALUABLE", [r.code for r in decision.blocking_results])
 
-    def test_protected_target_conflict_is_actionable(self):
-        decision = create_safe_decision(protected_clothing_overlap_pixel_count=4, removal_status="needs_review")
-        self.assertFalse(decision.approval_enabled)
-        self.assertTrue(decision.blocking_results[0].recovery_action_ko)
+    def test_automatic_protection_contact_is_corrected_warning(self):
+        decision = create_safe_decision(protected_clothing_overlap_pixel_count=4)
+        self.assertTrue(decision.approval_enabled)
+        self.assertEqual(len(decision.warning_results), 1)
+        warning = decision.warning_results[0]
+        self.assertEqual(warning.code, "AUTOMATIC_PROTECTION_CONTACT")
+        self.assertEqual(warning.corrected_value, 0)
 
     def test_safe_results_enable_approval(self):
         decision = create_safe_decision()

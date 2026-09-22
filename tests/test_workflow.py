@@ -49,3 +49,15 @@ def test_workflow_completed_state_stops_automatic_progress() -> None:
 
     assert context.progress == (8, 8)
     assert context.active is False
+
+
+def test_workflow_failure_without_stage_keeps_eight_step_denominator() -> None:
+    context = GenerationWorkflowContext(
+        character_image_path=Path("character.png"),
+        clothing_image_path=Path("clothing.png"),
+        pose_image_path=None,
+    )
+    context.current_stage = GenerationWorkflowStage.FAILED
+    context.failed_stage = None
+
+    assert context.progress == (0, 8)

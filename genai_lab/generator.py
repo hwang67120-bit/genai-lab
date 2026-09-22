@@ -9,15 +9,16 @@ from typing import Any
 from genai_lab.clothing import (
     CatVTONLocalSettings,
     CharacterAgnosticApprovedInput,
-    CharacterClothingProtectionError,
     ClothingReferenceInput,
-    execute_catvton_clothing_try_on,
 )
 from genai_lab.detail import (
     CharacterDetailCorrectionError,
     correct_character_candidate_details,
 )
 from genai_lab.request import CharacterGenerationRequest
+from genai_lab.clothing_reference_generation import prepare_design_reference_request
+from genai_lab.hair_detail_analysis import hair_prompt_delivery_report
+from genai_lab.reference_contract import validate_reference_mode, validate_visual_condition
 from genai_lab.pose_estimation import (
     PoseEstimationApprovedInput,
     prepare_pose_control_input,
@@ -55,26 +56,192 @@ def generate_character_candidate(
     오류:
         모델 실행 또는 GPU 메모리 부족 시 한글 오류를 발생시킨다.
     """
+    if any(value is not None for value in (clothing_reference_input, catvton_settings, approved_agnostic_input)):
+        raise ValueError('기존 CatVTON 의상 합성 기능은 제거되었습니다. 의상 디자인 참조 생성을 사용하세요.')
+    validate_reference_mode(config, approved_pose_estimation is not None)
+    reference_section = config.get('clothing_reference_generation', {})
+    if reference_section.get('enabled'):
+        if reference_section.get('visual_inputs') is None:
+            raise ValueError('태그 전용 의상 생성 경로는 제거되었습니다. 승인된 얼굴·의상 참조가 필요합니다.')
+        if getattr(reference_section['visual_inputs'], 'initial', None) is not None:
+            raise ValueError('폐기된 초기 이미지가 생성 입력에 남아 있습니다.')
+        validate_visual_condition(reference_section.get('visual_condition'))
     import torch
 
-    ip_adapter_reference_image = prepare_ip_adapter_reference_image(
-        generation_request.reference_image
-    )
-    if run_log is not None:
-        run_log.write_stage(
-            "참조 이미지 준비",
-            (
-                f"IP-Adapter 입력 크기={ip_adapter_reference_image.width}x"
-                f"{ip_adapter_reference_image.height}, 사용자 승인본 사용"
+    reference_config = config.get('clothing_reference_generation', {})
+    reference_mode = bool(reference_config.get('enabled', False))
+    design_record = None
+    approved_run = None
+    if reference_mode:
+        if any(value is not None for value in (
+            clothing_reference_input, catvton_settings, approved_agnostic_input, approved_pose_estimation,
+        )):
+            raise ValueError('디자인 참조 생성에는 의상 합성·신체 복원·외부 자세 입력을 연결하지 않습니다.')
+        from genai_lab.native_pipeline_contract import (
+            native_pipeline_enabled,
+            prepare_character_only_base_request,
+        )
+        native_character_base = native_pipeline_enabled(config)
+        if native_character_base:
+            generation_request, design_record = prepare_character_only_base_request(
+                generation_request,
+                (pipeline.tokenizer, pipeline.tokenizer_2),
+                character_tags=reference_config.get(
+                    'approved_character_tags', ()),
+                character_gender=reference_config.get(
+                    'character_gender', 'unspecified'),
+            )
+        else:
+            generation_request, design_record = prepare_design_reference_request(
+                generation_request, reference_config.get('approved_tags', ()),
+                (pipeline.tokenizer, pipeline.tokenizer_2),
+                character_tags=reference_config.get(
+                    'approved_character_tags', ()),
+                character_gender=reference_config.get(
+                    'character_gender', 'unspecified'),
+                approved_detail_tags=reference_config.get(
+                    'approved_detail_tags', ()),
+                part_color_descriptions=reference_config.get(
+                    'part_color_descriptions', ()),
+                approved_part_color_descriptions=reference_config.get(
+                    'approved_part_color_descriptions', ()),
+                garment_prompt_policy=reference_config.get(
+                    'garment_prompt_policy', {}),
+                long_prompt_settings=config.get('long_prompt_embedding', {}),
+            )
+        design_record['garment_detail_analysis'] = reference_config.get('garment_detail_report')
+        design_record['hair_detail_analysis'] = reference_config.get('hair_detail_report')
+        design_record['hair_prompt_delivery'] = hair_prompt_delivery_report(
+            design_record['approved_character_tags'], generation_request.prompt,
+            design_record['hair_detail_analysis'])
+        hair_visual = getattr(
+            reference_config.get('visual_inputs'), 'hair_reference', None)
+        design_record['hair_prompt_delivery'].update(
+            visual_reference_scope=(
+                'text_only_in_base'
+                if native_character_base
+                else (
+                    'hair_only' if hair_visual is not None
+                    else 'identity(face_hair)'
+                )
+            ),
+            separate_hair_adapter=(
+                False if native_character_base
+                else hair_visual is not None
             ),
         )
+        design_record['eye_color_analysis'] = reference_config.get('eye_color_report')
+        design_record['character_feature_routing'] = reference_config.get('character_feature_routing')
+        if reference_config.get('require_prompt_approval'):
+            expected = reference_config.get('approved_prompt_pair')
+            actual = (generation_request.prompt, generation_request.negative_prompt)
+            if not isinstance(expected, (list, tuple)) or tuple(expected) != actual:
+                raise ValueError('승인한 생성 조건과 실제 프롬프트가 다릅니다. 다시 검토하세요.')
+            design_record['prompt_preflight_approved'] = True
+        from genai_lab.approved_reference_run import require_reference_run
+        approved_run = require_reference_run(
+            reference_config['visual_inputs'], config, generation_request,
+            prepared=True)
+        if run_log is not None:
+            hair_delivery = design_record['hair_prompt_delivery']
+            run_log.write_stage(
+                '헤어 생성 조건 전달',
+                f"승인={list(hair_delivery['approved_hair_tags'])}, "
+                f"실제 프롬프트 전달={list(hair_delivery['delivered_hair_tags'])}, "
+                f"승인 후 누락={list(hair_delivery['missing_approved_hair_tags'])}, "
+                f"분석 후 미전달={list(hair_delivery['analyzed_but_not_delivered'])}, "
+                f"상세 자동후보={list(hair_delivery['optional_hair_candidates'])}, "
+                f"시각 참조={hair_delivery['visual_reference_scope']}, "
+                f"별도 헤어 어댑터={hair_delivery['separate_hair_adapter']}")
+            run_log.write_stage('캐릭터 성별 지정',
+                f"지정={design_record['character_gender']}, "
+                f"제외 태그={design_record['removed_character_gender_tags']}, "
+                f"충돌 네거티브 제거={design_record['removed_gender_negative_terms']}")
+            run_log.write_stage('의상 프롬프트 정리',
+                f"제거={design_record['removed_conflicting_negative_terms']}, "
+                f"실제 부정 프롬프트={generation_request.negative_prompt}, "
+                f"실제 부정 토큰={design_record['negative']['effective_token_counts']}")
+            run_log.write_stage('의상 성별 조건 차단',
+                f"정책={design_record['garment_gender_policy']}, "
+                f"의상 제외 태그={design_record['excluded_non_design_tags']}, "
+                f"성별 네거티브={design_record['gender_negative_guard']}, "
+                '이미지 내부 체형 분리=미구현, 결과 승인 필요')
+            run_log.write_stage('의상 디자인 참조 생성',
+                f"방식={'영역별 이미지+태그' if reference_config.get('visual_inputs') is not None else '승인 태그'}, 신체 복원/외부 자세/부분 보정=미사용, "
+                f"크기={generation_request.width}x{generation_request.height}, "
+                f"prompt={generation_request.prompt}, 잘림={design_record['positive']['truncated']}")
 
-    original_image_canvas = prepare_original_image_canvas(
-        generation_request.reference_image,
-        generation_request.width,
-        generation_request.height,
-    )
-    if run_log is not None:
+    visual_inputs = reference_config.get('visual_inputs') if reference_mode else None
+    if visual_inputs is not None:
+        # Base는 승인된 캐릭터 원본에서 시작한다. 분석 마스크나 의상 RGB를
+        # 시작 캔버스에 합성하지 않아 원본 좌표 오염을 만들지 않는다.
+        original_image_canvas = prepare_original_image_canvas(
+            visual_inputs.source,
+            generation_request.width,
+            generation_request.height,
+        )
+        ip_adapter_reference_image = visual_inputs.identity.copy()
+        garment_scale = float(reference_config.get('garment_reference_scale', 0.45))
+        identity_scale = float(reference_config.get('identity_reference_scale', 0.7))
+        design_record.update(
+                             mode=(
+                                 'animagine_character_only_base'
+                                 if native_character_base
+                                 else 'visual_reference_regeneration'
+                             ),
+                             garment_image_adapter=(
+                                 False
+                                 if native_character_base
+                                 else garment_scale > 0
+                             ),
+                             garment_tags_enabled=not native_character_base,
+                             clothing_neutralized=original_image_canvas is not None, body_restoration=False,
+                             initial_image_used=original_image_canvas is not None,
+                             identity_reference_scope=(
+                                 'full_character'
+                                 if native_character_base
+                                 else (
+                                     'face_only'
+                                     if visual_inputs.hair_reference is not None
+                                     else 'face_hair'
+                                 )
+                             ),
+                             hair_image_adapter=(
+                                 False
+                                 if native_character_base
+                                 else visual_inputs.hair_reference is not None
+                             ),
+                             hair_reference_scale=(
+                                 None
+                                 if native_character_base
+                                 else (
+                                     visual_inputs.hair_reference_scale
+                                     if visual_inputs.hair_reference is not None
+                                     else None
+                                 )
+                             ),
+                             identity_scale=identity_scale, garment_scale=garment_scale)
+        if run_log is not None:
+            scene_condition = getattr(visual_inputs, 'scene_condition', None)
+            from genai_lab.reference_order import adapter_reference_names
+            reference_count = (len(scene_condition.references)
+                               if scene_condition else
+                               len(adapter_reference_names(visual_inputs)))
+            run_log.write_stage(
+                '시각 참조 입력',
+                f'잘라낸 부위별 참조 {reference_count}개, '
+                f'의상 참조 강도={garment_scale}, '
+                f'캐릭터 전용 Base={native_character_base}, '
+                '분석 마스크는 크롭·JSON에만 사용, 생성 공간 마스크=미사용, '
+                '신체 복원=0회')
+    else:
+        ip_adapter_reference_image = prepare_ip_adapter_reference_image(generation_request.reference_image)
+        original_image_canvas = prepare_original_image_canvas(
+            generation_request.reference_image, generation_request.width, generation_request.height)
+        if run_log is not None:
+            run_log.write_stage('참조 이미지 준비',
+                f'IP-Adapter 입력 크기={ip_adapter_reference_image.width}x{ip_adapter_reference_image.height}, 사용자 승인본 사용')
+    if run_log is not None and original_image_canvas is not None:
         run_log.write_stage(
             "원본 유지 화면 준비",
             (
@@ -166,6 +333,29 @@ def generate_character_candidate(
         "generator": random_start,
     }
     generation_mode = config["generation"].get("mode", "text_to_image")
+    from genai_lab.reference_step_schedule import effective_denoising_steps
+    base_denoising_steps = effective_denoising_steps(
+        generation_request.inference_steps,
+        generation_mode,
+        executed_image_change_strength,
+    )
+    if visual_inputs is not None:
+        if generation_mode != 'image_to_image':
+            raise ValueError('참조 생성 Base는 승인된 캐릭터 RGB를 사용하는 image_to_image여야 합니다.')
+        if design_record is not None:
+            design_record.update(
+                generation_mode=generation_mode,
+                effective_strength=executed_image_change_strength,
+                effective_denoising_steps=base_denoising_steps,
+            )
+        if run_log is not None:
+            scene_active = getattr(visual_inputs, 'scene_condition', None) is not None
+            run_log.write_stage('편집 기반 Base 입력',
+                f'pipeline={type(pipeline).__name__}, 승인 캐릭터 RGB 사용, '
+                f'strength={executed_image_change_strength:.2f}, '
+                f'실제 디노이징={base_denoising_steps}회, '
+                f'구조 선화={scene_active}, 잘라낸 부위별 참조 유지, '
+                '기준 이미지 좌표 공간 마스크 미전달')
     if generation_mode == "image_to_image":
         model_arguments["image"] = original_image_canvas
         model_arguments["strength"] = executed_image_change_strength
@@ -173,6 +363,83 @@ def generate_character_candidate(
         model_arguments["width"] = generation_request.width
         model_arguments["height"] = generation_request.height
     model_arguments["ip_adapter_image"] = [ip_adapter_reference_image]
+    if visual_inputs is not None:
+        model_arguments.pop('ip_adapter_image')
+        model_arguments.update(reference_config['visual_condition'])
+        model_arguments['width'] = generation_request.width
+        model_arguments['height'] = generation_request.height
+        candidate_latents = reference_config.get('candidate_latents')
+        if generation_mode == "image_to_image" and candidate_latents is not None:
+            raise ValueError(
+                "Img2Img Base에 사전 생성 latent를 전달하면 승인 RGB 시작 이미지를 우회합니다."
+            )
+        if candidate_latents is not None:
+            # 파이프라인이 작업 텐서를 변경해도 재시도 원본은 그대로 보존한다.
+            model_arguments['latents'] = candidate_latents.clone()
+            design_record['common_candidate_latent'] = reference_config.get(
+                'candidate_latent_record')
+        from genai_lab.scene_generation import scene_arguments
+        model_arguments.update(scene_arguments(
+            pipeline, config, visual_inputs,
+            (generation_request.width, generation_request.height), run_log))
+        if getattr(visual_inputs, 'scene_condition', None) is not None:
+            design_record.update(scene_lineart=True, initial_rgb_image=True)
+            if run_log is not None:
+                run_log.write_stage(
+                    '장면 선화 조건',
+                    'control_image=구조 선화, image=승인 캐릭터 RGB, 인페인팅/원본 픽셀 덧씌우기 없음',
+                )
+    body_proportion_control_image = None
+    body_proportion_record = None
+    if visual_inputs is not None and prepared_pose_control is None:
+        from genai_lab.body_proportion_presets import (
+            prepare_body_proportion_control,
+        )
+        (
+            body_proportion_control_image,
+            body_proportion_record,
+        ) = prepare_body_proportion_control(
+            config,
+            generation_request,
+            project_root,
+        )
+        design_record["body_proportion_control"] = body_proportion_record
+        if body_proportion_control_image is not None:
+            expected_model_id = body_proportion_record["settings"]["model_id"]
+            if (
+                getattr(
+                    pipeline,
+                    "_genai_lab_body_proportion_model_id",
+                    None,
+                )
+                != expected_model_id
+            ):
+                body_proportion_control_image.close()
+                raise ValueError(
+                    "현재 Animagine 파이프라인이 승인 체형 ControlNet과 다릅니다."
+                )
+            model_arguments["control_image"] = body_proportion_control_image
+            model_arguments["controlnet_conditioning_scale"] = (
+                body_proportion_record["settings"]["conditioning_scale"]
+            )
+            model_arguments["control_guidance_start"] = (
+                body_proportion_record["settings"]["guidance_start"]
+            )
+            model_arguments["control_guidance_end"] = (
+                body_proportion_record["settings"]["guidance_end"]
+            )
+        if run_log is not None:
+            run_log.write_stage(
+                "Animagine Base 체형 프리셋",
+                f"상태={body_proportion_record['status']}, "
+                f"프리셋={body_proportion_record.get('preset_id')}, "
+                f"ControlNet={body_proportion_record['settings']['model_id']}, "
+                f"강도={body_proportion_record['settings']['conditioning_scale']:.2f}, "
+                f"구간={body_proportion_record['settings']['guidance_start']:.2f}~"
+                f"{body_proportion_record['settings']['guidance_end']:.2f}, "
+                "OpenPose=미사용",
+            )
+
     if prepared_pose_control is not None:
         model_arguments["control_image"] = (
             prepared_pose_control.control_map_image
@@ -183,9 +450,273 @@ def generate_character_candidate(
         model_arguments["control_guidance_start"] = pose_control_guidance_start
         model_arguments["control_guidance_end"] = pose_control_guidance_end
 
+    refinement_settings = None
+    integrity_settings = None
+    defer_part_correction = False
+    final_latent_audit = {}
+    if visual_inputs is not None:
+        from genai_lab.latent_refinement import resolve_latent_refinement
+        refinement_settings = resolve_latent_refinement(config, generation_request)
+        from genai_lab.generated_image_integrity import resolve_generated_image_integrity
+        integrity_settings = resolve_generated_image_integrity(config)
+        from genai_lab.candidate_pipeline import resolve_candidate_pipeline
+        candidate_pipeline_settings = resolve_candidate_pipeline(
+            config,
+            int(reference_config.get("candidate_count", 2)),
+        )
+        defer_part_correction = (
+            candidate_pipeline_settings.enabled
+            and candidate_pipeline_settings.repair_best_candidate_only
+        )
+        if refinement_settings.enabled:
+            if getattr(visual_inputs, "scene_condition", None) is not None:
+                raise ValueError(
+                    "현재 latent 정밀화는 장면 선화 조건과 동시에 사용할 수 없습니다."
+                )
+            model_arguments["output_type"] = "latent"
+
     generation_started_at = time.perf_counter()
     try:
-        generated_image = pipeline(**model_arguments).images[0]
+        reference_schedule = None
+        if visual_inputs is not None:
+            from genai_lab.reference_order import (
+                adapter_references,
+                adapter_references_for_stage,
+            )
+            from genai_lab.reference_step_schedule import build_reference_scale_schedule
+            staged_generation = bool(
+                config.get('staged_reference_generation', {}).get('enabled', False)
+            )
+            reference_entries = (
+                adapter_references_for_stage(
+                    visual_inputs, 'base', identity_scale, garment_scale
+                )
+                if staged_generation
+                else adapter_references(
+                    visual_inputs, identity_scale, garment_scale
+                )
+            )
+            reference_schedule, schedule_record = build_reference_scale_schedule(
+                config, reference_entries, base_denoising_steps)
+            if reference_schedule is not None:
+                pipeline.set_ip_adapter_scale(reference_schedule.initial_scale)
+                model_arguments['callback_on_step_end'] = reference_schedule
+                design_record['reference_step_schedule'] = schedule_record
+                if run_log is not None:
+                    run_log.write_stage(
+                        '단계별 참조 강도',
+                        f"순서={schedule_record['reference_order']}, "
+                        f"단계={schedule_record['phases']}")
+        check_running = reference_config.get('check_running') if reference_mode else None
+        if check_running is not None:
+            check_running()
+            previous_callback = model_arguments.get('callback_on_step_end')
+            def on_step_end(pipe, step, timestep, callback_kwargs):
+                check_running()
+                if previous_callback is not None:
+                    return previous_callback(pipe, step, timestep, callback_kwargs)
+                return callback_kwargs
+            on_step_end.reference_step_schedule_record = getattr(
+                previous_callback, 'reference_step_schedule_record', None)
+            model_arguments['callback_on_step_end'] = on_step_end
+        if integrity_settings is not None and integrity_settings.enabled:
+            from genai_lab.generated_image_integrity import wrap_final_latent_audit
+            model_arguments['callback_on_step_end'] = wrap_final_latent_audit(
+                model_arguments.get('callback_on_step_end'),
+                base_denoising_steps,
+                final_latent_audit,
+                integrity_settings.record(),
+            )
+        if visual_inputs is not None:
+            from genai_lab.approved_reference_run import verify_pipeline_boundary
+            verification_started = time.perf_counter()
+            fingerprint = verify_pipeline_boundary(visual_inputs, config, generation_request, model_arguments)
+            if run_log is not None:
+                run_log.write_stage('최종 승인 조건 검증',
+                    f"후보={generation_request.candidate_number}, 완료, "
+                    f"소요={time.perf_counter() - verification_started:.3f}초")
+            # 단계 스케줄이 없을 때도 이전 후보의 최종 강도가 남지 않게 승인값을 복원한다.
+            if reference_schedule is None:
+                from genai_lab.reference_order import (
+                    adapter_references,
+                    adapter_references_for_stage,
+                    unmasked_adapter_scale,
+                )
+                restore_entries = (
+                    adapter_references_for_stage(
+                        visual_inputs, 'base', identity_scale, garment_scale
+                    )
+                    if config.get('staged_reference_generation', {}).get(
+                        'enabled', False
+                    )
+                    else adapter_references(
+                        visual_inputs, identity_scale, garment_scale
+                    )
+                )
+                pipeline.set_ip_adapter_scale(unmasked_adapter_scale(
+                    entry.scale for entry in restore_entries))
+            design_record['approved_generation_fingerprint'] = fingerprint
+            long_plan = design_record['positive'].get('long_prompt', {})
+            common_prompt_condition = reference_config.get(
+                'common_prompt_condition')
+            common_prompt_record = reference_config.get('common_prompt_record')
+            if (common_prompt_condition is not None
+                    and long_plan.get('chunk_count', 1) <= 1):
+                from genai_lab.common_prompt_embeddings import (
+                    validate_common_prompt_embeddings,
+                )
+                validate_common_prompt_embeddings(
+                    common_prompt_condition,
+                    common_prompt_record,
+                    generation_request.prompt,
+                    generation_request.negative_prompt,
+                )
+                model_arguments.pop('prompt')
+                model_arguments.pop('negative_prompt')
+                model_arguments.update(common_prompt_condition)
+                design_record['common_prompt_embeddings'] = common_prompt_record
+                if run_log is not None:
+                    run_log.write_stage(
+                        '공통 프롬프트 임베딩 전달',
+                        f"후보={generation_request.candidate_number}, "
+                        "승인 텍스트 해시 검증=통과, 재인코딩=없음")
+            elif long_plan.get('chunk_count', 1) > 1:
+                if refinement_settings is not None and refinement_settings.enabled:
+                    raise ValueError(
+                        "2청크 프롬프트와 latent 정밀화의 동시 사용은 아직 승인되지 않았습니다.")
+                from genai_lab.sdxl_long_prompt import build_long_prompt_embeddings
+                embedding_arguments, embedding_record = build_long_prompt_embeddings(
+                    pipeline, long_plan, generation_request.negative_prompt)
+                model_arguments.pop('prompt')
+                model_arguments.pop('negative_prompt')
+                model_arguments.update(embedding_arguments)
+                design_record['long_prompt_embedding'] = embedding_record
+                if run_log is not None:
+                    run_log.write_stage(
+                        '긴 프롬프트 임베딩',
+                        f"정책={embedding_record['policy_version']}, "
+                        f"청크={long_plan['chunk_count']}, "
+                        f"shape={embedding_record['positive_shape']}, "
+                        "추론 단계 변경 없음")
+        base_started_at = time.perf_counter()
+        try:
+            first_stage_images = pipeline(**model_arguments).images
+        finally:
+            if body_proportion_control_image is not None:
+                body_proportion_control_image.close()
+                body_proportion_control_image = None
+                model_arguments.pop("control_image", None)
+        # Diffusers는 PIL 출력일 때는 이미지 목록을, output_type="latent"일 때는
+        # [B, 4, H, W] 텐서 자체를 images에 담는다. latent의 [0]을 먼저 꺼내면
+        # 배치 축이 사라져 [4, H, W]가 되므로 정밀화 경로에서는 그대로 유지한다.
+        first_stage_output = (
+            first_stage_images
+            if refinement_settings is not None and refinement_settings.enabled
+            else first_stage_images[0]
+        )
+        base_elapsed_seconds = time.perf_counter() - base_started_at
+
+        if refinement_settings is not None and refinement_settings.enabled:
+            from genai_lab.latent_refinement import (
+                prepare_refinement_latents,
+                refinement_pipeline_from,
+            )
+            refinement_latents = prepare_refinement_latents(
+                first_stage_output,
+                generation_request,
+                refinement_settings,
+                vae_scale_factor=getattr(pipeline, "vae_scale_factor", 8),
+            )
+            refinement_record = refinement_settings.record()
+            if run_log is not None:
+                run_log.write_stage(
+                    "1차 latent 검증",
+                    f"후보={generation_request.candidate_number}, "
+                    f"shape={tuple(first_stage_output.shape)}, "
+                    f"확대배율={refinement_settings.latent_scale_factor:.2f}, "
+                    f"소요={base_elapsed_seconds:.3f}초, 의미 품질 판정=미수행",
+                )
+
+            if check_running is not None:
+                check_running()
+            if hasattr(pipeline, "maybe_free_model_hooks"):
+                pipeline.maybe_free_model_hooks()
+            torch.cuda.empty_cache()
+            refinement_pipeline = refinement_pipeline_from(pipeline)
+
+            from genai_lab.reference_order import (
+                adapter_references,
+                unmasked_adapter_scale,
+            )
+            refinement_entries = adapter_references(
+                visual_inputs, identity_scale, garment_scale)
+            refinement_pipeline.set_ip_adapter_scale(
+                unmasked_adapter_scale(
+                    entry.scale for entry in refinement_entries)
+            )
+
+            def on_refinement_step_end(pipe, step, timestep, callback_kwargs):
+                del pipe, step, timestep
+                if check_running is not None:
+                    check_running()
+                return callback_kwargs
+
+            on_refinement_step_end.latent_refinement_record = refinement_record
+            refinement_arguments = {
+                "prompt": generation_request.prompt,
+                "negative_prompt": generation_request.negative_prompt,
+                "image": refinement_latents,
+                "strength": refinement_settings.strength,
+                "num_inference_steps": refinement_settings.inference_steps,
+                "guidance_scale": refinement_settings.guidance_scale,
+                "generator": torch.Generator(device="cpu").manual_seed(
+                    generation_request.seed
+                ),
+                "callback_on_step_end": on_refinement_step_end,
+            }
+            refinement_arguments.update(reference_config["visual_condition"])
+
+            from genai_lab.approved_reference_run import verify_refinement_boundary
+            verify_refinement_boundary(
+                visual_inputs,
+                config,
+                generation_request,
+                refinement_arguments,
+                refinement_latents,
+            )
+            refinement_started_at = time.perf_counter()
+            generated_image = refinement_pipeline(**refinement_arguments).images[0]
+            refinement_elapsed_seconds = time.perf_counter() - refinement_started_at
+            design_record["latent_refinement"] = dict(
+                refinement_record,
+                status="completed",
+                base_elapsed_seconds=round(base_elapsed_seconds, 3),
+                refinement_elapsed_seconds=round(refinement_elapsed_seconds, 3),
+                input_latent_shape=list(first_stage_output.shape),
+                refined_latent_shape=list(refinement_latents.shape),
+                output_size=list(generated_image.size),
+            )
+            if run_log is not None:
+                run_log.write_stage(
+                    "2차 Img2Img 정밀화",
+                    f"후보={generation_request.candidate_number}, "
+                    f"strength={refinement_settings.strength:.2f}, "
+                    f"steps={refinement_settings.inference_steps}, "
+                    f"guidance={refinement_settings.guidance_scale:.2f}, "
+                    f"소요={refinement_elapsed_seconds:.3f}초, "
+                    f"출력={generated_image.width}x{generated_image.height}",
+                )
+            del refinement_latents
+            del first_stage_output
+            torch.cuda.empty_cache()
+        else:
+            generated_image = first_stage_output
+            if design_record is not None:
+                design_record["latent_refinement"] = {
+                    "enabled": False,
+                    "status": "disabled",
+                    "base_elapsed_seconds": round(base_elapsed_seconds, 3),
+                }
     except (torch.cuda.OutOfMemoryError, RuntimeError) as error:
         is_memory_error = isinstance(error, torch.cuda.OutOfMemoryError) or (
             "out of memory" in str(error).lower()
@@ -198,10 +729,154 @@ def generate_character_candidate(
             ) from error
         raise
     finally:
+        # 콜백 closure와 후보 latent 복사본이 다음 후보까지 GPU tensor를
+        # 붙잡지 않도록 파이프라인 호출 직후 참조를 끊는다.
+        model_arguments.pop("callback_on_step_end", None)
+        model_arguments.pop("latents", None)
         ip_adapter_reference_image.close()
-        original_image_canvas.close()
-        if prepared_pose_control is not None:
-            prepared_pose_control.close()
+        if original_image_canvas is not None:
+            original_image_canvas.close()
+        body_proportion_control_image = None
+    if prepared_pose_control is not None:
+        prepared_pose_control.close()
+
+    if integrity_settings is not None and integrity_settings.enabled:
+        from genai_lab.generated_image_integrity import (
+            GeneratedOutputIntegrityError,
+            analyze_generated_image_integrity,
+        )
+        if not final_latent_audit:
+            generated_image.close()
+            raise GeneratedOutputIntegrityError(
+                "최종 denoising latent 감사 기록이 생성되지 않았습니다.",
+                {
+                    "status": "invalid",
+                    "failure_stage": "final_latent",
+                    "reason": "final_latent_audit_missing",
+                    "retryable": integrity_settings.retry_final_latent_failure,
+                },
+            )
+        image_integrity = analyze_generated_image_integrity(
+            generated_image, integrity_settings)
+        design_record["final_latent_integrity"] = dict(final_latent_audit)
+        design_record["generated_image_integrity"] = image_integrity
+        if run_log is not None:
+            run_log.write_stage(
+                "최종 latent 무결성",
+                f"후보={generation_request.candidate_number}, 결과={final_latent_audit}",
+            )
+            run_log.write_stage(
+                "생성 이미지 무결성",
+                f"후보={generation_request.candidate_number}, 결과={image_integrity}",
+            )
+        if image_integrity["status"] == "corrupted":
+            debug_directory = reference_config.get("integrity_debug_directory")
+            attempt = int(reference_config.get("integrity_attempt", 1))
+            if (integrity_settings.preserve_corrupted_image
+                    and debug_directory is not None):
+                debug_path = (
+                    Path(debug_directory)
+                    / (f"candidate_{generation_request.candidate_number}"
+                       f"_attempt_{attempt}_corrupted.png")
+                )
+                debug_path.parent.mkdir(parents=True, exist_ok=True)
+                generated_image.save(debug_path)
+                image_integrity["debug_image_path"] = str(debug_path)
+                if run_log is not None:
+                    run_log.write_stage(
+                        "손상 후보 보존",
+                        f"후보={generation_request.candidate_number}, "
+                        f"시도={attempt}, 경로={debug_path}",
+                    )
+            generated_image.close()
+            raise GeneratedOutputIntegrityError(
+                "생성 이미지에서 기계적 픽셀 손상이 감지됐습니다.", image_integrity)
+
+    if visual_inputs is not None and not defer_part_correction:
+        from genai_lab.part_error_correction import (
+            PartCorrectionContractError,
+            correct_detected_parts,
+        )
+        if run_log is not None:
+            run_log.write_stage(
+                "후보 부위 오류 검사",
+                "완성 후보에서 귀·꼬리 위치 재검출 및 원본 부위 특징 비교 시작",
+            )
+        try:
+            correction = correct_detected_parts(
+                pipeline,
+                generated_image,
+                visual_inputs,
+                config,
+                generation_request,
+                approved_run_record=approved_run.record(),
+                check_running=check_running,
+            )
+            design_record["part_error_correction"] = correction.report
+            if correction.image is not generated_image:
+                generated_image.close()
+                generated_image = correction.image
+            if run_log is not None:
+                run_log.write_stage(
+                    "후보 부위 오류 보정",
+                    f"상태={correction.report['status']}, "
+                    f"보정 채택={correction.report.get('corrected_count', 0)}, "
+                    f"부위={correction.report.get('parts', {})}",
+                )
+        except InterruptedError:
+            generated_image.close()
+            raise
+        except PartCorrectionContractError:
+            generated_image.close()
+            raise
+        except TimeoutError as error:
+            design_record["part_error_correction"] = {
+                "status": "timeout_keep_original",
+                "error": str(error),
+            }
+            if run_log is not None:
+                run_log.write_stage(
+                    "후보 부위 오류 보정 시간 초과",
+                    f"{error}; 완성된 1차 후보 유지",
+                )
+        except Exception as error:
+            design_record["part_error_correction"] = {
+                "status": "failed_keep_original",
+                "error": f"{type(error).__name__}: {error}",
+            }
+            if run_log is not None:
+                run_log.write_stage(
+                    "후보 부위 오류 보정 실패",
+                    f"{type(error).__name__}: {error}; 1차 후보 유지",
+                )
+        from genai_lab.generated_condition_audit import (
+            build_generated_condition_audit,
+        )
+        audit = build_generated_condition_audit(
+            visual_inputs.approved_generation.record(), design_record)
+        design_record["generated_condition_audit"] = audit
+        if run_log is not None:
+            run_log.write_stage(
+                "생성 결과 조건 교차 검증",
+                f"상태={audit['status']}, 검사={audit['checks']}")
+
+    if visual_inputs is not None and defer_part_correction:
+        design_record["part_error_correction"] = {
+            "status": "deferred_for_batch_selection",
+            "parts": {},
+            "reason": "repair_best_candidate_only",
+        }
+        from genai_lab.generated_condition_audit import (
+            build_generated_condition_audit,
+        )
+        audit = build_generated_condition_audit(
+            visual_inputs.approved_generation.record(), design_record)
+        design_record["generated_condition_audit"] = audit
+        if run_log is not None:
+            run_log.write_stage(
+                "후보 부위 오류 보정",
+                "상태=deferred_for_batch_selection, 정상 후보 비교 후 최상위 1개만 보정",
+            )
 
     elapsed_seconds = round(time.perf_counter() - generation_started_at, 3)
     peak_vram_bytes = torch.cuda.max_memory_allocated()
@@ -221,93 +896,7 @@ def generate_character_candidate(
     clothing_effect_metrics = None
     clothing_try_on_status = "not_requested"
     clothing_verification_warning_ko = None
-    if clothing_reference_input is not None:
-        clothing_try_on_status = "failed"
-        if catvton_settings is None:
-            clothing_verification_warning_ko = (
-                "의상 참조가 있지만 CatVTON 실행 설정이 없습니다."
-            )
-        elif approved_agnostic_input is None:
-            clothing_verification_warning_ko = (
-                "의상 참조가 있지만 사용자 승인 Human-Agnostic 입력이 없습니다."
-            )
-        else:
-            if run_log is not None:
-                run_log.write_stage(
-                    "의상 참조 합성",
-                    "CatVTON 별도 프로세스와 의상 영역 보호 검사 시작",
-                )
-            try:
-                if hasattr(pipeline, "maybe_free_model_hooks"):
-                    pipeline.maybe_free_model_hooks()
-                torch.cuda.empty_cache()
-                clothing_try_on_result = execute_catvton_clothing_try_on(
-                    base_character_image=generated_image,
-                    clothing_reference_input=clothing_reference_input,
-                    approved_agnostic_input=approved_agnostic_input,
-                    settings=catvton_settings,
-                    seed=generation_request.seed,
-                )
-                before_clothing_image = generated_image.copy()
-                generated_image.close()
-                generated_image = clothing_try_on_result.candidate.image
-                clothing_change_mask = (
-                    clothing_try_on_result.clothing_change_mask
-                )
-                raw_clothing_try_on_image = (
-                    clothing_try_on_result.raw_try_on_image
-                )
-                clothing_difference_image = (
-                    clothing_try_on_result.difference_image
-                )
-                clothing_effect_metrics = clothing_try_on_result.effect_metrics
-                clothing_try_on_status = (
-                    "no_effect"
-                    if clothing_effect_metrics.no_effect
-                    else "completed"
-                )
-                clothing_verification_warning_ko = (
-                    "CatVTON 최종 합성의 승인 영역 안 변경이 0px입니다. "
-                    "원시 출력과 차이맵을 확인하세요."
-                    if clothing_effect_metrics.no_effect
-                    else clothing_try_on_result.candidate.verification.reason_ko
-                )
-                if run_log is not None:
-                    changed_pixel_count = (
-                        clothing_try_on_result.candidate.verification
-                        .changed_pixel_count_outside_clothing
-                    )
-                    run_log.write_stage(
-                        "의상 참조 합성",
-                        (
-                            "완료, 의상 영역 밖 변경 픽셀="
-                            f"{changed_pixel_count}, "
-                            "마스크 출처="
-                            f"{clothing_try_on_result.execution_metadata.mask_source}, "
-                            "AutoMasker 실행="
-                            f"{clothing_try_on_result.execution_metadata.automasker_run_count}회, "
-                            "안전 검사="
-                            f"{'활성화' if clothing_try_on_result.execution_metadata.safety_check_enabled else '비활성화'}, "
-                            "승인 마스크 픽셀="
-                            f"{clothing_try_on_result.execution_metadata.approved_mask_pixel_count:,}px, "
-                            "원시 model_mask 안 변경="
-                            f"{clothing_effect_metrics.raw_changed_inside_model_mask:,}px, "
-                            "최종 승인 영역 안 변경="
-                            f"{clothing_effect_metrics.final_changed_inside_approved_mask:,}px, "
-                            "보호 합성 제거="
-                            f"{clothing_effect_metrics.discarded_by_protection_pixels:,}px, "
-                            "승인 영역 RGB L1 평균="
-                            f"{clothing_effect_metrics.mean_rgb_l1_inside:.4f}, "
-                            f"상태={clothing_try_on_status}"
-                        ),
-                    )
-            except (CharacterClothingProtectionError, OSError) as error:
-                clothing_verification_warning_ko = str(error)
-                if run_log is not None:
-                    run_log.write_stage(
-                        "의상 참조 합성 실패",
-                        f"{error} 기본 생성 후보를 유지합니다.",
-                    )
+
 
 
     candidate_image = generated_image
@@ -318,7 +907,7 @@ def generate_character_candidate(
     corrected_region_count = 0
     rejected_region_count = 0
     detail_verification_warning_ko = None
-    detail_config = config.get("detail_correction", {})
+    detail_config = {} if reference_mode else config.get("detail_correction", {})
     if detail_config.get("enabled", False):
         if run_log is not None:
             run_log.write_stage(
@@ -403,8 +992,9 @@ def generate_character_candidate(
         clothing_reference_name=(
             clothing_reference_input.image_path.name
             if clothing_reference_input is not None
-            else None
+            else reference_config.get('source_name') if reference_mode else None
         ),
+        design_reference_record=design_record,
         clothing_category=(
             clothing_reference_input.category.value
             if clothing_reference_input is not None
@@ -456,71 +1046,8 @@ def apply_clothing_to_generated_candidate(
     approved_agnostic_input: CharacterAgnosticApprovedInput,
     run_log: GenerationRunLog | None = None,
 ) -> CharacterGenerationCandidate:
-    """이미 생성된 같은 후보에 승인 마스크와 의상을 적용한다."""
-    if run_log is not None:
-        run_log.write_stage(
-            "의상 참조 합성",
-            "생성 후보 원본과 같은 좌표의 승인 마스크로 CatVTON 시작",
-        )
-    clothing_try_on_result = execute_catvton_clothing_try_on(
-        base_character_image=base_candidate.image,
-        clothing_reference_input=clothing_reference_input,
-        approved_agnostic_input=approved_agnostic_input,
-        settings=catvton_settings,
-        seed=base_candidate.seed,
-    )
-    effect_metrics = clothing_try_on_result.effect_metrics
-    clothing_try_on_status = (
-        "no_effect" if effect_metrics.no_effect else "completed"
-    )
-    verification_message = (
-        "CatVTON 최종 합성의 승인 영역 안 변경이 0px입니다. "
-        "원시 출력과 차이맵을 확인하세요."
-        if effect_metrics.no_effect
-        else clothing_try_on_result.candidate.verification.reason_ko
-    )
-    if run_log is not None:
-        metadata = clothing_try_on_result.execution_metadata
-        run_log.write_stage(
-            "의상 참조 합성",
-            (
-                "완료, 인물 입력=generated_candidate, "
-                f"입력 크기={metadata.person_input_width}x"
-                f"{metadata.person_input_height}, "
-                "의상 조건="
-                f"{metadata.clothing_input_width}x"
-                f"{metadata.clothing_input_height}, "
-                "의상 알파 점유율="
-                f"{metadata.clothing_alpha_coverage_percent:.3f}%, "
-                "의상 영역 밖 변경 픽셀="
-                f"{clothing_try_on_result.candidate.verification.changed_pixel_count_outside_clothing}, "
-                f"승인 마스크 픽셀={metadata.approved_mask_pixel_count:,}px, "
-                f"model_mask 출처={metadata.model_mask_source}, "
-                f"model_mask 픽셀={metadata.model_mask_pixel_count:,}px, "
-                "원시 model_mask 안 변경="
-                f"{effect_metrics.raw_changed_inside_model_mask:,}px, "
-                "최종 승인 영역 안 변경="
-                f"{effect_metrics.final_changed_inside_approved_mask:,}px, "
-                "보호 합성 제거="
-                f"{effect_metrics.discarded_by_protection_pixels:,}px, "
-                "승인 영역 RGB L1 평균="
-                f"{effect_metrics.mean_rgb_l1_inside:.4f}, "
-                f"상태={clothing_try_on_status}"
-            ),
-        )
-    return replace(
-        base_candidate,
-        image=clothing_try_on_result.candidate.image,
-        before_clothing_image=base_candidate.image,
-        clothing_change_mask=clothing_try_on_result.clothing_change_mask,
-        raw_clothing_try_on_image=clothing_try_on_result.raw_try_on_image,
-        clothing_difference_image=clothing_try_on_result.difference_image,
-        clothing_effect_metrics=effect_metrics,
-        clothing_reference_name=clothing_reference_input.image_path.name,
-        clothing_category=clothing_reference_input.category.value,
-        clothing_try_on_status=clothing_try_on_status,
-        clothing_verification_warning_ko=verification_message,
-    )
+    """오래된 호출자가 무거운 합성 경로로 진입하지 않도록 명시적으로 거부한다."""
+    raise ValueError("기존 CatVTON 의상 합성 기능은 제거되었습니다. 의상 디자인 참조 생성을 사용하세요.")
 
 
 def generate_images(

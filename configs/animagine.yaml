@@ -656,6 +656,6 @@ native_refinement:
   all_failed_action: keep_approved_base_and_seed
   minimum_similarity: 0.65
   minimum_color_similarity: 0.55
-  width: 320
-  height: 512
+  width: 512
+  height: 896
   flux_steps: 4

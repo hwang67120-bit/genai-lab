@@ -476,8 +476,11 @@ class AdditionalPartsAnalyzer:
                     )
                     mask_pixels = int(combined.sum())
                     area_ratio = mask_pixels / denominator_pixels
+                    area_limit_name = name.removeprefix("output_")
                     maximum_area_ratio = (
-                        self.maximum_foreground_area_ratios[name]
+                        self.maximum_foreground_area_ratios.get(
+                            area_limit_name
+                        )
                     )
                     entry["area_validity"] = {
                         "version": "small_part_area_validity_v1",
@@ -486,9 +489,26 @@ class AdditionalPartsAnalyzer:
                         "denominator_source": denominator_source,
                         "foreground_area_ratio": float(area_ratio),
                         "maximum_foreground_area_ratio": maximum_area_ratio,
-                        "valid": area_ratio <= maximum_area_ratio,
+                        "valid": (
+                            True
+                            if maximum_area_ratio is None
+                            else area_ratio <= maximum_area_ratio
+                        ),
+                        "status": (
+                            "not_applicable"
+                            if maximum_area_ratio is None
+                            else "evaluated"
+                        ),
+                        "reason": (
+                            "not_small_part_class"
+                            if maximum_area_ratio is None
+                            else None
+                        ),
                     }
-                    if area_ratio > maximum_area_ratio:
+                    if (
+                        maximum_area_ratio is not None
+                        and area_ratio > maximum_area_ratio
+                    ):
                         entry.update(
                             status="uncertain",
                             presence="unresolved",

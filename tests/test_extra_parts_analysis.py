@@ -226,3 +226,33 @@ def test_oversized_small_part_is_unresolved_and_not_conditioned(tmp_path):
         garment.close()
         hair.close()
         analyzer.close()
+
+
+def test_output_hair_is_not_forced_through_small_part_area_limit(tmp_path):
+    analyzer = EarTailAnalyzer(
+        Backend(),
+        debug_dir=tmp_path,
+        part_queries=[{
+            "name": "output_hair",
+            "query": "hair.",
+            "hair_context": False,
+        }],
+    )
+    try:
+        with Image.new("RGB", (16, 24)) as image:
+            parts = analyzer.analyze(
+                image,
+                image.size,
+                cancelled=lambda: False,
+                deadline=perf_counter() + 30,
+            )
+        assert [part.name for part in parts] == ["output_hair"]
+        validity = analyzer.report["parts"]["output_hair"]["area_validity"]
+        assert validity["status"] == "not_applicable"
+        assert validity["reason"] == "not_small_part_class"
+        assert validity["maximum_foreground_area_ratio"] is None
+        assert validity["valid"] is True
+    finally:
+        for part in parts:
+            part.close()
+        analyzer.close()

@@ -102,6 +102,57 @@ def build_garment_refinement_prompt(prompt, garment_topology):
     return f"{prompt.strip()}{separator}{guidance}", True
 
 
+
+
+def _load_or_redetect_regions(
+    generated_image,
+    config,
+    root,
+    output_regions_directory,
+    *,
+    check,
+    run_log,
+    report,
+):
+    """Reuse valid Base-coordinate masks; reject stale masks and redetect safely."""
+    from genai_lab.reference_regions import (
+        analyze_reference_regions,
+        load_reference_regions,
+    )
+
+    if output_regions_directory is not None:
+        try:
+            regions = load_reference_regions(
+                Path(output_regions_directory),
+                generated_image.size,
+                required_regions=("identity", "garment"),
+                analysis_scope="garment_edit_input",
+            )
+        except ValueError as error:
+            report["stored_output_regions"] = {
+                "status": "rejected_redetected",
+                "reason": str(error),
+                "error_type": type(error).__name__,
+                "directory": str(output_regions_directory),
+            }
+        else:
+            report["output_region_source"] = (
+                "reused_redetected_base_candidate_coordinates"
+            )
+            report["output_regions_directory"] = str(output_regions_directory)
+            return regions
+
+    regions = analyze_reference_regions(
+        generated_image,
+        config,
+        root,
+        cancelled=lambda: (check() or False),
+        run_log=run_log,
+        analysis_scope="garment_edit_input",
+    )
+    report["output_region_source"] = "redetected_for_selected_candidate"
+    return regions
+
 def correct_selected_garment(
     generation_pipeline,
     generated_image,
@@ -179,24 +230,15 @@ def correct_selected_garment(
     plan = None
     try:
         check()
-        if output_regions_directory is not None:
-            regions = load_reference_regions(
-                Path(output_regions_directory), generated_image.size,
-                required_regions=("identity", "garment"),
-                analysis_scope="garment_edit_input")
-            report['output_region_source'] = (
-                'reused_redetected_base_candidate_coordinates')
-            report['output_regions_directory'] = str(output_regions_directory)
-        else:
-            regions = analyze_reference_regions(
-                generated_image,
-                config,
-                root,
-                cancelled=lambda: (check() or False),
-                run_log=run_log,
-                analysis_scope="garment_edit_input",
-            )
-            report['output_region_source'] = 'redetected_for_selected_candidate'
+        regions = _load_or_redetect_regions(
+            generated_image,
+            config,
+            root,
+            output_regions_directory,
+            check=check,
+            run_log=run_log,
+            report=report,
+        )
         source_mask = _expanded_mask(
             regions.masks["garment"],
             generated_image.size,

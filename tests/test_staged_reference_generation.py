@@ -249,3 +249,45 @@ def test_selected_garment_correction_uses_soft_mask_without_hard_paste(
 
 
 
+
+
+def test_invalid_saved_output_regions_are_redetected(monkeypatch, tmp_path):
+    from PIL import Image
+    from genai_lab.selected_garment_correction import _load_or_redetect_regions
+
+    image = Image.new("RGB", (32, 48), "white")
+    sentinel = object()
+    calls = []
+
+    def reject_saved(*args, **kwargs):
+        raise ValueError("stored masks violate containment")
+
+    def redetect(source, config, root, **kwargs):
+        calls.append((source.size, kwargs["analysis_scope"]))
+        return sentinel
+
+    monkeypatch.setattr(
+        "genai_lab.reference_regions.load_reference_regions", reject_saved
+    )
+    monkeypatch.setattr(
+        "genai_lab.reference_regions.analyze_reference_regions", redetect
+    )
+    report = {}
+    try:
+        result = _load_or_redetect_regions(
+            image,
+            {},
+            tmp_path,
+            tmp_path / "stale-regions",
+            check=lambda: None,
+            run_log=None,
+            report=report,
+        )
+    finally:
+        image.close()
+
+    assert result is sentinel
+    assert calls == [((32, 48), "garment_edit_input")]
+    assert report["output_region_source"] == "redetected_for_selected_candidate"
+    assert report["stored_output_regions"]["status"] == "rejected_redetected"
+    assert report["stored_output_regions"]["error_type"] == "ValueError"

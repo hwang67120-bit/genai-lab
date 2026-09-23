@@ -88,7 +88,7 @@ def resolve_selected_garment_correction(config):
 def _similarity(pipeline, image, mask, reference_feature):
     from genai_lab.regional_reference import crop_reference
     from genai_lab.visual_reference import image_feature
-    
+
     with crop_reference(image, mask) as crop:
         candidate_feature = image_feature(pipeline, crop)
     return float(np.clip(np.dot(candidate_feature, reference_feature), -1, 1))
@@ -254,6 +254,10 @@ def correct_selected_garment(
                 approved_tags,
                 growth_pixels=settings.target_growth_pixels,
             )
+            if target_coverage.record.get("status") == "UNRESOLVED":
+                raise GarmentCorrectionContractError(
+                    f"garment_category_unresolved: approved_tags={approved_tags}"
+                )
             protection = analyze_output_protection_masks(
                 generated_image, config, target="garment", check=check)
             plan = build_garment_edit_plan(
@@ -268,6 +272,14 @@ def correct_selected_garment(
                 feather_radius=settings.feather_radius,
                 soft_boundary_strength=settings.soft_boundary_strength,
             )
+            metrics = plan.record.get("metrics", {})
+            if (metrics.get("hard_protection_pixels", 0)
+                    >= metrics.get("requested_pixels", 0)):
+                raise GarmentCorrectionContractError(
+                    "protection_exceeds_requested_region: "
+                    f"protection={metrics.get('hard_protection_pixels')} "
+                    f"requested={metrics.get('requested_pixels')}"
+                )
         finally:
             source_mask.close()
 
@@ -436,7 +448,3 @@ def correct_selected_garment(
             regions.close()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
-
-
-
-

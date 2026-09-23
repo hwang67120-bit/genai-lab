@@ -216,7 +216,7 @@ staged_reference_generation:
   garment:
     enabled: true
     reference_scale: 0.80
-    inpaint_strength: 0.90
+    inpaint_strength: 0.95
     inference_steps: 28
     guidance_scale: 5.5
     minimum_similarity_improvement: 0.0

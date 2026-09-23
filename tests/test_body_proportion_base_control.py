@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 import sys
+import pytest
 
 from PIL import Image
 import yaml
@@ -32,6 +33,17 @@ def request(preset_id="standard_7_5h_shoulder", framing="full_body"):
     )
 
 
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "body_proportion_presets.enabled 가 false 로 꺼져 있어 "
+        "프리셋 경로가 실행되지 않는다. 테스트는 활성 상태를 기대한다. "
+        "기능을 다시 켜면 이 테스트는 XPASS 가 되고 strict=True 이므로 "
+        "실패한다. 그때 마커를 제거하거나 테스트를 갱신할 것. "
+        "이전 A/B 기록: 프리셋 적용 여부와 무관하게 출력 해시가 전부 동일했다. "
+        "근거 설정: configs/animagine.yaml:270"
+    ),
+)
 def test_full_body_preset_becomes_animagine_control():
     config = load_config()
     image, record = prepare_body_proportion_control(
@@ -50,6 +62,17 @@ def test_full_body_preset_becomes_animagine_control():
         image.close()
 
 
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "body_proportion_presets.enabled 가 false 로 꺼져 있어 "
+        "프리셋 경로가 실행되지 않는다. 테스트는 활성 상태를 기대한다. "
+        "기능을 다시 켜면 이 테스트는 XPASS 가 되고 strict=True 이므로 "
+        "실패한다. 그때 마커를 제거하거나 테스트를 갱신할 것. "
+        "이전 A/B 기록: 프리셋 적용 여부와 무관하게 출력 해시가 전부 동일했다. "
+        "근거 설정: configs/animagine.yaml:270"
+    ),
+)
 def test_non_full_body_keeps_selection_but_skips_control():
     config = load_config()
     image, record = prepare_body_proportion_control(
@@ -60,6 +83,17 @@ def test_non_full_body_keeps_selection_but_skips_control():
     assert record["preset_id"] == "standard_7_5h_shoulder"
 
 
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "body_proportion_presets.enabled 가 false 로 꺼져 있어 "
+        "프리셋 경로가 실행되지 않는다. 테스트는 활성 상태를 기대한다. "
+        "기능을 다시 켜면 이 테스트는 XPASS 가 되고 strict=True 이므로 "
+        "실패한다. 그때 마커를 제거하거나 테스트를 갱신할 것. "
+        "이전 A/B 기록: 프리셋 적용 여부와 무관하게 출력 해시가 전부 동일했다. "
+        "근거 설정: configs/animagine.yaml:270"
+    ),
+)
 def test_legacy_request_without_selection_does_not_change_pipeline():
     config = load_config()
     record = body_proportion_contract(

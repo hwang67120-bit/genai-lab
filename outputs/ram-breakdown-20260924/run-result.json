@@ -1,0 +1,2172 @@
+{
+  "execution": {
+    "case": "ordinary-female",
+    "status": "completed",
+    "attempt": 1,
+    "source_harness": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\sdxl-local-garment-strength-v2-20260923\\run_experiment.py",
+    "source_harness_sha256": "5842081cfd3873b74c07bb67f308e3c4a297a05c42d9d11471f3d7e7073ef94e",
+    "seed": 209210001,
+    "expected_profile": {
+      "reference_scale": 0.8,
+      "inpaint_strength": 0.9,
+      "inference_steps": 28
+    },
+    "base_hash_equality_required": false,
+    "character_raw": {
+      "path": "C:\\Users\\user\\Downloads\\참조 이미지\\ca87afc2b4d4ee36b66e015534cb6ad3.jpg",
+      "sha256": "56be980996335fd9de4b43e524757099571115a796024e7fc7e0ca9c7729ab42"
+    },
+    "input_source_preflight": {
+      "path": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\ram-breakdown-20260924\\cases\\ordinary-female\\preflight-input-source.png",
+      "sha256": "dd8a2899573bd971a9a5134007d0979ebfac46a8980b39945b5db54603935ae0",
+      "expected_v2_sha256": "dd8a2899573bd971a9a5134007d0979ebfac46a8980b39945b5db54603935ae0",
+      "matches_v2": true
+    },
+    "baseline_candidate_seed": 209210001,
+    "approved_character_tags": [
+      "1girl",
+      "black hair",
+      "short hair",
+      "blue eyes"
+    ],
+    "approved_garment_tags": [
+      "bodysuit",
+      "black bodysuit",
+      "jacket",
+      "yellow jacket",
+      "long sleeves",
+      "hoodie"
+    ],
+    "approved_garment_detail_tags": [],
+    "pipeline_load_seconds": 17.290954600000077,
+    "prompt": "1girl, female focus, feminine silhouette, full body, head to toe, feet visible, entire character inside frame, black hair, short hair, blue eyes, solo, simple background, coherent anatomy, best quality",
+    "negative_prompt": "1boy, nsfw, lowres, bad, text, error, extra digits, missing fingers, worst quality, low quality, watermark, signature, unfinished, different character, different character design, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, fused fingers, extra fingers, uneven eyes",
+    "base_prompt_same_as_v2": true,
+    "base_negative_same_as_v2": true,
+    "stage3_analysis_seconds": 166.93355340000016,
+    "prepared_board": {
+      "path": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\ram-breakdown-20260924\\cases\\ordinary-female\\prepared-garment.png",
+      "sha256": "8c5f1c0223ef29375d5289eec10891468ba05433968652f55f3f43a128e03acb",
+      "expected_preflight_sha256": "8c5f1c0223ef29375d5289eec10891468ba05433968652f55f3f43a128e03acb"
+    },
+    "stage4_tag_seconds": 10.276407199999994,
+    "approval_fingerprint": "15a51f781a3c1c2babbcc89c5581552c3b2bc31ee95f964f09b02c9326705b14",
+    "sealed_profile": {
+      "enabled": true,
+      "feather_radius": 10,
+      "guidance_scale": 5.5,
+      "inference_steps": 28,
+      "inpaint_strength": 0.9,
+      "mask_padding_pixels": 2,
+      "minimum_similarity_improvement": 0.0,
+      "reference_scale": 0.8,
+      "reject_similarity_regression": false,
+      "soft_boundary_strength": 0.5,
+      "target_growth_pixels": 12,
+      "timeout_seconds": 300
+    },
+    "input_roles": {
+      "character_role": "character_reference_only",
+      "character_path": "C:\\Users\\user\\Downloads\\참조 이미지\\ca87afc2b4d4ee36b66e015534cb6ad3.jpg",
+      "character_sha256": "56be980996335fd9de4b43e524757099571115a796024e7fc7e0ca9c7729ab42",
+      "garment_role": "garment_reference_only",
+      "garment_path": "C:\\Users\\user\\Downloads\\참조 의상\\096104f0613d833f0c975d118610910e.jpg",
+      "garment_sha256": "6fdcdacee7f7e3e08cc8bc9dbb9921ff94a19fc6494b71462f54e5b929e4e8fa",
+      "garment_root": "C:\\Users\\user\\Downloads\\참조 의상",
+      "character_canvas": {
+        "version": "character_canvas_multiple_v1",
+        "original_size": [
+          736,
+          1226
+        ],
+        "normalized_size": [
+          736,
+          1232
+        ],
+        "padding_ltrb": [
+          0,
+          3,
+          0,
+          3
+        ],
+        "multiple": 8,
+        "content_resized": false,
+        "fill_source": "top_left_pixel"
+      }
+    },
+    "policy_refresh": {
+      "version": "current_analysis_policy_refresh_v1",
+      "source": "\\\\192.168.0.109\\win_g\\genai-lab\\configs\\animagine.yaml",
+      "refreshed": {
+        "reference_face_observation": {
+          "enabled": true,
+          "detector_repository": "Bingsu/adetailer",
+          "model": "face_yolov8s.pt",
+          "cache_dir": "D:/genai-cache/huggingface",
+          "minimum_confidence": 0.3,
+          "minimum_area_ratio": 0.0005,
+          "maximum_area_ratio": 0.12,
+          "parser_minimum_area_ratio": 0.002
+        },
+        "reference_hair_observation": {
+          "enabled": true,
+          "detector_model_id": "IDEA-Research/grounding-dino-tiny",
+          "sam_model_id": "facebook/sam2.1-hiera-tiny",
+          "cache_dir": "D:/genai-cache/huggingface",
+          "query": "hair. hairstyle.",
+          "box_threshold": 0.25,
+          "mask_threshold": 0.8,
+          "minimum_area_ratio": 0.001,
+          "maximum_area_ratio": 0.2,
+          "maximum_candidates": 8
+        },
+        "reference_base_mask_validation": {
+          "block_on_review": true,
+          "face": {
+            "minimum_pixels": 64,
+            "minimum_canvas_area_ratio": 0.0005
+          },
+          "hair": {
+            "minimum_pixels": 128,
+            "minimum_canvas_area_ratio": 0.0015
+          },
+          "identity": {
+            "minimum_pixels": 128,
+            "minimum_canvas_area_ratio": 0.0015
+          },
+          "foreground": {
+            "minimum_pixels": 256,
+            "minimum_canvas_area_ratio": 0.01
+          },
+          "garment": {
+            "minimum_pixels": 128,
+            "minimum_canvas_area_ratio": 0.001
+          }
+        },
+        "reference_analysis.part_detection.maximum_foreground_area_ratios": {
+          "human_ears": 0.12,
+          "animal_ears": 0.25,
+          "tail": 0.6,
+          "hair_accessory": 0.2
+        }
+      },
+      "model_seed_and_input_contract_changed": false
+    },
+    "input_bound_reset": {
+      "version": "input_bound_approval_reset_v1",
+      "cleared_keys": [
+        "approved_tags",
+        "approved_detail_tags",
+        "approved_garment_topology",
+        "garment_detail_report",
+        "eye_color_report",
+        "hair_detail_report",
+        "hair_prompt_delivery",
+        "part_color_descriptions",
+        "approved_part_color_descriptions"
+      ],
+      "character_tags": [
+        "1girl",
+        "black hair",
+        "short hair",
+        "blue eyes"
+      ],
+      "character_gender": "female",
+      "garment_name": "096104f0613d833f0c975d118610910e.jpg",
+      "garment_tags": [
+        "bodysuit",
+        "black bodysuit",
+        "jacket",
+        "yellow jacket",
+        "long sleeves",
+        "hoodie"
+      ],
+      "garment_detail_tags": []
+    },
+    "analysis_record": {
+      "mode": "reference_regions_v1",
+      "size": [
+        736,
+        1232
+      ],
+      "pixel_counts": {
+        "identity": 26797,
+        "hair": 10115,
+        "face": 21462,
+        "garment": 117671,
+        "foreground": 151610
+      },
+      "unresolved": [
+        "iris_left",
+        "iris_right",
+        "ears",
+        "tail",
+        "wings",
+        "horns"
+      ],
+      "note": "미검출/미지원은 부재의 증거가 아닙니다. 원본 좌표는 포즈 고정이 아닙니다.",
+      "neutralization_used": false,
+      "removal_verification_used": false,
+      "backend": "SCHP-LIP/ATR + DensePose AutoMasker + foreground",
+      "foreground_detection": {
+        "source": "isnet-anime",
+        "fallback_used": false
+      },
+      "analysis_size": [
+        576,
+        1024
+      ],
+      "content_box": [
+        0,
+        30,
+        576,
+        994
+      ],
+      "garment_mask_policy": {
+        "mode": "legacy_overall",
+        "approved_tags": [],
+        "included_classes": [],
+        "excluded_classes": [
+          "Upper-clothes",
+          "Coat",
+          "Dress",
+          "Skirt",
+          "Pants",
+          "Jumpsuits",
+          "Socks",
+          "Left-shoe",
+          "Right-shoe",
+          "Scarf",
+          "Glove"
+        ],
+        "cross_parser_veto_classes": [
+          "Left-leg",
+          "Right-leg",
+          "Left-shoe",
+          "Right-shoe"
+        ],
+        "detached_component_policy": "keep_components_at_least_one_percent_of_largest",
+        "final_disconnected_pixels_removed": 0
+      },
+      "analysis_scope": "character_input",
+      "required_regions": [
+        "identity"
+      ],
+      "target_garment_tags_applied": false,
+      "elapsed_seconds": 106.27074110000012,
+      "face_observation": {
+        "version": "reference_face_observation_v1",
+        "parser_face_pixels": 0,
+        "parser_face_area_ratio": 0.0,
+        "parser_face_bbox": null,
+        "parser_face_bbox_area_ratio": 0.0,
+        "parser_minimum_area_ratio": 0.002,
+        "parser_maximum_area_ratio": 0.12,
+        "semantic_mask": false,
+        "coordinate_space": "current_image",
+        "detector": "Bingsu/adetailer face_yolov8s bounding box",
+        "confidence": 0.8670742511749268,
+        "box": [
+          292,
+          204,
+          438,
+          351
+        ],
+        "box_pixels": 21462,
+        "box_area_ratio": 0.023669095849802372,
+        "minimum_area_ratio": 0.0005,
+        "maximum_area_ratio": 0.12,
+        "candidate_count": 1,
+        "status": "recovered",
+        "reason": "parser_face_below_measurement_minimum",
+        "masks_modified": true,
+        "identity_union_applied": true,
+        "garment_exclusion_applied": true,
+        "garment_overlap_removed_pixels": 16595,
+        "automatic_generation_condition": true,
+        "usage": "source_generation_identity_reference"
+      },
+      "garment_reference_boards": {
+        "flux2_klein": {
+          "source_size": [
+            736,
+            1104
+          ],
+          "source_alpha_pixels": 812544,
+          "regions": [
+            [
+              0,
+              0,
+              736,
+              1104
+            ]
+          ],
+          "board_size": [
+            512,
+            512
+          ],
+          "opaque_input": true,
+          "components": 1
+        }
+      },
+      "additional_parts_status": "unresolved_skipped",
+      "part_detection": {
+        "mode": "source_regions_experiment",
+        "parts": {
+          "human_ears": {
+            "status": "uncertain",
+            "boxes": [
+              [
+                176.9900665283203,
+                36.623897552490234,
+                487.60089111328125,
+                1194.1864013671875
+              ],
+              [
+                292.261474609375,
+                260.6086730957031,
+                323.53741455078125,
+                297.7511901855469
+              ]
+            ],
+            "detection_scores": [
+              0.4804081320762634,
+              0.3506823480129242
+            ],
+            "accepted_masks": 0,
+            "target_status": "unresolved",
+            "semantic_status": "unresolved",
+            "presence": "unresolved",
+            "query": "human ears. person ears.",
+            "raw_candidate_fingerprint": "881f0c8fcee8f46d8591897403fa59cfabd16e29eef4b41aaa65dc333e179596",
+            "analysis_stage": "independent_detection",
+            "mask_quality_scores": [
+              0.9800167083740234,
+              0.820755124092102
+            ],
+            "candidate_mask_paths": [
+              "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-lfy6w_p_\\human_ears_candidate_0_mask.png",
+              "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-lfy6w_p_\\human_ears_candidate_1_mask.png"
+            ],
+            "source_filter": [
+              {
+                "index": 0,
+                "area_pixels": 149622,
+                "garment_overlap": 0.7796714386921709,
+                "hair_overlap": 0.06120757642592667,
+                "hair_coverage": 0.9053880375679684,
+                "accepted": true,
+                "reason": "candidate",
+                "selection_status": "proposed",
+                "semantic_status": "unresolved",
+                "decision_source": "experimental_overlap_v2",
+                "requires_review": true,
+                "removed_pixels": 0,
+                "candidate_index": 0,
+                "mask_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-lfy6w_p_\\human_ears_candidate_0_mask.png"
+              },
+              {
+                "index": 1,
+                "area_pixels": 562,
+                "garment_overlap": 0.0,
+                "hair_overlap": 0.0,
+                "hair_coverage": 0.0,
+                "accepted": true,
+                "reason": "candidate",
+                "selection_status": "proposed",
+                "semantic_status": "unresolved",
+                "decision_source": "experimental_overlap_v2",
+                "requires_review": true,
+                "removed_pixels": 0,
+                "candidate_index": 1,
+                "mask_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-lfy6w_p_\\human_ears_candidate_1_mask.png"
+              }
+            ],
+            "review_stage": "cross_part_overlap_review",
+            "duplicate_box_resolution": {
+              "version": "ear_candidate_deduplication_v1",
+              "input_count": 2,
+              "output_count": 2,
+              "removed": [],
+              "policy": "drop_two_ear_envelope_then_score_ordered_nms"
+            },
+            "area_validity": {
+              "version": "small_part_area_validity_v1",
+              "mask_pixels": 149622,
+              "denominator_pixels": 151610,
+              "denominator_source": "foreground_mask",
+              "foreground_area_ratio": 0.9868874084822901,
+              "maximum_foreground_area_ratio": 0.12,
+              "valid": false,
+              "status": "evaluated",
+              "reason": null
+            },
+            "outcome_reason": "small_part_area_upper_bound_exceeded",
+            "automatic_conditioning": false,
+            "measured_mask_pixels": 149622,
+            "rejected_candidate_indices": [
+              0,
+              1
+            ]
+          },
+          "animal_ears": {
+            "status": "uncertain",
+            "boxes": [],
+            "detection_scores": [],
+            "accepted_masks": 0,
+            "target_status": "unresolved",
+            "semantic_status": "unresolved",
+            "presence": "not_observed",
+            "query": "animal ears.",
+            "raw_candidate_fingerprint": "9ad6331d694435013a0afe57fd28cac1e250a1ad7048282b28faf8c0203eed29",
+            "analysis_stage": "independent_detection",
+            "outcome_reason": "no_candidate_above_threshold",
+            "automatic_conditioning": false
+          },
+          "tail": {
+            "status": "detected",
+            "boxes": [
+              [
+                233.44680786132812,
+                36.97039031982422,
+                333.8957214355469,
+                375.1246643066406
+              ]
+            ],
+            "detection_scores": [
+              0.3951002061367035
+            ],
+            "accepted_masks": 1,
+            "target_status": "unresolved_unapproved_character_part",
+            "semantic_status": "unresolved",
+            "presence": "model_candidate",
+            "query": "tail.",
+            "raw_candidate_fingerprint": "3bf6383e78f58347215d9d29b4e7274206ef598d424c99a46d31409bff44ba22",
+            "analysis_stage": "independent_detection",
+            "mask_quality_scores": [
+              0.8532957434654236
+            ],
+            "candidate_mask_paths": [
+              "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-lfy6w_p_\\tail_candidate_0_mask.png"
+            ],
+            "source_preflight": {
+              "version": "tail_source_preflight_v1",
+              "status": "passed",
+              "maximum_garment_overlap": 0.75,
+              "rejected_candidate_indices": [],
+              "safe_candidate_count": 1
+            },
+            "source_filter": [
+              {
+                "index": 0,
+                "area_pixels": 13269,
+                "garment_overlap": 0.49076795538473134,
+                "hair_overlap": 0.0,
+                "hair_coverage": 0.0,
+                "accepted": true,
+                "reason": "candidate",
+                "selection_status": "proposed",
+                "semantic_status": "unresolved",
+                "decision_source": "experimental_overlap_v2",
+                "requires_review": true,
+                "removed_pixels": 0,
+                "candidate_index": 0,
+                "mask_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-lfy6w_p_\\tail_candidate_0_mask.png"
+              }
+            ],
+            "review_stage": "cross_part_overlap_review",
+            "area_validity": {
+              "version": "small_part_area_validity_v1",
+              "mask_pixels": 13269,
+              "denominator_pixels": 151610,
+              "denominator_source": "foreground_mask",
+              "foreground_area_ratio": 0.08752061209682739,
+              "maximum_foreground_area_ratio": 0.6,
+              "valid": true,
+              "status": "evaluated",
+              "reason": null
+            },
+            "automatic_conditioning": false,
+            "outcome_reason": "missing_approved_character_tag",
+            "accepted_boxes": [
+              [
+                233.44680786132812,
+                36.97039031982422,
+                333.8957214355469,
+                375.1246643066406
+              ]
+            ],
+            "mask_pixels": 13269,
+            "mask_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-lfy6w_p_\\tail_mask.png",
+            "crop_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-lfy6w_p_\\tail_reference.png",
+            "raw_detection_preserved": true,
+            "generation_region": null
+          },
+          "hair_accessory": {
+            "status": "uncertain",
+            "boxes": [
+              [
+                279.324462890625,
+                142.45510864257812,
+                452.4993591308594,
+                316.9912109375
+              ]
+            ],
+            "detection_scores": [
+              0.4395011365413666
+            ],
+            "accepted_masks": 0,
+            "target_status": "unresolved",
+            "semantic_status": "unresolved",
+            "presence": "unresolved",
+            "query": "hair ornament. hair accessory. hair clip.",
+            "raw_candidate_fingerprint": "9a4de3eb7d306c845dca84477b55ad876c734619319b0f5f8012e85bc3a3ed8d",
+            "analysis_stage": "independent_detection",
+            "mask_quality_scores": [
+              0.9207988977432251
+            ],
+            "candidate_mask_paths": [
+              "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-lfy6w_p_\\hair_accessory_candidate_0_mask.png"
+            ],
+            "source_filter": [
+              {
+                "index": 0,
+                "area_pixels": 15820,
+                "garment_overlap": 0.05676359039190897,
+                "hair_overlap": 0.6374841972187105,
+                "hair_coverage": 0.9970341077607514,
+                "accepted": false,
+                "reason": "broad_hair_candidate",
+                "selection_status": "not_proposed",
+                "semantic_status": "unresolved",
+                "decision_source": "experimental_overlap_v2",
+                "requires_review": true,
+                "removed_pixels": 15820,
+                "candidate_index": 0,
+                "mask_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-lfy6w_p_\\hair_accessory_candidate_0_mask.png"
+              }
+            ],
+            "review_stage": "cross_part_overlap_review",
+            "outcome_reason": "all_candidates_rejected_or_low_mask_quality",
+            "automatic_conditioning": false
+          }
+        },
+        "debug_dir": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-lfy6w_p_",
+        "image_size": [
+          736,
+          1232
+        ],
+        "filter_policy": {
+          "version": "experimental_overlap_v2",
+          "enabled": true,
+          "semantic_accuracy_verified": false,
+          "requires_input_review": true,
+          "minimum_hair_overlap": 0.5,
+          "part_queries": [
+            {
+              "name": "human_ears",
+              "query": "human ears. person ears.",
+              "hair_context": false
+            },
+            {
+              "name": "animal_ears",
+              "query": "animal ears.",
+              "hair_context": true
+            },
+            {
+              "name": "tail",
+              "query": "tail.",
+              "hair_context": false
+            },
+            {
+              "name": "hair_accessory",
+              "query": "hair ornament. hair accessory. hair clip.",
+              "hair_context": true
+            }
+          ],
+          "garment_dominance": 0.9,
+          "broad_hair_coverage": 0.5,
+          "tail_maximum_garment_overlap": 0.75,
+          "maximum_foreground_area_ratios": {
+            "human_ears": 0.12,
+            "animal_ears": 0.25,
+            "tail": 0.6,
+            "hair_accessory": 0.2
+          },
+          "oversized_part_policy": "unresolved_without_automatic_conditioning",
+          "accepted_mask_pixels_preserved": true
+        },
+        "part_overlap": {},
+        "status": "detected",
+        "unapproved_optional_parts": {
+          "status": "unresolved_skipped",
+          "parts": [
+            "tail"
+          ],
+          "raw_detection_preserved": true,
+          "automatic_conditioning": false
+        }
+      },
+      "ear_contract": {
+        "version": "independent_ear_contract_v1",
+        "human": {
+          "state": "unknown",
+          "visible_count": 0,
+          "location": "face_side",
+          "location_evidence": [
+            {
+              "box": [
+                176.9900665283203,
+                36.623897552490234,
+                487.60089111328125,
+                1194.1864013671875
+              ],
+              "center": [
+                0.4514884223108706,
+                0.4995171667693497
+              ],
+              "size": [
+                0.4220255768817404,
+                0.9395799543950465
+              ]
+            },
+            {
+              "box": [
+                292.261474609375,
+                260.6086730957031,
+                323.53741455078125,
+                297.7511901855469
+              ],
+              "center": [
+                0.41834163665771484,
+                0.22660708737063717
+              ],
+              "size": [
+                0.0424944836160411,
+                0.03014814698850954
+              ]
+            }
+          ],
+          "location_verified": false,
+          "confidence": 0.4804081320762634,
+          "mask_path": null,
+          "crop_path": null,
+          "mask_pixels": null,
+          "evidence": "not_observed",
+          "ambiguity": null,
+          "absence_inferred_from_non_detection": false
+        },
+        "animal": {
+          "state": "unknown",
+          "visible_count": 0,
+          "location": "hair_crown",
+          "location_evidence": [],
+          "location_verified": false,
+          "confidence": null,
+          "mask_path": null,
+          "crop_path": null,
+          "mask_pixels": null,
+          "evidence": "not_observed",
+          "ambiguity": null,
+          "absence_inferred_from_non_detection": false,
+          "approved_species_tags": []
+        },
+        "source_masks_are_independent": true,
+        "non_detection_policy": "unknown_not_absent",
+        "generation_parts": []
+      },
+      "part_region_experiment": {
+        "mode": "source_regions_experiment",
+        "status": "no_optional_parts",
+        "pose_locked": false,
+        "region_policy": "source_roi_priority_experiment",
+        "requires_input_review": false,
+        "semantic_accuracy_verified": "not_applicable",
+        "identity_overlap_removed": 0,
+        "garment_overlap_removed": 0,
+        "area_audit": {
+          "identity": {
+            "before": 26797,
+            "after": 26797,
+            "removed": 0
+          },
+          "garment": {
+            "before": 117671,
+            "after": 117671,
+            "removed": 0
+          }
+        },
+        "overlap_policy": "no_optional_parts_no_op",
+        "conditioned_parts": [],
+        "generation_region_strengthening": {}
+      },
+      "additional_parts": [],
+      "hair_mask_refinement": {
+        "version": "protected_hair_mask_refinement_v2",
+        "status": "unresolved",
+        "reason": "hair_mask_refinement_exhausted",
+        "repaired": true,
+        "mask_returned": false,
+        "attempts": [
+          {
+            "attempt": 1,
+            "close_radius": 0,
+            "raw_hair_pixels": 10115,
+            "hair_pixels": 5010,
+            "retained_ratio": 0.495304003954523,
+            "missing_pixels": 0,
+            "missing_ratio": 0.0,
+            "raw_face_overlap": 0.4725654967869501,
+            "raw_ear_overlap": 0.0,
+            "raw_human_ear_overlap": 0.0,
+            "raw_animal_ear_overlap": 0.0,
+            "raw_accessory_overlap": 0.0,
+            "raw_outside_head": 0.0,
+            "face_overlap_after": 0.0,
+            "ear_overlap_after": 0.0,
+            "human_ear_overlap_after": 0.0,
+            "animal_ear_overlap_after": 0.0,
+            "accessory_overlap_after": 0.0,
+            "outside_head_after": 0.0,
+            "accepted": false
+          },
+          {
+            "attempt": 2,
+            "close_radius": 2,
+            "raw_hair_pixels": 10115,
+            "hair_pixels": 5010,
+            "retained_ratio": 0.495304003954523,
+            "missing_pixels": 0,
+            "missing_ratio": 0.0,
+            "raw_face_overlap": 0.4725654967869501,
+            "raw_ear_overlap": 0.0,
+            "raw_human_ear_overlap": 0.0,
+            "raw_animal_ear_overlap": 0.0,
+            "raw_accessory_overlap": 0.0,
+            "raw_outside_head": 0.0,
+            "face_overlap_after": 0.0,
+            "ear_overlap_after": 0.0,
+            "human_ear_overlap_after": 0.0,
+            "animal_ear_overlap_after": 0.0,
+            "accessory_overlap_after": 0.0,
+            "outside_head_after": 0.0,
+            "accepted": false
+          },
+          {
+            "attempt": 3,
+            "close_radius": 4,
+            "raw_hair_pixels": 10115,
+            "hair_pixels": 5010,
+            "retained_ratio": 0.495304003954523,
+            "missing_pixels": 0,
+            "missing_ratio": 0.0,
+            "raw_face_overlap": 0.4725654967869501,
+            "raw_ear_overlap": 0.0,
+            "raw_human_ear_overlap": 0.0,
+            "raw_animal_ear_overlap": 0.0,
+            "raw_accessory_overlap": 0.0,
+            "raw_outside_head": 0.0,
+            "face_overlap_after": 0.0,
+            "ear_overlap_after": 0.0,
+            "human_ear_overlap_after": 0.0,
+            "animal_ear_overlap_after": 0.0,
+            "accessory_overlap_after": 0.0,
+            "outside_head_after": 0.0,
+            "accepted": false
+          }
+        ],
+        "failure_policy": "unresolved_without_generation_condition",
+        "color_analysis_skipped": true
+      },
+      "hair_visual_condition": {
+        "version": "returned_hair_mask_condition_v1",
+        "status": "unresolved_skipped",
+        "reason": "refined_hair_mask_unavailable",
+        "automatic_conditioning": false,
+        "fallback": "approved_text_tags_only"
+      },
+      "final_garment_part_overlap_audit": {
+        "version": "returned_garment_part_overlap_audit_v1",
+        "status": "passed",
+        "garment_source": "materialized_visual_inputs",
+        "parts": [],
+        "overlap_pixels": {},
+        "required_overlap_pixels": 0
+      },
+      "condition_separation": {
+        "version": "independent_reference_conditions_v1",
+        "fingerprint": "e51e2c6422080ad32bb52dce774e3da7115afc3fef3b62bc639e3f720ff76840",
+        "layout_policy": "source_roi_priority_experiment",
+        "source_conditions_mutated": false,
+        "layout_changed": false,
+        "generation_isolated": false,
+        "conditions": [
+          {
+            "name": "identity",
+            "rgb_size": [
+              512,
+              512
+            ],
+            "region_size": [
+              736,
+              1232
+            ],
+            "rgb_sha256": "0cb432db021731f928afa39758e9f11d1213c430b8f3169c40e8047b10e18fed",
+            "source_region_sha256": "a17b385bc342e31073b3d1af51b19c9e41a96f1a0fc132e961442777f25acfdc",
+            "scale": null,
+            "scale_source": "generation_setting"
+          },
+          {
+            "name": "garment",
+            "rgb_size": [
+              512,
+              512
+            ],
+            "region_size": [
+              736,
+              1232
+            ],
+            "rgb_sha256": "e489ef64500dc08ce109db080909e11ae99cef4e94662f6f1bb3a047d9f45f9c",
+            "source_region_sha256": "90ced5df0eff8bf6ae8f730703a922905b573d25ce062b2de4dd11379f19b274",
+            "scale": null,
+            "scale_source": "generation_setting"
+          }
+        ]
+      },
+      "preparation_stage_timings": {
+        "image_mask_processing_seconds": 164.501,
+        "image_extraction_seconds": 0.247
+      },
+      "part_color_descriptions": [
+        {
+          "part_name": "human_ears",
+          "colors": [],
+          "status": "unresolved",
+          "reasons": [
+            "색상 측정 없음"
+          ],
+          "prompt_text": "",
+          "evidence": {
+            "policy": {
+              "max_distance": 22.0,
+              "minimum_margin": 1.5,
+              "minimum_area_ratio": 0.1,
+              "minimum_coverage": 0.85,
+              "maximum_colors": 3,
+              "dark_lightness": 45.0,
+              "light_lightness": 80.0
+            },
+            "color_labels": {
+              "blue": "파랑",
+              "purple": "보라",
+              "red": "빨강",
+              "pink": "분홍",
+              "orange": "주황",
+              "yellow": "노랑",
+              "brown": "갈색",
+              "green": "초록",
+              "cyan": "청록",
+              "white": "흰색",
+              "gray": "회색",
+              "black": "검정",
+              "dark blue": "어두운 파랑",
+              "light blue": "밝은 파랑",
+              "dark purple": "어두운 보라",
+              "light purple": "밝은 보라",
+              "dark red": "어두운 빨강",
+              "light red": "밝은 빨강",
+              "dark pink": "어두운 분홍",
+              "light pink": "밝은 분홍",
+              "dark orange": "어두운 주황",
+              "light orange": "밝은 주황",
+              "dark yellow": "어두운 노랑",
+              "light yellow": "밝은 노랑",
+              "dark brown": "어두운 갈색",
+              "light brown": "밝은 갈색",
+              "dark green": "어두운 초록",
+              "light green": "밝은 초록",
+              "dark cyan": "어두운 청록",
+              "light cyan": "밝은 청록",
+              "dark white": "어두운 흰색",
+              "light white": "밝은 흰색",
+              "dark gray": "어두운 회색",
+              "light gray": "밝은 회색",
+              "dark black": "어두운 검정",
+              "light black": "밝은 검정"
+            },
+            "clusters": [],
+            "coverage": 0.0,
+            "method": "nearest CSS family in OpenCV Lab; not probability"
+          },
+          "policy_fingerprint": "449df195373783ac3c6155d20aaea36eae3b40df9ff2b5dbf9f195ff810596b9",
+          "semantic_accuracy_verified": false
+        },
+        {
+          "part_name": "animal_ears",
+          "colors": [],
+          "status": "unresolved",
+          "reasons": [
+            "색상 측정 없음"
+          ],
+          "prompt_text": "",
+          "evidence": {
+            "policy": {
+              "max_distance": 22.0,
+              "minimum_margin": 1.5,
+              "minimum_area_ratio": 0.1,
+              "minimum_coverage": 0.85,
+              "maximum_colors": 3,
+              "dark_lightness": 45.0,
+              "light_lightness": 80.0
+            },
+            "color_labels": {
+              "blue": "파랑",
+              "purple": "보라",
+              "red": "빨강",
+              "pink": "분홍",
+              "orange": "주황",
+              "yellow": "노랑",
+              "brown": "갈색",
+              "green": "초록",
+              "cyan": "청록",
+              "white": "흰색",
+              "gray": "회색",
+              "black": "검정",
+              "dark blue": "어두운 파랑",
+              "light blue": "밝은 파랑",
+              "dark purple": "어두운 보라",
+              "light purple": "밝은 보라",
+              "dark red": "어두운 빨강",
+              "light red": "밝은 빨강",
+              "dark pink": "어두운 분홍",
+              "light pink": "밝은 분홍",
+              "dark orange": "어두운 주황",
+              "light orange": "밝은 주황",
+              "dark yellow": "어두운 노랑",
+              "light yellow": "밝은 노랑",
+              "dark brown": "어두운 갈색",
+              "light brown": "밝은 갈색",
+              "dark green": "어두운 초록",
+              "light green": "밝은 초록",
+              "dark cyan": "어두운 청록",
+              "light cyan": "밝은 청록",
+              "dark white": "어두운 흰색",
+              "light white": "밝은 흰색",
+              "dark gray": "어두운 회색",
+              "light gray": "밝은 회색",
+              "dark black": "어두운 검정",
+              "light black": "밝은 검정"
+            },
+            "clusters": [],
+            "coverage": 0.0,
+            "method": "nearest CSS family in OpenCV Lab; not probability"
+          },
+          "policy_fingerprint": "449df195373783ac3c6155d20aaea36eae3b40df9ff2b5dbf9f195ff810596b9",
+          "semantic_accuracy_verified": false
+        },
+        {
+          "part_name": "tail",
+          "colors": [],
+          "status": "unresolved",
+          "reasons": [
+            "색상 측정 없음"
+          ],
+          "prompt_text": "",
+          "evidence": {
+            "policy": {
+              "max_distance": 22.0,
+              "minimum_margin": 1.5,
+              "minimum_area_ratio": 0.1,
+              "minimum_coverage": 0.85,
+              "maximum_colors": 3,
+              "dark_lightness": 45.0,
+              "light_lightness": 80.0
+            },
+            "color_labels": {
+              "blue": "파랑",
+              "purple": "보라",
+              "red": "빨강",
+              "pink": "분홍",
+              "orange": "주황",
+              "yellow": "노랑",
+              "brown": "갈색",
+              "green": "초록",
+              "cyan": "청록",
+              "white": "흰색",
+              "gray": "회색",
+              "black": "검정",
+              "dark blue": "어두운 파랑",
+              "light blue": "밝은 파랑",
+              "dark purple": "어두운 보라",
+              "light purple": "밝은 보라",
+              "dark red": "어두운 빨강",
+              "light red": "밝은 빨강",
+              "dark pink": "어두운 분홍",
+              "light pink": "밝은 분홍",
+              "dark orange": "어두운 주황",
+              "light orange": "밝은 주황",
+              "dark yellow": "어두운 노랑",
+              "light yellow": "밝은 노랑",
+              "dark brown": "어두운 갈색",
+              "light brown": "밝은 갈색",
+              "dark green": "어두운 초록",
+              "light green": "밝은 초록",
+              "dark cyan": "어두운 청록",
+              "light cyan": "밝은 청록",
+              "dark white": "어두운 흰색",
+              "light white": "밝은 흰색",
+              "dark gray": "어두운 회색",
+              "light gray": "밝은 회색",
+              "dark black": "어두운 검정",
+              "light black": "밝은 검정"
+            },
+            "clusters": [],
+            "coverage": 0.0,
+            "method": "nearest CSS family in OpenCV Lab; not probability"
+          },
+          "policy_fingerprint": "449df195373783ac3c6155d20aaea36eae3b40df9ff2b5dbf9f195ff810596b9",
+          "semantic_accuracy_verified": false
+        }
+      ],
+      "experimental_input_approval": {
+        "status": "approved_by_user",
+        "fingerprint": "f64790e6143ade12ff618c08082c80062e03c89598a7924d02b68fdced8a33c5",
+        "semantic_accuracy_verified": false
+      }
+    },
+    "base_generation_seconds": 270.6894476999996,
+    "base_maximum_cuda_memory_reserved_bytes": 6891241472,
+    "base_candidate_1": {
+      "source_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-candidates-xoqz6tg3\\candidate_1.png",
+      "preserved_path": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\ram-breakdown-20260924\\cases\\ordinary-female\\base_candidates\\candidate_1.png",
+      "sha256": "cd1a11ffa5664d37106758e544ca783d0950f868dcebe0ae39bd04f2f5d9d3e0"
+    },
+    "input_source": {
+      "path": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\ram-breakdown-20260924\\cases\\ordinary-female\\base_candidates\\input_source.png",
+      "sha256": "dd8a2899573bd971a9a5134007d0979ebfac46a8980b39945b5db54603935ae0",
+      "expected_v2_sha256": "dd8a2899573bd971a9a5134007d0979ebfac46a8980b39945b5db54603935ae0"
+    },
+    "garment_board": {
+      "path": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\ram-breakdown-20260924\\cases\\ordinary-female\\base_candidates\\input_garment.png",
+      "sha256": "8c5f1c0223ef29375d5289eec10891468ba05433968652f55f3f43a128e03acb",
+      "expected_preflight_sha256": "8c5f1c0223ef29375d5289eec10891468ba05433968652f55f3f43a128e03acb",
+      "used_in_generation": true
+    },
+    "approval_comparison": {
+      "field_differences": [
+        {
+          "path": "approval_fingerprint",
+          "old": "94e59bfdf749bae1ad586ea21495bafaac8824e7237c5e126c81c10fb3b6e0d6",
+          "new": "15a51f781a3c1c2babbcc89c5581552c3b2bc31ee95f964f09b02c9326705b14"
+        },
+        {
+          "path": "approved_detail_tags",
+          "old": [
+            "layered black and gray outfit",
+            "metal zipper and pocket details",
+            "ribbed cuffs and hem"
+          ],
+          "new": []
+        },
+        {
+          "path": "approved_tags",
+          "old": [
+            "oversized black bomber jacket",
+            "gray cable-knit sweater vest",
+            "black turtleneck",
+            "white collared shirt",
+            "black necktie",
+            "black wide-leg trousers",
+            "black lace-up platform combat boots"
+          ],
+          "new": [
+            "bodysuit",
+            "black bodysuit",
+            "jacket",
+            "yellow jacket",
+            "long sleeves",
+            "hoodie"
+          ]
+        },
+        {
+          "path": "condition_snapshot.approved_conditions.garment_detail_tags",
+          "old": [
+            "layered black and gray outfit",
+            "metal zipper and pocket details",
+            "ribbed cuffs and hem"
+          ],
+          "new": []
+        },
+        {
+          "path": "condition_snapshot.approved_conditions.garment_tags",
+          "old": [
+            "oversized black bomber jacket",
+            "gray cable-knit sweater vest",
+            "black turtleneck",
+            "white collared shirt",
+            "black necktie",
+            "black wide-leg trousers",
+            "black lace-up platform combat boots"
+          ],
+          "new": [
+            "bodysuit",
+            "black bodysuit",
+            "jacket",
+            "yellow jacket",
+            "long sleeves",
+            "hoodie"
+          ]
+        },
+        {
+          "path": "condition_snapshot.fingerprint",
+          "old": "28b85200d20e3c0f654159c6bdc14befd674465cc5a4efcdbd713e77de81c137",
+          "new": "403255e138bcb1214398bb3d962445d0faa7a513cdae1f9398a5f6491795bbb9"
+        },
+        {
+          "path": "condition_snapshot.observations.human_ears.detection.candidate_mask_paths",
+          "old": [
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-affgznah\\human_ears_candidate_0_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-affgznah\\human_ears_candidate_1_mask.png"
+          ],
+          "new": [
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-lfy6w_p_\\human_ears_candidate_0_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-lfy6w_p_\\human_ears_candidate_1_mask.png"
+          ]
+        },
+        {
+          "path": "condition_snapshot.observations.human_ears.detection.source_filter",
+          "old": [
+            {
+              "accepted": true,
+              "area_pixels": 149622,
+              "candidate_index": 0,
+              "decision_source": "experimental_overlap_v2",
+              "garment_overlap": 0.7796714386921709,
+              "hair_coverage": 0.9053880375679684,
+              "hair_overlap": 0.06120757642592667,
+              "index": 0,
+              "mask_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-affgznah\\human_ears_candidate_0_mask.png",
+              "reason": "candidate",
+              "removed_pixels": 0,
+              "requires_review": true,
+              "selection_status": "proposed",
+              "semantic_status": "unresolved"
+            },
+            {
+              "accepted": true,
+              "area_pixels": 562,
+              "candidate_index": 1,
+              "decision_source": "experimental_overlap_v2",
+              "garment_overlap": 0.0,
+              "hair_coverage": 0.0,
+              "hair_overlap": 0.0,
+              "index": 1,
+              "mask_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-affgznah\\human_ears_candidate_1_mask.png",
+              "reason": "candidate",
+              "removed_pixels": 0,
+              "requires_review": true,
+              "selection_status": "proposed",
+              "semantic_status": "unresolved"
+            }
+          ],
+          "new": [
+            {
+              "accepted": true,
+              "area_pixels": 149622,
+              "candidate_index": 0,
+              "decision_source": "experimental_overlap_v2",
+              "garment_overlap": 0.7796714386921709,
+              "hair_coverage": 0.9053880375679684,
+              "hair_overlap": 0.06120757642592667,
+              "index": 0,
+              "mask_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-lfy6w_p_\\human_ears_candidate_0_mask.png",
+              "reason": "candidate",
+              "removed_pixels": 0,
+              "requires_review": true,
+              "selection_status": "proposed",
+              "semantic_status": "unresolved"
+            },
+            {
+              "accepted": true,
+              "area_pixels": 562,
+              "candidate_index": 1,
+              "decision_source": "experimental_overlap_v2",
+              "garment_overlap": 0.0,
+              "hair_coverage": 0.0,
+              "hair_overlap": 0.0,
+              "index": 1,
+              "mask_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-lfy6w_p_\\human_ears_candidate_1_mask.png",
+              "reason": "candidate",
+              "removed_pixels": 0,
+              "requires_review": true,
+              "selection_status": "proposed",
+              "semantic_status": "unresolved"
+            }
+          ]
+        },
+        {
+          "path": "condition_snapshot.observations.source_analysis_full.condition_separation.conditions",
+          "old": [
+            {
+              "name": "identity",
+              "region_size": [
+                736,
+                1232
+              ],
+              "rgb_sha256": "0cb432db021731f928afa39758e9f11d1213c430b8f3169c40e8047b10e18fed",
+              "rgb_size": [
+                512,
+                512
+              ],
+              "scale": null,
+              "scale_source": "generation_setting",
+              "source_region_sha256": "a17b385bc342e31073b3d1af51b19c9e41a96f1a0fc132e961442777f25acfdc"
+            },
+            {
+              "name": "garment",
+              "region_size": [
+                736,
+                1232
+              ],
+              "rgb_sha256": "5ca4ef909aaa7cffdd2077418f8efab563d4828af7d734db7d168e9159616858",
+              "rgb_size": [
+                512,
+                512
+              ],
+              "scale": null,
+              "scale_source": "generation_setting",
+              "source_region_sha256": "90ced5df0eff8bf6ae8f730703a922905b573d25ce062b2de4dd11379f19b274"
+            }
+          ],
+          "new": [
+            {
+              "name": "identity",
+              "region_size": [
+                736,
+                1232
+              ],
+              "rgb_sha256": "0cb432db021731f928afa39758e9f11d1213c430b8f3169c40e8047b10e18fed",
+              "rgb_size": [
+                512,
+                512
+              ],
+              "scale": null,
+              "scale_source": "generation_setting",
+              "source_region_sha256": "a17b385bc342e31073b3d1af51b19c9e41a96f1a0fc132e961442777f25acfdc"
+            },
+            {
+              "name": "garment",
+              "region_size": [
+                736,
+                1232
+              ],
+              "rgb_sha256": "e489ef64500dc08ce109db080909e11ae99cef4e94662f6f1bb3a047d9f45f9c",
+              "rgb_size": [
+                512,
+                512
+              ],
+              "scale": null,
+              "scale_source": "generation_setting",
+              "source_region_sha256": "90ced5df0eff8bf6ae8f730703a922905b573d25ce062b2de4dd11379f19b274"
+            }
+          ]
+        },
+        {
+          "path": "condition_snapshot.observations.source_analysis_full.condition_separation.fingerprint",
+          "old": "29eda1e3244ff0e282d732a619639c143e6287f5e2cd1bf7937507708bd5eb1d",
+          "new": "e51e2c6422080ad32bb52dce774e3da7115afc3fef3b62bc639e3f720ff76840"
+        },
+        {
+          "path": "condition_snapshot.observations.source_analysis_full.elapsed_seconds",
+          "old": 22.122862599993823,
+          "new": 106.27074110000012
+        },
+        {
+          "path": "condition_snapshot.observations.source_analysis_full.experimental_input_approval.fingerprint",
+          "old": "3fa2300f3c79fd1b7585a8a2c265f4bca74191734f16d310f22c44dbdbec3614",
+          "new": "f64790e6143ade12ff618c08082c80062e03c89598a7924d02b68fdced8a33c5"
+        },
+        {
+          "path": "condition_snapshot.observations.source_analysis_full.garment_reference_boards.flux2_klein.regions",
+          "old": [
+            [
+              0,
+              0,
+              1200,
+              1600
+            ]
+          ],
+          "new": [
+            [
+              0,
+              0,
+              736,
+              1104
+            ]
+          ]
+        },
+        {
+          "path": "condition_snapshot.observations.source_analysis_full.garment_reference_boards.flux2_klein.source_alpha_pixels",
+          "old": 1920000,
+          "new": 812544
+        },
+        {
+          "path": "condition_snapshot.observations.source_analysis_full.garment_reference_boards.flux2_klein.source_size",
+          "old": [
+            1200,
+            1600
+          ],
+          "new": [
+            736,
+            1104
+          ]
+        },
+        {
+          "path": "condition_snapshot.observations.source_analysis_full.part_detection.debug_dir",
+          "old": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-affgznah",
+          "new": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-lfy6w_p_"
+        },
+        {
+          "path": "condition_snapshot.observations.source_analysis_full.part_detection.parts.hair_accessory.candidate_mask_paths",
+          "old": [
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-affgznah\\hair_accessory_candidate_0_mask.png"
+          ],
+          "new": [
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-lfy6w_p_\\hair_accessory_candidate_0_mask.png"
+          ]
+        },
+        {
+          "path": "condition_snapshot.observations.source_analysis_full.part_detection.parts.hair_accessory.source_filter",
+          "old": [
+            {
+              "accepted": false,
+              "area_pixels": 15820,
+              "candidate_index": 0,
+              "decision_source": "experimental_overlap_v2",
+              "garment_overlap": 0.05676359039190897,
+              "hair_coverage": 0.9970341077607514,
+              "hair_overlap": 0.6374841972187105,
+              "index": 0,
+              "mask_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-affgznah\\hair_accessory_candidate_0_mask.png",
+              "reason": "broad_hair_candidate",
+              "removed_pixels": 15820,
+              "requires_review": true,
+              "selection_status": "not_proposed",
+              "semantic_status": "unresolved"
+            }
+          ],
+          "new": [
+            {
+              "accepted": false,
+              "area_pixels": 15820,
+              "candidate_index": 0,
+              "decision_source": "experimental_overlap_v2",
+              "garment_overlap": 0.05676359039190897,
+              "hair_coverage": 0.9970341077607514,
+              "hair_overlap": 0.6374841972187105,
+              "index": 0,
+              "mask_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-lfy6w_p_\\hair_accessory_candidate_0_mask.png",
+              "reason": "broad_hair_candidate",
+              "removed_pixels": 15820,
+              "requires_review": true,
+              "selection_status": "not_proposed",
+              "semantic_status": "unresolved"
+            }
+          ]
+        },
+        {
+          "path": "condition_snapshot.observations.source_analysis_full.part_detection.parts.human_ears.candidate_mask_paths",
+          "old": [
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-affgznah\\human_ears_candidate_0_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-affgznah\\human_ears_candidate_1_mask.png"
+          ],
+          "new": [
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-lfy6w_p_\\human_ears_candidate_0_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-lfy6w_p_\\human_ears_candidate_1_mask.png"
+          ]
+        },
+        {
+          "path": "condition_snapshot.observations.source_analysis_full.part_detection.parts.human_ears.source_filter",
+          "old": [
+            {
+              "accepted": true,
+              "area_pixels": 149622,
+              "candidate_index": 0,
+              "decision_source": "experimental_overlap_v2",
+              "garment_overlap": 0.7796714386921709,
+              "hair_coverage": 0.9053880375679684,
+              "hair_overlap": 0.06120757642592667,
+              "index": 0,
+              "mask_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-affgznah\\human_ears_candidate_0_mask.png",
+              "reason": "candidate",
+              "removed_pixels": 0,
+              "requires_review": true,
+              "selection_status": "proposed",
+              "semantic_status": "unresolved"
+            },
+            {
+              "accepted": true,
+              "area_pixels": 562,
+              "candidate_index": 1,
+              "decision_source": "experimental_overlap_v2",
+              "garment_overlap": 0.0,
+              "hair_coverage": 0.0,
+              "hair_overlap": 0.0,
+              "index": 1,
+              "mask_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-affgznah\\human_ears_candidate_1_mask.png",
+              "reason": "candidate",
+              "removed_pixels": 0,
+              "requires_review": true,
+              "selection_status": "proposed",
+              "semantic_status": "unresolved"
+            }
+          ],
+          "new": [
+            {
+              "accepted": true,
+              "area_pixels": 149622,
+              "candidate_index": 0,
+              "decision_source": "experimental_overlap_v2",
+              "garment_overlap": 0.7796714386921709,
+              "hair_coverage": 0.9053880375679684,
+              "hair_overlap": 0.06120757642592667,
+              "index": 0,
+              "mask_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-lfy6w_p_\\human_ears_candidate_0_mask.png",
+              "reason": "candidate",
+              "removed_pixels": 0,
+              "requires_review": true,
+              "selection_status": "proposed",
+              "semantic_status": "unresolved"
+            },
+            {
+              "accepted": true,
+              "area_pixels": 562,
+              "candidate_index": 1,
+              "decision_source": "experimental_overlap_v2",
+              "garment_overlap": 0.0,
+              "hair_coverage": 0.0,
+              "hair_overlap": 0.0,
+              "index": 1,
+              "mask_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-lfy6w_p_\\human_ears_candidate_1_mask.png",
+              "reason": "candidate",
+              "removed_pixels": 0,
+              "requires_review": true,
+              "selection_status": "proposed",
+              "semantic_status": "unresolved"
+            }
+          ]
+        },
+        {
+          "path": "condition_snapshot.observations.source_analysis_full.part_detection.parts.tail.candidate_mask_paths",
+          "old": [
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-affgznah\\tail_candidate_0_mask.png"
+          ],
+          "new": [
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-lfy6w_p_\\tail_candidate_0_mask.png"
+          ]
+        },
+        {
+          "path": "condition_snapshot.observations.source_analysis_full.part_detection.parts.tail.crop_path",
+          "old": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-affgznah\\tail_reference.png",
+          "new": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-lfy6w_p_\\tail_reference.png"
+        },
+        {
+          "path": "condition_snapshot.observations.source_analysis_full.part_detection.parts.tail.mask_path",
+          "old": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-affgznah\\tail_mask.png",
+          "new": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-lfy6w_p_\\tail_mask.png"
+        },
+        {
+          "path": "condition_snapshot.observations.source_analysis_full.part_detection.parts.tail.source_filter",
+          "old": [
+            {
+              "accepted": true,
+              "area_pixels": 13269,
+              "candidate_index": 0,
+              "decision_source": "experimental_overlap_v2",
+              "garment_overlap": 0.49076795538473134,
+              "hair_coverage": 0.0,
+              "hair_overlap": 0.0,
+              "index": 0,
+              "mask_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-affgznah\\tail_candidate_0_mask.png",
+              "reason": "candidate",
+              "removed_pixels": 0,
+              "requires_review": true,
+              "selection_status": "proposed",
+              "semantic_status": "unresolved"
+            }
+          ],
+          "new": [
+            {
+              "accepted": true,
+              "area_pixels": 13269,
+              "candidate_index": 0,
+              "decision_source": "experimental_overlap_v2",
+              "garment_overlap": 0.49076795538473134,
+              "hair_coverage": 0.0,
+              "hair_overlap": 0.0,
+              "index": 0,
+              "mask_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-lfy6w_p_\\tail_candidate_0_mask.png",
+              "reason": "candidate",
+              "removed_pixels": 0,
+              "requires_review": true,
+              "selection_status": "proposed",
+              "semantic_status": "unresolved"
+            }
+          ]
+        },
+        {
+          "path": "condition_snapshot.observations.source_analysis_full.preparation_stage_timings.image_extraction_seconds",
+          "old": 0.32,
+          "new": 0.247
+        },
+        {
+          "path": "condition_snapshot.observations.source_analysis_full.preparation_stage_timings.image_mask_processing_seconds",
+          "old": 63.422,
+          "new": 164.501
+        },
+        {
+          "path": "condition_snapshot.observations.tail.detection.candidate_mask_paths",
+          "old": [
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-affgznah\\tail_candidate_0_mask.png"
+          ],
+          "new": [
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-lfy6w_p_\\tail_candidate_0_mask.png"
+          ]
+        },
+        {
+          "path": "condition_snapshot.observations.tail.detection.crop_path",
+          "old": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-affgznah\\tail_reference.png",
+          "new": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-lfy6w_p_\\tail_reference.png"
+        },
+        {
+          "path": "condition_snapshot.observations.tail.detection.mask_path",
+          "old": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-affgznah\\tail_mask.png",
+          "new": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-lfy6w_p_\\tail_mask.png"
+        },
+        {
+          "path": "condition_snapshot.observations.tail.detection.source_filter",
+          "old": [
+            {
+              "accepted": true,
+              "area_pixels": 13269,
+              "candidate_index": 0,
+              "decision_source": "experimental_overlap_v2",
+              "garment_overlap": 0.49076795538473134,
+              "hair_coverage": 0.0,
+              "hair_overlap": 0.0,
+              "index": 0,
+              "mask_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-affgznah\\tail_candidate_0_mask.png",
+              "reason": "candidate",
+              "removed_pixels": 0,
+              "requires_review": true,
+              "selection_status": "proposed",
+              "semantic_status": "unresolved"
+            }
+          ],
+          "new": [
+            {
+              "accepted": true,
+              "area_pixels": 13269,
+              "candidate_index": 0,
+              "decision_source": "experimental_overlap_v2",
+              "garment_overlap": 0.49076795538473134,
+              "hair_coverage": 0.0,
+              "hair_overlap": 0.0,
+              "index": 0,
+              "mask_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-lfy6w_p_\\tail_candidate_0_mask.png",
+              "reason": "candidate",
+              "removed_pixels": 0,
+              "requires_review": true,
+              "selection_status": "proposed",
+              "semantic_status": "unresolved"
+            }
+          ]
+        },
+        {
+          "path": "garment_topology.component_presence.lower",
+          "old": "present",
+          "new": "unknown"
+        },
+        {
+          "path": "garment_topology.component_presence.upper",
+          "old": "present",
+          "new": "unknown"
+        },
+        {
+          "path": "garment_topology.components",
+          "old": [
+            "upper",
+            "lower"
+          ],
+          "new": []
+        },
+        {
+          "path": "garment_topology.evidence_tags",
+          "old": [
+            "oversized black bomber jacket",
+            "gray cable-knit sweater vest",
+            "white collared shirt",
+            "black wide-leg trousers"
+          ],
+          "new": []
+        },
+        {
+          "path": "garment_topology.forbidden_connections",
+          "old": [
+            "upper_to_lower"
+          ],
+          "new": []
+        },
+        {
+          "path": "garment_topology.status",
+          "old": "CONFIRMED",
+          "new": "UNRESOLVED"
+        },
+        {
+          "path": "garment_topology.topology",
+          "old": "two_piece",
+          "new": "unresolved"
+        },
+        {
+          "path": "parts",
+          "old": [
+            {
+              "mask": "3926b480a6d057bc894ecfdca2c27c38b0c7892719dc11acec2017d951da72be",
+              "name": "identity",
+              "rgb": "82c777aa17e4ceed80bdf1a73a338817751047d4a85a00073f4b390c1dc819a7",
+              "scale": 0.7
+            },
+            {
+              "mask": "400cff3914881d4108baeeed3748d09fff7eaafe1f6aa7115bc06ef5a81f0165",
+              "name": "garment",
+              "rgb": "1a984f94801dbf563bc63c4c3b6c994680300b8b89ad4568e3802ca255cbb7c4",
+              "scale": 0.0
+            }
+          ],
+          "new": [
+            {
+              "mask": "3926b480a6d057bc894ecfdca2c27c38b0c7892719dc11acec2017d951da72be",
+              "name": "identity",
+              "rgb": "82c777aa17e4ceed80bdf1a73a338817751047d4a85a00073f4b390c1dc819a7",
+              "scale": 0.7
+            },
+            {
+              "mask": "400cff3914881d4108baeeed3748d09fff7eaafe1f6aa7115bc06ef5a81f0165",
+              "name": "garment",
+              "rgb": "c30720c381bc851a0ba78245038110f90f4166d8384c4f88dbe9758fdc68f7b8",
+              "scale": 0.0
+            }
+          ]
+        },
+        {
+          "path": "visual_fingerprint",
+          "old": "3fa2300f3c79fd1b7585a8a2c265f4bca74191734f16d310f22c44dbdbec3614",
+          "new": "f64790e6143ade12ff618c08082c80062e03c89598a7924d02b68fdced8a33c5"
+        }
+      ]
+    },
+    "refinement_seconds": 120.77715989999979,
+    "maximum_cuda_memory_reserved_bytes": 6889144320,
+    "inpaint_observation": {
+      "calls": [
+        {
+          "strength": 0.9,
+          "num_inference_steps": 28,
+          "guidance_scale": 5.5,
+          "prompt": "1girl, female focus, feminine silhouette, full body, head to toe, feet visible, entire character inside frame, black hair, short hair, blue eyes, solo, simple background, coherent anatomy, best quality",
+          "prompt_2": null,
+          "negative_prompt": "1boy, nsfw, lowres, bad, text, error, extra digits, missing fingers, worst quality, low quality, watermark, signature, unfinished, different character, different character design, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, fused fingers, extra fingers, uneven eyes",
+          "negative_prompt_2": null,
+          "last_ip_adapter_scale": 0.8,
+          "callback_steps": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24
+          ],
+          "started_at": 1790235394.9058497,
+          "image_size": [
+            736,
+            1232
+          ],
+          "mask_size": [
+            736,
+            1232
+          ],
+          "seed": 209215001,
+          "finished_at": 1790235420.112186,
+          "effective_denoising_callback_count": 25
+        }
+      ],
+      "ip_adapter_scales": [
+        0.8
+      ]
+    },
+    "result": {
+      "status": "PASS",
+      "selected_engine": "sdxl_local",
+      "selected_image_path": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\ram-breakdown-20260924\\cases\\ordinary-female\\selected.png",
+      "selected_image_sha256": "c10bf6a3aedcfae17e289063d8bc1b83145672e2e93dd138b8fa18d53d275e81",
+      "report_path": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\ram-breakdown-20260924\\cases\\ordinary-female\\run.json",
+      "report": {
+        "version": "sdxl_local_refinement_run_v1",
+        "status": "PASS",
+        "refinement_mode": "sdxl_local",
+        "selected_output": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\ram-breakdown-20260924\\cases\\ordinary-female\\selected.png",
+        "decision": {
+          "selected_engine": "sdxl_local",
+          "reason": "corrected_review_required"
+        },
+        "attempts": {
+          "sdxl_local": {
+            "gate": {
+              "overall_similarity_percentage": 54.660844802856445,
+              "refinement_required": true,
+              "refinement_targets": [
+                "foreground_band_projection_requires_review",
+                "edit_protection_overlap_removed",
+                "target_coverage_reduced_by_domain_or_protection",
+                "outside_rgb_changed_without_composite"
+              ],
+              "hard_safety_passed": true
+            }
+          }
+        },
+        "local_refinement": {
+          "version": "selected_garment_correction_v2",
+          "enabled": true,
+          "reference_scale": 0.8,
+          "inpaint_strength": 0.9,
+          "inference_steps": 28,
+          "guidance_scale": 5.5,
+          "minimum_similarity_improvement": 0.0,
+          "mask_padding_pixels": 2,
+          "timeout_seconds": 300,
+          "feather_radius": 10,
+          "target_growth_pixels": 12,
+          "soft_boundary_strength": 0.5,
+          "reject_similarity_regression": false,
+          "reference_policy": "garment_only",
+          "mask_policy": "generated_output_hard_soft_coordinates",
+          "outside_mask_policy": "measure_without_pixel_composite",
+          "status": "corrected_review_required",
+          "garment_topology": {
+            "ambiguous_tags": [],
+            "component_presence": {
+              "lower": "unknown",
+              "one_piece": "unknown",
+              "upper": "unknown"
+            },
+            "components": [],
+            "enforcement": "soft_guidance_and_diagnostic_only",
+            "evidence_tags": [],
+            "forbidden_connections": [],
+            "required_exposed_regions": [],
+            "source": "derived_from_user_approved_tags",
+            "status": "UNRESOLVED",
+            "topology": "unresolved",
+            "version": "garment_topology_contract_v1"
+          },
+          "garment_topology_guidance_applied": false,
+          "stored_output_regions": {
+            "status": "rejected_redetected",
+            "reason": "참조 영역 간 포함·충돌 관계가 잘못됐습니다.",
+            "error_type": "ValueError",
+            "directory": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\masks\\output-regions"
+          },
+          "output_region_source": "redetected_for_selected_candidate",
+          "target_garment_coverage": {
+            "version": "target_garment_coverage_v1",
+            "status": "REVIEW",
+            "method": "generated_base_foreground_bands_v1",
+            "approved_garment_tags": [
+              "bodysuit",
+              "black bodysuit",
+              "jacket",
+              "yellow jacket",
+              "long sleeves",
+              "hoodie"
+            ],
+            "categories": [
+              "top",
+              "dress"
+            ],
+            "long_sleeves": true,
+            "growth_pixels": 12,
+            "target_pixels": 182817,
+            "growth_pixels_count": 27789,
+            "foreground_bbox_xywh": [
+              178,
+              36,
+              305,
+              1159
+            ],
+            "review_reasons": [
+              "foreground_band_projection_requires_review"
+            ],
+            "coordinate_source": "generated_base"
+          },
+          "output_protection_analysis": {
+            "version": "output_protection_analysis_v1",
+            "coordinate_source": "generated_candidate",
+            "hard_parts": [
+              "output_face",
+              "output_hair",
+              "output_hair_accessory"
+            ],
+            "conditional_parts": [],
+            "diagnostic_only_parts": [],
+            "hard_pixels": 23845,
+            "conditional_pixels": 0,
+            "soft_boundary_pixels": 1658
+          },
+          "garment_edit_plan": {
+            "version": "garment_edit_plan_v1",
+            "status": "REVIEW",
+            "coordinate_source": "generated_base",
+            "source_reference_pixel_coordinates_reused": false,
+            "hard_mask_role": "maximum_authorized_edit_domain",
+            "soft_mask_role": "inward_feathered_condition_strength",
+            "review_reasons": [
+              "edit_protection_overlap_removed",
+              "target_coverage_reduced_by_domain_or_protection"
+            ],
+            "metrics": {
+              "source_removal_pixels": 159734,
+              "target_coverage_pixels": 182817,
+              "requested_pixels": 182817,
+              "hard_edit_pixels": 156173,
+              "hard_protection_pixels": 23845,
+              "conditional_protection_pixels": 0,
+              "protection_conflict_pixels": 22662,
+              "target_coverage_missing_pixels": 26644,
+              "target_coverage_missing_ratio": 0.14574136978508564,
+              "soft_nonzero_pixels": 149930,
+              "soft_outside_hard_pixels": 0,
+              "soft_outside_hard_ratio": 0.0,
+              "soft_min": 0,
+              "soft_max": 254,
+              "soft_mean": 189.97854302600322,
+              "requested_feather_radius": 10,
+              "effective_feather_radius": 10
+            }
+          },
+          "mask_diagnostic_manifest": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\masks\\local-refinement\\garment_edit_plan.json",
+          "mask_diagnostic_directory": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\masks\\local-refinement",
+          "diagnostic_images": {
+            "source_garment_removal": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\masks\\local-refinement\\source_garment_removal.png",
+            "target_garment_coverage": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\masks\\local-refinement\\target_garment_coverage.png",
+            "garment_growth_envelope": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\masks\\local-refinement\\garment_growth_envelope.png",
+            "requested_edit": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\masks\\local-refinement\\requested_edit.png",
+            "hard_edit_domain": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\masks\\local-refinement\\hard_edit_domain.png",
+            "hard_protection": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\masks\\local-refinement\\hard_protection.png",
+            "conditional_protection": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\masks\\local-refinement\\conditional_protection.png",
+            "effective_protection": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\masks\\local-refinement\\effective_protection.png",
+            "mask_conflict": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\masks\\local-refinement\\mask_conflict.png",
+            "soft_guidance": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\masks\\local-refinement\\soft_guidance.png",
+            "overlay": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\masks\\local-refinement\\overlay.png",
+            "output_face": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\masks\\local-refinement\\output_face.png",
+            "output_hair": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\masks\\local-refinement\\output_hair.png",
+            "output_hair_accessory": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\masks\\local-refinement\\output_hair_accessory.png"
+          },
+          "output_coordinate_control": {
+            "mask_coordinates": "generated_candidate",
+            "latent_policy": "diffusers_sdxl_4ch_next_timestep_original_latents",
+            "attention_policy": "same_output_mask_single_reference",
+            "mask_policy": "hard_boundary_with_inward_soft_feather",
+            "hard_authorized_pixels": 156173,
+            "soft_nonzero_pixels": 149930,
+            "latent_restore_steps": 25,
+            "inpaint_mask_processor": "temporary_non_binary_processor_restored_after_call"
+          },
+          "pipeline_state_restore": {
+            "status": "deferred_to_request_boundary_reset"
+          },
+          "outside_change": {
+            "outside_pixel_count": 750579,
+            "outside_changed_pixels": 507950,
+            "outside_changed_ratio": 0.6767442201287273,
+            "outside_mean_absolute_difference": 0.5527439483385493,
+            "outside_pixel_restoration_applied": false
+          },
+          "before_similarity": 0.33893340826034546,
+          "after_similarity": 0.5466084480285645,
+          "similarity_improvement": 0.207675039768219,
+          "selected_pixels": 156173,
+          "elapsed_seconds": 106.002,
+          "ip_adapter_inputs": [
+            "garment"
+          ],
+          "blocked_ip_adapter_inputs": [
+            "identity",
+            "hair",
+            "human_ears",
+            "animal_ears",
+            "ears",
+            "tail"
+          ],
+          "image_merge_used": false,
+          "hard_paste_used": false,
+          "mask_composite_used": false,
+          "review_reasons": [
+            "foreground_band_projection_requires_review",
+            "edit_protection_overlap_removed",
+            "target_coverage_reduced_by_domain_or_protection",
+            "outside_rgb_changed_without_composite"
+          ],
+          "reason": "diagnostics_recorded",
+          "candidate_structure_gate": {
+            "version": "candidate_structure_gate_v3",
+            "enabled": true,
+            "background_color_distance": 22.0,
+            "minimum_primary_height_ratio": 0.42,
+            "minimum_primary_bbox_area_ratio": 0.055,
+            "maximum_tall_component_aspect_ratio": 0.38,
+            "maximum_tall_component_solidity": 0.97,
+            "minimum_component_area_ratio": 0.001,
+            "overhead_component_area_ratio": 0.1,
+            "overhead_component_width_ratio": 0.24,
+            "minimum_overhead_gap_ratio": 0.04,
+            "upper_band_fraction": 0.32,
+            "maximum_upper_width_ratio": 2.5,
+            "minimum_upper_canvas_width_ratio": 0.48,
+            "policy": "reject_spatial_artifacts_before_semantic_fallback_score",
+            "pose_policy": "pose_invariant_no_front_or_standing_requirement",
+            "status": "PASS",
+            "action": "pass",
+            "violations": [],
+            "unresolved": [],
+            "checks": {
+              "character_occupancy": {
+                "status": "PASS",
+                "primary_height_ratio": 0.9423701298701299,
+                "primary_bbox_area_ratio": 0.5492891110248447
+              },
+              "detached_overhead_object": {
+                "status": "PASS",
+                "components": [],
+                "pose_ambiguous_components": [],
+                "minimum_overhead_gap_ratio": 0.04
+              },
+              "primary_component_shape": {
+                "status": "PASS",
+                "width_height_ratio": 0.3695090439276486,
+                "solidity": 0.46772900125459604
+              },
+              "abnormal_upper_width": {
+                "status": "PASS",
+                "upper_canvas_width_ratio": 0.2907608695652174,
+                "upper_to_lower_width_ratio": 1.68503937007874
+              },
+              "feet_body_connection": {
+                "status": "NOT_EVALUATED",
+                "reason": "body_keypoint_parser_required"
+              },
+              "garment_body_overlap": {
+                "status": "NOT_EVALUATED",
+                "reason": "garment_parser_required"
+              },
+              "foreground_separation": {
+                "status": "PASS",
+                "reason": null
+              }
+            },
+            "foreground_ratio": 0.17208564193958215,
+            "component_count": 1,
+            "primary_component": {
+              "label": 1,
+              "x": 177,
+              "y": 35,
+              "width": 429,
+              "height": 1161,
+              "area": 156022
+            }
+          }
+        },
+        "diagnostic_images": {
+          "source_garment_removal": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\masks\\local-refinement\\source_garment_removal.png",
+          "target_garment_coverage": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\masks\\local-refinement\\target_garment_coverage.png",
+          "garment_growth_envelope": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\masks\\local-refinement\\garment_growth_envelope.png",
+          "requested_edit": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\masks\\local-refinement\\requested_edit.png",
+          "hard_edit_domain": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\masks\\local-refinement\\hard_edit_domain.png",
+          "hard_protection": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\masks\\local-refinement\\hard_protection.png",
+          "conditional_protection": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\masks\\local-refinement\\conditional_protection.png",
+          "effective_protection": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\masks\\local-refinement\\effective_protection.png",
+          "mask_conflict": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\masks\\local-refinement\\mask_conflict.png",
+          "soft_guidance": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\masks\\local-refinement\\soft_guidance.png",
+          "overlay": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\masks\\local-refinement\\overlay.png",
+          "output_face": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\masks\\local-refinement\\output_face.png",
+          "output_hair": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\masks\\local-refinement\\output_hair.png",
+          "output_hair_accessory": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\masks\\local-refinement\\output_hair_accessory.png"
+        },
+        "image_merge_used": false,
+        "hard_paste_used": false,
+        "mask_composite_used": false,
+        "approved_base_sha256": "cd1a11ffa5664d37106758e544ca783d0950f868dcebe0ae39bd04f2f5d9d3e0",
+        "person_count_diagnostic": {
+          "version": "person_count_diagnostic_v1",
+          "enabled": true,
+          "expected_count": 1,
+          "detector_model_id": "IDEA-Research/grounding-dino-tiny",
+          "cache_dir": "D:/genai-cache/huggingface",
+          "box_threshold": 0.3,
+          "text_threshold": 0.25,
+          "minimum_area_ratio": 0.02,
+          "duplicate_iou": 0.65,
+          "blocking": false,
+          "policy": "diagnostic_only",
+          "status": "PASS",
+          "action": "diagnostic",
+          "detected_count": 1,
+          "matches_expected": true,
+          "boxes_xyxy": [
+            [
+              176.63763427734375,
+              33.86491394042969,
+              484.64630126953125,
+              1195.559326171875
+            ]
+          ],
+          "scores": [
+            0.9229153990745544
+          ],
+          "raw_detection_count": 1,
+          "return_blocked": false,
+          "overlay_path": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\diagnostics\\person-count-overlay.png"
+        },
+        "final_review": {
+          "status": "pending_user_decision",
+          "evidence_path": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\ram-breakdown-20260924\\cases\\ordinary-female\\stage8-review-evidence.json",
+          "candidate_id": "candidate-1"
+        }
+      },
+      "selected_image_size": [
+        736,
+        1232
+      ]
+    },
+    "orchestrator_trace": [
+      {
+        "stage": "run_context",
+        "status": "created",
+        "run_id": "20260924-162738-32b83572",
+        "run_directory": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572",
+        "refinement_mode": "sdxl_local"
+      },
+      {
+        "stage": "prepare_visual_inputs",
+        "status": "started"
+      },
+      {
+        "stage": "prepare_visual_inputs",
+        "status": "completed"
+      },
+      {
+        "stage": "approve_visual_inputs",
+        "status": "completed",
+        "approval_fingerprint": "15a51f781a3c1c2babbcc89c5581552c3b2bc31ee95f964f09b02c9326705b14",
+        "replay_bundle": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\ram-breakdown-20260924\\cases\\ordinary-female\\base-work\\product-run-specs\\20260924-163037-527909-15a51f781a3c"
+      },
+      {
+        "stage": "request_runtime_reset",
+        "status": "completed",
+        "report": {
+          "version": "request_runtime_reset_v1",
+          "boundary": "request_start",
+          "pipeline_present": true,
+          "actions": [
+            "model_hooks_released",
+            "ip_adapter_scale_zeroed"
+          ],
+          "errors": [],
+          "status": "completed"
+        }
+      },
+      {
+        "stage": "generate_base_candidates",
+        "status": "started",
+        "refinement_mode": "sdxl_local"
+      },
+      {
+        "stage": "generate_base_candidates",
+        "status": "completed"
+      },
+      {
+        "stage": "select_base_candidate",
+        "status": "completed",
+        "candidate_number": 1,
+        "base_image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260924-162738-32b83572\\base\\approved-base.png",
+        "base_sha256": "cd1a11ffa5664d37106758e544ca783d0950f868dcebe0ae39bd04f2f5d9d3e0",
+        "refinement_mode": "sdxl_local"
+      },
+      {
+        "stage": "finalize_selected_candidate",
+        "status": "started",
+        "candidate_number": 1,
+        "refinement_mode": "sdxl_local"
+      },
+      {
+        "stage": "finalize_selected_candidate",
+        "status": "output_resolved",
+        "output_directory": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\ram-breakdown-20260924\\cases\\ordinary-female"
+      },
+      {
+        "stage": "request_runtime_reset",
+        "status": "completed",
+        "report": {
+          "version": "request_runtime_reset_v1",
+          "boundary": "request_end",
+          "pipeline_present": true,
+          "actions": [
+            "model_hooks_released",
+            "interrupt_cleared",
+            "ip_adapter_scale_zeroed",
+            "cached_inpaint_pipeline_released"
+          ],
+          "errors": [],
+          "status": "completed"
+        }
+      },
+      {
+        "stage": "finalize_selected_candidate",
+        "status": "completed",
+        "native_status": "PASS",
+        "selected_engine": "sdxl_local",
+        "selected_image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\ram-breakdown-20260924\\cases\\ordinary-female\\selected.png",
+        "refinement_mode": "sdxl_local"
+      }
+    ],
+    "run_profile": {
+      "reference_scale": 0.8,
+      "inpaint_strength": 0.9,
+      "inference_steps": 28
+    },
+    "run_profile_matches_expected": true,
+    "elapsed_seconds": 597.7724360000002
+  },
+  "generation_calls": {
+    "base": 1,
+    "inpaint": 1
+  }
+}

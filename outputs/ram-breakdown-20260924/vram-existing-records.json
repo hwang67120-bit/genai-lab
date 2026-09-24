@@ -1,0 +1,4512 @@
+{
+  "status": "partial_recovery_from_finished_run_no_new_generation",
+  "unit": "GiB (1024**3 bytes)",
+  "checkpoints": [
+    {
+      "code": "00",
+      "pid": 4872,
+      "time": 1790234773.6551576,
+      "label": "process start (instrumentation initialized)",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "01",
+      "pid": 4872,
+      "time": 1790234783.9135401,
+      "label": "torch import complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "02",
+      "pid": 4872,
+      "time": 1790234792.1055133,
+      "label": "diffusers import complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "03",
+      "pid": 4872,
+      "time": 1790234852.184663,
+      "label": "SDXL from_pretrained complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5134927368,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5134927368
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "05",
+      "pid": 4872,
+      "time": 1790234857.1868083,
+      "label": "load_ip_adapter complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "04",
+      "pid": 4872,
+      "time": 1790234858.0097654,
+      "label": "enable_model_cpu_offload complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": null,
+      "pid": 4872,
+      "time": 1790234859.1385224,
+      "label": "reference analysis before",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "00",
+      "pid": 26300,
+      "time": 1790234861.1428883,
+      "label": "process start (instrumentation initialized)",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "01",
+      "pid": 26300,
+      "time": 1790234889.8885999,
+      "label": "torch import complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "02",
+      "pid": 26300,
+      "time": 1790234902.367865,
+      "label": "diffusers import complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": null,
+      "pid": 26300,
+      "time": 1790234936.958869,
+      "label": "isnet ONNX before load",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": null,
+      "pid": 26300,
+      "time": 1790234937.1987636,
+      "label": "onnx_other ONNX before load",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "09",
+      "pid": 26300,
+      "time": 1790234939.927271,
+      "label": "isnet ONNX session created",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "10",
+      "pid": 26300,
+      "time": 1790234955.6954398,
+      "label": "CatVTON AutoMasker initialized",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "AutoMasker.densepose_processor.predictor.model",
+          "group": "automasker",
+          "dtype": "torch.float32",
+          "device": "cuda:0",
+          "logical_bytes": 255709584,
+          "dtype_device_bytes": {
+            "torch.float32@cuda:0": 255709584
+          }
+        },
+        {
+          "name": "AutoMasker.schp_processor_atr.model",
+          "group": "automasker",
+          "dtype": "torch.float32",
+          "device": "cuda:0",
+          "logical_bytes": 267332104,
+          "dtype_device_bytes": {
+            "torch.float32@cuda:0": 267331152,
+            "torch.int64@cuda:0": 952
+          }
+        },
+        {
+          "name": "AutoMasker.schp_processor_lip.model",
+          "group": "automasker",
+          "dtype": "torch.float32",
+          "device": "cuda:0",
+          "logical_bytes": 267334160,
+          "dtype_device_bytes": {
+            "torch.float32@cuda:0": 267333208,
+            "torch.int64@cuda:0": 952
+          }
+        }
+      ],
+      "gpu_resident_modules": [
+        {
+          "name": "AutoMasker.densepose_processor.predictor.model",
+          "group": "automasker",
+          "dtype": "torch.float32",
+          "device": "cuda:0",
+          "logical_bytes": 255709584,
+          "dtype_device_bytes": {
+            "torch.float32@cuda:0": 255709584
+          }
+        },
+        {
+          "name": "AutoMasker.schp_processor_atr.model",
+          "group": "automasker",
+          "dtype": "torch.float32",
+          "device": "cuda:0",
+          "logical_bytes": 267332104,
+          "dtype_device_bytes": {
+            "torch.float32@cuda:0": 267331152,
+            "torch.int64@cuda:0": 952
+          }
+        },
+        {
+          "name": "AutoMasker.schp_processor_lip.model",
+          "group": "automasker",
+          "dtype": "torch.float32",
+          "device": "cuda:0",
+          "logical_bytes": 267334160,
+          "dtype_device_bytes": {
+            "torch.float32@cuda:0": 267333208,
+            "torch.int64@cuda:0": 952
+          }
+        }
+      ]
+    },
+    {
+      "code": "16",
+      "pid": 26300,
+      "time": 1790234964.3392434,
+      "label": "process exit / instrumentation removed",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": null,
+      "pid": 4872,
+      "time": 1790234969.4715428,
+      "label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": null,
+      "pid": 4872,
+      "time": 1790234969.932889,
+      "label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": null,
+      "pid": 4872,
+      "time": 1790234970.2351987,
+      "label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": null,
+      "pid": 4872,
+      "time": 1790234970.4895885,
+      "label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": null,
+      "pid": 4872,
+      "time": 1790234970.8534865,
+      "label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "07",
+      "pid": 4872,
+      "time": 1790234971.744618,
+      "label": "sam2 from_pretrained complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        },
+        {
+          "name": "Sam2Model",
+          "group": "sam2",
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "logical_bytes": 125764932,
+          "dtype_device_bytes": {
+            "torch.float32@cpu": 125764932
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "06",
+      "pid": 4872,
+      "time": 1790234974.2825797,
+      "label": "grounding_dino from_pretrained complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        },
+        {
+          "name": "Sam2Model",
+          "group": "sam2",
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "logical_bytes": 125764932,
+          "dtype_device_bytes": {
+            "torch.float32@cpu": 125764932
+          }
+        },
+        {
+          "name": "GroundingDinoForObjectDetection",
+          "group": "grounding_dino",
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "logical_bytes": 689235048,
+          "dtype_device_bytes": {
+            "torch.float32@cpu": 688996360,
+            "torch.int64@cpu": 238688
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": null,
+      "pid": 4872,
+      "time": 1790235025.7355661,
+      "label": "reference analysis after",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": null,
+      "pid": 4872,
+      "time": 1790235026.4496524,
+      "label": "wd14 ONNX before load",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": null,
+      "pid": 4872,
+      "time": 1790235026.9586804,
+      "label": "onnx_other ONNX before load",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "08",
+      "pid": 4872,
+      "time": 1790235033.8309019,
+      "label": "wd14 ONNX session created",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "11",
+      "pid": 4872,
+      "time": 1790235039.506055,
+      "label": "Base stage before",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "04",
+      "pid": 4872,
+      "time": 1790235040.4487875,
+      "label": "enable_model_cpu_offload complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": null,
+      "pid": 4872,
+      "time": 1790235087.7791069,
+      "label": "wd14 ONNX before load",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 1389319680,
+            "torch.int64@cuda:0": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 3689814528,
+            "torch.int64@cuda:0": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": [
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 1389319680,
+            "torch.int64@cuda:0": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 3689814528,
+            "torch.int64@cuda:0": 2056
+          }
+        }
+      ]
+    },
+    {
+      "code": null,
+      "pid": 4872,
+      "time": 1790235088.3020313,
+      "label": "onnx_other ONNX before load",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 1389319680,
+            "torch.int64@cuda:0": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 3689814528,
+            "torch.int64@cuda:0": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": [
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 1389319680,
+            "torch.int64@cuda:0": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 3689814528,
+            "torch.int64@cuda:0": 2056
+          }
+        }
+      ]
+    },
+    {
+      "code": "08",
+      "pid": 4872,
+      "time": 1790235092.469215,
+      "label": "wd14 ONNX session created",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 1389319680,
+            "torch.int64@cuda:0": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 3689814528,
+            "torch.int64@cuda:0": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": [
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 1389319680,
+            "torch.int64@cuda:0": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 3689814528,
+            "torch.int64@cuda:0": 2056
+          }
+        }
+      ]
+    },
+    {
+      "code": null,
+      "pid": 4872,
+      "time": 1790235094.2300537,
+      "label": "base actual sampling before",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 3689814528,
+            "torch.int64@cuda:0": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": [
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 3689814528,
+            "torch.int64@cuda:0": 2056
+          }
+        }
+      ]
+    },
+    {
+      "code": "04",
+      "pid": 4872,
+      "time": 1790235158.4615338,
+      "label": "enable_model_cpu_offload complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": null,
+      "pid": 4872,
+      "time": 1790235158.8490276,
+      "label": "base actual sampling after",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "00",
+      "pid": 33176,
+      "time": 1790235160.9563706,
+      "label": "process start (instrumentation initialized)",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "01",
+      "pid": 33176,
+      "time": 1790235181.7840157,
+      "label": "torch import complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "02",
+      "pid": 33176,
+      "time": 1790235190.1585255,
+      "label": "diffusers import complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": null,
+      "pid": 33176,
+      "time": 1790235213.2879717,
+      "label": "isnet ONNX before load",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": null,
+      "pid": 33176,
+      "time": 1790235213.540366,
+      "label": "onnx_other ONNX before load",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "09",
+      "pid": 33176,
+      "time": 1790235216.8600068,
+      "label": "isnet ONNX session created",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "10",
+      "pid": 33176,
+      "time": 1790235232.4929013,
+      "label": "CatVTON AutoMasker initialized",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "AutoMasker.densepose_processor.predictor.model",
+          "group": "automasker",
+          "dtype": "torch.float32",
+          "device": "cuda:0",
+          "logical_bytes": 255709584,
+          "dtype_device_bytes": {
+            "torch.float32@cuda:0": 255709584
+          }
+        },
+        {
+          "name": "AutoMasker.schp_processor_atr.model",
+          "group": "automasker",
+          "dtype": "torch.float32",
+          "device": "cuda:0",
+          "logical_bytes": 267332104,
+          "dtype_device_bytes": {
+            "torch.float32@cuda:0": 267331152,
+            "torch.int64@cuda:0": 952
+          }
+        },
+        {
+          "name": "AutoMasker.schp_processor_lip.model",
+          "group": "automasker",
+          "dtype": "torch.float32",
+          "device": "cuda:0",
+          "logical_bytes": 267334160,
+          "dtype_device_bytes": {
+            "torch.float32@cuda:0": 267333208,
+            "torch.int64@cuda:0": 952
+          }
+        }
+      ],
+      "gpu_resident_modules": [
+        {
+          "name": "AutoMasker.densepose_processor.predictor.model",
+          "group": "automasker",
+          "dtype": "torch.float32",
+          "device": "cuda:0",
+          "logical_bytes": 255709584,
+          "dtype_device_bytes": {
+            "torch.float32@cuda:0": 255709584
+          }
+        },
+        {
+          "name": "AutoMasker.schp_processor_atr.model",
+          "group": "automasker",
+          "dtype": "torch.float32",
+          "device": "cuda:0",
+          "logical_bytes": 267332104,
+          "dtype_device_bytes": {
+            "torch.float32@cuda:0": 267331152,
+            "torch.int64@cuda:0": 952
+          }
+        },
+        {
+          "name": "AutoMasker.schp_processor_lip.model",
+          "group": "automasker",
+          "dtype": "torch.float32",
+          "device": "cuda:0",
+          "logical_bytes": 267334160,
+          "dtype_device_bytes": {
+            "torch.float32@cuda:0": 267333208,
+            "torch.int64@cuda:0": 952
+          }
+        }
+      ]
+    },
+    {
+      "code": "16",
+      "pid": 33176,
+      "time": 1790235243.829631,
+      "label": "process exit / instrumentation removed",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": null,
+      "pid": 4872,
+      "time": 1790235247.160306,
+      "label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": null,
+      "pid": 4872,
+      "time": 1790235247.5301065,
+      "label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": null,
+      "pid": 4872,
+      "time": 1790235247.8213146,
+      "label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": null,
+      "pid": 4872,
+      "time": 1790235248.096357,
+      "label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": null,
+      "pid": 4872,
+      "time": 1790235248.4088385,
+      "label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "07",
+      "pid": 4872,
+      "time": 1790235249.2238553,
+      "label": "sam2 from_pretrained complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        },
+        {
+          "name": "Sam2Model",
+          "group": "sam2",
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "logical_bytes": 125764932,
+          "dtype_device_bytes": {
+            "torch.float32@cpu": 125764932
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "06",
+      "pid": 4872,
+      "time": 1790235251.350078,
+      "label": "grounding_dino from_pretrained complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        },
+        {
+          "name": "Sam2Model",
+          "group": "sam2",
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "logical_bytes": 125764932,
+          "dtype_device_bytes": {
+            "torch.float32@cpu": 125764932
+          }
+        },
+        {
+          "name": "GroundingDinoForObjectDetection",
+          "group": "grounding_dino",
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "logical_bytes": 689235048,
+          "dtype_device_bytes": {
+            "torch.float32@cpu": 688996360,
+            "torch.int64@cpu": 238688
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "00",
+      "pid": 24900,
+      "time": 1790235272.4801834,
+      "label": "process start (instrumentation initialized)",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "01",
+      "pid": 24900,
+      "time": 1790235282.418973,
+      "label": "torch import complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "02",
+      "pid": 24900,
+      "time": 1790235285.2028294,
+      "label": "diffusers import complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": null,
+      "pid": 24900,
+      "time": 1790235289.5905259,
+      "label": "isnet ONNX before load",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": null,
+      "pid": 24900,
+      "time": 1790235289.9138916,
+      "label": "onnx_other ONNX before load",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "09",
+      "pid": 24900,
+      "time": 1790235292.5110252,
+      "label": "isnet ONNX session created",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "10",
+      "pid": 24900,
+      "time": 1790235296.5290754,
+      "label": "CatVTON AutoMasker initialized",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "AutoMasker.densepose_processor.predictor.model",
+          "group": "automasker",
+          "dtype": "torch.float32",
+          "device": "cuda:0",
+          "logical_bytes": 255709584,
+          "dtype_device_bytes": {
+            "torch.float32@cuda:0": 255709584
+          }
+        },
+        {
+          "name": "AutoMasker.schp_processor_atr.model",
+          "group": "automasker",
+          "dtype": "torch.float32",
+          "device": "cuda:0",
+          "logical_bytes": 267332104,
+          "dtype_device_bytes": {
+            "torch.float32@cuda:0": 267331152,
+            "torch.int64@cuda:0": 952
+          }
+        },
+        {
+          "name": "AutoMasker.schp_processor_lip.model",
+          "group": "automasker",
+          "dtype": "torch.float32",
+          "device": "cuda:0",
+          "logical_bytes": 267334160,
+          "dtype_device_bytes": {
+            "torch.float32@cuda:0": 267333208,
+            "torch.int64@cuda:0": 952
+          }
+        }
+      ],
+      "gpu_resident_modules": [
+        {
+          "name": "AutoMasker.densepose_processor.predictor.model",
+          "group": "automasker",
+          "dtype": "torch.float32",
+          "device": "cuda:0",
+          "logical_bytes": 255709584,
+          "dtype_device_bytes": {
+            "torch.float32@cuda:0": 255709584
+          }
+        },
+        {
+          "name": "AutoMasker.schp_processor_atr.model",
+          "group": "automasker",
+          "dtype": "torch.float32",
+          "device": "cuda:0",
+          "logical_bytes": 267332104,
+          "dtype_device_bytes": {
+            "torch.float32@cuda:0": 267331152,
+            "torch.int64@cuda:0": 952
+          }
+        },
+        {
+          "name": "AutoMasker.schp_processor_lip.model",
+          "group": "automasker",
+          "dtype": "torch.float32",
+          "device": "cuda:0",
+          "logical_bytes": 267334160,
+          "dtype_device_bytes": {
+            "torch.float32@cuda:0": 267333208,
+            "torch.int64@cuda:0": 952
+          }
+        }
+      ]
+    },
+    {
+      "code": "16",
+      "pid": 24900,
+      "time": 1790235297.9260552,
+      "label": "process exit / instrumentation removed",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "12",
+      "pid": 4872,
+      "time": 1790235309.8087385,
+      "label": "Base stage after",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 3689814528,
+            "torch.int64@cuda:0": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": [
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 3689814528,
+            "torch.int64@cuda:0": 2056
+          }
+        }
+      ]
+    },
+    {
+      "code": "13",
+      "pid": 4872,
+      "time": 1790235314.9640648,
+      "label": "refinement stage before",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 3689814528,
+            "torch.int64@cuda:0": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": [
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 3689814528,
+            "torch.int64@cuda:0": 2056
+          }
+        }
+      ]
+    },
+    {
+      "code": "00",
+      "pid": 14484,
+      "time": 1790235316.3882203,
+      "label": "process start (instrumentation initialized)",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "01",
+      "pid": 14484,
+      "time": 1790235326.877384,
+      "label": "torch import complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "02",
+      "pid": 14484,
+      "time": 1790235331.3375375,
+      "label": "diffusers import complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": null,
+      "pid": 14484,
+      "time": 1790235339.8797126,
+      "label": "isnet ONNX before load",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": null,
+      "pid": 14484,
+      "time": 1790235340.1346576,
+      "label": "onnx_other ONNX before load",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "09",
+      "pid": 14484,
+      "time": 1790235342.958051,
+      "label": "isnet ONNX session created",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "10",
+      "pid": 14484,
+      "time": 1790235346.7478948,
+      "label": "CatVTON AutoMasker initialized",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "AutoMasker.densepose_processor.predictor.model",
+          "group": "automasker",
+          "dtype": "torch.float32",
+          "device": "cuda:0",
+          "logical_bytes": 255709584,
+          "dtype_device_bytes": {
+            "torch.float32@cuda:0": 255709584
+          }
+        },
+        {
+          "name": "AutoMasker.schp_processor_atr.model",
+          "group": "automasker",
+          "dtype": "torch.float32",
+          "device": "cuda:0",
+          "logical_bytes": 267332104,
+          "dtype_device_bytes": {
+            "torch.float32@cuda:0": 267331152,
+            "torch.int64@cuda:0": 952
+          }
+        },
+        {
+          "name": "AutoMasker.schp_processor_lip.model",
+          "group": "automasker",
+          "dtype": "torch.float32",
+          "device": "cuda:0",
+          "logical_bytes": 267334160,
+          "dtype_device_bytes": {
+            "torch.float32@cuda:0": 267333208,
+            "torch.int64@cuda:0": 952
+          }
+        }
+      ],
+      "gpu_resident_modules": [
+        {
+          "name": "AutoMasker.densepose_processor.predictor.model",
+          "group": "automasker",
+          "dtype": "torch.float32",
+          "device": "cuda:0",
+          "logical_bytes": 255709584,
+          "dtype_device_bytes": {
+            "torch.float32@cuda:0": 255709584
+          }
+        },
+        {
+          "name": "AutoMasker.schp_processor_atr.model",
+          "group": "automasker",
+          "dtype": "torch.float32",
+          "device": "cuda:0",
+          "logical_bytes": 267332104,
+          "dtype_device_bytes": {
+            "torch.float32@cuda:0": 267331152,
+            "torch.int64@cuda:0": 952
+          }
+        },
+        {
+          "name": "AutoMasker.schp_processor_lip.model",
+          "group": "automasker",
+          "dtype": "torch.float32",
+          "device": "cuda:0",
+          "logical_bytes": 267334160,
+          "dtype_device_bytes": {
+            "torch.float32@cuda:0": 267333208,
+            "torch.int64@cuda:0": 952
+          }
+        }
+      ]
+    },
+    {
+      "code": "16",
+      "pid": 14484,
+      "time": 1790235348.0688946,
+      "label": "process exit / instrumentation removed",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": null,
+      "pid": 4872,
+      "time": 1790235349.340273,
+      "label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 3689814528,
+            "torch.int64@cuda:0": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": [
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 3689814528,
+            "torch.int64@cuda:0": 2056
+          }
+        }
+      ]
+    },
+    {
+      "code": null,
+      "pid": 4872,
+      "time": 1790235349.6723926,
+      "label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 3689814528,
+            "torch.int64@cuda:0": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": [
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 3689814528,
+            "torch.int64@cuda:0": 2056
+          }
+        }
+      ]
+    },
+    {
+      "code": null,
+      "pid": 4872,
+      "time": 1790235349.9427414,
+      "label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 3689814528,
+            "torch.int64@cuda:0": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": [
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 3689814528,
+            "torch.int64@cuda:0": 2056
+          }
+        }
+      ]
+    },
+    {
+      "code": null,
+      "pid": 4872,
+      "time": 1790235350.220494,
+      "label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 3689814528,
+            "torch.int64@cuda:0": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": [
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 3689814528,
+            "torch.int64@cuda:0": 2056
+          }
+        }
+      ]
+    },
+    {
+      "code": null,
+      "pid": 4872,
+      "time": 1790235350.5596473,
+      "label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 3689814528,
+            "torch.int64@cuda:0": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": [
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 3689814528,
+            "torch.int64@cuda:0": 2056
+          }
+        }
+      ]
+    },
+    {
+      "code": "07",
+      "pid": 4872,
+      "time": 1790235351.132281,
+      "label": "sam2 from_pretrained complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 3689814528,
+            "torch.int64@cuda:0": 2056
+          }
+        },
+        {
+          "name": "Sam2Model",
+          "group": "sam2",
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "logical_bytes": 125764932,
+          "dtype_device_bytes": {
+            "torch.float32@cpu": 125764932
+          }
+        }
+      ],
+      "gpu_resident_modules": [
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 3689814528,
+            "torch.int64@cuda:0": 2056
+          }
+        }
+      ]
+    },
+    {
+      "code": "06",
+      "pid": 4872,
+      "time": 1790235352.2306368,
+      "label": "grounding_dino from_pretrained complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 3689814528,
+            "torch.int64@cuda:0": 2056
+          }
+        },
+        {
+          "name": "Sam2Model",
+          "group": "sam2",
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "logical_bytes": 125764932,
+          "dtype_device_bytes": {
+            "torch.float32@cpu": 125764932
+          }
+        },
+        {
+          "name": "GroundingDinoForObjectDetection",
+          "group": "grounding_dino",
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "logical_bytes": 689235048,
+          "dtype_device_bytes": {
+            "torch.float32@cpu": 688996360,
+            "torch.int64@cpu": 238688
+          }
+        }
+      ],
+      "gpu_resident_modules": [
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 3689814528,
+            "torch.int64@cuda:0": 2056
+          }
+        }
+      ]
+    },
+    {
+      "code": "04",
+      "pid": 4872,
+      "time": 1790235393.8979397,
+      "label": "enable_model_cpu_offload complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "04",
+      "pid": 4872,
+      "time": 1790235394.7965205,
+      "label": "enable_model_cpu_offload complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": null,
+      "pid": 4872,
+      "time": 1790235395.264243,
+      "label": "inpaint actual sampling before",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "04",
+      "pid": 4872,
+      "time": 1790235419.6521008,
+      "label": "enable_model_cpu_offload complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": null,
+      "pid": 4872,
+      "time": 1790235420.0861862,
+      "label": "inpaint actual sampling after",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": null,
+      "pid": 4872,
+      "time": 1790235422.1254084,
+      "label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 3689814528,
+            "torch.int64@cuda:0": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": [
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 3689814528,
+            "torch.int64@cuda:0": 2056
+          }
+        }
+      ]
+    },
+    {
+      "code": null,
+      "pid": 4872,
+      "time": 1790235422.4220574,
+      "label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 3689814528,
+            "torch.int64@cuda:0": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": [
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 3689814528,
+            "torch.int64@cuda:0": 2056
+          }
+        }
+      ]
+    },
+    {
+      "code": "06",
+      "pid": 4872,
+      "time": 1790235423.558391,
+      "label": "grounding_dino from_pretrained complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 3689814528,
+            "torch.int64@cuda:0": 2056
+          }
+        },
+        {
+          "name": "GroundingDinoForObjectDetection",
+          "group": "grounding_dino",
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "logical_bytes": 689235048,
+          "dtype_device_bytes": {
+            "torch.float32@cpu": 688996360,
+            "torch.int64@cpu": 238688
+          }
+        }
+      ],
+      "gpu_resident_modules": [
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cuda:0",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cuda:0": 3689814528,
+            "torch.int64@cuda:0": 2056
+          }
+        }
+      ]
+    },
+    {
+      "code": "04",
+      "pid": 4872,
+      "time": 1790235433.4195719,
+      "label": "enable_model_cpu_offload complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "04",
+      "pid": 4872,
+      "time": 1790235434.3623512,
+      "label": "enable_model_cpu_offload complete",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "14",
+      "pid": 4872,
+      "time": 1790235434.9512603,
+      "label": "refinement and its internal gates after",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "15",
+      "pid": 4872,
+      "time": 1790235435.35287,
+      "label": "measurement and gates complete (inside finalize boundary)",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [
+        {
+          "name": "text_encoder",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 246121576,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 246120960,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "vae",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 167307726,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 167307726
+          }
+        },
+        {
+          "name": "unet",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 5837497864,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 5837497864
+          }
+        },
+        {
+          "name": "text_encoder_2",
+          "group": "sdxl",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 1389320296,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 1389319680,
+            "torch.int64@cpu": 616
+          }
+        },
+        {
+          "name": "image_encoder",
+          "group": "ip_adapter",
+          "dtype": "torch.float16",
+          "device": "cpu",
+          "logical_bytes": 3689816584,
+          "dtype_device_bytes": {
+            "torch.float16@cpu": 3689814528,
+            "torch.int64@cpu": 2056
+          }
+        }
+      ],
+      "gpu_resident_modules": []
+    },
+    {
+      "code": "16",
+      "pid": 4872,
+      "time": 1790235436.5634792,
+      "label": "process exit / instrumentation removed",
+      "allocated_GB": null,
+      "reserved_GB": null,
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "measurement_status": "not_recorded_in_finished_run",
+      "resident_module_snapshots": [],
+      "gpu_resident_modules": []
+    }
+  ],
+  "stage_peaks": [
+    {
+      "stage": "Base candidate generation",
+      "max_allocated_GB": 6.051684856414795,
+      "max_reserved_GB": null,
+      "source": "cases/ordinary-female/base_candidates/candidate_1.json:peak_vram_bytes",
+      "implementation": "genai_lab/generator.py:882,979 torch.cuda.max_memory_allocated",
+      "scope": "parent CUDA allocator; candidate window reset inside generator",
+      "peak_time": null
+    },
+    {
+      "stage": "Base orchestrator (generation + validation)",
+      "max_allocated_GB": null,
+      "max_reserved_GB": 6.41796875,
+      "source": "cases/ordinary-female/execution.json:base_maximum_cuda_memory_reserved_bytes",
+      "scope": "parent CUDA allocator; child processes not included; nested reset exists",
+      "peak_time": null
+    },
+    {
+      "stage": "refinement orchestrator (generation + internal gates)",
+      "max_allocated_GB": null,
+      "max_reserved_GB": 6.416015625,
+      "source": "cases/ordinary-female/execution.json:maximum_cuda_memory_reserved_bytes",
+      "scope": "parent CUDA allocator; measurements not separately reset",
+      "peak_time": null
+    },
+    {
+      "stage": "measurement only",
+      "max_allocated_GB": null,
+      "max_reserved_GB": null,
+      "peak_time": null,
+      "scope": "not separately measured"
+    }
+  ],
+  "Q4": "not_measurable: no denoising callback residency snapshots",
+  "Q5": "not_measurable: no encode/denoise/decode interval peak timestamps",
+  "Q6": "not_measurable: no simultaneous allocated/reserved measurements; do not subtract unrelated maxima",
+  "new_generation_calls": 0,
+  "source_commit": "73dd0c8f270cf33b3e6249b62cd3edd83f3d27b0"
+}

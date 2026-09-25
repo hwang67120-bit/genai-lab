@@ -19,7 +19,6 @@ from PIL import Image
 from scripts.generation_inputs import resolve_inference_size
 from scripts.inpaint_runtime_probe import sample_resources
 from genai_lab.inpaint_runtime_monitor import RuntimeLogTail
-from genai_lab.body_initialization import BodyInitialization
 from genai_lab.inpaint_quality import NeutralResidualDiagnostic, inspect_neutral_residual
 
 from genai_lab.garment_reference_board import (
@@ -75,10 +74,6 @@ class GarmentInpaintSettings:
     neutral_rgb: tuple[int, int, int] = (127, 127, 127)
     neutral_residual_tolerance: int = 8
     operation: str = "garment_inpaint"
-    body_pose_controlnet_model_id: str = "xinsir/controlnet-openpose-sdxl-1.0"
-    body_pose_conditioning_scale: float = 0.65
-    body_pose_guidance_start: float = 0.0
-    body_pose_guidance_end: float = 0.80
 
 
 @dataclass(frozen=True)
@@ -133,7 +128,6 @@ class GarmentInpaintReviewCandidate:
     settings: GarmentInpaintSettings
     automatic_save_count: int = 0
     neutral_residual: NeutralResidualDiagnostic | None = None
-    body_pose_control_preview: Image.Image | None = None
 
     def close(self) -> None:
         for image in (
@@ -149,8 +143,6 @@ class GarmentInpaintReviewCandidate:
             image.close()
         if self.neutral_residual is not None:
             self.neutral_residual.close()
-        if self.body_pose_control_preview is not None:
-            self.body_pose_control_preview.close()
 
 
 @dataclass(frozen=True)
@@ -185,8 +177,6 @@ class GarmentGenerationEngine(ABC):
         settings: GarmentInpaintSettings,
         progress_callback: Callable[[GarmentInpaintProgress], None] | None = None,
         composite_mask: Image.Image | None = None,
-        body_pose_control_image: Image.Image | None = None,
-        body_initialization: BodyInitialization | None = None,
     ) -> GarmentInpaintReviewCandidate:
         """사용자 승인 전 검토 후보를 만들고 자동 저장하지 않는다."""
 
@@ -206,8 +196,6 @@ class SubprocessSDXLGarmentGenerationEngine(GarmentGenerationEngine):
         settings: GarmentInpaintSettings,
         progress_callback: Callable[[GarmentInpaintProgress], None] | None = None,
         composite_mask: Image.Image | None = None,
-        body_pose_control_image: Image.Image | None = None,
-        body_initialization: BodyInitialization | None = None,
     ) -> GarmentInpaintReviewCandidate:
         return _execute_garment_inpaint(
             base_character_image,
@@ -220,8 +208,6 @@ class SubprocessSDXLGarmentGenerationEngine(GarmentGenerationEngine):
             settings,
             progress_callback,
             composite_mask,
-            body_pose_control_image,
-            body_initialization,
         )
 
 
@@ -236,8 +222,6 @@ def execute_garment_inpaint(
     settings: GarmentInpaintSettings,
     progress_callback: Callable[[GarmentInpaintProgress], None] | None = None,
     composite_mask: Image.Image | None = None,
-    body_pose_control_image: Image.Image | None = None,
-    body_initialization: BodyInitialization | None = None,
 ) -> GarmentInpaintReviewCandidate:
     """기본 별도 프로세스 엔진으로 사용자 승인 전 후보를 만든다."""
     return SubprocessSDXLGarmentGenerationEngine().generate_inpaint(
@@ -251,8 +235,6 @@ def execute_garment_inpaint(
         settings,
         progress_callback,
         composite_mask,
-        body_pose_control_image,
-        body_initialization,
     )
 
 
@@ -267,21 +249,10 @@ def _execute_garment_inpaint(
     settings: GarmentInpaintSettings,
     progress_callback: Callable[[GarmentInpaintProgress], None] | None = None,
     composite_mask: Image.Image | None = None,
-    body_pose_control_image: Image.Image | None = None,
-    body_initialization: BodyInitialization | None = None,
 ) -> GarmentInpaintReviewCandidate:
     """별도 GPU 프로세스를 실행하고 마스크로 보호한 후보를 만든다."""
     started_at = perf_counter()
     _validate_settings(settings)
-    if body_initialization is not None:
-        if settings.operation != "body_restoration":
-            raise GarmentInpaintError("체형 초기화는 신체 복원에서만 사용할 수 있습니다.")
-        if (body_initialization.initial_image.size != approved_human_agnostic_image.size
-                or not np.array_equal(
-                    np.asarray(body_initialization.initial_image.convert("RGB")),
-                    np.asarray(approved_human_agnostic_image.convert("RGB")),
-                )):
-            raise GarmentInpaintError("승인한 체형 초기 이미지와 실행 입력이 다릅니다.")
     _validate_inputs(
         base_character_image,
         approved_human_agnostic_image,
@@ -289,8 +260,6 @@ def _execute_garment_inpaint(
         prompt,
         seed,
         settings.mask_threshold,
-        settings.operation,
-        body_pose_control_image,
     )
     base_rgb = _convert_to_rgb_on_white(base_character_image)
     human_agnostic_rgb = _convert_to_rgb_on_white(
@@ -309,11 +278,6 @@ def _execute_garment_inpaint(
             "합성 페더 마스크 크기가 기준 캐릭터와 다릅니다."
         )
     garment_rgb = _convert_to_rgb_on_white(garment_reference_image)
-    body_pose_rgb = (
-        body_pose_control_image.convert("RGB")
-        if body_pose_control_image is not None
-        else None
-    )
     try:
         garment_board = create_garment_reference_board(
             garment_reference_image,
@@ -355,7 +319,6 @@ def _execute_garment_inpaint(
         "stdout": benchmark_directory / "stdout.log",
         "stderr": benchmark_directory / "stderr.log",
         "metadata": benchmark_directory / "metadata.json",
-        "body_pose_control": benchmark_directory / "body_pose_control.png",
     }
     for image, name in (
         (initial, "initial"), (mask_l, "mask"),
@@ -364,34 +327,14 @@ def _execute_garment_inpaint(
         (garment_board.image, "garment_board"),
     ):
         image.save(paths[name])
-    if body_pose_rgb is not None:
-        body_pose_rgb.save(paths["body_pose_control"])
     metadata = _create_benchmark_metadata(
         settings, paths, prompt, negative_prompt, seed, base_rgb.size,
         garment_board,
-        body_pose_rgb is not None,
     )
     _write_benchmark_metadata(paths["metadata"], metadata)
     try:
-        if body_initialization is not None:
-            artifacts = {}
-            for name in (
-                "body_initial", "body_proxy", "body_skin_region",
-                "body_basewear_region", "body_background_region",
-                "body_skin_samples", "body_sample_overlay",
-            ):
-                artifact_path = benchmark_directory / f"{name}.png"
-                body_initialization.images[name].save(artifact_path)
-                artifacts[name] = {
-                    "path": str(artifact_path), "sha256": _sha256_file(artifact_path),
-                }
-            metadata["body_initialization"] = {
-                **body_initialization.metadata, "artifacts": artifacts,
-            }
-            _write_benchmark_metadata(paths["metadata"], metadata)
         command = _build_runner_command(
             settings, paths, prompt, negative_prompt, seed, base_rgb.size,
-            body_pose_rgb is not None,
         )
         monitor_stop = Event()
         monitor_thread = Thread(
@@ -412,7 +355,7 @@ def _execute_garment_inpaint(
         metadata["runtime_trace_file"] = "runtime_trace.jsonl"
         _write_benchmark_metadata(paths["metadata"], metadata)
         try:
-            print(f"[복원 계측] 작업={settings.operation} 연산={resolve_inference_size(base_rgb.size, settings.inference_width)} "
+            print(f"[의상 계측] 작업={settings.operation} 연산={resolve_inference_size(base_rgb.size, settings.inference_width)} "
                   f"로그={benchmark_directory / 'runtime_trace.jsonl'} 부모={metadata['parent_resources_before_runner']}", flush=True)
         except Exception:
             pass
@@ -456,7 +399,6 @@ def _execute_garment_inpaint(
         review_candidate = _create_review_candidate(
             base_rgb, initial, mask_l, composite_l,
             garment_rgb, garment_board.image,
-            body_pose_rgb,
             raw_output,
             settings, elapsed_seconds, execution_metrics,
             benchmark_directory, garment_board,
@@ -509,7 +451,7 @@ def _execute_garment_inpaint(
         })
         _write_benchmark_metadata(paths["metadata"], metadata)
         raise GarmentInpaintError(
-            f"{'신체 복원' if settings.operation == 'body_restoration' else '2D 의상 Inpaint'} 제한 시간 {settings.timeout_seconds}초 초과, "
+            f"2D 의상 Inpaint 제한 시간 {settings.timeout_seconds}초 초과, "
             f"벤치마크 보존={benchmark_directory}"
         ) from error
     except Exception as error:
@@ -532,8 +474,6 @@ def _execute_garment_inpaint(
             garment_rgb, initial,
         ):
             image.close()
-        if body_pose_rgb is not None:
-            body_pose_rgb.close()
         garment_board.close()
         if raw_output is not None:
             raw_output.close()
@@ -568,7 +508,6 @@ def _create_review_candidate(
     composite_mask_l: Image.Image,
     garment_rgb: Image.Image,
     garment_board_rgb: Image.Image,
-    body_pose_control_rgb: Image.Image | None,
     raw_output: Image.Image,
     settings: GarmentInpaintSettings,
     elapsed_seconds: float,
@@ -638,11 +577,6 @@ def _create_review_candidate(
             initial, protected, mask_l,
             settings.neutral_rgb, settings.neutral_residual_tolerance,
         ),
-        body_pose_control_preview=(
-            body_pose_control_rgb.copy()
-            if body_pose_control_rgb is not None
-            else None
-        ),
     )
 
 
@@ -653,8 +587,6 @@ def _validate_inputs(
     prompt: str,
     seed: int,
     threshold: int,
-    operation: str,
-    body_pose_control_image: Image.Image | None,
 ) -> None:
     expected = base.size
     for name, actual in {
@@ -669,28 +601,6 @@ def _validate_inputs(
         raise GarmentInpaintError("의상 Inpaint 프롬프트가 비어 있습니다.")
     if not 0 <= seed <= 2**63 - 1:
         raise GarmentInpaintError("시드는 0~2^63-1 범위여야 합니다.")
-    if operation == "body_restoration" and body_pose_control_image is None:
-        raise GarmentInpaintError(
-            "신체 복원에는 기준 캐릭터 DWPose ControlNet 입력이 필요합니다."
-        )
-    if operation == "garment_inpaint" and body_pose_control_image is not None:
-        raise GarmentInpaintError(
-            "일반 의상 합성에 신체 복원용 DWPose 입력을 전달할 수 없습니다."
-        )
-    if body_pose_control_image is not None:
-        if body_pose_control_image.size != expected:
-            raise GarmentInpaintError(
-                "신체 복원 DWPose 지도 크기가 기준 캐릭터와 다릅니다: "
-                f"{body_pose_control_image.size} != {expected}"
-            )
-        pose_rgb = body_pose_control_image.convert("RGB")
-        try:
-            if int(np.count_nonzero(np.asarray(pose_rgb, dtype=np.uint8))) == 0:
-                raise GarmentInpaintError(
-                    "신체 복원 DWPose 지도의 유효 픽셀이 0개입니다."
-                )
-        finally:
-            pose_rgb.close()
     base_image = base.convert("RGB")
     agnostic_image = human_agnostic.convert("RGB")
     mask_image = approved_mask.convert("L")
@@ -717,9 +627,9 @@ def _validate_inputs(
 
 
 def _validate_settings(settings: GarmentInpaintSettings) -> None:
-    if settings.operation not in {"garment_inpaint", "body_restoration"}:
+    if settings.operation != "garment_inpaint":
         raise GarmentInpaintError(
-            "operation은 garment_inpaint 또는 body_restoration이어야 합니다."
+            "operation은 garment_inpaint이어야 합니다."
         )
     if (len(settings.neutral_rgb) != 3
             or any(type(v) is not int or not 0 <= v <= 255 for v in settings.neutral_rgb)
@@ -737,16 +647,9 @@ def _validate_settings(settings: GarmentInpaintSettings) -> None:
     for name, value in (
         ("strength", settings.strength),
         ("ip_adapter_scale", settings.ip_adapter_scale),
-        ("body_pose_conditioning_scale", settings.body_pose_conditioning_scale),
-        ("body_pose_guidance_start", settings.body_pose_guidance_start),
-        ("body_pose_guidance_end", settings.body_pose_guidance_end),
     ):
         if not 0.0 <= value <= 1.0:
             raise GarmentInpaintError(f"{name}은 0.0~1.0이어야 합니다.")
-    if settings.body_pose_guidance_start > settings.body_pose_guidance_end:
-        raise GarmentInpaintError(
-            "body_pose_guidance_start는 guidance_end 이하여야 합니다."
-        )
     if settings.inference_steps < 1 or settings.guidance_scale <= 0:
         raise GarmentInpaintError("steps는 1 이상, guidance는 0 초과여야 합니다.")
     if settings.padding_mask_crop < 0 or settings.timeout_seconds < 1:
@@ -761,7 +664,6 @@ def _validate_settings(settings: GarmentInpaintSettings) -> None:
         ("adapter_repository", settings.adapter_repository),
         ("adapter_subfolder", settings.adapter_subfolder),
         ("adapter_weight", settings.adapter_weight),
-        ("body_pose_controlnet_model_id", settings.body_pose_controlnet_model_id),
         (
             "adapter_image_encoder_subfolder",
             settings.adapter_image_encoder_subfolder,
@@ -822,7 +724,6 @@ def _create_benchmark_metadata(
     seed: int,
     canvas_size: tuple[int, int],
     garment_board: GarmentReferenceBoard,
-    body_pose_control_enabled: bool,
 ) -> dict[str, object]:
     metadata = {
         "schema_version": 6,
@@ -831,13 +732,6 @@ def _create_benchmark_metadata(
         "operation": settings.operation,
         "tps_rgb_composite_enabled": False,
         "garment_controlnet_enabled": False,
-        "body_pose_controlnet_enabled": body_pose_control_enabled,
-        "body_pose_controlnet": {
-            "model_id": settings.body_pose_controlnet_model_id,
-            "conditioning_scale": settings.body_pose_conditioning_scale,
-            "guidance_start": settings.body_pose_guidance_start,
-            "guidance_end": settings.body_pose_guidance_end,
-        } if body_pose_control_enabled else None,
         "started_at": datetime.now().astimezone().isoformat(),
         "seed": seed,
         "prompt": prompt,
@@ -917,11 +811,6 @@ def _create_benchmark_metadata(
         },
     }
 
-    if body_pose_control_enabled:
-        metadata["input_files"]["body_pose_control"] = {
-            "name": paths["body_pose_control"].name,
-            "sha256": _sha256_file(paths["body_pose_control"]),
-        }
     return metadata
 
 
@@ -992,7 +881,6 @@ def _build_runner_command(
     negative_prompt: str,
     seed: int,
     canvas_size: tuple[int, int],
-    body_pose_control_enabled: bool,
 ) -> list[str]:
     command = [
         str(settings.python_executable), str(settings.runner_path),
@@ -1023,18 +911,6 @@ def _build_runner_command(
     if settings.inference_width is not None:
         resolve_inference_size(canvas_size, settings.inference_width)
         command.extend(("--inference-width", str(settings.inference_width)))
-    if body_pose_control_enabled:
-        command.extend((
-            "--body-pose-control-image", str(paths["body_pose_control"]),
-            "--body-pose-controlnet-model-id",
-            settings.body_pose_controlnet_model_id,
-            "--body-pose-conditioning-scale",
-            str(settings.body_pose_conditioning_scale),
-            "--body-pose-guidance-start",
-            str(settings.body_pose_guidance_start),
-            "--body-pose-guidance-end",
-            str(settings.body_pose_guidance_end),
-        ))
     return command
 
 

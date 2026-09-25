@@ -163,9 +163,7 @@ from genai_lab.original_body_pose import (
     OriginalBodyPose,
     OriginalBodyPoseError,
     approve_original_body_pose,
-    prepare_original_body_pose_control,
 )
-from genai_lab.body_initialization import BodyInitialization, create_body_initialization
 from genai_lab.garment_landmarks import extract_garment_mask_landmarks
 from genai_lab.character_target_landmarks import (
     extract_character_target_landmarks,
@@ -225,7 +223,6 @@ FRAMING_OPTIONS = (
 
 # 결과 확인 전에는 자세 ControlNet과 참조 의상 IP-Adapter를 연결하지 않고
 # 기존 의상 제거/신체 복원만 단독 검증한다.
-BODY_RESTORATION_ISOLATION_MODE = True
 CLOTHING_REFERENCE_GENERATION_MODE = True
 
 
@@ -2413,57 +2410,6 @@ def add_image_review_grid(
     parent_layout.addLayout(grid)
 
 
-class BodyInitializationReviewDialog(QDialog):
-    """GPU 실행 전에 실제 색상 표본과 체형/배경 초기값을 확인한다."""
-
-    def __init__(self, source, control_map, candidate: BodyInitialization, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("4단계: 체형·피부·기본복 초기 이미지 검토")
-        available = self.screen().availableGeometry()
-        self.resize(min(1180, available.width() - 60), min(860, available.height() - 60))
-        layout = QVBoxLayout(self)
-        info = QLabel(
-            "아직 AI 복원 결과가 아닙니다. 초록색=얼굴 색상 표본, 주황색=손 비교 표본. "
-            "얼굴 표본이 눈·머리카락·홍조를 잡았거나 체형/기본복 위치가 틀리면 취소하세요. "
-            "체형 폭은 관절 기반 추정값이며, 배경은 주변 색의 단색 초기값입니다."
-        )
-        info.setWordWrap(True)
-        layout.addWidget(info)
-        scroll = QScrollArea(self)
-        scroll.setWidgetResizable(True)
-        content = QWidget()
-        content_layout = QVBoxLayout(content)
-        images = candidate.images
-        add_image_review_grid(content_layout, (
-            ("1. 원본 캐릭터", source),
-            ("2. 원본 DWPose", control_map),
-            ("3. 얼굴·손 표본 위치", images["body_sample_overlay"]),
-            ("4. 관절 기반 체형 후보", images["body_proxy"]),
-            ("5. 피부 초기화 영역", images["body_skin_region"]),
-            ("6. 불투명 기본복 영역", images["body_basewear_region"]),
-            ("7. 배경 복원 대상", images["body_background_region"]),
-            ("8. 생성에 전달할 초기 이미지", images["body_initial"]),
-        ))
-        scroll.setWidget(content)
-        layout.addWidget(scroll)
-        meta = candidate.metadata
-        metrics = QLabel(
-            f"얼굴 표본={meta['skin_sample_count']}px, 피부 RGB={meta['skin_rgb']}, "
-            f"기본복 RGB={meta['basewear_rgb']}, 손 비교={meta['hand_comparison']}, "
-            f"배경색 편차(p90)={meta['background_spread_p90']:.1f}. "
-            "승인 범위 밖 변경=0px, 보호 영역 변경=0px. "
-            "승인하면 이 초기 이미지로 신체 복원만 실행합니다."
-        )
-        metrics.setWordWrap(True)
-        layout.addWidget(metrics)
-        buttons = QHBoxLayout()
-        cancel = QPushButton("취소하고 확인")
-        cancel.clicked.connect(self.reject)
-        approve = QPushButton("초기 이미지 승인 후 신체 복원")
-        approve.clicked.connect(self.accept)
-        buttons.addWidget(cancel)
-        buttons.addWidget(approve)
-        layout.addLayout(buttons)
 
 
 class GarmentTpsReviewDialog(QDialog):
@@ -2722,83 +2668,6 @@ class GarmentInpaintReviewDialog(QDialog):
         self.accept()
 
 
-class BodyRestorationReviewDialog(QDialog):
-    """의상·자세 합성 없이 기존 의상 제거와 신체 복원만 공개한다."""
-
-    def __init__(
-        self,
-        candidate: GarmentInpaintReviewCandidate,
-        parent=None,
-    ) -> None:
-        super().__init__(parent)
-        self.setWindowTitle("기존 의상 제거·신체 복원 결과 확인")
-        available = self.screen().availableGeometry()
-        self.resize(
-            min(1180, max(760, available.width() - 80)),
-            min(860, max(560, available.height() - 80)),
-        )
-        self.approved = False
-        layout = QVBoxLayout(self)
-        scroll = QScrollArea(self)
-        scroll.setWidgetResizable(True)
-        content = QWidget()
-        content_layout = QVBoxLayout(content)
-        add_image_review_grid(
-            content_layout,
-            (
-                ("1. 기존 의상 포함 원본", candidate.base_character_preview),
-                ("2. 기존 의상 중립화 입력", candidate.human_agnostic_preview),
-                ("3. 신체 복원 대상 마스크", candidate.approved_mask_preview),
-                ("4. 신체 복원 원시 출력", candidate.raw_inpaint_output),
-                ("5. 원본 보호 적용 신체 복원", candidate.protected_output),
-                ("6. 원본 대비 변경 영역 ×4", candidate.difference_preview),
-            ),
-        )
-        if candidate.body_pose_control_preview is not None:
-            add_image_review_grid(content_layout, (
-                (
-                    "7. 실제 신체 복원 ControlNet 입력",
-                    candidate.body_pose_control_preview,
-                ),
-            ))
-        residual = candidate.neutral_residual
-        if residual is not None:
-            add_image_review_grid(content_layout, (
-                ("8. 중립 회색 잔여 의심 영역", residual.mask),
-            ))
-        metrics = QLabel(
-            f"복원 마스크={candidate.inpaint_mask_pixels:,}px, "
-            f"내부 변경={candidate.protected_changed_inside_mask_pixels:,}px, "
-            f"외부 변경={candidate.protected_changed_outside_mask_pixels:,}px, "
-            f"Diffusion={candidate.execution_metrics.diffusion_seconds:.3f}초, "
-            f"전체={candidate.execution_metrics.parent_total_seconds:.3f}초, "
-            f"벤치마크={candidate.benchmark_directory}. "
-            "이 실행에는 기준 캐릭터 DWPose ControlNet만 사용되며, "
-            "외부 자세와 참조 의상 IP-Adapter는 사용되지 않았습니다."
-        )
-        metrics.setWordWrap(True)
-        content_layout.addWidget(metrics)
-        scroll.setWidget(content)
-        layout.addWidget(scroll)
-        buttons = QHBoxLayout()
-        approve = QPushButton("신체 복원 결과 확인 완료")
-        reject = QPushButton("거절하고 중지")
-        approve.setEnabled(
-            candidate.protected_changed_inside_mask_pixels > 0
-            and candidate.raw_changed_from_initial_inside_mask_pixels > 0
-            and candidate.protected_changed_outside_mask_pixels == 0
-            and candidate.automatic_save_count == 0
-        )
-        approve.clicked.connect(self._approve)
-        reject.clicked.connect(self.reject)
-        buttons.addWidget(approve)
-        buttons.addWidget(reject)
-        layout.addLayout(buttons)
-
-    @Slot()
-    def _approve(self) -> None:
-        self.approved = True
-        self.accept()
 
 
 class GarmentGeometryWorker(QObject):
@@ -2919,39 +2788,6 @@ def build_garment_inpaint_prompts(
     )
 
 
-def build_body_restoration_prompts(
-    base_prompt: str,
-    base_negative_prompt: str,
-) -> tuple[str, str]:
-    """참조 의상이나 사용자 텍스트 없이 중립 기본 신체 조건을 만든다."""
-    del base_prompt
-    positive = (
-        "anime character, same character design, same face, same hairstyle, "
-        "same body proportions, clean anime lineart, anatomically coherent body, "
-        "opaque basic one-piece covering torso and pelvis, "
-        "natural skin on arms and legs, preserve input colors, clean background"
-    )
-    removal_negative = (
-        "jacket, coat, cape, dress, skirt, pants, shorts, stockings, thighhighs, "
-        "boots, shoes, leftover clothing, gray body, duplicate body"
-    )
-    blocked_base_negative = {
-        "different outfit",
-        "mismatched colors",
-        "unnatural clothing folds",
-        "warped clothing",
-    }
-    filtered_base_negative = ", ".join(
-        token
-        for token in (
-            part.strip() for part in base_negative_prompt.split(",")
-        )
-        if token and token.casefold() not in blocked_base_negative
-    )
-    negative_parts = tuple(
-        part for part in (removal_negative, filtered_base_negative) if part
-    )
-    return positive, ", ".join(negative_parts)
 
 
 class GarmentInpaintWorker(QObject):
@@ -2973,8 +2809,6 @@ class GarmentInpaintWorker(QObject):
         negative_prompt: str,
         seed: int,
         settings: GarmentInpaintSettings,
-        body_pose_control_image: Image.Image | None = None,
-        body_initialization: BodyInitialization | None = None,
     ) -> None:
         super().__init__()
         self.base_character = base_character.copy()
@@ -2988,27 +2822,13 @@ class GarmentInpaintWorker(QObject):
         self.negative_prompt = negative_prompt
         self.seed = seed
         self.settings = settings
-        self.body_initialization = (
-            body_initialization.copy() if body_initialization is not None else None
-        )
-        self.body_pose_control_image = (
-            body_pose_control_image.copy()
-            if body_pose_control_image is not None
-            else None
-        )
 
     @Slot()
     def run(self) -> None:
         try:
-            if self.settings.operation == "body_restoration":
-                self.status_changed.emit(
-                    "SDXL Inpaint 기존 의상 제거·신체 복원 실행 중 "
-                    "(기준 캐릭터 DWPose 사용·외부 자세/참조 의상 없음)..."
-                )
-            else:
-                self.status_changed.emit(
-                    "SDXL Inpaint + IP-Adapter Plus 의상 생성 중..."
-                )
+            self.status_changed.emit(
+                "SDXL Inpaint + IP-Adapter Plus 의상 생성 중..."
+            )
             result = execute_garment_inpaint(
                 self.base_character,
                 self.approved_human_agnostic_image,
@@ -3020,8 +2840,6 @@ class GarmentInpaintWorker(QObject):
                 self.settings,
                 progress_callback=self.progress_changed.emit,
                 composite_mask=self.approved_composite_mask,
-                body_pose_control_image=self.body_pose_control_image,
-                body_initialization=self.body_initialization,
             )
             self.completed.emit(result)
         except Exception as error:
@@ -3032,10 +2850,6 @@ class GarmentInpaintWorker(QObject):
             self.approved_change_mask.close()
             self.approved_composite_mask.close()
             self.garment_reference.close()
-            if self.body_pose_control_image is not None:
-                self.body_pose_control_image.close()
-            if self.body_initialization is not None:
-                self.body_initialization.close()
 
 
 class GenerationWorker(QObject):
@@ -3391,7 +3205,6 @@ class GenAILabWindow(QMainWindow):
         self.pending_native_base_candidate: CharacterGenerationCandidate | None = None
         self.native_refinement_progress = None
         self.garment_inpaint_start_deferred = False
-        self.garment_inpaint_restoration_deferred = False
         self.reference_worker = None
         self.reference_worker_thread = None
         self.outfit_worker = None
@@ -4199,7 +4012,7 @@ class GenAILabWindow(QMainWindow):
             return
         if self.pending_clothing_base_candidate is None:
             self.pause_generation_workflow(
-                GenerationWorkflowStage.BODY_RESTORING,
+                GenerationWorkflowStage.POSE_ESTIMATING,
                 "신체 복원용 DWPose 원본인 기준 캐릭터 후보가 없습니다.",
             )
             return
@@ -4262,7 +4075,7 @@ class GenAILabWindow(QMainWindow):
             if not quality.accepted:
                 reason = "; ".join(quality.rejection_reasons)
                 self.pause_generation_workflow(
-                    GenerationWorkflowStage.BODY_RESTORING,
+                    GenerationWorkflowStage.POSE_ESTIMATING,
                     f"기준 캐릭터 DWPose 품질 미달: {reason}",
                 )
                 QMessageBox.warning(
@@ -4279,7 +4092,7 @@ class GenAILabWindow(QMainWindow):
             self.execute_approval_dialog(dialog)
             if not dialog.is_approved:
                 self.pause_generation_workflow(
-                    GenerationWorkflowStage.BODY_RESTORING,
+                    GenerationWorkflowStage.POSE_ESTIMATING,
                     "기준 캐릭터 신체 복원용 DWPose 승인이 취소되었습니다.",
                 )
                 return
@@ -4301,7 +4114,7 @@ class GenAILabWindow(QMainWindow):
         except OriginalBodyPoseError as error:
             self.release_original_body_pose()
             self.pause_generation_workflow(
-                GenerationWorkflowStage.BODY_RESTORING,
+                GenerationWorkflowStage.POSE_ESTIMATING,
                 str(error),
             )
             QMessageBox.critical(self, "기준 캐릭터 DWPose 승인 실패", str(error))
@@ -4317,7 +4130,7 @@ class GenAILabWindow(QMainWindow):
         """원본 자세 실패를 외부 저장 자세로 숨기지 않고 중단한다."""
         self.release_original_body_pose()
         self.pause_generation_workflow(
-            GenerationWorkflowStage.BODY_RESTORING,
+            GenerationWorkflowStage.POSE_ESTIMATING,
             f"기준 캐릭터 DWPose 추출 실패: {message}",
         )
         dialog = QMessageBox(self)
@@ -5571,7 +5384,6 @@ class GenAILabWindow(QMainWindow):
         if self.config is None:
             self.config = load_yaml(current_dir / "configs" / "animagine.yaml")
         section = self.config.get("garment_inpaint", {})
-        pose_section = self.config.get("pose_control", {})
 
         def resolved_path(key: str, default: str) -> Path:
             path = Path(str(section.get(key, default)))
@@ -5640,30 +5452,15 @@ class GenAILabWindow(QMainWindow):
             ),
             timeout_seconds=int(section.get("timeout_seconds", 1800)),
             dtype=str(section.get("dtype", "float16")),
-            body_pose_controlnet_model_id=str(pose_section.get(
-                "model_id", "xinsir/controlnet-openpose-sdxl-1.0"
-            )),
-            body_pose_conditioning_scale=float(pose_section.get(
-                "conditioning_scale", 0.65
-            )),
-            body_pose_guidance_start=float(pose_section.get(
-                "guidance_start", 0.0
-            )),
-            body_pose_guidance_end=float(pose_section.get(
-                "guidance_end", 0.80
-            )),
         )
 
-    def start_body_restoration(self) -> None:
-        """원본 DWPose만 사용하고 외부 자세·참조 의상 없이 복원한다."""
-        self._start_inpaint(restoration_only=True)
 
     def start_garment_inpaint(self) -> None:
         """Human-Agnostic 승인본과 의상 참조로 GPU 작업을 1회 시작한다."""
-        self._start_inpaint(restoration_only=False)
+        self._start_inpaint()
 
-    def _start_inpaint(self, restoration_only: bool) -> None:
-        """격리 신체 복원 또는 참조 의상 Inpaint Worker를 시작한다."""
+    def _start_inpaint(self) -> None:
+        """참조 의상 Inpaint Worker를 시작한다."""
         if (
             self.garment_inpaint_worker_thread is not None
             and self.garment_inpaint_worker_thread.isRunning()
@@ -5672,7 +5469,6 @@ class GenAILabWindow(QMainWindow):
         if self.worker_thread is not None and self.worker_thread.isRunning():
             if not self.garment_inpaint_start_deferred:
                 self.garment_inpaint_start_deferred = True
-                self.garment_inpaint_restoration_deferred = restoration_only
                 self.status_label.setText(
                     "상태: 7/8 시작 전 Step 5 작업자 종료 대기 중..."
                 )
@@ -5684,23 +5480,16 @@ class GenAILabWindow(QMainWindow):
         if (
             self.pending_clothing_base_candidate is None
             or self.confirmed_character_body_comparison is None
-            or (
-                not restoration_only
-                and self.pending_clothing_extraction is None
-            )
+            or self.pending_clothing_extraction is None
         ):
             self.pause_generation_workflow(
                 (
-                    GenerationWorkflowStage.BODY_RESTORING
-                    if restoration_only
-                    else GenerationWorkflowStage.CLOTHING_COMPOSITING
+                    GenerationWorkflowStage.CLOTHING_COMPOSITING
                 ),
-                "신체 복원 또는 의상 Inpaint 승인 입력이 부족합니다.",
+                "의상 Inpaint 승인 입력이 부족합니다.",
             )
             return
         base = self.pending_clothing_base_candidate
-        prepared_body_pose = None
-        body_initialization = None
         resolution_dialog = GenerationResolutionDialog(
             base.image.size, getattr(self, "last_inpaint_width", None), self,
         )
@@ -5708,69 +5497,17 @@ class GenAILabWindow(QMainWindow):
             self.status_label.setText("상태: 생성 해상도 선택 취소 - 생성하지 않았습니다.")
             return
         self.last_inpaint_width = resolution_dialog.inference_width
-        if restoration_only:
-            if self.original_body_pose is None:
-                self.pause_generation_workflow(
-                    GenerationWorkflowStage.BODY_RESTORING,
-                    "기준 캐릭터 신체 복원용 DWPose 승인이 없습니다.",
-                )
-                return
-            try:
-                prepared_body_pose = prepare_original_body_pose_control(
-                    self.original_body_pose,
-                    base.image,
-                )
-                confirmed = self.confirmed_character_body_comparison
-                if (confirmed.approved_foreground_mask is None
-                        or confirmed.approved_protection_mask is None):
-                    raise ValueError("체형 초기화용 외곽·보호 마스크가 없습니다. 변경 영역을 다시 승인하세요.")
-                body_initialization = create_body_initialization(
-                    base.image, confirmed.approved_change_mask,
-                    confirmed.approved_protection_mask,
-                    confirmed.approved_foreground_mask, self.original_body_pose,
-                )
-                dialog = BodyInitializationReviewDialog(
-                    base.image, prepared_body_pose.control_map_image,
-                    body_initialization, self,
-                )
-                accepted = self.execute_approval_dialog(dialog)
-                dialog.deleteLater()
-                if accepted != int(QDialog.DialogCode.Accepted):
-                    body_initialization.close()
-                    prepared_body_pose.close()
-                    self.pause_generation_workflow(
-                        GenerationWorkflowStage.BODY_RESTORING,
-                        "체형·피부 표본 초기 이미지 검토를 취소했습니다. 생성하지 않았습니다.",
-                    )
-                    return
-            except (ValueError, PoseReferenceEstimationError) as error:
-                if body_initialization is not None:
-                    body_initialization.close()
-                if prepared_body_pose is not None:
-                    prepared_body_pose.close()
-                self.pause_generation_workflow(
-                    GenerationWorkflowStage.BODY_RESTORING,
-                    str(error),
-                )
-                QMessageBox.critical(self, "신체 복원 초기 입력 오류", str(error))
-                return
-            prompt, negative_prompt = build_body_restoration_prompts(
-                base.prompt,
-                base.negative_prompt,
-            )
-            inpaint_reference = Image.new("RGBA", (32, 32), "white")
-        else:
-            tags = (
-                self.confirmed_clothing_design.design_tags
-                if self.confirmed_clothing_design is not None
-                else ()
-            )
-            prompt, negative_prompt = build_garment_inpaint_prompts(
-                base.prompt,
-                base.negative_prompt,
-                tuple(tags),
-            )
-            inpaint_reference = self.pending_clothing_extraction.extracted_image
+        tags = (
+            self.confirmed_clothing_design.design_tags
+            if self.confirmed_clothing_design is not None
+            else ()
+        )
+        prompt, negative_prompt = build_garment_inpaint_prompts(
+            base.prompt,
+            base.negative_prompt,
+            tuple(tags),
+        )
+        inpaint_reference = self.pending_clothing_extraction.extracted_image
         release_metrics = self.release_step5_pipeline()
         settings = replace(
             self.create_garment_inpaint_settings(),
@@ -5785,46 +5522,22 @@ class GenAILabWindow(QMainWindow):
             step5_vram_after_reserved_mib=(
                 release_metrics["after_reserved_mib"]
             ),
-            operation=(
-                "body_restoration"
-                if restoration_only
-                else "garment_inpaint"
-            ),
         )
         self.status_label.setText(
             "상태: 7/8 Step 5 모델 해제 완료 - "
-            f"모드={'신체 복원 단독' if restoration_only else '의상 합성'}, "
+            f"모드={'의상 합성'}, "
             f"할당 {release_metrics['before_allocated_mib']:.1f}→"
             f"{release_metrics['after_allocated_mib']:.1f}MiB, "
             f"예약 {release_metrics['after_reserved_mib']:.1f}MiB"
         )
         self.garment_inpaint_worker_thread = QThread(self)
-        try:
-            self.garment_inpaint_worker = GarmentInpaintWorker(
-                base.image,
-                (body_initialization.initial_image if body_initialization is not None
-                 else self.confirmed_character_body_comparison.approved_human_agnostic_image),
-                self.confirmed_character_body_comparison.approved_change_mask,
-                self.confirmed_character_body_comparison.approved_composite_mask,
-                inpaint_reference,
-                prompt,
-                negative_prompt,
-                base.seed,
-                settings,
-                body_pose_control_image=(
-                    prepared_body_pose.control_map_image
-                    if prepared_body_pose is not None
-                    else None
-                ),
-                body_initialization=body_initialization,
-            )
-        finally:
-            if restoration_only:
-                inpaint_reference.close()
-            if prepared_body_pose is not None:
-                prepared_body_pose.close()
-            if body_initialization is not None:
-                body_initialization.close()
+        self.garment_inpaint_worker = GarmentInpaintWorker(
+            base.image,
+            self.confirmed_character_body_comparison.approved_human_agnostic_image,
+            self.confirmed_character_body_comparison.approved_change_mask,
+            self.confirmed_character_body_comparison.approved_composite_mask,
+            inpaint_reference, prompt, negative_prompt, base.seed, settings,
+        )
         self.garment_inpaint_worker.moveToThread(
             self.garment_inpaint_worker_thread
         )
@@ -5868,9 +5581,7 @@ class GenAILabWindow(QMainWindow):
             )
             return
         self.garment_inpaint_start_deferred = False
-        restoration_only = self.garment_inpaint_restoration_deferred
-        self.garment_inpaint_restoration_deferred = False
-        self._start_inpaint(restoration_only)
+        self._start_inpaint()
 
     def release_step5_pipeline(self) -> dict[str, float]:
         """Step 9 전에 GUI와 Worker가 보유한 Step 5 모델 참조를 해제한다."""
@@ -5916,27 +5627,18 @@ class GenAILabWindow(QMainWindow):
         self,
         review_candidate: GarmentInpaintReviewCandidate,
     ) -> None:
-        restoration_only = (
-            review_candidate.settings.operation == "body_restoration"
-        )
         dialog = (
-            BodyRestorationReviewDialog(review_candidate, self)
-            if restoration_only
-            else GarmentInpaintReviewDialog(review_candidate, self)
+            GarmentInpaintReviewDialog(review_candidate, self)
         )
         try:
             self.execute_approval_dialog(dialog)
             if not dialog.approved:
                 self.pause_generation_workflow(
                     (
-                        GenerationWorkflowStage.BODY_RESTORING
-                        if restoration_only
-                        else GenerationWorkflowStage.CLOTHING_COMPOSITING
+                        GenerationWorkflowStage.CLOTHING_COMPOSITING
                     ),
                     (
-                        "사용자가 기존 의상 제거·신체 복원 결과를 거절했습니다."
-                        if restoration_only
-                        else "사용자가 2D 의상 Inpaint 결과를 거절했습니다."
+                        "사용자가 2D 의상 Inpaint 결과를 거절했습니다."
                     ),
                 )
                 return
@@ -5954,19 +5656,13 @@ class GenAILabWindow(QMainWindow):
                 before_clothing_image=None,
                 clothing_change_mask=change_mask,
                 clothing_reference_name=(
-                    None
-                    if restoration_only
-                    else Path(self.outfit_path).name if self.outfit_path else None
+                    Path(self.outfit_path).name if self.outfit_path else None
                 ),
                 clothing_category=(
-                    None
-                    if restoration_only
-                    else self.require_approved_legacy_clothing_category().value
+                    self.require_approved_legacy_clothing_category().value
                 ),
                 clothing_try_on_status=(
-                    "completed_body_restoration_isolation"
-                    if restoration_only
-                    else "completed_2d_inpaint"
+                    "completed_2d_inpaint"
                 ),
                 clothing_verification_warning_ko=None,
                 raw_clothing_try_on_image=None,
@@ -5985,18 +5681,13 @@ class GenAILabWindow(QMainWindow):
             self.move_generation_workflow(
                 GenerationWorkflowStage.FINAL_REVIEW,
                 (
-                    "기존 의상 제거·신체 복원 결과 확인 - "
-                    "기준 DWPose 사용·외부 자세/의상 합성 없음, 자동 저장 0개"
-                    if restoration_only
-                    else "2D 의상 후보 최종 승인 대기 - 자동 저장 0개"
+                    "2D 의상 후보 최종 승인 대기 - 자동 저장 0개"
                 ),
             )
         except Exception as error:
             self.pause_generation_workflow(
                 (
-                    GenerationWorkflowStage.BODY_RESTORING
-                    if restoration_only
-                    else GenerationWorkflowStage.CLOTHING_COMPOSITING
+                    GenerationWorkflowStage.CLOTHING_COMPOSITING
                 ),
                 f"Inpaint 승인 실패: {error}",
             )
@@ -6006,27 +5697,18 @@ class GenAILabWindow(QMainWindow):
 
     @Slot(str, str)
     def garment_inpaint_failed(self, message: str, details: str) -> None:
-        restoration_only = bool(
-            self.garment_inpaint_worker is not None
-            and self.garment_inpaint_worker.settings.operation
-            == "body_restoration"
-        )
         self.pause_generation_workflow(
             (
-                GenerationWorkflowStage.BODY_RESTORING
-                if restoration_only
-                else GenerationWorkflowStage.CLOTHING_COMPOSITING
+                GenerationWorkflowStage.CLOTHING_COMPOSITING
             ),
             (
-                f"기존 의상 제거·신체 복원 실패: {message}"
-                if restoration_only
-                else f"2D 의상 Inpaint 실패: {message}"
+                f"2D 의상 Inpaint 실패: {message}"
             ),
         )
         dialog = QMessageBox(self)
         dialog.setIcon(QMessageBox.Icon.Critical)
         dialog.setWindowTitle(
-            "신체 복원 실패" if restoration_only else "2D 의상 Inpaint 실패"
+            "2D 의상 Inpaint 실패"
         )
         dialog.setText(message)
         dialog.setDetailedText(details)
@@ -6406,7 +6088,7 @@ class GenAILabWindow(QMainWindow):
             return
 
         if (
-            not BODY_RESTORATION_ISOLATION_MODE
+            not CLOTHING_REFERENCE_GENERATION_MODE
             and
             workflow_context.pose_image_path is not None
             and self.approved_pose_estimation is None
@@ -6584,7 +6266,7 @@ class GenAILabWindow(QMainWindow):
             )
             return
         if (
-            not BODY_RESTORATION_ISOLATION_MODE
+            not CLOTHING_REFERENCE_GENERATION_MODE
             and
             self.approved_pose_reference is not None
             and self.approved_pose_estimation is None
@@ -6740,7 +6422,7 @@ class GenAILabWindow(QMainWindow):
 
             active_pose_estimation = (
                 None
-                if BODY_RESTORATION_ISOLATION_MODE
+                if CLOTHING_REFERENCE_GENERATION_MODE
                 else self.approved_pose_estimation
             )
             run_log.write_stage(
@@ -6876,18 +6558,11 @@ class GenAILabWindow(QMainWindow):
         self,
         progress: GarmentInpaintProgress,
     ) -> None:
-        restoration_only = bool(
-            self.garment_inpaint_worker is not None
-            and self.garment_inpaint_worker.settings.operation
-            == "body_restoration"
-        )
         phase_labels = {
             "runner_started": "실행기 시작",
             "pipeline_loading": "Animagine XL 파이프라인 로딩",
             "ip_adapter_loading": (
-                "IP-Adapter 생략"
-                if restoration_only
-                else "IP-Adapter 로딩"
+                "IP-Adapter 로딩"
             ),
             "diffusion_running": "Diffusion 추론",
             "output_saving": "결과 변환·저장",
@@ -6905,7 +6580,7 @@ class GenAILabWindow(QMainWindow):
         )
         self.status_label.setText(
             "상태: 7/8 "
-            f"{'신체 복원 단독' if restoration_only else '의상 생성'} | "
+            f"{'의상 생성'} | "
             f"{phase_labels.get(progress.phase, progress.phase)} | "
             f"{callback_text} | {configured_text} | "
             f"단계 경과={progress.phase_elapsed_seconds:.1f}초 | "

@@ -22,7 +22,6 @@ def test_reference_result_goes_directly_to_review(monkeypatch):
     def forbidden():
         raise AssertionError('legacy stage must not start')
     monkeypatch.setattr(window, 'start_character_body_comparison', forbidden)
-    monkeypatch.setattr(window, 'start_body_restoration', forbidden)
     window.generation_completed(candidate, None)
     assert shown == [candidate]
     assert window.pending_clothing_base_candidate is None

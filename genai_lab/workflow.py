@@ -15,7 +15,6 @@ class GenerationWorkflowStage(str, Enum):
     POSE_ESTIMATING = "pose_estimating"
     BASE_GENERATING = "base_generating"
     BODY_MASKING = "body_masking"
-    BODY_RESTORING = "body_restoring"
     GARMENT_GEOMETRY = "garment_geometry"
     GARMENT_LINEART = "garment_lineart"
     CLOTHING_COMPOSITING = "clothing_compositing"
@@ -32,7 +31,6 @@ WORKFLOW_STAGE_PROGRESS: dict[GenerationWorkflowStage, tuple[int, int]] = {
     GenerationWorkflowStage.POSE_ESTIMATING: (4, 8),
     GenerationWorkflowStage.BASE_GENERATING: (5, 8),
     GenerationWorkflowStage.BODY_MASKING: (6, 8),
-    GenerationWorkflowStage.BODY_RESTORING: (7, 8),
     # TPS·Lineart는 활성 자동 경로가 아닌 진단용 상태로 보존한다.
     GenerationWorkflowStage.GARMENT_GEOMETRY: (6, 8),
     GenerationWorkflowStage.GARMENT_LINEART: (6, 8),

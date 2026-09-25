@@ -22,7 +22,7 @@ def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="2D garment inpaint runner")
     parser.add_argument(
         "--operation",
-        choices=("garment_inpaint", "body_restoration"),
+        choices=("garment_inpaint",),
         default="garment_inpaint",
     )
     for name in (
@@ -46,11 +46,6 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--seed", type=int, required=True)
     parser.add_argument("--dtype", choices=("float16", "bfloat16"), required=True)
     parser.add_argument("--progress-file", required=True)
-    parser.add_argument("--body-pose-control-image")
-    parser.add_argument("--body-pose-controlnet-model-id")
-    parser.add_argument("--body-pose-conditioning-scale", type=float)
-    parser.add_argument("--body-pose-guidance-start", type=float)
-    parser.add_argument("--body-pose-guidance-end", type=float)
     return parser.parse_args()
 
 
@@ -140,8 +135,6 @@ def main() -> None:
     arguments = parse_arguments()
     import torch
     from diffusers import (
-        ControlNetModel,
-        StableDiffusionXLControlNetInpaintPipeline,
         StableDiffusionXLInpaintPipeline,
     )
 
@@ -162,35 +155,14 @@ def main() -> None:
     mask = load_image_copy(arguments.mask_image, "L")
     garment = load_image_copy(arguments.garment_image, "RGB")
     body_pose = None
-    body_pose_arguments = (
-        arguments.body_pose_control_image,
-        arguments.body_pose_controlnet_model_id,
-        arguments.body_pose_conditioning_scale,
-        arguments.body_pose_guidance_start,
-        arguments.body_pose_guidance_end,
-    )
-    if arguments.operation == "body_restoration":
-        if any(value is None for value in body_pose_arguments):
-            raise RuntimeError(
-                "body_restoration에는 DWPose ControlNet 인자 5개가 모두 필요합니다."
-            )
-        body_pose = load_image_copy(arguments.body_pose_control_image, "RGB")
-    elif any(value is not None for value in body_pose_arguments):
-        raise RuntimeError(
-            "garment_inpaint에는 신체 복원용 DWPose 인자를 전달할 수 없습니다."
-        )
     pipeline = None
     controlnet = None
     generated = None
     result = None
     probe = RuntimeProbe(progress_path.with_name("runtime_trace.jsonl"), torch)
     try:
-        probe.wrap(ControlNetModel, "from_pretrained", "controlnet.load")
-        probe.wrap(StableDiffusionXLControlNetInpaintPipeline, "from_pretrained", "controlnet_inpaint.load")
         probe.wrap(StableDiffusionXLInpaintPipeline, "from_pretrained", "inpaint.load")
         size_inputs = [("initial", initial), ("mask", mask)]
-        if body_pose is not None:
-            size_inputs.append(("body_pose", body_pose))
         for name, image in size_inputs:
             if image.size != expected_size:
                 raise RuntimeError(
@@ -212,29 +184,13 @@ def main() -> None:
             phase_started_at=phase_started_at,
             message="started",
         )
-        if arguments.operation == "body_restoration":
-            controlnet = ControlNetModel.from_pretrained(
-                arguments.body_pose_controlnet_model_id,
-                torch_dtype=dtype,
-                cache_dir=arguments.cache_dir,
-                use_safetensors=True,
-            )
-            pipeline = StableDiffusionXLControlNetInpaintPipeline.from_pretrained(
-                arguments.base_model_id,
-                controlnet=controlnet,
-                torch_dtype=dtype,
-                variant=arguments.model_variant,
-                cache_dir=arguments.cache_dir,
-                use_safetensors=True,
-            )
-        else:
-            pipeline = StableDiffusionXLInpaintPipeline.from_pretrained(
-                arguments.base_model_id,
-                torch_dtype=dtype,
-                variant=arguments.model_variant,
-                cache_dir=arguments.cache_dir,
-                use_safetensors=True,
-            )
+        pipeline = StableDiffusionXLInpaintPipeline.from_pretrained(
+            arguments.base_model_id,
+            torch_dtype=dtype,
+            variant=arguments.model_variant,
+            cache_dir=arguments.cache_dir,
+            use_safetensors=True,
+        )
         emit_progress(
             progress_path,
             phase="pipeline_loading",
@@ -251,19 +207,18 @@ def main() -> None:
             message="started",
         )
         adapter_dimensions = None
-        if arguments.operation == "garment_inpaint":
-            pipeline.load_ip_adapter(
-                arguments.adapter_repository,
-                subfolder=arguments.adapter_subfolder,
-                weight_name=arguments.adapter_weight,
-                image_encoder_folder=arguments.adapter_image_encoder_subfolder,
-                cache_dir=arguments.cache_dir,
-            )
-            adapter_dimensions = validate_ip_adapter_dimensions(
-                pipeline,
-                arguments.adapter_weight,
-            )
-            pipeline.set_ip_adapter_scale(arguments.ip_adapter_scale)
+        pipeline.load_ip_adapter(
+            arguments.adapter_repository,
+            subfolder=arguments.adapter_subfolder,
+            weight_name=arguments.adapter_weight,
+            image_encoder_folder=arguments.adapter_image_encoder_subfolder,
+            cache_dir=arguments.cache_dir,
+        )
+        adapter_dimensions = validate_ip_adapter_dimensions(
+            pipeline,
+            arguments.adapter_weight,
+        )
+        pipeline.set_ip_adapter_scale(arguments.ip_adapter_scale)
         emit_progress(
             progress_path,
             phase="ip_adapter_loading",
@@ -271,8 +226,6 @@ def main() -> None:
             phase_started_at=phase_started_at,
             message=(
                 "completed"
-                if arguments.operation == "garment_inpaint"
-                else "skipped_for_body_restoration"
             ),
         )
         probe.wrap(pipeline, "enable_model_cpu_offload", "pipeline.install_cpu_offload")
@@ -294,18 +247,6 @@ def main() -> None:
                 {
                     "operation": arguments.operation,
                     "adapter_dimensions": adapter_dimensions,
-                    "body_pose_controlnet": (
-                        {
-                            "model_id": arguments.body_pose_controlnet_model_id,
-                            "conditioning_scale": (
-                                arguments.body_pose_conditioning_scale
-                            ),
-                            "guidance_start": arguments.body_pose_guidance_start,
-                            "guidance_end": arguments.body_pose_guidance_end,
-                        }
-                        if body_pose is not None
-                        else None
-                    ),
                     "inference_size": inference_size,
                     "output_size": expected_size,
                     "prompt": prompt_record,
@@ -363,17 +304,7 @@ def main() -> None:
             generator=generator,
             callback_on_step_end=report_diffusion_step,
         )
-        if arguments.operation == "garment_inpaint":
-            generation_arguments["ip_adapter_image"] = garment
-        else:
-            generation_arguments.update({
-                "control_image": body_pose,
-                "controlnet_conditioning_scale": (
-                    arguments.body_pose_conditioning_scale
-                ),
-                "control_guidance_start": arguments.body_pose_guidance_start,
-                "control_guidance_end": arguments.body_pose_guidance_end,
-            })
+        generation_arguments["ip_adapter_image"] = garment
         with probe.measure("pipeline.generate"):
             generated = pipeline(**generation_arguments).images[0]
         emit_progress(

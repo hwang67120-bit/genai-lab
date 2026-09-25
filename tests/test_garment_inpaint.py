@@ -149,8 +149,6 @@ def test_execution_protects_outside_and_exposes_eight_previews(
         assert metadata["initial_image_source"] == "approved_human_agnostic"
         assert metadata["tps_rgb_composite_enabled"] is False
         assert metadata["garment_controlnet_enabled"] is False
-        assert metadata["body_pose_controlnet_enabled"] is False
-        assert metadata["body_pose_controlnet"] is None
         assert metadata["base_model_id"] == (
             "diffusers/stable-diffusion-xl-1.0-inpainting-0.1"
         )
@@ -260,64 +258,14 @@ def test_runner_command_uses_no_tps_lineart_or_controlnet(tmp_path, monkeypatch)
         _close(inputs)
 
 
-def test_body_restoration_operation_is_forwarded_without_changing_masks(
-    tmp_path, monkeypatch
-):
-    inputs = _inputs()
-    captured: list[str] = []
-    body_pose = _body_pose()
-
-    def capture(command, **kwargs):
-        captured.extend(command)
-        return _success(command, **kwargs)
-
-    monkeypatch.setattr("genai_lab.garment_inpaint.subprocess.run", capture)
-    candidate = execute_garment_inpaint(
-        *inputs,
-        prompt="same character, neutral base layer, bare legs",
-        negative_prompt="stockings, boots",
-        seed=1,
-        settings=replace(_settings(tmp_path), operation="body_restoration"),
-        body_pose_control_image=body_pose,
-    )
-    try:
-        assert captured[captured.index("--operation") + 1] == (
-            "body_restoration"
-        )
-        metadata = json.loads(
-            (candidate.benchmark_directory / "metadata.json").read_text(
-                encoding="utf-8"
-            )
-        )
-        assert metadata["operation"] == "body_restoration"
-        assert metadata["body_pose_controlnet_enabled"] is True
-        assert metadata["body_pose_controlnet"] == {
-            "model_id": "xinsir/controlnet-openpose-sdxl-1.0",
-            "conditioning_scale": 0.65,
-            "guidance_start": 0.0,
-            "guidance_end": 0.8,
-        }
-        assert metadata["input_files"]["body_pose_control"]["sha256"]
-        assert "--body-pose-control-image" in captured
-        assert "--body-pose-controlnet-model-id" in captured
-        assert "--body-pose-conditioning-scale" in captured
-        assert "--body-pose-guidance-start" in captured
-        assert "--body-pose-guidance-end" in captured
-        assert candidate.body_pose_control_preview is not None
-        assert candidate.body_pose_control_preview.getbbox() is not None
-        assert candidate.protected_changed_outside_mask_pixels == 0
-    finally:
-        candidate.close()
-        body_pose.close()
-        _close(inputs)
 
 
-def test_body_restoration_without_original_pose_is_blocked_before_process(
+def test_removed_restoration_operation_is_rejected_before_process(
     tmp_path,
 ) -> None:
     inputs = _inputs()
     try:
-        with pytest.raises(GarmentInpaintError, match="DWPose ControlNet"):
+        with pytest.raises(GarmentInpaintError, match="operation은 garment_inpaint"):
             execute_garment_inpaint(
                 *inputs,
                 prompt="same character body",
@@ -332,22 +280,6 @@ def test_body_restoration_without_original_pose_is_blocked_before_process(
         _close(inputs)
 
 
-def test_garment_inpaint_rejects_body_restoration_pose_input(tmp_path) -> None:
-    inputs = _inputs()
-    body_pose = _body_pose()
-    try:
-        with pytest.raises(GarmentInpaintError, match="일반 의상 합성"):
-            execute_garment_inpaint(
-                *inputs,
-                prompt="jacket",
-                negative_prompt="",
-                seed=1,
-                settings=_settings(tmp_path),
-                body_pose_control_image=body_pose,
-            )
-    finally:
-        body_pose.close()
-        _close(inputs)
 
 
 def test_size_mismatch_is_blocked_before_process(tmp_path):

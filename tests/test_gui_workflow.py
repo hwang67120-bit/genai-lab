@@ -17,7 +17,6 @@ from genai_lab.workflow import (
 )
 from gui_main import (
     GenAILabWindow,
-    build_body_restoration_prompts,
     build_garment_inpaint_prompts,
 )
 
@@ -293,22 +292,6 @@ def test_garment_prompt_removes_only_app_outfit_preservation_conflicts() -> None
     )
 
 
-def test_body_restoration_prompt_has_no_reference_garment_dependency() -> None:
-    prompt, negative_prompt = build_body_restoration_prompts(
-        "matching outfit and colors, blue cape",
-        "different character, low quality",
-    )
-
-    assert "reference garment" not in prompt
-    assert "matching outfit" not in prompt
-    assert "same character design" in prompt
-    assert "neutral base layer" not in prompt
-    assert "opaque basic one-piece covering torso and pelvis" in prompt
-    assert "preserve input colors" in prompt
-    assert "stockings" in negative_prompt
-    assert "boots" in negative_prompt
-    assert "different character" in negative_prompt
-    assert "different outfit" not in negative_prompt
 
 
 def test_garment_inpaint_settings_use_vit_h_image_encoder() -> None:
@@ -321,12 +304,6 @@ def test_garment_inpaint_settings_use_vit_h_image_encoder() -> None:
         assert settings.adapter_image_encoder_subfolder == (
             "models/image_encoder"
         )
-        assert settings.body_pose_controlnet_model_id == (
-            "xinsir/controlnet-openpose-sdxl-1.0"
-        )
-        assert settings.body_pose_conditioning_scale == 0.65
-        assert settings.body_pose_guidance_start == 0.0
-        assert settings.body_pose_guidance_end == 0.8
     finally:
         close_window(window)
         application.processEvents()
@@ -399,7 +376,6 @@ def test_stale_synthesis_candidate_never_routes_to_restoration(monkeypatch):
     window.workflow_context = GenerationWorkflowContext(
         character_image_path=Path('character.png'), clothing_image_path=Path('clothing.png'),
         pose_image_path=None)
-    monkeypatch.setattr(window, 'start_body_restoration', lambda: started.append('restoration'))
     monkeypatch.setattr(window, 'start_original_body_pose_estimation', lambda: started.append('pose'))
     monkeypatch.setattr(window, 'pause_generation_workflow', lambda *args: paused.append(args))
     window.advance_generation_workflow()

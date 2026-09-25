@@ -617,28 +617,3 @@ person_count_diagnostic:
   minimum_area_ratio: 0.02
   duplicate_iou: 0.65
   blocking: false
-
-# 승인된 Base와 격리 의상 보드로 FLUX 전체 이미지를 한 번 정밀화한다.
-# 이미지 병합, hard paste, 마스크 합성 및 다른 생성 모델 폴백은 사용하지 않는다.
-# source_character_direct는 GPU 회귀 결과 때문에 실험 설정으로만 남긴다.
-native_refinement:
-  enabled: true
-  mode: gui_local_gpu
-  python_executable: D:/genai-cache/venv/Scripts/python.exe
-  runner_path: scripts/run_native_refinement.py
-  model_cache_dir: C:/Users/user/.cache/huggingface
-  allow_download: false
-  timeout_seconds: 3600
-  strategy: flux2_klein_only
-  engines: [flux2_klein]
-  candidate_policy: whole_image_native_output
-  image_merge_enabled: false
-  hard_paste_enabled: false
-  mask_composite_enabled: false
-  failed_candidates_returned: false
-  all_failed_action: keep_approved_base_and_seed
-  minimum_similarity: 0.65
-  minimum_color_similarity: 0.55
-  width: 512
-  height: 896
-  flux_steps: 4

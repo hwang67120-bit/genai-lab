@@ -23,10 +23,10 @@ import gui_main
 from genai_lab.external_candidate import load_external_character_candidate
 from genai_lab.generation_orchestrator import GenerationPhase
 from genai_lab.native_pipeline_contract import (
-    native_refinement_enabled,
+    final_refinement_enabled,
     validate_native_pipeline_config,
 )
-from genai_lab.native_refinement_execution import NativeRefinementExecutionResult
+from genai_lab.refinement_result import RefinementExecutionResult
 from genai_lab.visual_reference import CandidateBatch
 from genai_lab.workflow import GenerationWorkflowStage
 from gui_main import GenAILabWindow
@@ -35,7 +35,7 @@ from run import load_yaml, validate_config
 
 @pytest.mark.parametrize(
     ("native_status", "selected_engine"),
-    (("PASS", "flux2_klein"), ("BASE_LOCKED", None)),
+    (("PASS", "sdxl_local"), ("BASE_LOCKED", None)),
 )
 def test_gui_full_contract_routes_approved_inputs_to_final_review(
     monkeypatch,
@@ -50,12 +50,12 @@ def test_gui_full_contract_routes_approved_inputs_to_final_review(
     config["generation_run_context"]["root"] = str(tmp_path / "runs")
     validate_config(config)
     validate_native_pipeline_config(config)
-    assert native_refinement_enabled(config)
+    assert final_refinement_enabled(config)
 
     character_path = tmp_path / "character.png"
     outfit_path = tmp_path / "outfit.png"
     base_path = tmp_path / "candidate_1.png"
-    refined_path = tmp_path / "flux2_klein.png"
+    refined_path = tmp_path / "sdxl_local.png"
     garment_board_path = tmp_path / "input_garment.png"
     candidate_record_path = base_path.with_suffix(".json")
     approved_run_path = tmp_path / "approved_generation.json"
@@ -78,7 +78,7 @@ def test_gui_full_contract_routes_approved_inputs_to_final_review(
     window.selected_outfit_path = outfit_path
     contract_before_gui_routing = deepcopy({
         "native_pipeline_v2": config["native_pipeline_v2"],
-        "native_refinement": config["native_refinement"],
+        "refinement_execution": config["refinement_execution"],
     })
     trace: list[str] = []
     routed_paths: dict[str, Path] = {}
@@ -157,13 +157,13 @@ def test_gui_full_contract_routes_approved_inputs_to_final_review(
         # GUI 라우팅이 백엔드 설정·게이트 임계값을 다시 쓰지 않았는지 검사한다.
         assert {
             "native_pipeline_v2": window.config["native_pipeline_v2"],
-            "native_refinement": window.config[
-                "native_refinement"
+            "refinement_execution": window.config[
+                "refinement_execution"
             ],
         } == contract_before_gui_routing
         window.pending_native_base_candidate = base_candidate
         window.native_refinement_completed(
-            NativeRefinementExecutionResult(
+            RefinementExecutionResult(
                 status=native_status,
                 selected_engine=selected_engine,
                 selected_image_path=(
@@ -261,10 +261,10 @@ def test_gui_full_contract_routes_approved_inputs_to_final_review(
         assert window.pending_character_candidate is not None
         assert window.pending_character_candidate.seed == 123456
         if native_status == "PASS":
-            assert window.pending_character_candidate.model_id == "flux2_klein"
+            assert window.pending_character_candidate.model_id == "sdxl_local"
             assert (
                 window.pending_character_candidate.detail_correction_status
-                == "native_refinement_flux2_klein_final_gate_passed"
+                == "native_refinement_sdxl_local_final_gate_passed"
             )
             assert "최종 검토" in window.status_label.text()
         else:
@@ -281,8 +281,8 @@ def test_gui_full_contract_routes_approved_inputs_to_final_review(
         )
         assert {
             "native_pipeline_v2": window.config["native_pipeline_v2"],
-            "native_refinement": window.config[
-                "native_refinement"
+            "refinement_execution": window.config[
+                "refinement_execution"
             ],
         } == contract_before_gui_routing
     finally:

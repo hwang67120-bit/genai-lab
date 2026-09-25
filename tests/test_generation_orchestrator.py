@@ -70,7 +70,7 @@ def test_product_orchestrator_enforces_shared_base_flow(tmp_path):
             "reuse_animagine_prompt_in_native_stage": False,
             "raw_garment_person_image_allowed": False,
         },
-        "refinement_execution": {"enabled": True, "mode": "flux_whole_image"},
+        "refinement_execution": {"enabled": True, "mode": "sdxl_local"},
         "native_refinement": {"enabled": True},
     }
     request = SimpleNamespace(seed=1234, model_id="animagine")
@@ -140,43 +140,6 @@ def test_product_orchestrator_rejects_different_input_object(tmp_path):
         )
 
 
-def test_native_stage_writes_final_product_evidence(tmp_path, monkeypatch):
-    selected = tmp_path / "selected.png"
-    selected.write_bytes(b"image")
-    native_report = tmp_path / "run.json"
-    native_report.write_text("{}", encoding="utf-8")
-    result = SimpleNamespace(
-        status="PASS",
-        selected_engine="flux2_klein",
-        selected_image_path=selected,
-        report_path=native_report,
-    )
-
-    monkeypatch.setattr(
-        "genai_lab.native_refinement_execution.execute_native_refinement",
-        lambda *args, **kwargs: result,
-    )
-    approved = tmp_path / "approved_generation.json"
-    approved.write_text("{}", encoding="utf-8")
-    output = tmp_path / "native"
-
-    returned = GenerationOrchestrator._execute_native_refinement_stage(
-        SimpleNamespace(),
-        project_root=tmp_path,
-        base_image=tmp_path / "base.png",
-        candidate_record=tmp_path / "base.json",
-        approved_run=approved,
-        garment_reference=tmp_path / "garment.png",
-        output_directory=output,
-    )
-
-    assert returned is result
-    record = json.loads(
-        (output / "product_execution.json").read_text(encoding="utf-8")
-    )
-    assert record["status"] == "FINAL_GATE_PASS"
-    assert record["final_return_eligible"] is True
-    assert record["runtime_smoke"] is False
 
 
 def test_product_orchestrator_selects_and_finalizes_one_candidate(
@@ -215,7 +178,7 @@ def test_product_orchestrator_selects_and_finalizes_one_candidate(
             "reuse_animagine_prompt_in_native_stage": False,
             "raw_garment_person_image_allowed": False,
         },
-        "refinement_execution": {"enabled": True, "mode": "flux_whole_image"},
+        "refinement_execution": {"enabled": True, "mode": "sdxl_local"},
         "native_refinement": {"enabled": True},
     }
     orchestrator = GenerationOrchestrator(
@@ -229,15 +192,11 @@ def test_product_orchestrator_selects_and_finalizes_one_candidate(
         require_reference_run_fn=lambda *args: approval,
         save_replay_bundle_fn=lambda *args: tmp_path / "replay",
     )
-    monkeypatch.setattr(
-        "genai_lab.native_refinement_execution.resolve_native_refinement_settings",
-        lambda config, project_root: SimpleNamespace(),
-    )
     selected_image = tmp_path / "selected.png"
     selected_image.write_bytes(b"selected")
     result = SimpleNamespace(
         status="PASS",
-        selected_engine="flux2_klein",
+        selected_engine="sdxl_local",
         selected_image_path=selected_image,
         report_path=tmp_path / "native" / "run.json",
         output_directory=tmp_path / "native",
@@ -249,7 +208,7 @@ def test_product_orchestrator_selects_and_finalizes_one_candidate(
         captured.update(kwargs)
         return result
 
-    orchestrator._execute_native_refinement_stage = execute
+    orchestrator._execute_sdxl_local_refinement_stage = execute
     orchestrator.prepare_visual_inputs(object(), object())
     orchestrator.approve_visual_inputs(inputs)
     assert orchestrator.generate_base_candidates(object(), inputs) is batch
@@ -269,10 +228,10 @@ def test_product_orchestrator_selects_and_finalizes_one_candidate(
     )
 
     assert returned is result
-    assert captured["base_image"] == selection.base_image
-    assert captured["candidate_record"] == selection.candidate_record
-    assert captured["approved_run"] == selection.approved_run
-    assert captured["garment_reference"] == selection.garment_reference
+    assert captured["selection"].base_image == selection.base_image
+    assert captured["selection"].candidate_record == selection.candidate_record
+    assert captured["selection"].approved_run == selection.approved_run
+    assert captured["selection"].garment_reference == selection.garment_reference
     assert orchestrator.phase is GenerationPhase.COMPLETED
 
     evidence_path = tmp_path / "native" / "stage8-review-evidence.json"
@@ -317,74 +276,6 @@ def test_product_orchestrator_selects_and_finalizes_one_candidate(
     assert product["stage9_storage_decision"] == str(storage_path)
 
 
-def test_product_orchestrator_seals_direct_source_without_animagine(tmp_path):
-    source = Image.new("RGB", (24, 32), "blue")
-    garment = Image.new("RGB", (24, 32), "green")
-
-    class Approval:
-        fingerprint = "e" * 64
-
-        def record(self):
-            return {
-                "parts": [],
-                "gender": "male",
-            }
-
-    approval = Approval()
-    inputs = SimpleNamespace(
-        source=source,
-        garment=garment,
-        approved_generation=approval,
-    )
-    config = {
-        "paths": {"output_dir": "outputs"},
-        "native_pipeline_v2": {
-            "enabled": True,
-            "primary_route": "source_character_direct",
-            "animagine_fallback": "explicit_only",
-            "base_profile": "character_only",
-            "base_garment_prompt_enabled": False,
-            "base_garment_adapter_enabled": False,
-            "native_garment_source": "isolated_garment_board",
-            "reuse_animagine_prompt_in_native_stage": False,
-            "raw_garment_person_image_allowed": False,
-        },
-        "refinement_execution": {"enabled": True, "mode": "flux_whole_image"},
-        "native_refinement": {"enabled": True},
-    }
-    orchestrator = GenerationOrchestrator(
-        config,
-        SimpleNamespace(seed=23, candidate_number=1),
-        tmp_path,
-        Log(),
-        prepare_visual_inputs_fn=lambda *args: inputs,
-        generate_visual_batch_fn=lambda *args, **kwargs: pytest.fail(
-            "direct route must not generate an Animagine Base"
-        ),
-        approve_reference_run_fn=lambda *args: None,
-        require_reference_run_fn=lambda *args: approval,
-        save_replay_bundle_fn=lambda *args: tmp_path / "replay",
-    )
-    orchestrator.restore_approved_inputs(inputs)
-
-    selection = orchestrator.select_direct_source(inputs)
-
-    assert selection.input_mode == "source_character_direct"
-    assert selection.base_image.name == "approved-source.png"
-    assert selection.garment_reference.name == "input_garment.png"
-    assert selection.base_image.is_file()
-    assert selection.garment_reference.is_file()
-    source_record = json.loads(
-        selection.candidate_record.read_text(encoding="utf-8")
-    )
-    approved_record = json.loads(
-        selection.approved_run.read_text(encoding="utf-8")
-    )
-    assert source_record["approved_generation_fingerprint"] == "e" * 64
-    assert approved_record["approval_fingerprint"] == "e" * 64
-    assert orchestrator.phase is GenerationPhase.CANDIDATE_SELECTED
-    source.close()
-    garment.close()
 
 
 def test_product_orchestrator_uses_only_sdxl_local_finalizer(
@@ -436,6 +327,7 @@ def test_product_orchestrator_uses_only_sdxl_local_finalizer(
     )
     orchestrator._selected_base = selection
     orchestrator._generation_pipeline = SimpleNamespace()
+    orchestrator._generation_pipeline = SimpleNamespace()
     orchestrator.phase = GenerationPhase.CANDIDATE_SELECTED
     output = tmp_path / "local-output"
     selected = output / "selected.png"
@@ -457,9 +349,7 @@ def test_product_orchestrator_uses_only_sdxl_local_finalizer(
         )
 
     orchestrator._execute_sdxl_local_refinement_stage = local_finalizer
-    orchestrator._execute_native_refinement_stage = lambda *args, **kwargs: pytest.fail(
-        "FLUX finalizer must not run in sdxl_local mode"
-    )
+    assert not hasattr(orchestrator, "_execute_native_refinement_stage")
 
     result = orchestrator.finalize_selected_candidate(
         selection,
@@ -592,7 +482,7 @@ def test_post_refinement_failure_uses_request_failed_boundary(
         },
         "refinement_execution": {
             "enabled": True,
-            "mode": "flux_whole_image",
+            "mode": "sdxl_local",
         },
         "native_refinement": {"enabled": True},
         "generation_run_context": {
@@ -635,22 +525,19 @@ def test_post_refinement_failure_uses_request_failed_boundary(
         batch_directory=tmp_path,
     )
     orchestrator._selected_base = selection
+    orchestrator._generation_pipeline = SimpleNamespace()
     orchestrator.phase = GenerationPhase.CANDIDATE_SELECTED
     result = SimpleNamespace(
         status="PASS",
-        selected_engine="flux2_klein",
+        selected_engine="sdxl_local",
         selected_image_path=selected,
         report_path=orchestrator.run_context.refinement_directory / "run.json",
         output_directory=orchestrator.run_context.refinement_directory,
         report={},
     )
     result.report_path.write_text("{}", encoding="utf-8")
-    orchestrator._execute_native_refinement_stage = (
+    orchestrator._execute_sdxl_local_refinement_stage = (
         lambda *args, **kwargs: result
-    )
-    monkeypatch.setattr(
-        "genai_lab.native_refinement_execution.resolve_native_refinement_settings",
-        lambda config, project_root: SimpleNamespace(),
     )
     monkeypatch.setattr(
         "genai_lab.person_count_diagnostic.evaluate_person_count",

@@ -3,7 +3,6 @@ from copy import deepcopy
 import pytest
 
 from genai_lab.native_pipeline_contract import (
-    FLUX_WHOLE_IMAGE_REFINEMENT,
     SDXL_LOCAL_REFINEMENT,
     NativePipelineConfigurationError,
     resolve_refinement_mode,
@@ -24,7 +23,7 @@ def valid_config():
         },
         "refinement_execution": {
             "enabled": True,
-            "mode": FLUX_WHOLE_IMAGE_REFINEMENT,
+            "mode": SDXL_LOCAL_REFINEMENT,
         },
         "native_refinement": {
             "enabled": True,
@@ -59,10 +58,11 @@ def test_refinement_mode_is_required_and_explicit():
         resolve_refinement_mode(config)
 
 
-def test_flux_mode_validates_as_single_finalizer():
+def test_removed_flux_mode_is_rejected():
     config = valid_config()
-    validate_native_pipeline_config(config)
-    assert resolve_refinement_mode(config) == FLUX_WHOLE_IMAGE_REFINEMENT
+    config["refinement_execution"]["mode"] = "flux_whole_image"
+    with pytest.raises(NativePipelineConfigurationError, match="sdxl_local"):
+        validate_native_pipeline_config(config)
 
 
 def test_sdxl_local_mode_uses_staged_garment_contract():

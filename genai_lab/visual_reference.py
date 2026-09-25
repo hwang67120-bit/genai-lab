@@ -1981,12 +1981,12 @@ def generate_visual_batch(
             '이 화면에는 픽셀 무결성·성별·명백한 구조 오염 검사를 통과한 '
             'Animagine Base가 표시됩니다. 얼굴·헤어 유사도는 탈락 조건이 '
             '아니며 퍼센트 진단과 미세 조정 대상으로 기록됩니다. 선택한 '
-            'Base는 FLUX.2 Klein으로 전체 이미지 정밀화를 실행합니다.'
+            'Base는 SDXL 국소 의상 정밀화를 실행합니다.'
         )
         log.write_stage(
             '로컬 네이티브 정밀화 인계',
             f'승인 가능한 Base={len(batch.candidates)}개, '
-            '선택 후 FLUX.2 Klein → 최종 게이트',
+            '선택 후 SDXL 국소 정밀화 → 최종 게이트',
         )
         return batch
 

@@ -200,8 +200,8 @@ from genai_lab.external_candidate import (
     ExternalCandidateInputError,
     load_external_character_candidate,
 )
-from genai_lab.native_refinement_execution import (
-    NativeRefinementExecutionResult,
+from genai_lab.refinement_result import (
+    RefinementExecutionResult,
 )
 from genai_lab.run_log import (
     GenerationRunLog,
@@ -3036,25 +3036,11 @@ class GenerationWorker(QObject):
                 "환경 검사",
                 f"GPU={environment['gpu']}, GPU 메모리={gpu_memory_gb:.1f}GB",
             )
-            from genai_lab.native_pipeline_contract import native_direct_enabled
-            direct_native_route = bool(
-                visual_inputs is not None
-                and native_direct_enabled(self.config)
-            )
             pose_control_enabled = (
                 self.existing_candidate is None
                 and self.approved_pose_estimation is not None
             )
-            if direct_native_route:
-                self.pipeline = None
-                self.run_log.write_stage(
-                    "모델 준비",
-                    "원본 캐릭터 직접 Native 경로 - Animagine 로딩 생략",
-                )
-                self.status_changed.emit(
-                    "승인 원본 캐릭터와 격리 의상을 Native 모델에 직접 전달할 준비 중..."
-                )
-            elif self.pipeline is None and self.existing_candidate is None:
+            if self.pipeline is None and self.existing_candidate is None:
                 model_started_at = perf_counter()
                 self.status_changed.emit("모델과 참조 그림 장치 준비 중...")
                 self.run_log.write_stage("모델 준비", "모델 불러오기 시작")
@@ -3074,21 +3060,7 @@ class GenerationWorker(QObject):
                 )
 
             generation_started_at = perf_counter()
-            if visual_inputs is not None and direct_native_route:
-                self.status_changed.emit(
-                    "원본 캐릭터 + 격리 의상 직접 편집: FLUX.2 Klein 실행 중..."
-                )
-                selection = self.orchestrator.select_direct_source(visual_inputs)
-                native_result = self.orchestrator.finalize_selected_candidate(
-                    selection,
-                    status_callback=self.status_changed.emit,
-                )
-                character_candidate = (
-                    self.orchestrator.build_direct_native_candidate(
-                        native_result, selection
-                    )
-                )
-            elif visual_inputs is not None:
+            if visual_inputs is not None:
                 character_candidate = (
                     self.orchestrator.generate_base_candidates(
                         self.pipeline, visual_inputs)
@@ -3327,10 +3299,7 @@ class GenAILabWindow(QMainWindow):
         self.refinement_mode_combo.addItem(
             "SDXL 국소 정밀화", "sdxl_local"
         )
-        self.refinement_mode_combo.addItem(
-            "FLUX 전체 이미지 정밀화", "flux_whole_image"
-        )
-        self.refinement_mode_combo.setCurrentIndex(1)
+        self.refinement_mode_combo.setCurrentIndex(0)
         refinement_layout.addWidget(refinement_label)
         refinement_layout.addWidget(self.refinement_mode_combo)
         layout.addLayout(refinement_layout)
@@ -3353,24 +3322,12 @@ class GenAILabWindow(QMainWindow):
 
         self.framing_help = QLabel(
             "실행 경로: 의상 조건이 없는 Animagine 캐릭터 Base 생성·게이트 → "
-            "사용자 Base 선택 → SDXL 국소 또는 FLUX 전체 이미지 중 한 모드만 실행 → "
-            "구조·인물 수·유사도 진단. 두 정밀화 엔진은 한 실행에서 연속 적용하지 않습니다."
+            "사용자 Base 선택 → SDXL 국소 정밀화 → "
+            "구조·인물 수·유사도 진단."
         )
         self.framing_help.setWordWrap(True)
         layout.addWidget(self.framing_help)
-        hf_cache = Path.home() / ".cache" / "huggingface"
-        def cached_model(name: str) -> bool:
-            return any(
-                (root / name).is_dir()
-                for root in (hf_cache, hf_cache / "hub")
-            )
-
-        flux_ready = cached_model("models--black-forest-labs--FLUX.2-klein-4B")
-        self.local_engine_status_label = QLabel(
-            "로컬 모델: FLUX.2 Klein={}".format(
-                "준비됨" if flux_ready else "없음",
-            )
-        )
+        self.local_engine_status_label = QLabel("실행 엔진: SDXL 국소 정밀화")
         layout.addWidget(self.local_engine_status_label)
         self.pipeline_stage_label = QLabel(
             "실행 단계: 입력 대기 → 캐릭터 전용 Base → 선택 정밀화 1회 → 최종 검토"
@@ -3612,7 +3569,7 @@ class GenAILabWindow(QMainWindow):
             active_generation_state or not missing_required_outfit
         ):
             return  # Preserve the active work/review status and button label.
-        self.generate_button.setText("전체 로컬 파이프라인 실행 (Animagine → FLUX)")
+        self.generate_button.setText("전체 로컬 파이프라인 실행 (Animagine → SDXL 국소 정밀화)")
         self.status_label.setText(
             "상태: 입력 등록 "
             f"{registered_input_count}/3개 - "
@@ -6545,12 +6502,7 @@ class GenAILabWindow(QMainWindow):
     @Slot(str)
     def show_worker_status(self, message):
         self.status_label.setText(f"상태: {message}")
-        from genai_lab.native_pipeline_contract import native_direct_enabled
-        route = (
-            "원본 직접 Native"
-            if self.config and native_direct_enabled(self.config)
-            else "Animagine Base"
-        )
+        route = "Animagine Base"
         self.pipeline_stage_label.setText(f"실행 단계: {route} - {message}")
 
     @Slot(object)
@@ -6699,11 +6651,11 @@ class GenAILabWindow(QMainWindow):
         if isinstance(character_candidate, CandidateBatch):
             batch = character_candidate
             from genai_lab.native_pipeline_contract import (
-                native_refinement_enabled as native_refinement_is_enabled,
+                final_refinement_enabled as final_refinement_is_enabled,
             )
             native_refinement_enabled = bool(
                 self.config
-                and native_refinement_is_enabled(self.config)
+                and final_refinement_is_enabled(self.config)
                 and batch.review_stage == "native_base"
             )
             selected_base_path = None
@@ -6985,15 +6937,7 @@ class GenAILabWindow(QMainWindow):
         self.pending_final_review_evidence = None
 
         mode = orchestrator.refinement_mode
-        mode_label = (
-            "SDXL 국소 정밀화"
-            if mode == "sdxl_local"
-            else "FLUX 전체 이미지 정밀화"
-        )
-        if mode == "flux_whole_image" and self.pipeline is not None:
-            if hasattr(self.pipeline, "maybe_free_model_hooks"):
-                self.pipeline.maybe_free_model_hooks()
-            self.pipeline = None
+        mode_label = "SDXL 국소 정밀화"
         gc.collect()
         torch.cuda.empty_cache()
 
@@ -7093,7 +7037,7 @@ class GenAILabWindow(QMainWindow):
     @Slot(object)
     def native_refinement_completed(
         self,
-        result: NativeRefinementExecutionResult,
+        result: RefinementExecutionResult,
     ) -> None:
         if self.native_refinement_progress is not None:
             self.native_refinement_progress.close()
@@ -7611,7 +7555,7 @@ class GenAILabWindow(QMainWindow):
         self.external_candidate_button.setEnabled(
             self.can_import_external_candidate()
         )
-        self.generate_button.setText("전체 로컬 파이프라인 실행 (Animagine → FLUX)")
+        self.generate_button.setText("전체 로컬 파이프라인 실행 (Animagine → SDXL 국소 정밀화)")
         self.status_label.setText(status_message)
 
     @Slot(str, str, object)

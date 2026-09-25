@@ -237,76 +237,7 @@ class GenerationOrchestrator:
             inputs, self.config, self.request
         )
 
-    def uses_direct_native_route(self) -> bool:
-        from genai_lab.native_pipeline_contract import native_direct_enabled
-        return native_direct_enabled(self.config)
 
-    def select_direct_source(self, inputs: Any) -> BaseCandidateSelection:
-        """승인된 원본 캐릭터와 격리 의상을 Native 입력으로 직접 봉인한다."""
-        approval = self.require_approved_inputs(inputs)
-        if not self.uses_direct_native_route():
-            raise GenerationOrchestrationError(
-                "원본 직접 Native 경로가 설정에서 활성화되지 않았습니다."
-            )
-        directory = self.run_context.run_directory
-        source_path = self.run_context.base_directory / "approved-source.png"
-        garment_path = self.run_context.inputs_directory / "input_garment.png"
-        candidate_record_path = self.run_context.base_directory / "approved-source.json"
-        approved_run_path = self.run_context.inputs_directory / "approved-generation.json"
-        inputs.source.save(source_path)
-        inputs.garment.save(garment_path)
-
-        approved_record = approval.record()
-        approved_record["approval_fingerprint"] = approval.fingerprint
-        self._write_manifest(approved_run_path, approved_record)
-        candidate_number = int(getattr(self.request, "candidate_number", 1))
-        seed = int(getattr(self.request, "seed", 0))
-        source_record = {
-            "version": "native_direct_source_v1",
-            "input_mode": "source_character_direct",
-            "approved_generation_fingerprint": approval.fingerprint,
-            "seed": seed,
-            "candidate_number": candidate_number,
-            "source_image": str(source_path),
-            "garment_reference": str(garment_path),
-            "image_merge_used": False,
-            "hard_paste_used": False,
-            "mask_composite_used": False,
-        }
-        self._write_manifest(candidate_record_path, source_record)
-        self.run_context.record_artifact(
-            "approved_base", source_path, digest=True
-        )
-        self.run_context.record_artifact(
-            "candidate_record", candidate_record_path, digest=True
-        )
-        self.run_context.record_artifact(
-            "approved_generation", approved_run_path, digest=True
-        )
-        self.run_context.record_artifact(
-            "garment_reference", garment_path, digest=True
-        )
-        selection = BaseCandidateSelection(
-            index=0,
-            candidate_number=candidate_number,
-            base_image=source_path,
-            candidate_record=candidate_record_path,
-            approved_run=approved_run_path,
-            garment_reference=garment_path,
-            batch_directory=directory,
-            input_mode="source_character_direct",
-        )
-        self._selected_base = selection
-        self.phase = GenerationPhase.CANDIDATE_SELECTED
-        self._record(
-            "select_direct_source",
-            "completed",
-            input_mode=selection.input_mode,
-            source_image=str(source_path),
-            garment_reference=str(garment_path),
-            approval_fingerprint=approval.fingerprint,
-        )
-        return selection
 
     def generate_base_candidates(self, pipeline: Any, inputs: Any) -> Any:
         approval = self.require_approved_inputs(inputs)
@@ -570,7 +501,7 @@ class GenerationOrchestrator:
             raise GenerationOrchestrationError(
                 "현재 오케스트레이터가 선택한 Base 후보가 아닙니다."
             )
-        if self.refinement_mode not in {"sdxl_local", "flux_whole_image"}:
+        if self.refinement_mode != "sdxl_local":
             raise GenerationOrchestrationError(
                 f"봉인된 정밀화 실행 모드가 없습니다: {self.refinement_mode}"
             )
@@ -603,36 +534,16 @@ class GenerationOrchestrator:
         reset_report = None
         finalization_succeeded = False
         try:
-            if self.refinement_mode == "flux_whole_image":
-                from genai_lab.native_refinement_execution import (
-                    resolve_native_refinement_settings,
+            if self._generation_pipeline is None:
+                raise GenerationOrchestrationError(
+                    "SDXL 국소 정밀화에 Base 생성 파이프라인이 없습니다."
                 )
-                settings = resolve_native_refinement_settings(
-                    self.config, self.project_root
-                )
-                result = self._execute_native_refinement_stage(
-                    settings,
-                    project_root=self.project_root,
-                    base_image=selection.base_image,
-                    candidate_record=selection.candidate_record,
-                    approved_run=selection.approved_run,
-                    garment_reference=selection.garment_reference,
-                    output_directory=output_directory,
-                    input_mode=selection.input_mode,
-                    status_callback=callback,
-                    cancelled=cancelled or self.cancelled,
-                )
-            else:
-                if self._generation_pipeline is None:
-                    raise GenerationOrchestrationError(
-                        "SDXL 국소 정밀화에 Base 생성 파이프라인이 없습니다."
-                    )
-                result = self._execute_sdxl_local_refinement_stage(
-                    self._generation_pipeline,
-                    selection=selection,
-                    output_directory=output_directory,
-                    status_callback=callback,
-                )
+            result = self._execute_sdxl_local_refinement_stage(
+                self._generation_pipeline,
+                selection=selection,
+                output_directory=output_directory,
+                status_callback=callback,
+            )
 
             callback("최종 인물 수 진단 기록 중...")
             from PIL import Image
@@ -873,8 +784,8 @@ class GenerationOrchestrator:
                 "SDXL 국소 정밀화는 승인 Animagine Base만 입력받습니다."
             )
         from PIL import Image
-        from genai_lab.native_refinement_execution import (
-            NativeRefinementExecutionResult,
+        from genai_lab.refinement_result import (
+            RefinementExecutionResult,
         )
         from genai_lab.selected_garment_correction import (
             correct_selected_garment,
@@ -1021,7 +932,7 @@ class GenerationOrchestrator:
             }
             report_path = output_directory / "run.json"
             self._write_manifest(report_path, report)
-            return NativeRefinementExecutionResult(
+            return RefinementExecutionResult(
                 status=status,
                 selected_engine=selected_engine,
                 selected_image_path=selected_path,
@@ -1078,165 +989,7 @@ class GenerationOrchestrator:
             Path(output_directory) / self.MANIFEST_NAME, record
         )
 
-    def build_direct_native_candidate(
-        self,
-        result: Any,
-        selection: BaseCandidateSelection,
-    ) -> Any:
-        """직접 Native 결과를 GUI/CLI 공통 최종 후보 객체로 변환한다."""
-        if selection.input_mode != "source_character_direct":
-            raise GenerationOrchestrationError(
-                "원본 직접 Native 선택만 최종 후보로 변환할 수 있습니다."
-            )
-        if result.status != "PASS":
-            raise GenerationOrchestrationError(
-                f"원본 직접 Native 후보를 반환할 수 없습니다: {result.status}"
-            )
-        from PIL import Image
-        from genai_lab.result import CharacterGenerationCandidate
 
-        with Image.open(result.selected_image_path) as opened:
-            image = opened.convert("RGB").copy()
-        engine = result.selected_engine or "unknown"
-        attempt = result.report.get("attempts", {}).get(engine, {})
-        gate = attempt.get("gate", {})
-        percentage = gate.get("overall_similarity_percentage")
-        targets = list(gate.get("refinement_targets", ()))
-        percentage_text = (
-            "계산 불가" if percentage is None else f"{float(percentage):.1f}%"
-        )
-        warning = (
-            f"Hard safety 통과. 전체 유사도 지표 {percentage_text}; "
-            f"미세 조정 필요: {', '.join(targets)}"
-            if targets else None
-        )
-        framing = getattr(self.request, "framing_type", "full_body")
-        framing_value = getattr(framing, "value", framing)
-        return CharacterGenerationCandidate(
-            image=image,
-            original_generated_image=None,
-            reference_image_name=str(
-                getattr(self.request, "reference_image_name", "approved-reference")
-            ),
-            before_clothing_image=None,
-            clothing_change_mask=None,
-            clothing_reference_name=selection.garment_reference.name,
-            clothing_category=None,
-            clothing_try_on_status="native_direct_hard_safety_passed",
-            clothing_verification_warning_ko=warning,
-            reference_enhancement_applied=bool(
-                getattr(self.request, "reference_enhancement_applied", False)
-            ),
-            reference_enhancement_model_id=getattr(
-                self.request, "reference_enhancement_model_id", None
-            ),
-            reference_quality_status=str(
-                getattr(self.request, "reference_quality_status", "approved")
-            ),
-            framing_type=str(framing_value),
-            seed=int(getattr(self.request, "seed", 0)),
-            candidate_number=selection.candidate_number,
-            prompt=str(getattr(self.request, "prompt", "")),
-            negative_prompt=str(getattr(self.request, "negative_prompt", "")),
-            model_id=engine,
-            reference_adapter_id="native_direct_multi_reference",
-            original_image_change_strength=float(
-                getattr(self.request, "original_image_change_strength", 0.0)
-            ),
-            reference_image_strength=float(
-                getattr(self.request, "reference_image_strength", 0.0)
-            ),
-            pose_control_status="not_used",
-            pose_control_model_id=None,
-            pose_control_conditioning_scale=None,
-            pose_control_guidance_start=None,
-            pose_control_guidance_end=None,
-            detail_correction_status=f"native_direct_{engine}_hard_safety_passed",
-            detected_face_count=0,
-            detected_hand_count=0,
-            corrected_region_count=0,
-            rejected_region_count=0,
-            detail_verification_warning_ko=warning,
-            elapsed_seconds=0.0,
-            peak_vram_bytes=0,
-            generated_at=datetime.now().astimezone().isoformat(),
-            design_reference_record={
-                "version": "native_direct_candidate_v1",
-                "route": "source_character_direct",
-                "input_mode": selection.input_mode,
-                "selected_engine": result.selected_engine,
-                "native_report": str(result.report_path),
-                "native_output_directory": str(result.output_directory),
-                "similarity_percentage": percentage,
-                "refinement_targets": targets,
-                "image_merge_used": False,
-                "hard_paste_used": False,
-                "mask_composite_used": False,
-                "approval_fingerprint": getattr(
-                    getattr(self._prepared_inputs, "approved_generation", None),
-                    "fingerprint",
-                    None,
-                ),
-            },
-        )
-
-    @classmethod
-    def _execute_native_refinement_stage(
-        cls,
-        settings: Any,
-        *,
-        project_root: Path,
-        base_image: Path,
-        candidate_record: Path,
-        approved_run: Path,
-        garment_reference: Path,
-        output_directory: Path,
-        input_mode: str = "approved_base",
-        status_callback: Callable[[str], None] | None = None,
-        cancelled: Callable[[], bool] = lambda: False,
-    ) -> Any:
-        from genai_lab.native_refinement_execution import (
-            execute_native_refinement,
-        )
-        result = execute_native_refinement(
-            settings,
-            project_root=project_root,
-            base_image=base_image,
-            candidate_record=candidate_record,
-            approved_run=approved_run,
-            garment_reference=garment_reference,
-            output_directory=output_directory,
-            input_mode=input_mode,
-            status_callback=status_callback,
-            cancelled=cancelled,
-        )
-        if result.status not in {"PASS", "BASE_LOCKED"}:
-            raise GenerationOrchestrationError(
-                f"최종 Native 상태를 반환할 수 없습니다: {result.status}"
-            )
-        record = {
-            "version": cls.VERSION,
-            "execution_scope": "product_pipeline",
-            "runtime_smoke": False,
-            "stage": "native_refinement",
-            "status": (
-                "FINAL_GATE_PASS"
-                if result.status == "PASS"
-                else "FINAL_BASE_LOCKED"
-            ),
-            "native_status": result.status,
-            "input_mode": input_mode,
-            "selected_engine": result.selected_engine,
-            "selected_image": str(result.selected_image_path),
-            "final_return_eligible": True,
-            "source_approved_run": str(Path(approved_run)),
-            "native_report": str(result.report_path),
-        }
-        cls._write_manifest(
-            Path(output_directory) / cls.MANIFEST_NAME,
-            record,
-        )
-        return result
 
     @staticmethod
     def _write_manifest(path: Path, record: dict[str, Any]) -> None:

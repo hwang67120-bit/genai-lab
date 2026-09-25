@@ -66,8 +66,7 @@ def test_gui_routes_selected_base_to_native_refinement(
             "reuse_animagine_prompt_in_native_stage": False,
             "raw_garment_person_image_allowed": False,
         },
-        "refinement_execution": {"enabled": True, "mode": "flux_whole_image"},
-        "native_refinement": {"enabled": True},
+        "refinement_execution": {"enabled": True, "mode": "sdxl_local"},
     }
     window.selected_outfit_path = garment_path
     selection = SimpleNamespace(
@@ -125,11 +124,10 @@ def test_gui_shows_local_pipeline_as_primary_action() -> None:
     window = GenAILabWindow()
     try:
         assert "전체 로컬 파이프라인" in window.generate_button.text()
-        assert window.refinement_mode_combo.count() == 2
+        assert window.refinement_mode_combo.count() == 1
         assert "의상 조건이 없는 Animagine 캐릭터 Base" in window.framing_help.text()
         assert "선택 기능" in window.external_candidate_button.text()
-        assert "FLUX.2 Klein" in window.local_engine_status_label.text()
-        assert "FLUX.2 Klein" in window.local_engine_status_label.text()
+        assert "SDXL" in window.local_engine_status_label.text()
         assert "OmniGen" not in window.local_engine_status_label.text()
     finally:
         window.close()

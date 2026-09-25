@@ -18,7 +18,6 @@ if str(PROJECT_ROOT) not in sys.path:
 from genai_lab.generation_orchestrator import GenerationOrchestrator
 from genai_lab.generation_replay import load_generation_replay_bundle
 from genai_lab.model import prepare_pipeline
-from genai_lab.native_pipeline_contract import native_direct_enabled
 from genai_lab.run_log import create_generation_run_log
 from run import (
     check_environment,
@@ -68,9 +67,7 @@ def main() -> int:
             f"GPU={environment['gpu']}, "
             f"GPU 메모리={environment['vram_bytes'] / 1024**3:.1f}GB",
         )
-        direct_route = native_direct_enabled(config)
-        if not direct_route:
-            pipeline = prepare_pipeline(config)
+        pipeline = prepare_pipeline(config)
         orchestrator = GenerationOrchestrator(
             config,
             request,
@@ -81,22 +78,33 @@ def main() -> int:
         )
         orchestrator.restore_approved_inputs(inputs)
 
-        if direct_route:
-            selection = orchestrator.select_direct_source(inputs)
+        batch = orchestrator.generate_base_candidates(pipeline, inputs)
+        summary = {
+            "execution_scope": "product_pipeline",
+            "runtime_smoke": False,
+            "approval_fingerprint": approval.fingerprint,
+            "route": "approved_animagine_base",
+            "base_directory": str(batch.directory),
+            "base_review_stage": batch.review_stage,
+            "candidate_count": len(batch.candidates),
+            "selected_candidate": args.selected_candidate,
+            "status": "BASE_READY_FOR_SELECTION",
+            "final_return_eligible": False,
+        }
+        if args.selected_candidate is not None:
+            index = args.selected_candidate - 1
+            selection = orchestrator.select_base_candidate(batch, index)
             result = orchestrator.finalize_selected_candidate(
                 selection,
                 output_directory=args.native_output_dir,
                 status_callback=lambda message: print(message, flush=True),
             )
-            summary = {
-                "execution_scope": "product_pipeline",
-                "runtime_smoke": False,
-                "approval_fingerprint": approval.fingerprint,
-                "route": "source_character_direct",
-                "input_directory": str(selection.batch_directory),
-                "candidate_count": len((getattr(result, "report", {}) or {}).get("attempts", {})),
-                "selected_candidate": result.selected_engine,
-                "status": "FINAL_GATE_PASS",
+            summary.update({
+                "status": (
+                    "FINAL_GATE_PASS"
+                    if result.status == "PASS"
+                    else "FINAL_BASE_LOCKED"
+                ),
                 "native_status": result.status,
                 "selected_engine": result.selected_engine,
                 "selected_image": str(result.selected_image_path),
@@ -106,48 +114,8 @@ def main() -> int:
                 "final_review_evidence": (getattr(result, "report", {}) or {}).get(
                     "final_review", {}
                 ).get("evidence_path"),
-                "image_merge_used": False,
-            }
-            summary_directory = selection.batch_directory
-        else:
-            batch = orchestrator.generate_base_candidates(pipeline, inputs)
-            summary = {
-                "execution_scope": "product_pipeline",
-                "runtime_smoke": False,
-                "approval_fingerprint": approval.fingerprint,
-                "route": "approved_animagine_base",
-                "base_directory": str(batch.directory),
-                "base_review_stage": batch.review_stage,
-                "candidate_count": len(batch.candidates),
-                "selected_candidate": args.selected_candidate,
-                "status": "BASE_READY_FOR_SELECTION",
-                "final_return_eligible": False,
-            }
-            if args.selected_candidate is not None:
-                index = args.selected_candidate - 1
-                selection = orchestrator.select_base_candidate(batch, index)
-                result = orchestrator.finalize_selected_candidate(
-                    selection,
-                    output_directory=args.native_output_dir,
-                    status_callback=lambda message: print(message, flush=True),
-                )
-                summary.update({
-                    "status": (
-                        "FINAL_GATE_PASS"
-                        if result.status == "PASS"
-                        else "FINAL_BASE_LOCKED"
-                    ),
-                    "native_status": result.status,
-                    "selected_engine": result.selected_engine,
-                    "selected_image": str(result.selected_image_path),
-                    "native_report": str(result.report_path),
-                    "final_return_eligible": True,
-                    "user_approval_status": "pending",
-                    "final_review_evidence": (getattr(result, "report", {}) or {}).get(
-                        "final_review", {}
-                    ).get("evidence_path"),
-                })
-            summary_directory = Path(batch.directory)
+            })
+        summary_directory = Path(batch.directory)
         summary_path = Path(summary_directory) / "codex_product_result.json"
         summary_path.write_text(
             json.dumps(summary, ensure_ascii=False, indent=2) + "\n",

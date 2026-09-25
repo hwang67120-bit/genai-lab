@@ -37,10 +37,8 @@ from scripts.generation_inputs import (
 CONTRACT_VERSION = "native_pipeline_contract_v5"
 BASE_PROFILE = "character_only"
 GARMENT_SOURCE = "isolated_garment_board"
-NATIVE_INSTRUCTION_VERSION = "native_refinement_instruction_v4"
 SDXL_LOCAL_REFINEMENT = "sdxl_local"
-FLUX_WHOLE_IMAGE_REFINEMENT = "flux_whole_image"
-REFINEMENT_MODES = {SDXL_LOCAL_REFINEMENT, FLUX_WHOLE_IMAGE_REFINEMENT}
+REFINEMENT_MODES = {SDXL_LOCAL_REFINEMENT}
 OPTIONAL_CHARACTER_PART_LABELS = {
     "human_ears": "human ears",
     "animal_ears": "animal ears",
@@ -96,9 +94,9 @@ def native_primary_route(config: Mapping[str, Any] | None) -> str:
             "native_pipeline_v2는 항목 묶음이어야 합니다."
         )
     route = str(section.get("primary_route", "approved_animagine_base"))
-    if route not in {"approved_animagine_base", "source_character_direct"}:
+    if route != "approved_animagine_base":
         raise NativePipelineConfigurationError(
-            f"지원하지 않는 Native 주 실행 경로입니다: {route}"
+            f"승인 Animagine Base만 지원하는 주 실행 경로입니다: {route}"
         )
     return route
 
@@ -119,8 +117,7 @@ def resolve_refinement_mode(config: Mapping[str, Any] | None) -> str | None:
     mode = section.get("mode")
     if mode not in REFINEMENT_MODES:
         raise NativePipelineConfigurationError(
-            "refinement_execution.mode는 sdxl_local 또는 "
-            "flux_whole_image여야 합니다."
+            "refinement_execution.mode는 sdxl_local이어야 합니다."
         )
     return str(mode)
 
@@ -129,27 +126,9 @@ def final_refinement_enabled(config: Mapping[str, Any] | None) -> bool:
     return resolve_refinement_mode(config) is not None
 
 
-def native_direct_enabled(config: Mapping[str, Any] | None) -> bool:
-    return (
-        final_refinement_enabled(config)
-        and resolve_refinement_mode(config) == FLUX_WHOLE_IMAGE_REFINEMENT
-        and native_primary_route(config) == "source_character_direct"
-    )
 
 
-def native_refinement_enabled(config: Mapping[str, Any] | None) -> bool:
-    """Compatibility predicate; full validation remains fail-closed."""
-    if not native_pipeline_enabled(config):
-        return False
-    refinement = (config or {}).get("native_refinement", {})
-    if not isinstance(refinement, Mapping) or refinement.get("enabled") is not True:
-        return False
-    return final_refinement_enabled(config)
 
-def _finite_number(value: object, *, minimum: float, maximum: float | None = None) -> bool:
-    if type(value) not in (int, float) or not math.isfinite(float(value)):
-        return False
-    return float(value) >= minimum and (maximum is None or float(value) <= maximum)
 
 
 def validate_native_pipeline_config(config: Mapping[str, Any]) -> None:
@@ -172,101 +151,19 @@ def validate_native_pipeline_config(config: Mapping[str, Any]) -> None:
             "native_pipeline_v2와 refinement_execution은 함께 활성화하거나 "
             "함께 비활성화해야 합니다."
         )
-    refinement = config.get("native_refinement", {})
-    if refinement is None:
-        refinement = {}
-    if not isinstance(refinement, Mapping):
-        raise NativePipelineConfigurationError(
-            "native_refinement은 항목 묶음이어야 합니다."
-        )
     if not native_active:
         return
-
-    mode = resolve_refinement_mode(config)
-    if refinement.get("enabled") is not True:
-        raise NativePipelineConfigurationError(
-            "정밀화 실행에는 native_refinement.enabled=true가 필요합니다."
-        )
-    if (
-        mode == SDXL_LOCAL_REFINEMENT
-        and native_primary_route(config) == "source_character_direct"
-    ):
+    resolve_refinement_mode(config)
+    if native_primary_route(config) != "approved_animagine_base":
         raise NativePipelineConfigurationError(
             "SDXL 국소 정밀화는 승인 Animagine Base 경로에서만 실행할 수 있습니다."
         )
-
-    common_exact = {
-        "mode": "gui_local_gpu",
-        "image_merge_enabled": False,
-        "hard_paste_enabled": False,
-        "mask_composite_enabled": False,
-        "failed_candidates_returned": False,
-    }
-    mismatches = [
-        f"{key}={refinement.get(key)!r}"
-        for key, expected in common_exact.items()
-        if refinement.get(key) != expected
-    ]
-    if mode == FLUX_WHOLE_IMAGE_REFINEMENT:
-        flux_exact = {
-            "strategy": "flux2_klein_only",
-            "candidate_policy": "whole_image_native_output",
-            "all_failed_action": (
-                "require_explicit_animagine_fallback"
-                if native_primary_route(config) == "source_character_direct"
-                else "keep_approved_base_and_seed"
-            ),
-        }
-        mismatches.extend(
-            f"{key}={refinement.get(key)!r}"
-            for key, expected in flux_exact.items()
-            if refinement.get(key) != expected
-        )
-        if tuple(refinement.get("engines", ())) != ("flux2_klein",):
-            mismatches.append(f"engines={refinement.get('engines')!r}")
-    else:
-        garment = config.get("staged_reference_generation", {}).get(
-            "garment", {}
-        )
-        if not isinstance(garment, Mapping) or garment.get("enabled") is not True:
-            mismatches.append("staged_reference_generation.garment.enabled")
-
-    if mismatches:
+    garment = config.get("staged_reference_generation", {}).get("garment", {})
+    if not isinstance(garment, Mapping) or garment.get("enabled") is not True:
         raise NativePipelineConfigurationError(
-            "정밀화 실행 계약이 불완전합니다: " + ", ".join(mismatches)
+            "정밀화 실행 계약이 불완전합니다: staged_reference_generation.garment.enabled"
         )
 
-    if mode != FLUX_WHOLE_IMAGE_REFINEMENT:
-        return
-    for key in ("minimum_similarity", "minimum_color_similarity"):
-        if not _finite_number(refinement.get(key), minimum=0.0, maximum=1.0):
-            raise NativePipelineConfigurationError(
-                f"native_refinement.{key}는 0~1 사이의 유한한 숫자여야 합니다."
-            )
-    for key in ("width", "height"):
-        value = refinement.get(key)
-        if type(value) is not int or value <= 0 or value % 8 != 0:
-            raise NativePipelineConfigurationError(
-                f"native_refinement.{key}는 8의 배수인 양의 정수여야 합니다."
-            )
-    value = refinement.get("flux_steps")
-    if type(value) is not int or value < 1:
-        raise NativePipelineConfigurationError(
-            "native_refinement.flux_steps는 1 이상의 정수여야 합니다."
-        )
-    if not _finite_number(refinement.get("timeout_seconds"), minimum=0.000001):
-        raise NativePipelineConfigurationError(
-            "native_refinement.timeout_seconds는 0보다 큰 유한한 숫자여야 합니다."
-        )
-    if not isinstance(refinement.get("allow_download"), bool):
-        raise NativePipelineConfigurationError(
-            "native_refinement.allow_download는 true 또는 false여야 합니다."
-        )
-    for key in ("python_executable", "runner_path", "model_cache_dir"):
-        if not isinstance(refinement.get(key), str) or not refinement[key].strip():
-            raise NativePipelineConfigurationError(
-                f"native_refinement.{key} 경로가 필요합니다."
-            )
 
 def _unique_tags(values: Iterable[str]) -> tuple[str, ...]:
     result: list[str] = []
@@ -474,213 +371,14 @@ def prepare_character_only_base_request(
     return replace(request, prompt=positive, negative_prompt=negative), record
 
 
-def _human_tags(values: Iterable[str]) -> str:
-    return ", ".join(tag.replace("_", " ") for tag in _unique_tags(values))
 
 
-def _mapping(value: object) -> Mapping[str, Any]:
-    return value if isinstance(value, Mapping) else {}
 
 
-def _confirmed_detection(
-    observation: Mapping[str, Any],
-) -> tuple[bool, list[str]]:
-    """Require semantic confirmation; an accepted detector mask is evidence only."""
-    detection = _mapping(observation.get("detection"))
-    reasons: list[str] = []
-    if detection.get("status") != "detected":
-        reasons.append("not_detected")
-    if int(detection.get("accepted_masks", 0) or 0) <= 0:
-        reasons.append("accepted_mask_missing")
-    if detection.get("semantic_status") not in {"confirmed", "verified"}:
-        reasons.append("semantic_status_unconfirmed")
-    if detection.get("target_status") not in {
-        "resolved", "confirmed", "verified",
-    }:
-        reasons.append("target_status_unconfirmed")
-    if detection.get("automatic_conditioning") is not True:
-        reasons.append("automatic_conditioning_disabled")
-    if str(detection.get("outcome_reason", "")).startswith("cross_class_"):
-        reasons.append("cross_class_conflict")
-    return not reasons, reasons
 
 
-def _optional_character_parts(
-    approved_run: Mapping[str, Any],
-    character_tags: Iterable[str],
-) -> tuple[tuple[str, ...], dict[str, Any]]:
-    """Resolve optional anatomy only from approved tags or recorded presence."""
-
-    tags = set(_unique_tags(character_tags))
-    tag_matches = {
-        "human_ears": tuple(sorted(
-            tag for tag in tags if tag == "human ears"
-        )),
-        "animal_ears": tuple(sorted(
-            tag for tag in tags
-            if tag == "animal ears"
-            or (tag.endswith(" ears") and tag != "human ears")
-        )),
-        "tail": tuple(sorted(
-            tag for tag in tags
-            if tag == "tail" or tag.endswith(" tail")
-        )),
-    }
-
-    ear_contract = _mapping(approved_run.get("ear_contract"))
-    ear_states = {
-        "human_ears": _mapping(ear_contract.get("human")).get("state"),
-        "animal_ears": _mapping(ear_contract.get("animal")).get("state"),
-    }
-    snapshot = _mapping(approved_run.get("condition_snapshot"))
-    observations = _mapping(snapshot.get("observations"))
-    for part_name in ("human_ears", "animal_ears"):
-        if ear_states[part_name] is None:
-            ear_states[part_name] = _mapping(
-                _mapping(observations.get(part_name)).get("contract")
-            ).get("state")
-
-    tail_observation = _mapping(observations.get("tail"))
-    tail_confirmed, tail_block_reasons = _confirmed_detection(
-        tail_observation
-    )
-    evidence: dict[str, Any] = {}
-    present_parts: list[str] = []
-    for part_name in OPTIONAL_CHARACTER_PART_LABELS:
-        sources: list[str] = []
-        if tag_matches[part_name]:
-            sources.append("approved_character_tags")
-        if (
-            part_name in ear_states
-            and ear_states[part_name] == "present"
-        ):
-            sources.append("ear_contract_present")
-        if part_name == "tail" and tail_confirmed:
-            sources.append("condition_snapshot_confirmed")
-        present = bool(sources)
-        if present:
-            present_parts.append(part_name)
-        evidence[part_name] = {
-            "present": present,
-            "sources": sources,
-            "tag_matches": list(tag_matches[part_name]),
-            "analysis_state": (
-                ear_states.get(part_name)
-                if part_name in ear_states
-                else _mapping(tail_observation.get("detection")).get("status")
-            ),
-            "detection_block_reasons": (
-                list(tail_block_reasons) if part_name == "tail" else []
-            ),
-        }
-    return tuple(present_parts), evidence
 
 
-def build_native_refinement_instruction(
-    approved_run: Mapping[str, Any],
-) -> tuple[str, dict[str, Any]]:
-    """Create a native instruction from separated character and garment data."""
-
-    character_tags = _unique_tags(
-        approved_run.get("approved_character_tags", ())
-    )
-    garment_tags = _unique_tags(
-        (
-            *approved_run.get("approved_tags", ()),
-            *approved_run.get("approved_detail_tags", ()),
-        )
-    )
-    if not character_tags:
-        raise ValueError("Native 정밀화에 사용할 승인 캐릭터 태그가 없습니다.")
-    if not garment_tags:
-        raise ValueError("Native 정밀화에 사용할 승인 의상 태그가 없습니다.")
-    garment_topology = approved_run.get("garment_topology")
-    if not isinstance(garment_topology, Mapping):
-        garment_topology = resolve_garment_topology(
-            approved_run.get("approved_tags", ()),
-            approved_run.get("approved_detail_tags", ()),
-        )
-    structural_guidance = topology_guidance(garment_topology)
-    hair_structure = approved_run.get("hair_structure")
-    if not isinstance(hair_structure, Mapping):
-        hair_structure = resolve_hair_structure(
-            approved_run.get("approved_character_tags", ()),
-            approved_run.get("hair_detail_analysis"),
-        )
-    hair_guidance = hair_structure_guidance(hair_structure)
-    hair_transfer_contract = approved_run.get("hair_transfer_contract")
-    if not isinstance(hair_transfer_contract, Mapping):
-        hair_transfer_contract = build_hair_transfer_contract(
-            approved_run.get("approved_character_tags", ()),
-            approved_run.get("hair_detail_analysis"),
-        )
-    gender = str(approved_run.get("gender") or "approved").strip().lower()
-    gender_text = {
-        "male": "adult male",
-        "female": "adult female",
-    }.get(gender, "approved")
-    lower_tags = set(garment_tags)
-    skirt_required = bool(
-        lower_tags.intersection({"skirt", "mini skirt", "microskirt"})
-    )
-    lower_guard = (
-        " Preserve the approved skirt silhouette; do not create pants, "
-        "trousers, or shorts."
-        if skirt_required
-        else " Do not invent a lower-body garment that is absent from the "
-        "garment board."
-    )
-    character_parts, character_part_evidence = _optional_character_parts(
-        approved_run, character_tags
-    )
-    authority_properties = [
-        "face",
-        "body",
-        "pose",
-        "anatomy",
-        "hairstyle",
-        "hair color",
-        *(
-            OPTIONAL_CHARACTER_PART_LABELS[part_name]
-            for part_name in character_parts
-        ),
-        "all character colors",
-    ]
-    instruction = (
-        f"Create one standalone full-body image of the same {gender_text} "
-        "character. Image 1 is the approved character Base and is the only "
-        f"authority for {', '.join(authority_properties)}. Preserve those "
-        "properties exactly. Image 2 is an isolated garment-only board with no "
-        "person identity. Use it only for garment shape, construction, details, "
-        "and garment colors. "
-        f"Character contract: {_human_tags(character_tags)}. "
-        f"{hair_guidance}"
-        f"Garment contract: {_human_tags(garment_tags)}. "
-        f"{structural_guidance}"
-        f"{lower_guard} "
-        "Do not create text, letters, logos, captions, collages, split views, "
-        "overlays, insets, detached objects, extra people, or a second character."
-    )
-    return instruction, {
-        "version": CONTRACT_VERSION,
-        "instruction_version": NATIVE_INSTRUCTION_VERSION,
-        "base_profile": BASE_PROFILE,
-        "garment_source": GARMENT_SOURCE,
-        "character_tags": list(character_tags),
-        "garment_tags": list(garment_tags),
-        "garment_topology": dict(garment_topology),
-        "garment_topology_guidance_applied": bool(structural_guidance),
-        "hair_structure": dict(hair_structure),
-        "hair_structure_guidance_applied": bool(hair_guidance),
-        "hair_transfer_contract": dict(hair_transfer_contract),
-        "gender": gender,
-        "skirt_guard": skirt_required,
-        "character_parts": list(character_parts),
-        "character_part_evidence": character_part_evidence,
-        "character_part_policy": "approved_tag_or_recorded_presence_v1",
-        "animagine_prompt_reused": False,
-        "raw_garment_person_image_allowed": False,
-    }
 
 
 def _approved_garment_digest(approved_run: Mapping[str, Any]) -> str:

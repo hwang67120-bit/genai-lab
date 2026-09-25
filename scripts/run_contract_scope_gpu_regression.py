@@ -22,7 +22,6 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from genai_lab.body_proportion_presets import active_body_proportion_preset_id
 from genai_lab.generation_orchestrator import GenerationOrchestrator
 from genai_lab.generation_replay import load_generation_replay_bundle
 from genai_lab.model import prepare_pipeline
@@ -46,7 +45,6 @@ def parse_args() -> argparse.Namespace:
         choices=("male", "female", "unspecified"),
         default="unspecified",
     )
-    parser.add_argument("--body-proportion-preset-id")
     parser.add_argument("--output-dir", type=Path, required=True)
     return parser.parse_args()
 
@@ -282,14 +280,8 @@ def main() -> int:
             reference_image_name=args.character_image.name,
             width=source.width,
             height=source.height,
-            body_proportion_preset_id=args.body_proportion_preset_id,
         )
-        preset_id = active_body_proportion_preset_id(request_template)
-        pipeline = (
-            prepare_pipeline(config, body_proportion_preset_id=preset_id)
-            if preset_id is not None
-            else prepare_pipeline(config)
-        )
+        pipeline = prepare_pipeline(config)
         request, prompt_record = prepare_character_only_base_request(
             request_template,
             (pipeline.tokenizer, pipeline.tokenizer_2),
@@ -353,7 +345,6 @@ def main() -> int:
             "garment_tags": list(fresh_garment_tags),
             "garment_detail_tags": list(fresh_garment_detail_tags),
             "seed": request.seed,
-            "body_proportion_preset_id": request.body_proportion_preset_id,
             "prompt": request.prompt,
             "negative_prompt": request.negative_prompt,
             "prompt_record": prompt_record,

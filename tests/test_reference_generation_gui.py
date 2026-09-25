@@ -168,9 +168,6 @@ def test_visual_request_setup_reaches_worker_without_local_torch(monkeypatch, tm
     from PySide6.QtWidgets import QDialog
     app = QApplication.instance() or QApplication([])
     window = GenAILabWindow()
-    window.body_proportion_combo.setCurrentIndex(
-        window.body_proportion_combo.findData("standard_7_5h_shoulder")
-    )
     image = Image.new('RGB', (64, 112), 'white')
     window.framing_combo.setCurrentIndex(framing_index)
     image.save(tmp_path / 'character.png')

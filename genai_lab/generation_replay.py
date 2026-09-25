@@ -147,7 +147,6 @@ def _load_request(directory: Path, record: dict[str, Any]) -> CharacterGeneratio
         reference_image_strength=float(record["reference_image_strength"]),
         model_id=str(record["model_id"]),
         reference_adapter_id=str(record["reference_adapter_id"]),
-        body_proportion_preset_id=record.get("body_proportion_preset_id"),
         body_morphology=(
             BodyMorphologyVector.from_record(record["body_morphology"])
             if record.get("body_morphology") is not None

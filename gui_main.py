@@ -26,11 +26,6 @@ from run import (
     validate_config,
 )
 from genai_lab.model import prepare_pipeline
-from genai_lab.body_proportion_presets import (
-    BODY_PROPORTION_PRESETS,
-    active_body_proportion_preset_id,
-    resolve_body_proportion_control,
-)
 from genai_lab.generator import (
 
     generate_character_candidate,
@@ -3249,24 +3244,9 @@ class GenerationWorker(QObject):
                 model_started_at = perf_counter()
                 self.status_changed.emit("모델과 참조 그림 장치 준비 중...")
                 self.run_log.write_stage("모델 준비", "모델 불러오기 시작")
-                body_preset_id = (
-                    None
-                    if pose_control_enabled
-                    else active_body_proportion_preset_id(
-                        self.generation_request
-                    )
+                self.pipeline = prepare_pipeline(
+                    self.config, pose_control_enabled=pose_control_enabled,
                 )
-                if body_preset_id is None:
-                    self.pipeline = prepare_pipeline(
-                        self.config,
-                        pose_control_enabled=pose_control_enabled,
-                    )
-                else:
-                    self.pipeline = prepare_pipeline(
-                        self.config,
-                        pose_control_enabled=False,
-                        body_proportion_preset_id=body_preset_id,
-                    )
                 self.run_log.write_stage(
                     "모델 준비",
                     f"완료, 소요 시간={perf_counter() - model_started_at:.1f}초",
@@ -3527,20 +3507,6 @@ class GenAILabWindow(QMainWindow):
         framing_layout.addWidget(framing_label)
         framing_layout.addWidget(self.framing_combo)
         layout.addLayout(framing_layout)
-
-        body_proportion_layout = QHBoxLayout()
-        body_proportion_label = QLabel("5. 체형 기준:")
-        self.body_proportion_combo = QComboBox()
-        self.body_proportion_combo.addItem("체형 프리셋을 선택하세요", None)
-        for preset in BODY_PROPORTION_PRESETS:
-            self.body_proportion_combo.addItem(
-                preset.label_ko,
-                preset.preset_id,
-            )
-        self.body_proportion_combo.setCurrentIndex(0)
-        body_proportion_layout.addWidget(body_proportion_label)
-        body_proportion_layout.addWidget(self.body_proportion_combo)
-        layout.addLayout(body_proportion_layout)
 
         refinement_layout = QHBoxLayout()
         refinement_label = QLabel("6. 최종 정밀화 모드:")
@@ -6517,7 +6483,6 @@ class GenAILabWindow(QMainWindow):
         self.pose_button.setEnabled(enabled and not CLOTHING_REFERENCE_GENERATION_MODE)
         self.clear_pose_button.setEnabled(enabled and not CLOTHING_REFERENCE_GENERATION_MODE)
         self.framing_combo.setEnabled(enabled)
-        self.body_proportion_combo.setEnabled(enabled)
         self.refinement_mode_combo.setEnabled(enabled)
         self.external_candidate_button.setEnabled(
             enabled and self.can_import_external_candidate()
@@ -6603,13 +6568,6 @@ class GenAILabWindow(QMainWindow):
 
         if not self.style_path:
             QMessageBox.warning(self, "경고", "캐릭터 기준 이미지를 선택하세요.")
-            return
-        if self.body_proportion_combo.currentData() is None:
-            QMessageBox.warning(
-                self,
-                "체형 기준 필요",
-                "Animagine Base에 적용할 체형 프리셋을 선택하세요.",
-            )
             return
         if CLOTHING_REFERENCE_GENERATION_MODE and self.outfit_path is None:
             QMessageBox.warning(
@@ -6699,8 +6657,6 @@ class GenAILabWindow(QMainWindow):
             generation_input = CharacterGenerationInput(
                 reference_image_path=Path(self.style_path),
                 framing_type=selected_framing_type,
-                body_proportion_preset_id=
-                self.body_proportion_combo.currentData(),
                 approved_reference_image=self.approved_reference_image.image,
                 reference_enhancement_applied=(
                     self.approved_reference_image.enhancement_applied
@@ -6791,7 +6747,6 @@ class GenAILabWindow(QMainWindow):
                 "요청 준비",
                 (
                     f"화면 범위={generation_request.framing_type.value}, "
-                    f"체형 프리셋={generation_request.body_proportion_preset_id}, "
                     f"원본 크기={generation_request.reference_image.width}x"
                     f"{generation_request.reference_image.height}, "
                     f"크기={generation_request.width}x{generation_request.height}, "
@@ -6832,34 +6787,6 @@ class GenAILabWindow(QMainWindow):
                     self.pipeline.maybe_free_model_hooks()
                 self.pipeline = None
 
-                torch.cuda.empty_cache()
-
-            body_settings = resolve_body_proportion_control(self.config)
-            requested_body_preset_id = active_body_proportion_preset_id(
-                generation_request
-            )
-            requested_body_model = (
-                body_settings.model_id
-                if requested_body_preset_id is not None
-                and not requested_pose_pipeline
-                else None
-            )
-            if (
-                self.pipeline is not None
-                and getattr(
-                    self.pipeline,
-                    "_genai_lab_body_proportion_model_id",
-                    None,
-                ) != requested_body_model
-            ):
-                run_log.write_stage(
-                    "모델 전환",
-                    "기존 모델의 체형 ControlNet 상태와 요청이 달라 재사용하지 않음, "
-                    f"새 체형 모델={requested_body_model or '미사용'}",
-                )
-                if hasattr(self.pipeline, "maybe_free_model_hooks"):
-                    self.pipeline.maybe_free_model_hooks()
-                self.pipeline = None
                 torch.cuda.empty_cache()
 
             self.generate_button.setEnabled(False)

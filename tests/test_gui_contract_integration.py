@@ -73,9 +73,6 @@ def test_gui_full_contract_routes_approved_inputs_to_final_review(
     report_path.write_text("{}", encoding="utf-8")
 
     window = GenAILabWindow()
-    window.body_proportion_combo.setCurrentIndex(
-        window.body_proportion_combo.findData("standard_7_5h_shoulder")
-    )
     window.config = config
     window.style_path = str(character_path)
     window.selected_outfit_path = outfit_path

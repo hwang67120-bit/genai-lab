@@ -389,57 +389,6 @@ def generate_character_candidate(
                     '장면 선화 조건',
                     'control_image=구조 선화, image=승인 캐릭터 RGB, 인페인팅/원본 픽셀 덧씌우기 없음',
                 )
-    body_proportion_control_image = None
-    body_proportion_record = None
-    if visual_inputs is not None and prepared_pose_control is None:
-        from genai_lab.body_proportion_presets import (
-            prepare_body_proportion_control,
-        )
-        (
-            body_proportion_control_image,
-            body_proportion_record,
-        ) = prepare_body_proportion_control(
-            config,
-            generation_request,
-            project_root,
-        )
-        design_record["body_proportion_control"] = body_proportion_record
-        if body_proportion_control_image is not None:
-            expected_model_id = body_proportion_record["settings"]["model_id"]
-            if (
-                getattr(
-                    pipeline,
-                    "_genai_lab_body_proportion_model_id",
-                    None,
-                )
-                != expected_model_id
-            ):
-                body_proportion_control_image.close()
-                raise ValueError(
-                    "현재 Animagine 파이프라인이 승인 체형 ControlNet과 다릅니다."
-                )
-            model_arguments["control_image"] = body_proportion_control_image
-            model_arguments["controlnet_conditioning_scale"] = (
-                body_proportion_record["settings"]["conditioning_scale"]
-            )
-            model_arguments["control_guidance_start"] = (
-                body_proportion_record["settings"]["guidance_start"]
-            )
-            model_arguments["control_guidance_end"] = (
-                body_proportion_record["settings"]["guidance_end"]
-            )
-        if run_log is not None:
-            run_log.write_stage(
-                "Animagine Base 체형 프리셋",
-                f"상태={body_proportion_record['status']}, "
-                f"프리셋={body_proportion_record.get('preset_id')}, "
-                f"ControlNet={body_proportion_record['settings']['model_id']}, "
-                f"강도={body_proportion_record['settings']['conditioning_scale']:.2f}, "
-                f"구간={body_proportion_record['settings']['guidance_start']:.2f}~"
-                f"{body_proportion_record['settings']['guidance_end']:.2f}, "
-                "OpenPose=미사용",
-            )
-
     if prepared_pose_control is not None:
         model_arguments["control_image"] = (
             prepared_pose_control.control_map_image
@@ -599,13 +548,7 @@ def generate_character_candidate(
                         f"shape={embedding_record['positive_shape']}, "
                         "추론 단계 변경 없음")
         base_started_at = time.perf_counter()
-        try:
-            first_stage_images = pipeline(**model_arguments).images
-        finally:
-            if body_proportion_control_image is not None:
-                body_proportion_control_image.close()
-                body_proportion_control_image = None
-                model_arguments.pop("control_image", None)
+        first_stage_images = pipeline(**model_arguments).images
         # Diffusers는 PIL 출력일 때는 이미지 목록을, output_type="latent"일 때는
         # [B, 4, H, W] 텐서 자체를 images에 담는다. latent의 [0]을 먼저 꺼내면
         # 배치 축이 사라져 [4, H, W]가 되므로 정밀화 경로에서는 그대로 유지한다.
@@ -736,7 +679,6 @@ def generate_character_candidate(
         ip_adapter_reference_image.close()
         if original_image_canvas is not None:
             original_image_canvas.close()
-        body_proportion_control_image = None
     if prepared_pose_control is not None:
         prepared_pose_control.close()
 

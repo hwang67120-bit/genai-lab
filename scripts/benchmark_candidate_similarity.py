@@ -24,7 +24,6 @@ from genai_lab.approved_reference_run import approve_reference_run
 from genai_lab.generation_orchestrator import GenerationOrchestrator
 from genai_lab.generation_replay import load_generation_replay_bundle
 from genai_lab.model import prepare_pipeline
-from genai_lab.body_proportion_presets import active_body_proportion_preset_id
 from genai_lab.run_log import create_generation_run_log
 from run import (
     check_environment,
@@ -247,15 +246,7 @@ def main() -> int:
 
         configure_system_certificates()
         environment = check_environment()
-        body_preset_id = active_body_proportion_preset_id(request)
-        pipeline_object = (
-            prepare_pipeline(
-                config,
-                body_proportion_preset_id=body_preset_id,
-            )
-            if body_preset_id is not None
-            else prepare_pipeline(config)
-        )
+        pipeline_object = prepare_pipeline(config)
         orchestrator = GenerationOrchestrator(
             config,
             request,

@@ -18,7 +18,6 @@ if str(PROJECT_ROOT) not in sys.path:
 from genai_lab.generation_orchestrator import GenerationOrchestrator
 from genai_lab.generation_replay import load_generation_replay_bundle
 from genai_lab.model import prepare_pipeline
-from genai_lab.body_proportion_presets import active_body_proportion_preset_id
 from genai_lab.native_pipeline_contract import native_direct_enabled
 from genai_lab.run_log import create_generation_run_log
 from run import (
@@ -71,15 +70,7 @@ def main() -> int:
         )
         direct_route = native_direct_enabled(config)
         if not direct_route:
-            body_preset_id = active_body_proportion_preset_id(request)
-            pipeline = (
-                prepare_pipeline(
-                    config,
-                    body_proportion_preset_id=body_preset_id,
-                )
-                if body_preset_id is not None
-                else prepare_pipeline(config)
-            )
+            pipeline = prepare_pipeline(config)
         orchestrator = GenerationOrchestrator(
             config,
             request,

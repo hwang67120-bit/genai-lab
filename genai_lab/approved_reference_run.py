@@ -117,8 +117,6 @@ def run_payload(inputs, config, request, *, prepared=False):
     from genai_lab.candidate_structure_gate import resolve_candidate_structure_gate
     candidate_structure_gate = resolve_candidate_structure_gate(config).record()
     body_morphology_similarity = resolve_body_morphology_similarity(config).record()
-    from genai_lab.body_proportion_presets import body_proportion_contract
-    body_proportion = body_proportion_contract(config, request)
     from genai_lab.style import prepare_original_image_canvas
     edit_canvas = prepare_original_image_canvas(inputs.source, request.width, request.height)
     try:
@@ -188,7 +186,6 @@ def run_payload(inputs, config, request, *, prepared=False):
         "base_seed": request.seed, "candidate_count": section["candidate_count"],
         "body_morphology": request_body_morphology(request).record(),
         "base_edit": base_edit,
-        "body_proportion_control": body_proportion,
         "maximum_candidate_attempts": (
             section["candidate_count"]
             + max(
@@ -368,36 +365,7 @@ def verify_pipeline_boundary(inputs, config, request, arguments):
         or arguments.get("strength") != base_edit.get("strength")
     ):
         raise ValueError("승인된 캐릭터 RGB 시작 이미지 또는 편집 강도와 실제 호출이 다릅니다.")
-    body_control = approval_record.get("body_proportion_control", {})
-    body_control_active = body_control.get("status") == "active"
-    if body_control_active:
-        if inputs.scene_condition is not None:
-            raise ValueError("체형 프리셋과 장면 선화 조건을 동시에 전달할 수 없습니다.")
-        from genai_lab.body_proportion_presets import PROJECT_ROOT, prepare_body_proportion_control
-        expected_control, runtime_record = prepare_body_proportion_control(
-            config, request, PROJECT_ROOT
-        )
-        try:
-            actual_control = arguments.get("control_image")
-            settings = body_control.get("settings", {})
-            if (
-                expected_control is None
-                or not isinstance(actual_control, Image.Image)
-                or image_digest(actual_control) != image_digest(expected_control)
-                or arguments.get("controlnet_conditioning_scale")
-                != float(settings.get("conditioning_scale", .42))
-                or arguments.get("control_guidance_start")
-                != float(settings.get("guidance_start", 0.0))
-                or arguments.get("control_guidance_end")
-                != float(settings.get("guidance_end", .72))
-                or runtime_record.get("control_sha256")
-                != body_control.get("control_sha256")
-            ):
-                raise ValueError("승인된 체형 프리셋 ControlNet 조건과 실제 호출이 다릅니다.")
-        finally:
-            if expected_control is not None:
-                expected_control.close()
-    elif "control_image" in arguments and inputs.scene_condition is None:
+    if "control_image" in arguments and inputs.scene_condition is None:
         raise ValueError("승인되지 않은 ControlNet 조건이 참조 생성에 연결됐습니다.")
     if inputs.scene_condition is not None:
         hint = arguments.get("control_image")

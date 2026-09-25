@@ -40,7 +40,6 @@ def make_request(reference):
         reference_image_strength=0.8,
         model_id="model",
         reference_adapter_id="adapter",
-        body_proportion_preset_id="standard_7_5h_shoulder",
     )
 
 
@@ -91,7 +90,6 @@ def test_generation_replay_round_trip_preserves_images_and_approval(
         assert loaded_request.seed == request.seed
         assert loaded_request.prompt == request.prompt
         assert loaded_request.body_morphology == request.body_morphology
-        assert loaded_request.body_proportion_preset_id == request.body_proportion_preset_id
         assert loaded_config["paths"]["output_dir"] == "replays"
         assert loaded_approval.fingerprint == approval.fingerprint
         assert (directory / "bundle.json").is_file()

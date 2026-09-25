@@ -264,23 +264,6 @@ candidate_semantic_gate:
   minimum_margin: 0.10
   novel_garment_threshold: 0.55
 
-# OpenPose 이전 Animagine Base 첫 패스에만 적용하는 정면 체형 기준.
-# 캐릭터·헤어 IP-Adapter와 분리된 Canny ControlNet 채널을 사용한다.
-body_proportion_presets:
-  enabled: false
-  status: animagine_base_connected
-  asset_root: inputs/body_proportion_presets/v3
-  family_count: 4
-  preset_count: 6
-  application_stage: animagine_base_only
-  openpose_used: false
-  user_selection_required: true
-  model_id: xinsir/controlnet-canny-sdxl-1.0
-  local_files_only: true
-  conditioning_scale: 0.42
-  guidance_start: 0.00
-  guidance_end: 0.72
-
 # 요청에 봉인된 체형 벡터와 출력 외곽의 관측 가능한 3개 지표만 비교한다.
 # 진단 기록이며 반환 차단·재시드·후보 순위에는 사용하지 않는다.
 body_morphology_similarity:

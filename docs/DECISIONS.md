@@ -2,6 +2,26 @@
 
 > 이 문서는 과거 판단과 실험 근거를 보존하는 기록이다. 현재 제품 계약은 docs/FLOW.md만 따른다. 아래 결정이 FLOW.md와 충돌하면 과거 결정으로 취급하며 새 구현의 근거로 사용하지 않는다.
 
+## D-073 미사용 경로 4덩어리 순차 제거
+
+- 기록일: 2026-09-25.
+- 문제: 정적 검색은 동적 접근을 놓칠 수 있고, 설정 읽기 기록은 사용 여부를 증명하지 못합니다(읽힘 ≠ 사용됨). 사용자는 유지 보수하기 어려운 네 경로를 제품에서 제거하도록 결정했습니다. 과거에 "연결 안 됨" 판단이 두 번 틀렸다는 사용자 문제 제기를 근거로, 삭제 후 실제 출력으로 대조했습니다.
+- 선택: body_proportion_presets → body_restoration → native_refinement(FLUX 전용) → garment_inpaint(구형 별도 러너)를 순서대로 제거했습니다. 한 덩어리마다 회귀 테스트·실제 GPU 대조·개별 커밋을 완료한 뒤 다음 덩어리를 진행했습니다. 현재 sdxl_local 의상 적용과 공통 Base 계약은 유지합니다.
+- 측정 기준: ordinary-female × 페라리, 과거 `outputs/strength-revert-20260924/cases/ordinary-female`의 Base/Final 파일을 재해시해 기준으로 사용했습니다. 시드 209210001, 정밀화 scale/strength/steps 0.80/0.90/28, 736×1232를 고정했습니다. 각 덩어리 실제 Base 1회·Final 1회, 콜백 25회이며 출력 해시가 모두 같습니다.
+
+| 덩어리 | Base SHA-256 | Final SHA-256 | 판정 | 커밋 |
+|---|---|---|---|---|
+| body_proportion_presets | `cd1a11ffa5664d37106758e544ca783d0950f868dcebe0ae39bd04f2f5d9d3e0` | `c10bf6a3aedcfae17e289063d8bc1b83145672e2e93dd138b8fa18d53d275e81` | 모두 동일 | `fb62d50a820e008ac98ed00acbdf3bb4c5de227e` |
+| body_restoration | `cd1a11ffa5664d37106758e544ca783d0950f868dcebe0ae39bd04f2f5d9d3e0` | `c10bf6a3aedcfae17e289063d8bc1b83145672e2e93dd138b8fa18d53d275e81` | 모두 동일 | `6e5875201151df97eedc7dcaefdb44cdabf5ef79` |
+| native_refinement | `cd1a11ffa5664d37106758e544ca783d0950f868dcebe0ae39bd04f2f5d9d3e0` | `c10bf6a3aedcfae17e289063d8bc1b83145672e2e93dd138b8fa18d53d275e81` | 모두 동일 | `b8e248a4b94312b535b9ca1f8bccbd99699a696d` |
+| garment_inpaint | `cd1a11ffa5664d37106758e544ca783d0950f868dcebe0ae39bd04f2f5d9d3e0` | `c10bf6a3aedcfae17e289063d8bc1b83145672e2e93dd138b8fa18d53d275e81` | 모두 동일 | `755e9cdca3c61e34ae8627263a9cfe9e370cef69` |
+
+- 검증: 시작 1232 passed / 3 xfailed → 1225 → 1198 → 1164 → 최종 1117 passed, 0 failed / 0 xfailed, 경고 2건. 기능 전용 테스트를 제거하여 테스트 집합이 줄었습니다. declared/unread는 542/190 → 528/185 → 528/185 → 507/171 → 481/146입니다. 세부 전체 목록과 줄 범위는 `outputs/unused-path-removal-20260925/`에 보존했습니다.
+- 폐기: D-064의 구형 별도 의상 Inpaint 실행·보드 구성, D-069·D-070·D-072의 신체 복원 제품 실행 부분을 폐기합니다. D-065의 구형 Inpaint 중립색 잔여 진단 소비 부분도 종료합니다. D-071의 복원 소비 연결은 제거하지만 원본 자세 승인·분리 보관은 유지합니다. 원래 결정 본문은 과거 근거로 보존합니다. 체형 프리셋과 FLUX 전용 결정 번호는 찾지 못했으므로 번호를 만들어 폐기하지 않습니다.
+- 보호: 자세 계통(pose_*·DWPose·original_body_pose, D-035/036/037과 D-071의 자세 승인·보관)은 제거 대상이 아닙니다. 보호 파일 10개 해시가 그대로이며 후속 자세 작업에 사용합니다. 결정 기록·벤치마크·A/B 산출물·모델 캐시·외부 자세 라이브러리를 보존했습니다.
+- 되돌림: 출력 해시가 달라져 되돌린 덩어리는 없습니다. 제거와 무관한 미커밋 provenance 및 기존 신규 문서·자료는 유지하고 제거 커밋에서 제외했습니다. 검증은 해당 작업 트리에서 수행했으므로 각 code-state.json의 소스 SHA-256을 함께 인용해야 합니다.
+- 한계: 해시 동일은 이 케이스·이 설정에서 제거한 경로가 출력에 영향을 주지 않았음을 뜻합니다. 다른 입력·다른 경로(GUI 등)의 동작은 별도 확인이 필요합니다. GUI는 모의 회귀만 검사했고 GUI GPU 대조는 수행하지 않았습니다. 메모리 누수 유무나 생성 품질 개선을 증명한 시험도 아닙니다.
+
 ## D-072 신체 복원 3단계 원본 DWPose ControlNet 연결
 
 - 문제: 2단계에서 기준 캐릭터 DWPose를 분리 보관했지만 신체 복원 Inpaint에 전달하지 않아 실제 생성은 여전히 넓은 회색 마스크와 프롬프트만 보고 신체를 추측했습니다.

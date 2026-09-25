@@ -1,9 +1,7 @@
-import numpy as np
 import pytest
-from PIL import Image
 from PySide6.QtWidgets import QApplication, QDialogButtonBox
 
-from scripts.garment_inpaint_runner import resolve_inference_size, resize_inference_inputs
+from scripts.generation_inputs import resolve_inference_size
 from genai_lab.generation_resolution_review import GenerationResolutionDialog
 
 
@@ -20,19 +18,6 @@ def test_invalid_size_rejected(width):
         resolve_inference_size((768, 1344), width)
 
 
-def test_inputs_same_canvas_binary_mask_source_unchanged():
-    image = Image.new('RGB', (768, 1344), 'white')
-    mask = Image.new('L', image.size, 0)
-    mask.paste(255, (192, 336, 576, 1008))
-    pose = image.copy()
-    before = image.tobytes(), mask.tobytes(), pose.tobytes()
-    resized = resize_inference_inputs(image, mask, pose, (512, 896))
-    assert all(im.size == (512, 896) for im in resized)
-    assert set(np.unique(np.asarray(resized[1]))) == {0, 255}
-    assert resized[1].getbbox() == (128, 224, 384, 672)
-    assert before == (image.tobytes(), mask.tobytes(), pose.tobytes())
-    for im in (*resized, image, mask, pose):
-        im.close()
 
 
 def test_dialog_preview_and_invalid_width():

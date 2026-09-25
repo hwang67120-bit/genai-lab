@@ -125,34 +125,6 @@ pose_result_policy:
 
 # CatVTON 의상 합성 실행 설정은 제거됨. SCHP/DensePose 분석 환경은 유지.
 
-garment_inpaint:
-  enabled: true
-  python_executable: D:/genai-cache/venv/Scripts/python.exe
-  runner_path: scripts/garment_inpaint_runner.py
-  temporary_root: D:/genai-cache/temp/garment-inpaint
-  benchmark_root: outputs/debug_benchmark
-  cache_dir: D:/genai-cache/huggingface
-  base_model_id: diffusers/stable-diffusion-xl-1.0-inpainting-0.1
-  model_variant: fp16
-  adapter_repository: h94/IP-Adapter
-  adapter_subfolder: sdxl_models
-  adapter_weight: ip-adapter-plus_sdxl_vit-h.safetensors
-  adapter_image_encoder_subfolder: models/image_encoder
-  strength: 0.90
-  inference_steps: 28
-  guidance_scale: 5.5
-  ip_adapter_scale: 0.80
-  padding_mask_crop: 64
-  mask_threshold: 128
-  garment_board_size: 1024
-  garment_board_outer_padding: 32
-  garment_board_cell_padding: 16
-  garment_board_minimum_component_pixels: 16
-  garment_board_maximum_components: 8
-  timeout_seconds: 1800
-  dtype: float16
-
-
 detail_correction:
   enabled: true
   detector_repository: Bingsu/adetailer

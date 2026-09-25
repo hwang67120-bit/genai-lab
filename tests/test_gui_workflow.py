@@ -17,7 +17,6 @@ from genai_lab.workflow import (
 )
 from gui_main import (
     GenAILabWindow,
-    build_garment_inpaint_prompts,
 )
 
 
@@ -272,98 +271,12 @@ def test_approval_dialog_blocks_duplicate_resume_until_closed(monkeypatch) -> No
 
 
 
-def test_garment_prompt_removes_only_app_outfit_preservation_conflicts() -> None:
-    prompt, negative_prompt = build_garment_inpaint_prompts(
-        "same character as reference image, matching outfit and colors, smile",
-        "different character, different outfit, mismatched colors, blurry",
-        ("blue jacket", "gold buttons"),
-    )
-
-    assert "matching outfit and colors" not in prompt
-    assert "blue jacket" in prompt
-    assert "gold buttons" in prompt
-    assert "different outfit" not in negative_prompt
-    assert "mismatched colors" not in negative_prompt
-    assert "different character" in negative_prompt
-    assert "blurry" in negative_prompt
-    assert prompt.startswith(
-        "blue jacket, gold buttons, reference garment, "
-        "preserve garment color pattern seams accessories"
-    )
 
 
 
 
-def test_garment_inpaint_settings_use_vit_h_image_encoder() -> None:
-    application, window = create_window()
-    try:
-        settings = window.create_garment_inpaint_settings()
-        assert settings.adapter_weight == (
-            "ip-adapter-plus_sdxl_vit-h.safetensors"
-        )
-        assert settings.adapter_image_encoder_subfolder == (
-            "models/image_encoder"
-        )
-    finally:
-        close_window(window)
-        application.processEvents()
 
 
-def test_step5_pipeline_release_clears_gui_and_worker_references(
-    monkeypatch,
-) -> None:
-    application, window = create_window()
-    calls: list[str] = []
-
-    class Pipeline:
-        def maybe_free_model_hooks(self) -> None:
-            calls.append("maybe_free_model_hooks")
-
-        def remove_all_hooks(self) -> None:
-            calls.append("remove_all_hooks")
-
-    class Worker:
-        def __init__(self, pipeline) -> None:
-            self.pipeline = pipeline
-
-    pipeline = Pipeline()
-    worker = Worker(pipeline)
-    window.pipeline = pipeline
-    window.worker = worker
-    monkeypatch.setattr("gui_main.torch.cuda.is_available", lambda: True)
-    memory_values = iter((2**20, 0))
-    monkeypatch.setattr(
-        "gui_main.torch.cuda.memory_allocated",
-        lambda: next(memory_values),
-    )
-    monkeypatch.setattr("gui_main.torch.cuda.memory_reserved", lambda: 0)
-    monkeypatch.setattr(
-        "gui_main.torch.cuda.synchronize",
-        lambda: calls.append("synchronize"),
-    )
-    monkeypatch.setattr(
-        "gui_main.torch.cuda.empty_cache",
-        lambda: calls.append("empty_cache"),
-    )
-
-    metrics = window.release_step5_pipeline()
-
-    assert window.pipeline is None
-    assert worker.pipeline is None
-    assert calls == [
-        "maybe_free_model_hooks",
-        "remove_all_hooks",
-        "synchronize",
-        "empty_cache",
-    ]
-    assert metrics == {
-        "before_allocated_mib": 1.0,
-        "after_allocated_mib": 0.0,
-        "after_reserved_mib": 0.0,
-    }
-    window.worker = None
-    close_window(window)
-    application.processEvents()
 
 
 def test_stale_synthesis_candidate_never_routes_to_restoration(monkeypatch):

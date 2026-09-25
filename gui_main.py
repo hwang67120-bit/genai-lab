@@ -49,7 +49,6 @@ from genai_lab.catvton_preflight import (
 )
 from genai_lab.target_masks import ApprovedTargetMasks
 from genai_lab.target_mask_review import TargetMaskReviewDialog
-from genai_lab.generation_resolution_review import GenerationResolutionDialog
 from genai_lab.clothing_reference_generation_review import ClothingReferenceGenerationDialog
 from genai_lab.character_preferences import load_character_gender, save_character_gender
 from genai_lab.visual_reference import (prepare_visual_inputs, generate_visual_batch, CandidateBatch)
@@ -183,13 +182,6 @@ from genai_lab.garment_lineart import (
     GarmentLineartReviewCandidate,
     approve_garment_lineart_review,
     create_garment_lineart_review,
-)
-from genai_lab.garment_inpaint import (
-    GarmentInpaintProgress,
-    GarmentInpaintReviewCandidate,
-    GarmentInpaintSettings,
-    approve_garment_inpaint_review,
-    execute_garment_inpaint,
 )
 
 from genai_lab.result import (
@@ -2554,118 +2546,6 @@ class GarmentLineartReviewDialog(QDialog):
         self.accept()
 
 
-class GarmentInpaintReviewDialog(QDialog):
-    """생성 입력·결과 8개와 중립색 잔여 진단을 공개한다."""
-
-    def __init__(
-        self,
-        candidate: GarmentInpaintReviewCandidate,
-        parent=None,
-    ) -> None:
-        super().__init__(parent)
-        self.setWindowTitle("2D 의상 Inpaint 결과 승인")
-        available = self.screen().availableGeometry()
-        self.resize(
-            min(1180, max(760, available.width() - 80)),
-            min(860, max(560, available.height() - 80)),
-        )
-        self.approved = False
-        layout = QVBoxLayout(self)
-        scroll = QScrollArea(self)
-        scroll.setWidgetResizable(True)
-        content = QWidget()
-        content_layout = QVBoxLayout(content)
-        add_image_review_grid(
-            content_layout,
-            (
-                ("1. 기준 캐릭터", candidate.base_character_preview),
-                ("2. Human-Agnostic 시작 이미지", candidate.human_agnostic_preview),
-                ("3. 승인 Inpaint 마스크", candidate.approved_mask_preview),
-                ("4. 승인 의상 원본", candidate.garment_reference_preview),
-                (
-                    "5. IP-Adapter Plus 실제 참조 보드",
-                    candidate.garment_reference_board_preview,
-                ),
-                ("6. 모델 원시 출력", candidate.raw_inpaint_output),
-                ("7. 승인 영역 보호 출력", candidate.protected_output),
-                ("8. 기준 대비 차이 ×4", candidate.difference_preview),
-            ),
-        )
-        residual = candidate.neutral_residual
-        if residual is not None:
-            add_image_review_grid(content_layout, (
-                ("9. 중립색 잔여 의심 영역 (흰색, 경고 전용)", residual.mask),
-            ))
-            percent = (
-                "계산 불가" if residual.suspected_percent is None
-                else f"{residual.suspected_percent:.2f}%"
-            )
-            warning = QLabel(
-                f"중립색 잔여 후보={residual.suspected_pixel_count:,}/"
-                f"{residual.evaluated_pixel_count:,}px ({percent}). "
-                "시작 이미지와 결과가 모두 중립색 근처인 영역입니다. "
-                "실제 회색 의상일 수도 있으므로 생성 실패로 단정하거나 승인을 차단하지 않습니다."
-            )
-            warning.setWordWrap(True)
-            content_layout.addWidget(warning)
-        metrics = QLabel(
-            f"하드 마스크={candidate.inpaint_mask_pixels:,}px, "
-            f"소프트 마스크={candidate.inpaint_soft_mask_pixels:,}px, "
-            f"원시 출력 내부 변경={candidate.raw_changed_inside_mask_pixels:,}px, "
-            f"Human-Agnostic 대비 내부 변경="
-            f"{candidate.raw_changed_from_initial_inside_mask_pixels:,}px, "
-            f"보호 출력 내부 변경={candidate.protected_changed_inside_mask_pixels:,}px, "
-            f"보호 출력 외부 변경={candidate.protected_changed_outside_mask_pixels:,}px, "
-            f"평균 RGB L1={candidate.mean_rgb_l1_inside_mask:.3f}, "
-            f"의상 조각={candidate.garment_retained_component_count}/"
-            f"{candidate.garment_source_component_count}개, "
-            f"참조 보드 점유={candidate.garment_board_occupied_pixel_count:,}px, "
-            f"자동 저장={candidate.automatic_save_count}개, "
-            f"벤치마크 파일={candidate.benchmark_file_count}개, "
-            f"벤치마크 경로={candidate.benchmark_directory}, "
-            f"파이프라인 로딩="
-            f"{candidate.execution_metrics.pipeline_load_seconds:.3f}초, "
-            f"IP-Adapter 로딩="
-            f"{candidate.execution_metrics.ip_adapter_load_seconds:.3f}초, "
-            f"Diffusion="
-            f"{candidate.execution_metrics.diffusion_seconds:.3f}초, "
-            f"출력 저장="
-            f"{candidate.execution_metrics.output_save_seconds:.3f}초, "
-            f"실행기 전체="
-            f"{candidate.execution_metrics.runner_total_seconds:.3f}초, "
-            f"부모 전체="
-            f"{candidate.execution_metrics.parent_total_seconds:.3f}초, "
-            f"진행 이벤트="
-            f"{candidate.execution_metrics.progress_event_count}개, "
-            f"잘못된 이벤트="
-            f"{candidate.execution_metrics.invalid_progress_event_count}개, "
-            f"Heartbeat="
-            f"{candidate.execution_metrics.heartbeat_count}회, "
-            f"기존 전체 시간={candidate.elapsed_seconds:.3f}초"
-        )
-        metrics.setWordWrap(True)
-        content_layout.addWidget(metrics)
-        scroll.setWidget(content)
-        layout.addWidget(scroll)
-        buttons = QHBoxLayout()
-        approve = QPushButton("2D 의상 합성 승인")
-        reject = QPushButton("거절하고 중지")
-        approve.setEnabled(
-            candidate.protected_changed_inside_mask_pixels > 0
-            and candidate.raw_changed_from_initial_inside_mask_pixels > 0
-            and candidate.protected_changed_outside_mask_pixels == 0
-            and candidate.automatic_save_count == 0
-        )
-        approve.clicked.connect(self._approve)
-        reject.clicked.connect(self.reject)
-        buttons.addWidget(approve)
-        buttons.addWidget(reject)
-        layout.addLayout(buttons)
-
-    @Slot()
-    def _approve(self) -> None:
-        self.approved = True
-        self.accept()
 
 
 
@@ -2744,112 +2624,10 @@ class GarmentGeometryWorker(QObject):
             self.approved_pose.close()
 
 
-def build_garment_inpaint_prompts(
-    base_prompt: str,
-    base_negative_prompt: str,
-    design_tags: tuple[str, ...],
-) -> tuple[str, str]:
-    """앱이 넣은 기존 의상 유지 토큰만 제외하고 새 의상 조건을 만든다."""
-    blocked_positive = {"matching outfit and colors"}
-    blocked_negative = {"different outfit", "mismatched colors"}
-
-    def split_tokens(text: str) -> list[str]:
-        return [token.strip() for token in text.split(",") if token.strip()]
-
-    def unique_tokens(tokens: list[str]) -> list[str]:
-        result: list[str] = []
-        seen: set[str] = set()
-        for token in tokens:
-            key = token.casefold()
-            if key not in seen:
-                seen.add(key)
-                result.append(token)
-        return result
-
-    base_positive_tokens = [
-        token for token in split_tokens(base_prompt)
-        if token.casefold() not in blocked_positive
-    ]
-    garment_priority_tokens = [
-        tag.strip() for tag in design_tags if tag.strip()
-    ]
-    garment_priority_tokens.extend((
-        "reference garment",
-        "preserve garment color pattern seams accessories",
-    ))
-    positive_tokens = garment_priority_tokens + base_positive_tokens
-    negative_tokens = [
-        token for token in split_tokens(base_negative_prompt)
-        if token.casefold() not in blocked_negative
-    ]
-    return (
-        ", ".join(unique_tokens(positive_tokens)),
-        ", ".join(unique_tokens(negative_tokens)),
-    )
 
 
 
 
-class GarmentInpaintWorker(QObject):
-    """Human-Agnostic 승인본을 별도 2D Inpaint 프로세스에 전달한다."""
-
-    status_changed = Signal(str)
-    progress_changed = Signal(object)
-    completed = Signal(object)
-    failed = Signal(str, str)
-
-    def __init__(
-        self,
-        base_character: Image.Image,
-        approved_human_agnostic_image: Image.Image,
-        approved_change_mask: Image.Image,
-        approved_composite_mask: Image.Image,
-        garment_reference: Image.Image,
-        prompt: str,
-        negative_prompt: str,
-        seed: int,
-        settings: GarmentInpaintSettings,
-    ) -> None:
-        super().__init__()
-        self.base_character = base_character.copy()
-        self.approved_human_agnostic_image = (
-            approved_human_agnostic_image.copy()
-        )
-        self.approved_change_mask = approved_change_mask.copy()
-        self.approved_composite_mask = approved_composite_mask.copy()
-        self.garment_reference = garment_reference.copy()
-        self.prompt = prompt
-        self.negative_prompt = negative_prompt
-        self.seed = seed
-        self.settings = settings
-
-    @Slot()
-    def run(self) -> None:
-        try:
-            self.status_changed.emit(
-                "SDXL Inpaint + IP-Adapter Plus 의상 생성 중..."
-            )
-            result = execute_garment_inpaint(
-                self.base_character,
-                self.approved_human_agnostic_image,
-                self.approved_change_mask,
-                self.garment_reference,
-                self.prompt,
-                self.negative_prompt,
-                self.seed,
-                self.settings,
-                progress_callback=self.progress_changed.emit,
-                composite_mask=self.approved_composite_mask,
-            )
-            self.completed.emit(result)
-        except Exception as error:
-            self.failed.emit(str(error), traceback.format_exc())
-        finally:
-            self.base_character.close()
-            self.approved_human_agnostic_image.close()
-            self.approved_change_mask.close()
-            self.approved_composite_mask.close()
-            self.garment_reference.close()
 
 
 class GenerationWorker(QObject):
@@ -3176,7 +2954,6 @@ class GenAILabWindow(QMainWindow):
         self.native_refinement_thread = None
         self.pending_native_base_candidate: CharacterGenerationCandidate | None = None
         self.native_refinement_progress = None
-        self.garment_inpaint_start_deferred = False
         self.reference_worker = None
         self.reference_worker_thread = None
         self.outfit_worker = None
@@ -3193,8 +2970,6 @@ class GenAILabWindow(QMainWindow):
         self.original_body_pose_worker_thread = None
         self.garment_geometry_worker = None
         self.garment_geometry_worker_thread = None
-        self.garment_inpaint_worker = None
-        self.garment_inpaint_worker_thread = None
         self.confirmed_character_body_comparison: ConfirmedCharacterBodyComparison | None = None
         self.body_comparison_clothing_category: ClothingCategory | None = None
         self.pending_clothing_source: NormalizedClothingSource | None = None
@@ -3508,7 +3283,6 @@ class GenAILabWindow(QMainWindow):
                 self.mask_worker_thread, self.design_worker_thread,
                 self.body_comparison_worker_thread, self.pose_estimation_worker_thread,
                 self.original_body_pose_worker_thread, self.garment_geometry_worker_thread,
-                self.garment_inpaint_worker_thread,
                 self.native_refinement_thread, self.worker_thread,
             )
         )
@@ -3526,7 +3300,6 @@ class GenAILabWindow(QMainWindow):
                 self.mask_worker_thread, self.design_worker_thread,
                 self.body_comparison_worker_thread, self.pose_estimation_worker_thread,
                 self.original_body_pose_worker_thread, self.garment_geometry_worker_thread,
-                self.garment_inpaint_worker_thread,
                 self.native_refinement_thread, self.worker_thread,
             )
         )
@@ -3560,7 +3333,6 @@ class GenAILabWindow(QMainWindow):
                     self.mask_worker_thread, self.design_worker_thread,
                     self.body_comparison_worker_thread, self.pose_estimation_worker_thread,
                     self.original_body_pose_worker_thread, self.garment_geometry_worker_thread,
-                    self.garment_inpaint_worker_thread,
                     self.native_refinement_thread, self.worker_thread,
                 )
             )
@@ -5335,346 +5107,14 @@ class GenAILabWindow(QMainWindow):
             if review_candidate is not None:
                 review_candidate.close()
 
-    def create_garment_inpaint_settings(self) -> GarmentInpaintSettings:
-        """YAML 수치를 경로 해석 뒤 Stage 5 설정 계약으로 변환한다."""
-        current_dir = Path(__file__).resolve().parent
-        if self.config is None:
-            self.config = load_yaml(current_dir / "configs" / "animagine.yaml")
-        section = self.config.get("garment_inpaint", {})
-
-        def resolved_path(key: str, default: str) -> Path:
-            path = Path(str(section.get(key, default)))
-            return path if path.is_absolute() else current_dir / path
-
-        return GarmentInpaintSettings(
-            python_executable=resolved_path(
-                "python_executable",
-                "D:/genai-cache/venv/Scripts/python.exe",
-            ),
-            runner_path=resolved_path(
-                "runner_path",
-                "scripts/garment_inpaint_runner.py",
-            ),
-            temporary_root=resolved_path(
-                "temporary_root",
-                "D:/genai-cache/temp/garment-inpaint",
-            ),
-            benchmark_root=resolved_path(
-                "benchmark_root",
-                "outputs/debug_benchmark",
-            ),
-            cache_dir=resolved_path(
-                "cache_dir",
-                "D:/genai-cache/huggingface",
-            ),
-            base_model_id=str(section.get(
-                "base_model_id",
-                "diffusers/stable-diffusion-xl-1.0-inpainting-0.1",
-            )),
-            model_variant=str(section.get("model_variant", "fp16")),
-            adapter_repository=str(
-                section.get("adapter_repository", "h94/IP-Adapter")
-            ),
-            adapter_subfolder=str(section.get("adapter_subfolder", "sdxl_models")),
-            adapter_weight=str(
-                section.get(
-                    "adapter_weight",
-                    "ip-adapter-plus_sdxl_vit-h.safetensors",
-                )
-            ),
-            adapter_image_encoder_subfolder=str(
-                section.get(
-                    "adapter_image_encoder_subfolder",
-                    "models/image_encoder",
-                )
-            ),
-            strength=float(section.get("strength", 0.90)),
-            inference_steps=int(section.get("inference_steps", 28)),
-            guidance_scale=float(section.get("guidance_scale", 5.5)),
-            ip_adapter_scale=float(section.get("ip_adapter_scale", 0.80)),
-            padding_mask_crop=int(section.get("padding_mask_crop", 64)),
-            mask_threshold=int(section.get("mask_threshold", 128)),
-            garment_board_size=int(section.get("garment_board_size", 1024)),
-            garment_board_outer_padding=int(
-                section.get("garment_board_outer_padding", 32)
-            ),
-            garment_board_cell_padding=int(
-                section.get("garment_board_cell_padding", 16)
-            ),
-            garment_board_minimum_component_pixels=int(
-                section.get("garment_board_minimum_component_pixels", 16)
-            ),
-            garment_board_maximum_components=int(
-                section.get("garment_board_maximum_components", 8)
-            ),
-            timeout_seconds=int(section.get("timeout_seconds", 1800)),
-            dtype=str(section.get("dtype", "float16")),
-        )
 
 
-    def start_garment_inpaint(self) -> None:
-        """Human-Agnostic 승인본과 의상 참조로 GPU 작업을 1회 시작한다."""
-        self._start_inpaint()
 
-    def _start_inpaint(self) -> None:
-        """참조 의상 Inpaint Worker를 시작한다."""
-        if (
-            self.garment_inpaint_worker_thread is not None
-            and self.garment_inpaint_worker_thread.isRunning()
-        ):
-            return
-        if self.worker_thread is not None and self.worker_thread.isRunning():
-            if not self.garment_inpaint_start_deferred:
-                self.garment_inpaint_start_deferred = True
-                self.status_label.setText(
-                    "상태: 7/8 시작 전 Step 5 작업자 종료 대기 중..."
-                )
-                QTimer.singleShot(
-                    100,
-                    self.continue_garment_inpaint_after_generation_worker,
-                )
-            return
-        if (
-            self.pending_clothing_base_candidate is None
-            or self.confirmed_character_body_comparison is None
-            or self.pending_clothing_extraction is None
-        ):
-            self.pause_generation_workflow(
-                (
-                    GenerationWorkflowStage.CLOTHING_COMPOSITING
-                ),
-                "의상 Inpaint 승인 입력이 부족합니다.",
-            )
-            return
-        base = self.pending_clothing_base_candidate
-        resolution_dialog = GenerationResolutionDialog(
-            base.image.size, getattr(self, "last_inpaint_width", None), self,
-        )
-        if resolution_dialog.exec() != QDialog.DialogCode.Accepted:
-            self.status_label.setText("상태: 생성 해상도 선택 취소 - 생성하지 않았습니다.")
-            return
-        self.last_inpaint_width = resolution_dialog.inference_width
-        tags = (
-            self.confirmed_clothing_design.design_tags
-            if self.confirmed_clothing_design is not None
-            else ()
-        )
-        prompt, negative_prompt = build_garment_inpaint_prompts(
-            base.prompt,
-            base.negative_prompt,
-            tuple(tags),
-        )
-        inpaint_reference = self.pending_clothing_extraction.extracted_image
-        release_metrics = self.release_step5_pipeline()
-        settings = replace(
-            self.create_garment_inpaint_settings(),
-            inference_width=self.last_inpaint_width,
-            neutral_rgb=self.confirmed_character_body_comparison.neutral_rgb,
-            step5_vram_before_allocated_mib=(
-                release_metrics["before_allocated_mib"]
-            ),
-            step5_vram_after_allocated_mib=(
-                release_metrics["after_allocated_mib"]
-            ),
-            step5_vram_after_reserved_mib=(
-                release_metrics["after_reserved_mib"]
-            ),
-        )
-        self.status_label.setText(
-            "상태: 7/8 Step 5 모델 해제 완료 - "
-            f"모드={'의상 합성'}, "
-            f"할당 {release_metrics['before_allocated_mib']:.1f}→"
-            f"{release_metrics['after_allocated_mib']:.1f}MiB, "
-            f"예약 {release_metrics['after_reserved_mib']:.1f}MiB"
-        )
-        self.garment_inpaint_worker_thread = QThread(self)
-        self.garment_inpaint_worker = GarmentInpaintWorker(
-            base.image,
-            self.confirmed_character_body_comparison.approved_human_agnostic_image,
-            self.confirmed_character_body_comparison.approved_change_mask,
-            self.confirmed_character_body_comparison.approved_composite_mask,
-            inpaint_reference, prompt, negative_prompt, base.seed, settings,
-        )
-        self.garment_inpaint_worker.moveToThread(
-            self.garment_inpaint_worker_thread
-        )
-        self.garment_inpaint_worker_thread.started.connect(
-            self.garment_inpaint_worker.run
-        )
-        self.garment_inpaint_worker.status_changed.connect(
-            self.show_worker_status
-        )
-        self.garment_inpaint_worker.progress_changed.connect(
-            self.show_garment_inpaint_progress
-        )
-        self.garment_inpaint_worker.completed.connect(
-            self.garment_inpaint_completed
-        )
-        self.garment_inpaint_worker.failed.connect(self.garment_inpaint_failed)
-        self.garment_inpaint_worker.completed.connect(
-            self.garment_inpaint_worker_thread.quit
-        )
-        self.garment_inpaint_worker.failed.connect(
-            self.garment_inpaint_worker_thread.quit
-        )
-        self.garment_inpaint_worker_thread.finished.connect(
-            self.garment_inpaint_worker.deleteLater
-        )
-        self.garment_inpaint_worker_thread.finished.connect(
-            self.garment_inpaint_worker_thread.deleteLater
-        )
-        self.garment_inpaint_worker_thread.finished.connect(
-            self.clear_garment_inpaint_worker
-        )
-        self.garment_inpaint_worker_thread.start()
 
-    @Slot()
-    def continue_garment_inpaint_after_generation_worker(self) -> None:
-        """Step 5 Worker 참조가 정리된 뒤 Step 9 시작을 한 번만 재개한다."""
-        if self.worker_thread is not None and self.worker_thread.isRunning():
-            QTimer.singleShot(
-                100,
-                self.continue_garment_inpaint_after_generation_worker,
-            )
-            return
-        self.garment_inpaint_start_deferred = False
-        self._start_inpaint()
 
-    def release_step5_pipeline(self) -> dict[str, float]:
-        """Step 9 전에 GUI와 Worker가 보유한 Step 5 모델 참조를 해제한다."""
-        cuda_available = torch.cuda.is_available()
-        before_allocated = (
-            torch.cuda.memory_allocated() if cuda_available else 0
-        )
-        pipeline = self.pipeline
-        self.pipeline = None
 
-        if (
-            self.worker is not None
-            and getattr(self.worker, "pipeline", None) is pipeline
-        ):
-            self.worker.pipeline = None
 
-        if pipeline is not None:
-            if hasattr(pipeline, "maybe_free_model_hooks"):
-                pipeline.maybe_free_model_hooks()
-            if hasattr(pipeline, "remove_all_hooks"):
-                pipeline.remove_all_hooks()
-            del pipeline
 
-        gc.collect()
-        if cuda_available:
-            torch.cuda.synchronize()
-            torch.cuda.empty_cache()
-            after_allocated = torch.cuda.memory_allocated()
-            after_reserved = torch.cuda.memory_reserved()
-        else:
-            after_allocated = 0
-            after_reserved = 0
-
-        mib = 1024**2
-        return {
-            "before_allocated_mib": before_allocated / mib,
-            "after_allocated_mib": after_allocated / mib,
-            "after_reserved_mib": after_reserved / mib,
-        }
-
-    @Slot(object)
-    def garment_inpaint_completed(
-        self,
-        review_candidate: GarmentInpaintReviewCandidate,
-    ) -> None:
-        dialog = (
-            GarmentInpaintReviewDialog(review_candidate, self)
-        )
-        try:
-            self.execute_approval_dialog(dialog)
-            if not dialog.approved:
-                self.pause_generation_workflow(
-                    (
-                        GenerationWorkflowStage.CLOTHING_COMPOSITING
-                    ),
-                    (
-                        "사용자가 2D 의상 Inpaint 결과를 거절했습니다."
-                    ),
-                )
-                return
-            approved = approve_garment_inpaint_review(review_candidate)
-            base = self.pending_clothing_base_candidate
-            if base is None:
-                approved.close()
-                raise RuntimeError("Inpaint 승인 시 기준 후보가 없습니다.")
-            change_mask = (
-                self.confirmed_character_body_comparison.approved_change_mask.copy()
-            )
-            final_candidate = replace(
-                base,
-                image=approved.image,
-                before_clothing_image=None,
-                clothing_change_mask=change_mask,
-                clothing_reference_name=(
-                    Path(self.outfit_path).name if self.outfit_path else None
-                ),
-                clothing_category=(
-                    self.require_approved_legacy_clothing_category().value
-                ),
-                clothing_try_on_status=(
-                    "completed_2d_inpaint"
-                ),
-                clothing_verification_warning_ko=None,
-                raw_clothing_try_on_image=None,
-                clothing_difference_image=None,
-                clothing_effect_metrics=None,
-            )
-            self.release_pending_clothing_base_candidate()
-            self.release_approved_garment_inputs()
-            self.release_confirmed_character_body_comparison()
-            self.pending_character_candidate = final_candidate
-            self.candidate_is_approved = False
-            self.show_character_candidate(final_candidate)
-            self.approve_candidate_button.setEnabled(True)
-            self.reject_candidate_button.setEnabled(True)
-            self.open_original_size_button.setEnabled(True)
-            self.move_generation_workflow(
-                GenerationWorkflowStage.FINAL_REVIEW,
-                (
-                    "2D 의상 후보 최종 승인 대기 - 자동 저장 0개"
-                ),
-            )
-        except Exception as error:
-            self.pause_generation_workflow(
-                (
-                    GenerationWorkflowStage.CLOTHING_COMPOSITING
-                ),
-                f"Inpaint 승인 실패: {error}",
-            )
-            QMessageBox.critical(self, "2D Inpaint 승인 실패", str(error))
-        finally:
-            review_candidate.close()
-
-    @Slot(str, str)
-    def garment_inpaint_failed(self, message: str, details: str) -> None:
-        self.pause_generation_workflow(
-            (
-                GenerationWorkflowStage.CLOTHING_COMPOSITING
-            ),
-            (
-                f"2D 의상 Inpaint 실패: {message}"
-            ),
-        )
-        dialog = QMessageBox(self)
-        dialog.setIcon(QMessageBox.Icon.Critical)
-        dialog.setWindowTitle(
-            "2D 의상 Inpaint 실패"
-        )
-        dialog.setText(message)
-        dialog.setDetailedText(details)
-        dialog.exec()
-
-    @Slot()
-    def clear_garment_inpaint_worker(self) -> None:
-        self.garment_inpaint_worker = None
-        self.garment_inpaint_worker_thread = None
 
     @Slot(str, str)
     def outfit_region_preparation_failed(
@@ -6007,7 +5447,6 @@ class GenAILabWindow(QMainWindow):
                 self.original_body_pose_worker_thread,
                 self.body_comparison_worker_thread,
                 self.garment_geometry_worker_thread,
-                self.garment_inpaint_worker_thread,
                 self.native_refinement_thread,
                 self.worker_thread,
             )
@@ -6505,40 +5944,6 @@ class GenAILabWindow(QMainWindow):
         route = "Animagine Base"
         self.pipeline_stage_label.setText(f"실행 단계: {route} - {message}")
 
-    @Slot(object)
-    def show_garment_inpaint_progress(
-        self,
-        progress: GarmentInpaintProgress,
-    ) -> None:
-        phase_labels = {
-            "runner_started": "실행기 시작",
-            "pipeline_loading": "Animagine XL 파이프라인 로딩",
-            "ip_adapter_loading": (
-                "IP-Adapter 로딩"
-            ),
-            "diffusion_running": "Diffusion 추론",
-            "output_saving": "결과 변환·저장",
-            "completed": "Inpaint 실행 완료",
-        }
-        callback_text = (
-            f"콜백={progress.current_step}회"
-            if progress.current_step is not None
-            else "콜백=0회"
-        )
-        configured_text = (
-            f"설정={progress.configured_steps}단계"
-            if progress.configured_steps is not None
-            else "설정=28단계"
-        )
-        self.status_label.setText(
-            "상태: 7/8 "
-            f"{'의상 생성'} | "
-            f"{phase_labels.get(progress.phase, progress.phase)} | "
-            f"{callback_text} | {configured_text} | "
-            f"단계 경과={progress.phase_elapsed_seconds:.1f}초 | "
-            f"전체 경과={progress.total_elapsed_seconds:.1f}초 | "
-            "제한=1,800초"
-        )
 
     @Slot(object)
     def review_character_generation_tags(self, result):
@@ -7594,7 +6999,6 @@ class GenAILabWindow(QMainWindow):
                 self.pose_estimation_worker_thread,
                 self.original_body_pose_worker_thread,
                 self.garment_geometry_worker_thread,
-                self.garment_inpaint_worker_thread,
                 self.native_refinement_thread,
                 self.worker_thread,
             )

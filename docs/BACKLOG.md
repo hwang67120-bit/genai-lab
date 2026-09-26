@@ -138,6 +138,14 @@
 근거: 불변식 2개(카테고리 미해결, 보호 > 요청) 도입 완료. 이 건은 미도입.
 다음: 필요 여부 재검토.
 
+- [ ] 51. **CatVTON 재평가**
+근거: 애니 캐릭터 품질은 실패로 확인된 것이 아니라 미측정이다. D-023(docs/DECISIONS.md:344)은 "실제 후보 한 장을 사용자가 시험하기 전에는 적합 판정을 내리지 않습니다"라고 했으나, D-050(:598)의 약 124초 실행은 승인 영역 안 변경을 측정하지 않았고 원시 출력이 삭제돼 모델 무변경과 후처리 제거를 구분할 수 없었다. D-050 개선 후 검증(:604)은 GPU CatVTON 추론 0회이며, 이후 TPS·2D Inpaint 전환 결정들의 검증에도 CatVTON 품질 재측정 근거는 없다(D-051 :612, D-057 :669, D-058 :678). 이는 과거 전체 CatVTON 실행이 0회라는 뜻이 아니다.
+D-051(:608–609)은 조건 잠재 벡터만으로 정확한 의상 좌표 대응을 기대했던 한계를 적고 TPS로 전환했다. D-057(:665–667)·D-058(:675)에서 2D Inpaint 경로로 전환됐으며 기존 CatVTON 코드는 "비교·복구 자산으로 보존"하기로 했다. 현재 configs/animagine.yaml:126에는 "CatVTON 의상 합성 실행 설정은 제거됨"이 명시돼 있다.
+라이선스 판단(D-023, :345, CC BY-NC-SA 4.0)은 비상업·무료 배포와 배포 방식 C(레시피 배포) 결정 이전 기준이다. 이번 항목에서는 기존 판단을 인용하며 현재 Q1·Q2 허용 여부를 새로 확정하지 않는다. 착용 전용 모델은 옷·피부 역할 배정을 학습하므로 범용 인페인팅에 없는 지시 층을 모델이 내장한다는 가설이 있다(미검증).
+사전 확인(2026-09-26): CatVTON 문자열 잔존 경로는 genai_lab/body_comparison.py, genai_lab/catvton_preflight.py, genai_lab/clothing.py, genai_lab/clothing_reference.py, genai_lab/generator.py, genai_lab/guardrails.py, genai_lab/try_on_metrics.py, scripts/body_comparison_runner.py, scripts/catvton_preflight_runner.py, scripts/pose_reference_runner.py, scripts/run_today_reference_edit.py; outputs/retired-code-20260908-kk98xxqg.tar.gz 목록에는 이름에 catvton이 포함된 파일 0개(다른 이름의 파일 내용에 포함됐는지는 미확인, 압축 해제·내용 열람 없음); D:/genai-cache/catvton-venv 및 Scripts/python.exe 존재, 현행 pose_reference_estimation.python_executable(configs/animagine.yaml:88–89)도 이 환경을 참조한다. 경로·환경 잔존은 CatVTON 추론 연결 또는 실행 가능성의 증명이 아니다.
+다음: 라이선스를 Q1(로컬 사용)·Q2(배포)로 나눠 재검토한다. 통과하면 기존 A/B 케이스 1건으로 원시 출력을 보존해 실행한다.
+- 선행: IP-Adapter 의상 조건 마스크 A/B 결과. B 영역 잔존이 줄지 않으면 이 항목의 우선순위를 올린다. 완료 기록 outputs/ip-mask-ab-20260926/README.md에서 육안 잔존 감소는 0/2건이므로 우선순위 상향 검토 근거가 생겼다(P1 방향 일치 1/2, 별도 수치 반증 조건에는 해당 없음).
+
 ## C. 배포 — 방식 C 확정 (레시피 배포)
 
 - [ ] 29. **병합 결정성**

@@ -508,6 +508,7 @@ class GenerationOrchestrator:
         output_directory: Path | None = None,
         status_callback: Callable[[str], None] | None = None,
         cancelled: Callable[[], bool] | None = None,
+        garment_ip_mask_mode: str | None = None,
     ) -> Any:
         """Finalize one approved Base with exactly one sealed refinement mode."""
         self._require_phase(GenerationPhase.CANDIDATE_SELECTED)
@@ -557,6 +558,8 @@ class GenerationOrchestrator:
                 selection=selection,
                 output_directory=output_directory,
                 status_callback=callback,
+                **({"garment_ip_mask_mode": garment_ip_mask_mode}
+                   if garment_ip_mask_mode is not None else {}),
             )
 
             callback("최종 인물 수 진단 기록 중...")
@@ -794,6 +797,7 @@ class GenerationOrchestrator:
         selection: BaseCandidateSelection,
         output_directory: Path,
         status_callback: Callable[[str], None],
+        garment_ip_mask_mode: str | None = None,
     ) -> Any:
         if selection.input_mode != "approved_base":
             raise GenerationOrchestrationError(
@@ -876,6 +880,8 @@ class GenerationOrchestrator:
                 selected_request,
                 self.project_root,
                 approved_run_record=approved_record,
+                **({"ip_adapter_mask_mode": garment_ip_mask_mode}
+                   if garment_ip_mask_mode is not None else {}),
                 check_running=(
                     lambda: (_ for _ in ()).throw(
                         InterruptedError("국소 정밀화를 취소했습니다.")

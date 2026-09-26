@@ -24,10 +24,13 @@ class TargetGarmentCoverage:
     mask: Image.Image
     growth_envelope: Image.Image
     record: dict[str, Any]
+    pre_union_mask: Image.Image | None = None
 
     def close(self) -> None:
         self.mask.close()
         self.growth_envelope.close()
+        if self.pre_union_mask is not None:
+            self.pre_union_mask.close()
 
 
 @dataclass
@@ -219,6 +222,8 @@ def project_target_garment_coverage(
         band[row(0.84):bottom, :] = True
         target |= foreground & band
 
+    # Observe the target before the existing source union, without changing it.
+    pre_union_mask = _mask(target)
     target |= source
     return TargetGarmentCoverage(
         _mask(target),
@@ -237,6 +242,7 @@ def project_target_garment_coverage(
             "review_reasons": ["foreground_band_projection_requires_review"],
             "coordinate_source": "generated_base",
         },
+        pre_union_mask=pre_union_mask,
     )
 
 

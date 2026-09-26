@@ -177,6 +177,7 @@ def correct_selected_garment(
     output_regions_directory=None,
     diagnostic_directory=None,
     restore_pipeline_state=True,
+    ip_adapter_mask_mode="edit",
 ):
     import torch
     from genai_lab.part_error_correction import (
@@ -197,6 +198,8 @@ def correct_selected_garment(
         measure_outside_rgb_change,
     )
 
+    if ip_adapter_mask_mode not in ("edit", "target_pre_union"):
+        raise ValueError("unknown garment IP-Adapter mask mode")
     settings = resolve_selected_garment_correction(config)
     report = settings.record()
     report.update(status='disabled' if not settings.enabled else 'running')
@@ -234,6 +237,7 @@ def correct_selected_garment(
     raw_proposed = None
     proposed = None
     correction_mask = None
+    condition_mask = None
     hard_mask = None
     target_coverage = None
     protection = None
@@ -306,6 +310,10 @@ def correct_selected_garment(
             )
         )
         if diagnostic_root is not None:
+            if target_coverage.pre_union_mask is not None:
+                diagnostic_root.mkdir(parents=True, exist_ok=True)
+                target_coverage.pre_union_mask.save(
+                    diagnostic_root / "target_pre_union.png")
             report["mask_diagnostic_manifest"] = str(
                 plan.save(diagnostic_root))
             report["mask_diagnostic_directory"] = str(diagnostic_root)
@@ -319,6 +327,16 @@ def correct_selected_garment(
                 report["diagnostic_images"][name] = str(path)
 
         correction_mask = plan.soft_guidance.copy()
+        report["ip_adapter_mask_mode"] = ip_adapter_mask_mode
+        if ip_adapter_mask_mode == "target_pre_union":
+            if target_coverage.pre_union_mask is None:
+                raise GarmentCorrectionContractError("target_pre_union_unavailable")
+            # Binary restriction preserves the existing soft weights exactly.
+            condition_mask = Image.fromarray(
+                np.where(np.asarray(target_coverage.pre_union_mask) == 255,
+                         np.asarray(correction_mask), 0).astype(np.uint8), mode="L")
+            if diagnostic_root is not None:
+                condition_mask.save(diagnostic_root / "ip_adapter_condition_mask.png")
         hard_mask = plan.hard_edit_domain.copy()
         selected_pixels = int(np.count_nonzero(
             np.asarray(hard_mask) >= 128
@@ -367,6 +385,7 @@ def correct_selected_garment(
             raw_proposed = run_isolated_inpaint(
                 inpaint_pipeline, control_report=report,
                 hard_authorized_mask=hard_mask,
+                **({"ip_adapter_mask": condition_mask} if condition_mask is not None else {}),
                 prompt=refinement_prompt,
                 negative_prompt=request.negative_prompt,
                 image=generated_image,
@@ -459,6 +478,8 @@ def correct_selected_garment(
             proposed.close()
         if raw_proposed is not None:
             raw_proposed.close()
+        if condition_mask is not None:
+            condition_mask.close()
         if correction_mask is not None:
             correction_mask.close()
         if hard_mask is not None:

@@ -187,7 +187,8 @@ def isolate_output_mask(image, mask, config, *, target, check):
 
 
 def run_isolated_inpaint(
-        pipeline, *, control_report, hard_authorized_mask=None, **kwargs):
+        pipeline, *, control_report, hard_authorized_mask=None,
+        ip_adapter_mask=None, **kwargs):
     from diffusers import StableDiffusionXLInpaintPipeline
     from diffusers.image_processor import (
         IPAdapterMaskProcessor, VaeImageProcessor,
@@ -236,13 +237,25 @@ def run_isolated_inpaint(
             "latent_restore_steps": 0,
         }
         raise ValueError("output correction mask is empty at latent resolution")
-    kwargs["cross_attention_kwargs"] = {"ip_adapter_masks": [masks]}
+    # The latent/edit mask above always stays W. Only image attention may differ.
+    # https://huggingface.co/docs/diffusers/using-diffusers/ip_adapter#masking
+    attention_masks = masks
+    if ip_adapter_mask is not None:
+        if (not isinstance(ip_adapter_mask, Image.Image)
+                or ip_adapter_mask.mode != "L"
+                or ip_adapter_mask.size != image.size):
+            raise ValueError("IP-Adapter mask must use grayscale output coordinates")
+        attention_masks = IPAdapterMaskProcessor(do_binarize=False).preprocess(
+            ip_adapter_mask, height=image.height, width=image.width)
+    kwargs["cross_attention_kwargs"] = {"ip_adapter_masks": [attention_masks]}
     previous = kwargs.get("callback_on_step_end")
     report = {
         "mask_coordinates": "generated_candidate",
         "latent_policy":
             "diffusers_sdxl_4ch_next_timestep_original_latents",
-        "attention_policy": "same_output_mask_single_reference",
+        "attention_policy": (
+            "same_output_mask_single_reference" if ip_adapter_mask is None
+            else "explicit_condition_mask_single_reference"),
         "mask_policy": "hard_boundary_with_inward_soft_feather",
         "hard_authorized_pixels": int(np.count_nonzero(hard_values)),
         "soft_nonzero_pixels": int(np.count_nonzero(values)),

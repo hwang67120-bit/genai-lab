@@ -114,6 +114,8 @@ def load_yaml(path: Path) -> dict[str, Any]:
 
     if not isinstance(data, dict):
         raise AppError("설정 파일의 최상위 값은 항목 묶음이어야 합니다.")
+    from genai_lab.provenance import track_config
+    data = track_config(data, path=path)
     return data
 
 

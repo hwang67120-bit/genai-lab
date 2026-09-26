@@ -140,8 +140,18 @@ def _load_or_redetect_regions(
                 "reused_redetected_base_candidate_coordinates"
             )
             report["output_regions_directory"] = str(output_regions_directory)
+            from genai_lab.provenance import recorder
+            observation = recorder(config)
+            if observation is not None:
+                observation.branches.append({"name": "garment_region_source",
+                    "choice": "stored_output_regions", "reason": "valid stored masks"})
             return regions
 
+    from genai_lab.provenance import recorder
+    observation = recorder(config)
+    if observation is not None:
+        observation.branches.append({"name": "garment_region_source",
+            "choice": "redetected_output_regions"})
     regions = analyze_reference_regions(
         generated_image,
         config,
@@ -332,12 +342,27 @@ def correct_selected_garment(
             torch.cuda.empty_cache()
         inpaint_pipeline = _inpaint_pipeline_from(generation_pipeline)
         inpaint_pipeline.set_ip_adapter_scale(settings.reference_scale)
+        from genai_lab.provenance import observe_pipeline
+        observe_pipeline(config, inpaint_pipeline, "garment_inpaint_scale_set")
 
         def on_step_end(pipe, step, timestep, values):
             del pipe, step, timestep
             check()
             return values
 
+        from genai_lab.provenance import recorder
+        observation = recorder(config)
+        if observation is not None:
+            observation.loaded["call_arguments"] = {
+                "prompt": refinement_prompt, "negative_prompt": request.negative_prompt,
+                "strength": settings.inpaint_strength,
+                "num_inference_steps": settings.inference_steps,
+                "guidance_scale": settings.guidance_scale,
+                "width": generated_image.width, "height": generated_image.height,
+                "padding_mask_crop": None,
+                "image": "selected_base_rgb", "ip_adapter_image": "isolated_garment",
+            }
+            observation.loaded["input_image_size"] = list(generated_image.size)
         try:
             raw_proposed = run_isolated_inpaint(
                 inpaint_pipeline, control_report=report,

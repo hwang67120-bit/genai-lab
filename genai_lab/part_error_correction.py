@@ -144,7 +144,11 @@ def _similarity(pipeline, image, mask, reference_feature):
 def _inpaint_pipeline_from(pipeline):
     cached = getattr(pipeline, "_genai_lab_part_inpaint_pipeline", None)
     if cached is not None:
+        from genai_lab.provenance import observe_choice
+        observe_choice(pipeline, "inpaint_pipeline_factory", "cached_pipeline")
         return cached
+    from genai_lab.provenance import observe_choice
+    observe_choice(pipeline, "inpaint_pipeline_factory", "AutoPipelineForInpainting.from_pipe")
     from diffusers import AutoPipelineForInpainting
     cached = AutoPipelineForInpainting.from_pipe(pipeline)
     cached.enable_model_cpu_offload()

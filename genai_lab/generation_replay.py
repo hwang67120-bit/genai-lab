@@ -434,6 +434,8 @@ def load_generation_replay_bundle(
             request.reference_image.close()
             inputs.close()
             raise
+    from genai_lab.provenance import track_config
+    config = track_config(config, path=directory / "config.json")
     return inputs, config, request, approval
 
 

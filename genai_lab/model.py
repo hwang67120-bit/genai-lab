@@ -9,6 +9,9 @@ def prepare_pipeline(
     pose_control_enabled: bool = False,
 ):
     """기준 모델, 참조 그림 장치와 선택적인 자세 제어 모델을 준비한다."""
+    from genai_lab.provenance import track_config, recorder, adapter_loaded, observe_pipeline
+    config = track_config(config)
+    recorder(config).start()
     from genai_lab.reference_contract import validate_reference_mode
     validate_reference_mode(config, pose_control_enabled)
     from genai_lab.scene_generation import scene_settings
@@ -97,7 +100,11 @@ def prepare_pipeline(
             weight_name=style["adapter_weight"],
             cache_dir=str(cache_dir),
         )
+        adapter_loaded(pipeline, repository=style["adapter_repository"],
+                       subfolder=style["adapter_subfolder"],
+                       weight_name=style["adapter_weight"])
         pipeline.set_ip_adapter_scale(float(style["scale"]))
+        observe_pipeline(config, pipeline, "adapter_loaded_and_scale_set")
 
     if (
         generation.get("mode", "text_to_image") == "image_to_image"
@@ -114,6 +121,8 @@ def prepare_pipeline(
     if family == "sdxl":
         print("GPU 메모리 절약: 사용 중인 모델 부분만 GPU로 이동")
         pipeline.enable_model_cpu_offload()
+        observe_pipeline(config, pipeline, "model_ready")
+        pipeline._run_provenance = recorder(config)
         return pipeline
     return pipeline.to("cuda")
 

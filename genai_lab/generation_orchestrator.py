@@ -92,6 +92,8 @@ class GenerationOrchestrator:
             require_reference_run_fn = (
                 require_reference_run_fn or require_reference_run
             )
+        from genai_lab.provenance import ensure_recorder
+        ensure_recorder(config, root=project_root)
         self.config = config
         self.request = request
         self.project_root = Path(project_root)
@@ -124,6 +126,8 @@ class GenerationOrchestrator:
             self.project_root,
             refinement_mode=self.refinement_mode,
         )
+        from genai_lab.provenance import recorder
+        recorder(self.config).bind(self.run_context)
         self.replay_bundle: Path | None = None
         self._record(
             "run_context",
@@ -144,6 +148,8 @@ class GenerationOrchestrator:
         event = {"stage": stage, "status": status}
         event.update(details)
         self.trace.append(event)
+        from genai_lab.provenance import recorder
+        recorder(self.config).event(stage, status, **details)
         if self.run_log is not None:
             self.run_log.write_stage(
                 "공통 생성 오케스트레이터",
@@ -241,6 +247,14 @@ class GenerationOrchestrator:
 
     def generate_base_candidates(self, pipeline: Any, inputs: Any) -> Any:
         approval = self.require_approved_inputs(inputs)
+        from genai_lab.provenance import recorder
+        model_observation = getattr(pipeline, "_run_provenance", None)
+        current_observation = recorder(self.config)
+        if model_observation is not None and model_observation is not current_observation:
+            current_observation.snapshots.extend(model_observation.snapshots)
+            for key, value in model_observation.read.items():
+                current_observation.access(key, value)
+            model_observation.remove_hooks()
         self.phase = GenerationPhase.BASE_RUNNING
         from genai_lab.native_pipeline_contract import final_refinement_enabled
         from genai_lab.request_runtime import reset_request_runtime
@@ -565,6 +579,8 @@ class GenerationOrchestrator:
                     "status": "DISABLED",
                     "action": "none",
                 }
+            from genai_lab.provenance import observe_gate
+            observe_gate(self.config, "person_count", person_report, "final")
             result.report["person_count_diagnostic"] = person_report
             from genai_lab.final_candidate_review import (
                 build_final_review_evidence,
@@ -875,6 +891,8 @@ class GenerationOrchestrator:
             structure_report = evaluate_candidate_structure(
                 corrected, resolve_candidate_structure_gate(self.config)
             )
+            from genai_lab.provenance import observe_gate
+            observe_gate(self.config, "structure", structure_report, "final")
             local_report["candidate_structure_gate"] = structure_report
             local_status = str(local_report.get("status", "unresolved"))
             pass_statuses = {
@@ -888,10 +906,14 @@ class GenerationOrchestrator:
             if accepted:
                 selected_path = output_directory / "selected.png"
                 corrected.save(selected_path)
+                from genai_lab.provenance import observe_action
+                observe_action(self.config, "structure", "final", "output_saved")
                 status = "PASS"
                 selected_engine = "sdxl_local"
             else:
                 selected_path = selection.base_image
+                from genai_lab.provenance import observe_action
+                observe_action(self.config, "structure", "final", "base_returned")
                 status = "BASE_LOCKED"
                 selected_engine = None
             similarity = local_report.get("after_similarity")
@@ -909,6 +931,10 @@ class GenerationOrchestrator:
                 "refinement_targets": list(dict.fromkeys(targets)),
                 "hard_safety_passed": structure_report.get("action") != "reject",
             }
+            observe_gate(self.config, "hard_safety",
+                         {"status": "PASS" if gate["hard_safety_passed"] else "FAIL"}, "final")
+            observe_action(self.config, "hard_safety", "final",
+                           "output_saved" if accepted else "base_returned")
             report = {
                 "version": "sdxl_local_refinement_run_v1",
                 "status": status,

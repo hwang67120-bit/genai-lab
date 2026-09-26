@@ -548,6 +548,8 @@ def generate_character_candidate(
                         f"shape={embedding_record['positive_shape']}, "
                         "추론 단계 변경 없음")
         base_started_at = time.perf_counter()
+        from genai_lab.provenance import observe_pipeline
+        observe_pipeline(config, pipeline, "base_call", model_arguments)
         first_stage_images = pipeline(**model_arguments).images
         # Diffusers는 PIL 출력일 때는 이미지 목록을, output_type="latent"일 때는
         # [B, 4, H, W] 텐서 자체를 images에 담는다. latent의 [0]을 먼저 꺼내면
@@ -702,6 +704,9 @@ def generate_character_candidate(
             generated_image, integrity_settings)
         design_record["final_latent_integrity"] = dict(final_latent_audit)
         design_record["generated_image_integrity"] = image_integrity
+        from genai_lab.provenance import observe_gate
+        observe_gate(config, "integrity", image_integrity,
+                     f"base:{generation_request.candidate_number}")
         if run_log is not None:
             run_log.write_stage(
                 "최종 latent 무결성",

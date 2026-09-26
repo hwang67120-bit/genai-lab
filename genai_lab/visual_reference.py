@@ -1389,6 +1389,9 @@ def generate_visual_batch(
                     local['clothing_reference_generation']['integrity_attempt'] = (
                         integrity_retry_count + 1)
                     with timed_stage(log, '후보 생성', index + 1, timings):
+                        from genai_lab.provenance import observe_attempt
+                        observe_attempt(local, index + 1, integrity_retry_count + 1,
+                                        retry_phase if index >= attempt_limit else None)
                         candidate = generate_character_candidate(
                             pipeline, local, current, root, log)
                         try:
@@ -1402,6 +1405,8 @@ def generate_visual_batch(
                     from genai_lab.generated_image_integrity import GeneratedOutputIntegrityError
                     if not isinstance(error, GeneratedOutputIntegrityError):
                         raise
+                    from genai_lab.provenance import observe_gate
+                    observe_gate(config, "integrity", error.report, f"base:{index + 1}")
                     log.write_stage(
                         '후보 이미지 무결성 실패',
                         f'후보={index + 1}, 시도={integrity_retry_count + 1}, '
@@ -1521,6 +1526,9 @@ def generate_visual_batch(
                     for reason in semantic_report.get('violations', ())))
             structure_report = evaluate_candidate_structure(
                 candidate.image, structure_gate_settings)
+            from genai_lab.provenance import observe_gate
+            observe_gate(config, "semantic", semantic_report, f"base:{index + 1}")
+            observe_gate(config, "structure", structure_report, f"base:{index + 1}")
             body_similarity_report = evaluate_body_morphology_similarity(
                 candidate.image,
                 body_morphology,
@@ -1720,6 +1728,8 @@ def generate_visual_batch(
                 'is_quality_retry': (
                     index >= attempt_limit and retry_phase == 'quality'),
             }
+            observe_gate(config, "reference_base_mask_validation",
+                         reference_base_mask_validation, f"base:{index + 1}")
             path = directory / f'candidate_{index + 1}.png'
             candidate.image.save(path)
             if (
@@ -1763,6 +1773,8 @@ def generate_visual_batch(
                     initial_quality_failures.append(True)
                 continue
             if structure_blocking:
+                from genai_lab.provenance import observe_action
+                observe_action(config, "structure", f"base:{index + 1}", "quarantined")
                 record['candidate_resolution'] = {
                     'status': 'quarantined_before_ranking',
                     'returned_image': None,
@@ -1781,6 +1793,8 @@ def generate_visual_batch(
                     initial_quality_failures.append(True)
                 continue
             if semantic_blocking:
+                from genai_lab.provenance import observe_action
+                observe_action(config, "semantic", f"base:{index + 1}", "quarantined")
                 record['candidate_decision'] = {
                     'version': 'candidate_semantic_decision_v2',
                     'action': 'retry',
@@ -1833,7 +1847,10 @@ def generate_visual_batch(
                 stage=('base' if staged_generation else 'final'),
             )
             record['candidate_decision'] = preliminary.report
+            observe_gate(config, "similarity", preliminary.report, f"base:{index + 1}")
             if preliminary.action != CandidateAction.KEEP:
+                from genai_lab.provenance import observe_action
+                observe_action(config, "similarity", f"base:{index + 1}", "quarantined")
                 record['candidate_resolution'] = {
                     'version': 'candidate_resolution_v2',
                     'status': (

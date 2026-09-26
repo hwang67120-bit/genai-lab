@@ -104,6 +104,22 @@ def build_garment_refinement_prompt(prompt, garment_topology):
 
 
 
+def _diagnostic_prompt(assembled_prompt, override):
+    """Explicit diagnostic text only; never alter the request or default assembly."""
+    import hashlib
+    if not isinstance(override, str) or not override.strip():
+        raise ValueError("refinement_prompt_override must be a nonempty string")
+    digest = lambda text: hashlib.sha256(text.encode("utf-8")).hexdigest()
+    return override, {
+        "applied": True,
+        "scope": "refinement_positive_prompt_only",
+        "assembled_prompt": assembled_prompt,
+        "actual_prompt": override,
+        "assembled_sha256": digest(assembled_prompt),
+        "actual_sha256": digest(override),
+    }
+
+
 def _load_or_redetect_regions(
     generated_image,
     config,
@@ -228,6 +244,7 @@ def correct_selected_garment(
     ip_adapter_exclusion_mask=None,
     initial_prefill_mask=None,
     initial_prefill_rgb=None,
+    refinement_prompt_override=None,
 ):
     import torch
     from genai_lab.part_error_correction import (
@@ -274,6 +291,10 @@ def correct_selected_garment(
     )
     report["garment_topology"] = topology_contract
     report["garment_topology_guidance_applied"] = topology_guidance_applied
+    if refinement_prompt_override is not None:
+        refinement_prompt, prompt_evidence = _diagnostic_prompt(
+            refinement_prompt, refinement_prompt_override)
+        report["refinement_prompt_override"] = prompt_evidence
 
     started = perf_counter()
 
@@ -448,6 +469,8 @@ def correct_selected_garment(
                 "image": ("diagnostic_prefilled_selected_base_rgb" if initial_image is not None
                           else "selected_base_rgb"), "ip_adapter_image": "isolated_garment",
             }
+            if "refinement_prompt_override" in report:
+                observation.loaded["refinement_prompt_override"] = report["refinement_prompt_override"]
             if "diagnostic_overrides" in report:
                 observation.loaded["diagnostic_overrides"] = report["diagnostic_overrides"]
             observation.loaded["input_image_size"] = list(generated_image.size)

@@ -512,6 +512,7 @@ class GenerationOrchestrator:
         garment_ip_exclusion_mask: Any | None = None,
         garment_initial_prefill_mask: Any | None = None,
         garment_initial_prefill_rgb: tuple[int, int, int] | None = None,
+        garment_refinement_prompt_override: str | None = None,
     ) -> Any:
         """Finalize one approved Base with exactly one sealed refinement mode."""
         self._require_phase(GenerationPhase.CANDIDATE_SELECTED)
@@ -569,6 +570,8 @@ class GenerationOrchestrator:
                    if garment_initial_prefill_mask is not None else {}),
                 **({"garment_initial_prefill_rgb": garment_initial_prefill_rgb}
                    if garment_initial_prefill_rgb is not None else {}),
+                **({"garment_refinement_prompt_override": garment_refinement_prompt_override}
+                   if garment_refinement_prompt_override is not None else {}),
             )
 
             callback("최종 인물 수 진단 기록 중...")
@@ -810,6 +813,7 @@ class GenerationOrchestrator:
         garment_ip_exclusion_mask: Any | None = None,
         garment_initial_prefill_mask: Any | None = None,
         garment_initial_prefill_rgb: tuple[int, int, int] | None = None,
+        garment_refinement_prompt_override: str | None = None,
     ) -> Any:
         if selection.input_mode != "approved_base":
             raise GenerationOrchestrationError(
@@ -900,6 +904,8 @@ class GenerationOrchestrator:
                    if garment_initial_prefill_mask is not None else {}),
                 **({"initial_prefill_rgb": garment_initial_prefill_rgb}
                    if garment_initial_prefill_rgb is not None else {}),
+                **({"refinement_prompt_override": garment_refinement_prompt_override}
+                   if garment_refinement_prompt_override is not None else {}),
                 check_running=(
                     lambda: (_ for _ in ()).throw(
                         InterruptedError("국소 정밀화를 취소했습니다.")

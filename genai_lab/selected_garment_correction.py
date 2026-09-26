@@ -163,6 +163,53 @@ def _load_or_redetect_regions(
     report["output_region_source"] = "redetected_for_selected_candidate"
     return regions
 
+
+def _diagnostic_inputs(base, soft_mask, condition_mask, *, exclusion_mask=None,
+                       prefill_mask=None, prefill_rgb=None):
+    """Explicit diagnostic inputs only; never mutate Base or edit authorization.
+
+    Attention masking follows run_isolated_inpaint's independent mask channel:
+    https://huggingface.co/docs/diffusers/using-diffusers/ip_adapter#masking
+    """
+    import hashlib
+
+    def binary(mask, label):
+        if mask.mode != "L" or mask.size != base.size:
+            raise ValueError(f"{label} must be an L mask in Base coordinates")
+        values = np.asarray(mask)
+        if not np.isin(values, (0, 255)).all() or not values.any():
+            raise ValueError(f"{label} must be nonempty and binary")
+        return values == 255
+
+    exclusion = binary(exclusion_mask, "IP exclusion") if exclusion_mask is not None else None
+    prefill = binary(prefill_mask, "initial prefill") if prefill_mask is not None else None
+    if (prefill is None) != (prefill_rgb is None):
+        raise ValueError("initial prefill requires both mask and RGB color")
+    if prefill is not None:
+        if (base.mode != "RGB" or len(prefill_rgb) != 3
+                or any(type(v) is not int or not 0 <= v <= 255 for v in prefill_rgb)):
+            raise ValueError("initial prefill requires three integer RGB channels")
+    attention = None
+    initial = None
+    evidence = {"scope": "diagnostic_only", "ip_exclusion_pixels": 0,
+                "initial_prefill_pixels": 0, "initial_prefill_rgb": None}
+    if exclusion is not None:
+        values = np.array(condition_mask if condition_mask is not None else soft_mask)
+        values[exclusion] = 0
+        attention = Image.fromarray(values, mode="L")
+        evidence.update(ip_exclusion_pixels=int(exclusion.sum()),
+                        exclusion_mask_pixel_sha256=hashlib.sha256(exclusion_mask.tobytes()).hexdigest())
+    if prefill is not None:
+        pixels = np.array(base)
+        pixels[prefill] = prefill_rgb
+        initial = Image.fromarray(pixels, mode="RGB")
+        evidence.update(initial_prefill_pixels=int(prefill.sum()),
+                        initial_prefill_rgb=list(prefill_rgb),
+                        prefill_mask_pixel_sha256=hashlib.sha256(prefill_mask.tobytes()).hexdigest(),
+                        initial_pixel_sha256=hashlib.sha256(initial.tobytes()).hexdigest())
+    return attention, initial, evidence
+
+
 def correct_selected_garment(
     generation_pipeline,
     generated_image,
@@ -178,6 +225,9 @@ def correct_selected_garment(
     diagnostic_directory=None,
     restore_pipeline_state=True,
     ip_adapter_mask_mode="edit",
+    ip_adapter_exclusion_mask=None,
+    initial_prefill_mask=None,
+    initial_prefill_rgb=None,
 ):
     import torch
     from genai_lab.part_error_correction import (
@@ -238,6 +288,7 @@ def correct_selected_garment(
     proposed = None
     correction_mask = None
     condition_mask = None
+    initial_image = None
     hard_mask = None
     target_coverage = None
     protection = None
@@ -337,6 +388,22 @@ def correct_selected_garment(
                          np.asarray(correction_mask), 0).astype(np.uint8), mode="L")
             if diagnostic_root is not None:
                 condition_mask.save(diagnostic_root / "ip_adapter_condition_mask.png")
+        if (ip_adapter_exclusion_mask is not None or initial_prefill_mask is not None
+                or initial_prefill_rgb is not None):
+            diagnostic_attention, initial_image, evidence = _diagnostic_inputs(
+                generated_image, correction_mask, condition_mask,
+                exclusion_mask=ip_adapter_exclusion_mask,
+                prefill_mask=initial_prefill_mask, prefill_rgb=initial_prefill_rgb)
+            if diagnostic_attention is not None:
+                if condition_mask is not None:
+                    condition_mask.close()
+                condition_mask = diagnostic_attention
+            report["diagnostic_overrides"] = evidence
+            if diagnostic_root is not None:
+                if condition_mask is not None:
+                    condition_mask.save(diagnostic_root / "ip_adapter_condition_mask.png")
+                if initial_image is not None:
+                    initial_image.save(diagnostic_root / "diagnostic_inpaint_initial.png")
         hard_mask = plan.hard_edit_domain.copy()
         selected_pixels = int(np.count_nonzero(
             np.asarray(hard_mask) >= 128
@@ -378,8 +445,11 @@ def correct_selected_garment(
                 "guidance_scale": settings.guidance_scale,
                 "width": generated_image.width, "height": generated_image.height,
                 "padding_mask_crop": None,
-                "image": "selected_base_rgb", "ip_adapter_image": "isolated_garment",
+                "image": ("diagnostic_prefilled_selected_base_rgb" if initial_image is not None
+                          else "selected_base_rgb"), "ip_adapter_image": "isolated_garment",
             }
+            if "diagnostic_overrides" in report:
+                observation.loaded["diagnostic_overrides"] = report["diagnostic_overrides"]
             observation.loaded["input_image_size"] = list(generated_image.size)
         try:
             raw_proposed = run_isolated_inpaint(
@@ -388,7 +458,7 @@ def correct_selected_garment(
                 **({"ip_adapter_mask": condition_mask} if condition_mask is not None else {}),
                 prompt=refinement_prompt,
                 negative_prompt=request.negative_prompt,
-                image=generated_image,
+                image=initial_image if initial_image is not None else generated_image,
                 mask_image=correction_mask,
                 ip_adapter_image=[garment_reference],
                 width=generated_image.width,
@@ -478,6 +548,8 @@ def correct_selected_garment(
             proposed.close()
         if raw_proposed is not None:
             raw_proposed.close()
+        if initial_image is not None:
+            initial_image.close()
         if condition_mask is not None:
             condition_mask.close()
         if correction_mask is not None:

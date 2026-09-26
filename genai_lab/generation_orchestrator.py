@@ -509,6 +509,9 @@ class GenerationOrchestrator:
         status_callback: Callable[[str], None] | None = None,
         cancelled: Callable[[], bool] | None = None,
         garment_ip_mask_mode: str | None = None,
+        garment_ip_exclusion_mask: Any | None = None,
+        garment_initial_prefill_mask: Any | None = None,
+        garment_initial_prefill_rgb: tuple[int, int, int] | None = None,
     ) -> Any:
         """Finalize one approved Base with exactly one sealed refinement mode."""
         self._require_phase(GenerationPhase.CANDIDATE_SELECTED)
@@ -560,6 +563,12 @@ class GenerationOrchestrator:
                 status_callback=callback,
                 **({"garment_ip_mask_mode": garment_ip_mask_mode}
                    if garment_ip_mask_mode is not None else {}),
+                **({"garment_ip_exclusion_mask": garment_ip_exclusion_mask}
+                   if garment_ip_exclusion_mask is not None else {}),
+                **({"garment_initial_prefill_mask": garment_initial_prefill_mask}
+                   if garment_initial_prefill_mask is not None else {}),
+                **({"garment_initial_prefill_rgb": garment_initial_prefill_rgb}
+                   if garment_initial_prefill_rgb is not None else {}),
             )
 
             callback("최종 인물 수 진단 기록 중...")
@@ -798,6 +807,9 @@ class GenerationOrchestrator:
         output_directory: Path,
         status_callback: Callable[[str], None],
         garment_ip_mask_mode: str | None = None,
+        garment_ip_exclusion_mask: Any | None = None,
+        garment_initial_prefill_mask: Any | None = None,
+        garment_initial_prefill_rgb: tuple[int, int, int] | None = None,
     ) -> Any:
         if selection.input_mode != "approved_base":
             raise GenerationOrchestrationError(
@@ -882,6 +894,12 @@ class GenerationOrchestrator:
                 approved_run_record=approved_record,
                 **({"ip_adapter_mask_mode": garment_ip_mask_mode}
                    if garment_ip_mask_mode is not None else {}),
+                **({"ip_adapter_exclusion_mask": garment_ip_exclusion_mask}
+                   if garment_ip_exclusion_mask is not None else {}),
+                **({"initial_prefill_mask": garment_initial_prefill_mask}
+                   if garment_initial_prefill_mask is not None else {}),
+                **({"initial_prefill_rgb": garment_initial_prefill_rgb}
+                   if garment_initial_prefill_rgb is not None else {}),
                 check_running=(
                     lambda: (_ for _ in ()).throw(
                         InterruptedError("국소 정밀화를 취소했습니다.")

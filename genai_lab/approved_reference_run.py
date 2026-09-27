@@ -309,7 +309,7 @@ def seal_encoded_condition(inputs, condition):
     return EncodedReferenceReceipt(approval.fingerprint, encoded_condition_fingerprint(condition))
 
 
-def verify_pipeline_boundary(inputs, config, request, arguments):
+def verify_pipeline_boundary(inputs, config, request, arguments, *, reference_pose=None):
     """프롬프트 재조립과 인코딩 후에도 승인 조건과 실제 호출 인수가 같은지 검사한다."""
     approval = require_reference_run(inputs, config, request, prepared=True)
     section = config["clothing_reference_generation"]
@@ -334,6 +334,28 @@ def verify_pipeline_boundary(inputs, config, request, arguments):
         arguments, request, approval.record()["common_candidate_latents"],
         section.get("candidate_latent_record"))
     expected_schedule = approval.record()["reference_step_schedule"]
+    if reference_pose is not None:
+        from genai_lab.reference_pose import ReferencePoseOptions
+        from genai_lab.pose_estimation import prepare_pose_control_input
+        from genai_lab.reference_step_schedule import build_reference_scale_schedule, effective_denoising_steps
+        if not isinstance(reference_pose, ReferencePoseOptions) or inputs.scene_condition is not None:
+            raise ValueError("Invalid explicit reference pose option")
+        pose_config = config.get("pose_control", {})
+        projected = prepare_pose_control_input(reference_pose.approved_pose, request.width, request.height)
+        try:
+            hint = arguments.get("control_image")
+            if (hint is None or image_digest(hint) != image_digest(projected.control_map_image)
+                    or arguments.get("controlnet_conditioning_scale") != float(pose_config["conditioning_scale"])
+                    or arguments.get("control_guidance_start") != float(pose_config["guidance_start"])
+                    or arguments.get("control_guidance_end") != float(pose_config["guidance_end"])):
+                raise ValueError("Approved external pose differs from actual ControlNet arguments")
+        finally:
+            projected.close()
+        entries = (adapter_references_for_stage(inputs, "base", float(section.get("identity_reference_scale", .7)), float(section.get("garment_reference_scale", .45)))
+                   if config.get("staged_reference_generation", {}).get("enabled", False)
+                   else adapter_references(inputs, float(section.get("identity_reference_scale", .7)), float(section.get("garment_reference_scale", .45))))
+        _, expected_schedule = build_reference_scale_schedule(
+            config, entries, effective_denoising_steps(request.inference_steps, "image_to_image", reference_pose.base_strength))
     callback = arguments.get("callback_on_step_end")
     actual_schedule = getattr(callback, "reference_step_schedule_record", None)
     if expected_schedule.get("enabled"):
@@ -362,10 +384,10 @@ def verify_pipeline_boundary(inputs, config, request, arguments):
         base_edit.get("mode") != "image_to_image"
         or not isinstance(actual_initial, Image.Image)
         or image_digest(actual_initial) != base_edit.get("source_canvas_sha256")
-        or arguments.get("strength") != base_edit.get("strength")
+        or arguments.get("strength") != (reference_pose.base_strength if reference_pose is not None else base_edit.get("strength"))
     ):
         raise ValueError("승인된 캐릭터 RGB 시작 이미지 또는 편집 강도와 실제 호출이 다릅니다.")
-    if "control_image" in arguments and inputs.scene_condition is None:
+    if "control_image" in arguments and inputs.scene_condition is None and reference_pose is None:
         raise ValueError("승인되지 않은 ControlNet 조건이 참조 생성에 연결됐습니다.")
     if inputs.scene_condition is not None:
         hint = arguments.get("control_image")

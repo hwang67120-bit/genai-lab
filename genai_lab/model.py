@@ -7,15 +7,25 @@ from typing import Any
 def prepare_pipeline(
     config: dict[str, Any],
     pose_control_enabled: bool = False,
+    *,
+    reference_pose=None,
 ):
     """기준 모델, 참조 그림 장치와 선택적인 자세 제어 모델을 준비한다."""
     from genai_lab.provenance import track_config, recorder, adapter_loaded, observe_pipeline
     config = track_config(config)
     recorder(config).start()
     from genai_lab.reference_contract import validate_reference_mode
-    validate_reference_mode(config, pose_control_enabled)
+    if reference_pose is not None:
+        from genai_lab.reference_pose import ReferencePoseOptions
+        if not isinstance(reference_pose, ReferencePoseOptions):
+            raise TypeError("reference_pose must be ReferencePoseOptions")
+        pose_control_enabled = True
+    validate_reference_mode(config, pose_control_enabled,
+                            reference_pose_enabled=reference_pose is not None)
     from genai_lab.scene_generation import scene_settings
     scene_config = scene_settings(config)
+    if reference_pose is not None and scene_config is not None:
+        raise ValueError("Reference pose and scene lineart cannot share ControlNet")
     import torch
     from diffusers import (
         AutoPipelineForImage2Image,
@@ -42,7 +52,7 @@ def prepare_pipeline(
             raise RuntimeError(
                 "현재 자세 제어는 원본 유지 이미지 수정 방식에서만 사용할 수 있습니다."
             )
-        if not pose_control.get("enabled", False):
+        if not pose_control.get("enabled", False) and reference_pose is None:
             raise RuntimeError(
                 "자세 승인은 완료됐지만 설정 'pose_control.enabled'가 꺼져 있습니다."
             )

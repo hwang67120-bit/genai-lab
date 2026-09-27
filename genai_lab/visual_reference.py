@@ -1031,8 +1031,10 @@ def generate_visual_batch(
     status,
     *,
     defer_final_refinement: bool = False,
+    reference_pose=None,
 ):
-    validate_reference_mode(config)
+    validate_reference_mode(config, reference_pose is not None,
+                            reference_pose_enabled=reference_pose is not None)
     validate_visual_inputs(inputs)
     require_reference_experiment_approval(inputs)
     from genai_lab.generator import generate_character_candidate
@@ -1393,7 +1395,9 @@ def generate_visual_batch(
                         observe_attempt(local, index + 1, integrity_retry_count + 1,
                                         retry_phase if index >= attempt_limit else None)
                         candidate = generate_character_candidate(
-                            pipeline, local, current, root, log)
+                            pipeline, local, current, root, log,
+                            **({"reference_pose": reference_pose}
+                               if reference_pose is not None else {}))
                         try:
                             # 반환된 완성 이미지는 취소 시 보존한다. 시간 초과만 검사한다.
                             check_running(include_cancel=False)

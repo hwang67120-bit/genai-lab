@@ -245,7 +245,8 @@ class GenerationOrchestrator:
 
 
 
-    def generate_base_candidates(self, pipeline: Any, inputs: Any) -> Any:
+    def generate_base_candidates(self, pipeline: Any, inputs: Any, *,
+                                 reference_pose=None) -> Any:
         approval = self.require_approved_inputs(inputs)
         from genai_lab.provenance import recorder
         model_observation = getattr(pipeline, "_run_provenance", None)
@@ -291,6 +292,8 @@ class GenerationOrchestrator:
                 defer_final_refinement=final_refinement_enabled(
                     self.config
                 ),
+                **({"reference_pose": reference_pose}
+                   if reference_pose is not None else {}),
             )
         except BaseException as error:
             failure_reset = reset_request_runtime(

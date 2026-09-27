@@ -47,6 +47,8 @@ def generate_character_candidate(
     catvton_settings: CatVTONLocalSettings | None = None,
     approved_agnostic_input: CharacterAgnosticApprovedInput | None = None,
     approved_pose_estimation: PoseEstimationApprovedInput | None = None,
+    *,
+    reference_pose=None,
 ) -> CharacterGenerationCandidate:
     """AI로 후보 한 장을 만들고 파일 저장 없이 메모리 객체로 반환한다.
 
@@ -58,7 +60,17 @@ def generate_character_candidate(
     """
     if any(value is not None for value in (clothing_reference_input, catvton_settings, approved_agnostic_input)):
         raise ValueError('기존 CatVTON 의상 합성 기능은 제거되었습니다. 의상 디자인 참조 생성을 사용하세요.')
-    validate_reference_mode(config, approved_pose_estimation is not None)
+    if reference_pose is not None:
+        from genai_lab.reference_pose import ReferencePoseOptions
+        if not isinstance(reference_pose, ReferencePoseOptions):
+            raise TypeError("reference_pose must be ReferencePoseOptions")
+        if approved_pose_estimation is not None:
+            raise ValueError("Pass the approved pose through one input only")
+        if not getattr(pipeline, "_genai_lab_pose_control_enabled", False):
+            raise ValueError("Reference pose requires a pose-enabled pipeline")
+        approved_pose_estimation = reference_pose.approved_pose
+    validate_reference_mode(config, approved_pose_estimation is not None,
+                            reference_pose_enabled=reference_pose is not None)
     reference_section = config.get('clothing_reference_generation', {})
     if reference_section.get('enabled'):
         if reference_section.get('visual_inputs') is None:
@@ -74,7 +86,8 @@ def generate_character_candidate(
     approved_run = None
     if reference_mode:
         if any(value is not None for value in (
-            clothing_reference_input, catvton_settings, approved_agnostic_input, approved_pose_estimation,
+            clothing_reference_input, catvton_settings, approved_agnostic_input,
+            approved_pose_estimation if reference_pose is None else None,
         )):
             raise ValueError('디자인 참조 생성에는 의상 합성·신체 복원·외부 자세 입력을 연결하지 않습니다.')
         from genai_lab.native_pipeline_contract import (
@@ -265,7 +278,7 @@ def generate_character_candidate(
     if approved_pose_estimation is not None:
         pose_config = config.get("pose_control", {})
         pose_result_policy = config.get("pose_result_policy", {})
-        if not pose_config.get("enabled", False):
+        if not pose_config.get("enabled", False) and reference_pose is None:
             raise RuntimeError(
                 "승인 자세가 있지만 설정 'pose_control.enabled'가 꺼져 있습니다."
             )
@@ -284,6 +297,8 @@ def generate_character_candidate(
         executed_image_change_strength = float(
             pose_config["original_image_change_strength"]
         )
+        if reference_pose is not None:
+            executed_image_change_strength = reference_pose.base_strength
         if run_log is not None:
             run_log.write_stage(
                 "임시 자세 결과 정책",
@@ -479,7 +494,8 @@ def generate_character_candidate(
         if visual_inputs is not None:
             from genai_lab.approved_reference_run import verify_pipeline_boundary
             verification_started = time.perf_counter()
-            fingerprint = verify_pipeline_boundary(visual_inputs, config, generation_request, model_arguments)
+            fingerprint = verify_pipeline_boundary(visual_inputs, config, generation_request, model_arguments,
+                                                   **({"reference_pose": reference_pose} if reference_pose is not None else {}))
             if run_log is not None:
                 run_log.write_stage('최종 승인 조건 검증',
                     f"후보={generation_request.candidate_number}, 완료, "
@@ -550,6 +566,9 @@ def generate_character_candidate(
         base_started_at = time.perf_counter()
         from genai_lab.provenance import observe_pipeline
         observe_pipeline(config, pipeline, "base_call", model_arguments)
+        from genai_lab.reference_pose import observe_reference_pose
+        observe_reference_pose(config, reference_pose, prepared_pose_control,
+                               executed_image_change_strength)
         first_stage_images = pipeline(**model_arguments).images
         # Diffusers는 PIL 출력일 때는 이미지 목록을, output_type="latent"일 때는
         # [B, 4, H, W] 텐서 자체를 images에 담는다. latent의 [0]을 먼저 꺼내면

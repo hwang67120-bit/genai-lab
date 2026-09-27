@@ -2,7 +2,7 @@
 import numpy as np
 
 
-def validate_reference_mode(config, pose_control_enabled=False):
+def validate_reference_mode(config, pose_control_enabled=False, *, reference_pose_enabled=False):
     from genai_lab.scene_generation import scene_settings
     scene_settings(config)
     section = config.get('clothing_reference_generation', {})
@@ -10,7 +10,7 @@ def validate_reference_mode(config, pose_control_enabled=False):
         return
     if section.get('without_initial_image', False) is not False:
         raise ValueError('참조 생성 Base에는 승인된 캐릭터 RGB 시작 이미지가 필요합니다.')
-    if pose_control_enabled:
+    if pose_control_enabled and not reference_pose_enabled:
         raise ValueError('디자인 참조 생성에는 외부 자세/ControlNet을 연결하지 않습니다.')
 
 

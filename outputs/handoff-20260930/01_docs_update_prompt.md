@@ -1,3 +1,5 @@
+> **2026-10-01: 이 초안은 `outputs/implementation-handoff-20261001/` (README.md, CODEX_IMPLEMENTATION_PROMPT.md) 로 대체됐다. 이후 시험(성별 계약, 마른 체형 자세 저하, 하이앵글 얼굴 참조 교환 등)이 반영되지 않은 부분이 있으니 그쪽을 기준으로 한다.**
+
 # Codex 프롬프트 1 — 2026-09-28~30 결정·발견을 DECISIONS·BACKLOG 에 반영
 
 (10/4 이후 Codex 에 그대로 붙여 넣는다. 작성: Claude, 2026-09-30. 이 문서는 초안이며 docs 는 아직 수정되지 않았다.)
@@ -21,16 +23,16 @@
 | 골격 전처리 | 비율 유지 여백 | **몸 관절 bbox 정규화**(위 .20H·아래 .10H·옆 .15H, 736:1232, 회색 128, 재검출) | pose-norm-20260928 (N2: 자세 일치 8→21/30, 붕괴 10→4) |
 | 부정 프롬프트 | exposure-v2 preflight 73토큰 | 아래 **최종본 72토큰, 한 청크** | negative-prevent2-20260929 (보이는 노출 3→0), bg-prevent-20260930 (뚜렷한 배경 잡티 11→6, 부작용 없음). 두 시험 모두 사전 기준 일부 불성립을 사용자가 알고 채택 |
 | 얼굴 IP 일정 | 0~10단계 0.0 → 11~27 0.9 | 기본 동일. **자세 이미지 얼굴이 정면 아님**이면 0~10단계 **0.5** → 11~27 0.9 | ip-timing-20260930, ip-timing-int-20260930 (옆 보는 자세 캐릭터 예 8→16/24, 정면 자세 변화 없음). 조건부 방식 자체의 통합 시험은 미실시 |
-| 긍정 프롬프트 조립 | — | [1girl/1boy] + 의상 태그 + 덮지 않는 부위 + 외형·체형·고정 + 자세 태그 + 꼬리 | garment-drift2-20260928, garment-other-20260928 |
+| 긍정 프롬프트 조립 | — | [사용자 지정 성별 태그 + 보조 태그] + 의상 태그 + 덮지 않는 부위 + 외형·체형·고정 + 자세 태그 + 꼬리 | garment-drift2-20260928, garment-other-20260928 |
 | 덮지 않는 부위 규칙 | — | 의상 **명사**(수식어 제거) 기준. 다리 덮는 명사 없으면 bare legs / 상의가 camisole·tank top 이고 팔 덮는 명사 없으면 bare shoulders, bare arms / 몸통 덮는 명사 없고 crop top 이면 midriff | garment-drift2 (H1: 엄격 의상 10→27/30), garment-other ("white camisole" 정확 일치 실패 → 명사 비교 필요) |
 | 주머니 규칙 | — | 의상에 주머니 있는 명사(shorts, pants, jeans, jacket, hoodie, coat)가 없으면 hands_in_pockets·hand_in_pocket 제거. 쥐는 소품 태그(gun 등)는 유지 | pose-conflict-20260929 (PK1·PK2, GN2·GN3) |
 | 토큰 초과 | 잘림 | 75토큰 초과 시 **고정 청크 인코딩**(중요 태그 첫 청크, 넘치는 꼬리만 뒤 청크) | prompt-chunk-20260929 (EQ: 1청크 SHA 3/3 동일, 의미 단위 청크 분리는 악화) |
 | 마른 체형 | — | 캐릭터 이미지 DWPose 어깨폭/몸통 < 0.48 이면 "slender, skinny" 추가 + 태거 medium breasts → small breasts. petite·flat chest·loli 등 어린 체형 연상 태그 금지 | slim-body-20260930 (체형 유지 7→20/24, 어려 보임 0) |
-| 남성 캐릭터 | — | 긍정 1boy, 부정의 "1boy" 를 "1girl" 로 교체 | retarget3-20260930 (구현 메모, 별도 판정 없음) |
+| 성별 (2026-10-01 수정) | 부정 고정 "1boy"(ordinary 실행에서 온 값)를 모든 캐릭터에 사용 — **계약 위반** | 제품 계약과 같게: 성별 출처는 사용자 지정값만(character_preferences). 지정 시 긍정 맨 앞 1boy/1girl + 보조 태그(male focus, masculine silhouette / female focus, feminine silhouette), 부정 맨 앞 반대 성별 차단, 같은 성별 부정어 제거. 지정 안 함이면 성별 태그·차단 없음. 태거 성별은 후보 표시만 | gender-contract-20261001 (GC1·GC2: 남성 지정 raccoon 이 기존 방식 남성 2/36 → 계약 방식 28/36, 동일성·자세·붕괴 유지. 의상 "예" 34→23 부작용 기록) |
 
-최종 부정 프롬프트:
+최종 부정 프롬프트(성별 차단은 위 성별 규칙으로 맨 앞에 붙인다 — 템플릿에는 성별어 없음):
 ```
-1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes
+nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes
 ```
 
 ### D-076 결과 제공 방식: 여러 seed 생성 후 사용자 선택

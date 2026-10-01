@@ -1,3 +1,5 @@
+> **2026-10-01: 이 초안은 `outputs/implementation-handoff-20261001/` (README.md, CODEX_IMPLEMENTATION_PROMPT.md) 로 대체됐다. 이후 시험(성별 계약, 마른 체형 자세 저하, 하이앵글 얼굴 참조 교환 등)이 반영되지 않은 부분이 있으니 그쪽을 기준으로 한다.**
+
 # Codex 프롬프트 2 — 1회 생성 구조 운영 구현 (단계별)
 
 (프롬프트 1 로 DECISIONS·BACKLOG 반영이 끝난 뒤 사용. 작성: Claude, 2026-09-30. 초안.)
@@ -32,8 +34,9 @@ D-074 후보 + D-075~D-078 로 확정한 구성을 **제품 코드에 옵션으�
 - 검증: pose-newimg·leg-overlap·input-direction 의 18장에서 시험 결과와 같은 판정이 나오는지(골격 검사 결과, K7 값, 방향 조건). 제어 이미지는 pose-norm control_*.png 와 SHA 비교. 정책 설정을 바꾸면(예: K2 → warn) 코드 수정 없이 처리만 바뀌는지 단위 테스트.
 
 ### 2. 프롬프트 조립 모듈
-- 순서: [1girl/1boy] + 의상 태그 + 덮지 않는 부위 + 외형·체형·고정(+마른 체형 규칙) + 자세 태그(주머니 규칙) + 꼬리(solo, full body, white background, simple background, coherent anatomy, best quality).
-- 부정: D-075 최종본(남성이면 "1boy"→"1girl").
+- 순서: [사용자 지정 성별 태그 + 보조 태그(제품 BASE_GENDER_CONDITION_TAGS)] + 의상 태그 + 덮지 않는 부위 + 외형·체형·고정(+마른 체형 규칙) + 자세 태그(주머니 규칙) + 꼬리(solo, full body, white background, simple background, coherent anatomy, best quality).
+- 부정: D-075 최종본(성별어 없는 템플릿) + 사용자 지정 성별이면 맨 앞에 반대 성별 차단(제품 clothing_reference_generation.py 와 같은 함수 재사용). 성별 출처는 character_preferences 만, 태거 성별은 쓰지 않는다.
+- 검증: 지정 남성·여성·지정 안 함 각각에서 긍정 첫 태그와 부정 첫 태그가 제품 경로(prepare_design_reference_request)와 같은지 단위 테스트.
 - 75토큰 초과 시 고정 청크. 조립 결과·토큰 수·청크 수를 기록.
 - 검증: integration-20260929/plan.json 의 120개 positive/negative 를 같은 입력으로 다시 만들어 문자열 일치.
 

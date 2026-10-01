@@ -5,14 +5,13 @@ from genai_lab.request import CharacterFramingType
 from scripts.generation_inputs import prepare_prompt_for_clip
 from genai_lab.reference_prompt_budget import build_reference_prompt
 from genai_lab.reference_tag_policy import (
-    excluded_garment_tag, resolve_character_gender, gender_tag_kind, CHARACTER_GENDERS, normalize_tag,
+    excluded_garment_tag, CHARACTER_GENDERS, normalize_tag,
 )
-
-
-BASE_GENDER_CONDITION_TAGS = {
-    'male': ('male focus', 'masculine silhouette'),
-    'female': ('female focus', 'feminine silhouette'),
-}
+# Keep this name importable for existing native Base consumers.
+from genai_lab.gender_prompt import (
+    BASE_GENDER_CONDITION_TAGS, prepare_gender_character_tags,
+    prepare_gender_negative_terms,
+)
 
 
 def _matches_garment_base(tag, base):
@@ -60,7 +59,8 @@ def prepare_design_reference_request(request, approved_tags, tokenizers, charact
                                      part_color_descriptions=(), garment_prompt_policy=None,
                                      long_prompt_settings=None,
                                      approved_part_color_descriptions=()):
-    character_tags, removed_gender_tags = resolve_character_gender(character_tags, character_gender)
+    character_tags, removed_gender_tags, base_gender_condition_tags = (
+        prepare_gender_character_tags(character_tags, character_gender))
     tags = tuple(dict.fromkeys(normalize_tag(term)
                               for tag in approved_tags for term in str(tag).split(',') if term.strip()))
     excluded_tags = tuple(tag for tag in tags if excluded_garment_tag(tag))
@@ -83,8 +83,6 @@ def prepare_design_reference_request(request, approved_tags, tokenizers, charact
     # 측정과 승인 기록은 보존하되 파생 색상 이름은 공통 프롬프트에 넣지 않는다.
     replaced_generic_parts = ()
     selected_gender_tag = CHARACTER_GENDERS[character_gender]
-    base_gender_condition_tags = BASE_GENDER_CONDITION_TAGS.get(
-        character_gender, ())
     positive, positive_record = build_reference_prompt(
         tokenizers,
         core_character=(*character_tags, *base_gender_condition_tags),
@@ -96,15 +94,8 @@ def prepare_design_reference_request(request, approved_tags, tokenizers, charact
     conflicts = {'different outfit', 'mismatched colors'}
     removed = [term for term in terms if term.casefold() in conflicts]
     retained = [term for term in terms if term.casefold() not in conflicts]
-    removed_gender_negative = [
-        term for term in retained
-        if selected_gender_tag and gender_tag_kind(term) == character_gender
-    ]
-    retained = [term for term in retained if term not in removed_gender_negative]
-    # 사용자 지정값만 사용한다. 의상/체형으로 반대 성별을 추정하지 않는다.
-    gender_guard = {'male': '1girl', 'female': '1boy'}.get(character_gender)
-    if gender_guard:
-        retained = [gender_guard] + [term for term in retained if normalize_tag(term) != gender_guard]
+    retained, removed_gender_negative, gender_guard = prepare_gender_negative_terms(
+        retained, character_gender)
     negative, negative_record = prepare_prompt_for_clip(', '.join(retained), tokenizers)
     if gender_guard and negative.split(',')[0].strip() != gender_guard:
         raise ValueError('사용자 지정 성별의 네거티브 조건이 토큰 한도로 누락됐습니다.')

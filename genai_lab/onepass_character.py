@@ -11,6 +11,7 @@ from PIL import Image
 from genai_lab.onepass_input_settings import OnePassInputSettings
 from genai_lab.onepass_pose import normalize_scores, validate_joints
 from genai_lab.reference_tag_policy import gender_tag_kind
+from genai_lab.onepass_garment_vocabulary import filter_pocket_tags
 
 POSE_ALLOW = (
     'hands_in_pockets', 'hand_in_pocket', 'holding_gun', 'holding_weapon', 'gun',
@@ -19,7 +20,6 @@ POSE_ALLOW = (
     'arms_up', 'hands_up', 'arm_up', 'hand_on_own_head', 'hands_on_own_head',
     'crossed_arms', 'hand_up',
 )
-POCKET_GARMENTS = ('shorts', 'pants', 'jeans', 'jacket', 'hoodie', 'coat')
 CHARACTER_PATTERN = re.compile(
     r'^(.*_hair|.*_eyes|dark_skin|dark-skinned_.*|tan|muscular|muscular_male|'
     r'muscular_female|abs|tall|thick_thighs|flat_chest|small_breasts|medium_breasts|'
@@ -58,12 +58,10 @@ def select_character_tags(scores, settings=OnePassInputSettings()):
 def select_pose_tags(scores, approved_garment_tags, settings=OnePassInputSettings()):
     """Keep allowlisted pose tags; pocket instructions require approved pocket garments."""
     scores = normalize_scores(scores)
-    garments = tuple(t.strip().lower().replace('_', ' ') for t in approved_garment_tags)
-    pockets = any(t == n or t.endswith(' ' + n) for t in garments for n in POCKET_GARMENTS)
-    return tuple(sorted(((t, scores[t]) for t in POSE_ALLOW
-                         if scores.get(t, 0) >= settings.checks.tag_threshold and
-                         (pockets or t not in ('hands_in_pockets', 'hand_in_pocket'))),
-                        key=lambda item: -item[1]))
+    selected = tuple(t for t in POSE_ALLOW if scores.get(t, 0) >= settings.checks.tag_threshold)
+    retained, _ = filter_pocket_tags(selected, approved_garment_tags)
+    return tuple(sorted(((t, scores[t]) for t in retained), key=lambda item: -item[1]))
+
 
 
 def measure_slimness(joints, settings=OnePassInputSettings()):

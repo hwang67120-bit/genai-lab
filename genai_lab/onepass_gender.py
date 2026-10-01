@@ -42,6 +42,14 @@ def _is_gender_condition(tag):
         tag in support for support in BASE_GENDER_CONDITION_TAGS.values())
 
 
+def validate_onepass_negative_template(negative_template):
+    """Validate the shared stage 1/3 template before adding a user gender guard."""
+    terms = [term.strip() for term in negative_template.split(',') if term.strip()]
+    if any(_is_gender_condition(normalize_tag(term)) for term in terms):
+        raise ValueError('1회 생성 부정 프롬프트 템플릿에는 성별 조건을 넣을 수 없습니다.')
+    return terms
+
+
 def prepare_onepass_gender(source_path: str | Path, character_tags,
                            negative_template: str, *, settings=None):
     """Read the existing preference store and reuse the product gender rules.
@@ -56,9 +64,7 @@ def prepare_onepass_gender(source_path: str | Path, character_tags,
         raise ValueError('캐릭터 성별 선택이 없습니다. 남성·여성·지정 안 함 중 선택하세요.')
     if isinstance(character_tags, str):
         raise TypeError('캐릭터 태그 목록이 필요합니다.')
-    terms = [term.strip() for term in negative_template.split(',') if term.strip()]
-    if any(_is_gender_condition(normalize_tag(term)) for term in terms):
-        raise ValueError('1회 생성 부정 프롬프트 템플릿에는 성별 조건을 넣을 수 없습니다.')
+    terms = validate_onepass_negative_template(negative_template)
     candidates = tuple(dict.fromkeys(
         normalize_tag(term) for tag in character_tags
         for term in str(tag).split(',') if term.strip()))

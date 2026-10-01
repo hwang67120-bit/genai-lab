@@ -40,6 +40,23 @@ class PoseAssessment:
 
 
 @dataclass(frozen=True)
+class FindingDisplay:
+    code: str
+    observations: tuple[dict, ...]
+
+
+def findings_for_display(assessment):
+    """One UI row per code, preserving every original/normalized observation.
+
+    This does not mutate findings or change policy/measurement decisions.
+    """
+    grouped = {}
+    for finding in assessment.findings:
+        grouped.setdefault(finding.code, []).append(dict(finding.values))
+    return tuple(FindingDisplay(code, tuple(values)) for code, values in grouped.items())
+
+
+@dataclass(frozen=True)
 class InputDecision:
     status: str
     rejects: tuple[str, ...]

@@ -3,7 +3,7 @@
 Clients must be provided explicitly by a configured worker; availability is
 checked at deployment time, not inferred from historical environment notes. No hardcoded cache directories or process-wide chdir/env mutation.
 """
-from genai_lab.onepass_pose import PoseObservation, joints_from_records
+from genai_lab.onepass_pose import PoseObservation, joints_from_records, summarize_hands
 from genai_lab.onepass_character import HeadDetection
 from genai_lab.onepass_input_settings import OnePassInputSettings
 from scripts.pose_reference_runner import create_pose_preview_and_coordinates
@@ -33,6 +33,7 @@ class DwPoseInputBackend:
             count = None
             face_points = ()
             face_scores = ()
+            hands = ()
             def pose_estimation(self, array):
                 points, scores = owner.detector.pose_estimation(array)
                 import numpy as np
@@ -47,6 +48,9 @@ class DwPoseInputBackend:
                     if points.shape[1] >= 92:
                         self.face_points = tuple(tuple(map(float, xy)) for xy in points[selected, 24:92])
                         self.face_scores = tuple(map(float, scores[selected, 24:92]))
+                    if points.shape[1] >= 134 and scores.shape[1] >= 134:
+                        self.hands = summarize_hands(tuple(map(float, scores[selected, 92:113])),
+                                                     tuple(map(float, scores[selected, 113:134])))
                 return points, scores
         counted = CountedDetector()
         try:
@@ -61,7 +65,7 @@ class DwPoseInputBackend:
             if counted.count is None:
                 raise ValueError('검출 인원 수가 반환되지 않았습니다.')
             return PoseObservation(joints_from_records(records), counted.count, overlay, control,
-                                   counted.face_points, counted.face_scores)
+                                   counted.face_points, counted.face_scores, counted.hands)
         except Exception:
             overlay.close()
             control.close()

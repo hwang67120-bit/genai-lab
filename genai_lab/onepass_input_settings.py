@@ -108,8 +108,19 @@ class CharacterInputSettings:
 
 
 @dataclass(frozen=True)
+class PoseDisplaySettings:
+    # Unvalidated estimate (검증 안 된 추정), display only; never a K2 threshold.
+    boundary_margin_ratio: float = 0.02
+
+    def __post_init__(self):
+        if not math.isfinite(self.boundary_margin_ratio) or not 0 <= self.boundary_margin_ratio < 0.5:
+            raise ValueError('표시용 경계 여백 비율 오류')
+
+
+@dataclass(frozen=True)
 class OnePassInputSettings:
     normalization: PoseNormalizationSettings = field(default_factory=PoseNormalizationSettings)
     checks: PoseCheckSettings = field(default_factory=PoseCheckSettings)
     policies: InputPolicies = field(default_factory=InputPolicies)
     character: CharacterInputSettings = field(default_factory=CharacterInputSettings)
+    display: PoseDisplaySettings = field(default_factory=PoseDisplaySettings)

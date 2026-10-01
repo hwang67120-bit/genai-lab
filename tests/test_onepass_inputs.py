@@ -174,7 +174,7 @@ def test_pipeline_two_passes_tags_original_and_preserves_first_count():
         assert images == [(100, 210), (736, 1232)]
         assert tagged == [(100, 210)]
         assert result.decision.rejects == ('K1',)
-        assert result.decision.choices == ('choose_other_image',)
+        assert result.decision.choices == ('proceed_without_pose', 'choose_other_image')
     finally:
         result.close()
 
@@ -380,3 +380,134 @@ def test_c6_malformed_face_coordinates_do_not_silently_fallback(face_points,face
         with pytest.raises(ValueError,match='얼굴 68점'):
             prepare_c6_crop(source,(HeadDetection((30,0,70,60),.9),),(),
                             face_points=face_points,face_scores=face_scores)
+
+
+@pytest.mark.parametrize('status,count,scores', [('pass',1,{'looking_at_viewer':1}),
+                                                ('warn_user_choice',1,{}), ('reject',2,{})])
+def test_explicit_pose_choices_have_no_default(status, count, scores):
+    decision = apply_input_policy(assess_pose(standard_joints(), count, scores))
+    assert decision.status == status
+    assert decision.choices == (('proceed_without_pose','choose_other_image') if status=='reject' else
+                               ('proceed_with_pose','proceed_without_pose','choose_other_image'))
+    assert not hasattr(decision, 'default_choice')
+
+
+def test_normalized_zero_joints_is_reviewable_k2():
+    calls=[]
+    def estimate(image):
+        calls.append(image.size)
+        joints = standard_joints() if len(calls)==1 else tuple(
+            replace(j, confidence_score=.29, detected=False) for j in standard_joints())
+        return PoseObservation(joints,1,image.copy(),image.copy())
+    with Image.new('RGB',(100,210),'red') as source:
+        with pytest.raises(PoseInputError) as caught:
+            prepare_onepass_pose(source,estimate=estimate,tag=lambda _: {'looking_at_viewer':1})
+    error=caught.value
+    try:
+        assert error.decision.rejects==('K2',)
+        assert error.decision.choices==('proceed_without_pose','choose_other_image')
+        assert error.original_overlay.size==(100,210)
+        assert error.overlay.size==(736,1232)
+        assert len(error.k2_hints)==8
+    finally:
+        error.close()
+
+
+def test_other_control_estimation_error_propagates_unchanged(monkeypatch):
+    import genai_lab.onepass_pose as module
+    from genai_lab.pose_estimation import PoseReferenceEstimationError
+    failure=PoseReferenceEstimationError('실행 실패: 출력 없음')
+    def failed(*args):
+        raise failure
+    monkeypatch.setattr(module,'prepare_onepass_control',failed)
+    def estimate(image):
+        return PoseObservation(standard_joints(),1,image.copy(),image.copy())
+    with Image.new('RGB',(100,210)) as source:
+        with pytest.raises(PoseReferenceEstimationError) as caught:
+            prepare_onepass_pose(source,estimate=estimate,tag=lambda _: {})
+    assert caught.value is failure
+
+
+def test_normalization_failure_keeps_original_evidence_only_even_with_warn_policy():
+    from genai_lab.onepass_pose import summarize_hands
+    hands=summarize_hands((.3,)*21,(.2,)*21)
+    def estimate(image):
+        return PoseObservation((),0,image.copy(),image.copy(),hands=hands)
+    cfg=OnePassInputSettings(policies=InputPolicies(rules=tuple((k,'warn') for k,_ in InputPolicies().rules)))
+    with Image.new('RGB',(100,210),'blue') as source:
+        with pytest.raises(PoseInputError) as caught:
+            prepare_onepass_pose(source,estimate=estimate,tag=lambda _: {},settings=cfg)
+    error=caught.value
+    try:
+        assert error.original_overlay.getpixel((0,0))==(0,0,255)
+        assert error.overlay is None and error.hands==()
+        assert error.original_hands==hands
+        assert error.decision.status=='reject'
+        assert 'proceed_with_pose' not in error.decision.choices
+        assert set(error.decision.warnings)>={'K1','K2'}
+    finally:
+        error.close()
+
+
+def test_display_evidence_does_not_change_control_or_decision():
+    from genai_lab.onepass_pose import summarize_hands
+    first_hands=summarize_hands((.29,)*20+(.3,),(.9,)*21)
+    second_hands=summarize_hands((.8,)*21,(.1,)*21)
+    def run(with_evidence):
+        calls=[]
+        def estimate(image):
+            calls.append(1)
+            hands=(first_hands if len(calls)==1 else second_hands) if with_evidence else ()
+            return PoseObservation(standard_joints(),1,image.copy(),Image.new('RGB',image.size,(20,30,40)),hands=hands)
+        with Image.new('RGB',(100,210),'red') as source:
+            return prepare_onepass_pose(source,estimate=estimate,tag=lambda _: {'looking_at_viewer':1})
+    before,after=run(False),run(True)
+    try:
+        assert before.decision==after.decision
+        assert before.assessment==after.assessment
+        assert before.control_image.tobytes()==after.control_image.tobytes()
+        assert after.original_overlay.size==(100,210)
+        assert after.original_overlay.getpixel((1,1))==(255,0,0)
+        assert after.original_hands==first_hands and after.hands==second_hands
+        assert first_hands[0].confident_count==1 and first_hands[0].total==21
+    finally:
+        before.close();after.close()
+
+
+@pytest.mark.parametrize('x,y,hint',[(1,100,'out_of_frame_likely'),(-4,100,'out_of_frame_likely'),
+                                   (50,209,'out_of_frame_likely'),(50,100,'low_confidence')])
+def test_k2_display_hint_uses_original_coordinates_only(x,y,hint):
+    from genai_lab.onepass_pose import missing_joint_hints
+    original=change(standard_joints(),'left_ankle',x=x,y=y,confidence_score=.1,detected=False)
+    normalized=change(standard_joints(),'left_ankle',x=50,y=100,confidence_score=.1,detected=False)
+    facts=assess_pose(normalized,1,{'looking_at_viewer':1})
+    before=apply_input_policy(facts)
+    values=missing_joint_hints(facts,original,(100,210))
+    assert len(values)==1 and values[0].hint==hint
+    assert values[0].margin_pixels==2 and not values[0].verified
+    assert apply_input_policy(facts)==before
+
+
+def test_dwpose_hand_scores_from_selected_person_are_display_only():
+    import numpy as np
+    points=np.zeros((2,134,2)); scores=np.full((2,134),.1)
+    scores[1,:18]=.9; scores[1,92:113]=[.3]+[.2]*20; scores[1,113:134]=.8
+    calls=[]
+    def detect(_):
+        calls.append(1)
+        return points,scores
+    def preview(image,wrapped,confidence):
+        wrapped.pose_estimation(None)
+        return image.copy(),[],image.copy()
+    with Image.new('RGB',(100,100)) as image:
+        result=DwPoseInputBackend(SimpleNamespace(pose_estimation=detect),preview_builder=preview)(image)
+    try:
+        assert len(calls)==1 and len(result.hands)==2
+        left,right=result.hands
+        assert (left.side,left.confident_count,left.total)==('left',1,21)
+        assert left.mean_score==pytest.approx((.3+.2*20)/21)
+        assert right.confident_count==21 and right.mean_score==pytest.approx(.8)
+        scores[:]=0
+        assert right.mean_score==pytest.approx(.8)
+    finally:
+        result.close()

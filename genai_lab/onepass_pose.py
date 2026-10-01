@@ -64,7 +64,7 @@ class InputDecision:
     choices: tuple[str, ...]
 
 
-def apply_input_policy(assessment: PoseAssessment, policies=InputPolicies()) -> InputDecision:
+def apply_input_policy(assessment: PoseAssessment, policies=InputPolicies(), *, control_available=True) -> InputDecision:
     policy = dict(policies.rules)
     rejects = tuple(dict.fromkeys(f.code for f in assessment.findings if policy[f.code] == 'reject'))
     warns = tuple(dict.fromkeys(f.code for f in assessment.findings if policy[f.code] == 'warn'))
@@ -73,9 +73,10 @@ def apply_input_policy(assessment: PoseAssessment, policies=InputPolicies()) -> 
             rejects += ('HIGH_ANGLE',)
         else:
             warns += ('HIGH_ANGLE',)
-    status = 'reject' if rejects else ('warn_user_choice' if warns else 'pass')
+    status = 'reject' if rejects or not control_available else ('warn_user_choice' if warns else 'pass')
     return InputDecision(status, rejects, warns,
-                         ('choose_other_image',) if rejects else ('proceed', 'choose_other_image'))
+                         ('proceed_without_pose', 'choose_other_image') if status == 'reject' else
+                         ('proceed_with_pose', 'proceed_without_pose', 'choose_other_image'))
 
 
 def joints_from_records(records) -> tuple[PoseJointCoordinateCandidate, ...]:
@@ -239,6 +240,58 @@ def prepare_onepass_control(control_map, joints, settings=OnePassInputSettings()
 
 
 @dataclass(frozen=True)
+class HandScoreSummary:
+    side: str
+    confident_count: int
+    mean_score: float
+    total: int = 21
+    confidence_threshold: float = 0.30
+
+
+def summarize_hands(left_scores, right_scores):
+    """Selected-person hand evidence only. Missing arrays remain unmeasured."""
+    if not left_scores and not right_scores:
+        return ()
+    result = []
+    for side, scores in (('left', left_scores), ('right', right_scores)):
+        if len(scores) != 21 or any(not math.isfinite(v) for v in scores):
+            raise ValueError('손 21점 신뢰도 형식 오류')
+        result.append(HandScoreSummary(side, sum(v >= .30 for v in scores), sum(scores)/21))
+    return tuple(result)
+
+
+@dataclass(frozen=True)
+class MissingJointHint:
+    joint_name: str
+    hint: str
+    original_point: tuple[float, float] | None
+    original_confidence: float | None
+    margin_pixels: float
+    verified: bool = False
+
+
+def missing_joint_hints(assessment, original_joints, original_size, settings=OnePassInputSettings()):
+    """Explain K2 using ORIGINAL coordinates; never alter findings or policies."""
+    if not any(f.code == 'K2' for f in assessment.findings):
+        return ()
+    missing = {name for f in assessment.findings if f.code == 'K2' for name in f.values['missing']}
+    index = {j.joint_name: j for j in original_joints}
+    width, height = original_size
+    margin = min(width, height)*settings.display.boundary_margin_ratio
+    result = []
+    for name in REQUIRED:
+        if name not in missing:
+            continue
+        joint = index.get(name)
+        near = joint is not None and (joint.x <= margin or joint.y <= margin or
+                                     joint.x >= width-margin or joint.y >= height-margin)
+        result.append(MissingJointHint(name, 'out_of_frame_likely' if near else 'low_confidence',
+                      (joint.x, joint.y) if joint else None,
+                      joint.confidence_score if joint else None, margin))
+    return tuple(result)
+
+
+@dataclass(frozen=True)
 class PoseObservation:
     joints: tuple[PoseJointCoordinateCandidate, ...]
     person_count: int
@@ -247,6 +300,7 @@ class PoseObservation:
     # Selected person, pixel coordinates; empty means face landmarks unavailable.
     face_points: tuple[tuple[float, float], ...] = ()
     face_scores: tuple[float, ...] = ()
+    hands: tuple[HandScoreSummary, ...] = ()
 
     def close(self):
         self.overlay.close()
@@ -254,11 +308,22 @@ class PoseObservation:
 
 
 class PoseInputError(ValueError):
-    """Input cannot be normalized; carry measured rule evidence for the review UI."""
-    def __init__(self, message, assessment, policies):
+    """Recoverable input failure with owned UI evidence; caller must close it."""
+    def __init__(self, message, assessment, policies, *, original_overlay=None,
+                 overlay=None, original_hands=(), hands=(), k2_hints=()):
         super().__init__(message)
         self.assessment = assessment
-        self.decision = apply_input_policy(assessment, policies)
+        self.decision = apply_input_policy(assessment, policies, control_available=False)
+        self.original_overlay = original_overlay
+        self.overlay = overlay
+        self.original_hands = original_hands
+        self.hands = hands
+        self.k2_hints = k2_hints
+
+    def close(self):
+        for image in (self.original_overlay, self.overlay):
+            if image is not None:
+                image.close()
 
 
 @dataclass(frozen=True)
@@ -270,21 +335,28 @@ class PreparedPose:
     observation_joints: tuple[PoseJointCoordinateCandidate, ...]
     assessment: PoseAssessment
     decision: InputDecision
+    original_overlay: Image.Image
+    original_hands: tuple[HandScoreSummary, ...] = ()
+    hands: tuple[HandScoreSummary, ...] = ()
+    k2_hints: tuple[MissingJointHint, ...] = ()
 
     def close(self):
         self.normalized_image.close()
         self.overlay.close()
         self.control_image.close()
+        self.original_overlay.close()
 
 
 def prepare_onepass_pose(source, *, estimate: Callable[[Image.Image], PoseObservation],
                          tag: Callable[[Image.Image], dict], settings=OnePassInputSettings()):
-    """Two detections with externally supplied backends; no hidden model fallback.
+    """Two detections; evidence is display-only and never authorizes generation.
 
-    Geometry failure raises an input error. Rule rejection returns review evidence
-    (including overlay) but never authorizes generation. The caller owns the result.
+    The caller owns PreparedPose or PoseInputError images and must close them.
+    Backend/execution errors propagate unchanged, without a silent fallback.
     """
     first = estimate(source)
+    second = None
+    normalized = None
     try:
         if type(first.person_count) is not int or first.person_count < 0:
             raise ValueError('실제 검출 인원 수가 필요합니다.')
@@ -292,24 +364,31 @@ def prepare_onepass_pose(source, *, estimate: Callable[[Image.Image], PoseObserv
             normalized, box = normalize_pose_image(source, first.joints, settings)
         except ValueError as error:
             assessment = assess_pose(first.joints, first.person_count, tag(source), settings.checks)
-            raise PoseInputError(str(error), assessment, settings.policies) from error
-    finally:
-        first.close()
-    second = None
-    try:
+            raise PoseInputError(str(error), assessment, settings.policies,
+                original_overlay=first.overlay.copy(), original_hands=first.hands,
+                k2_hints=missing_joint_hints(assessment, first.joints, source.size, settings)) from error
         second = estimate(normalized)
         assessment = assess_pose(second.joints, second.person_count, tag(source), settings.checks)
-        # Normalization must not silently turn a multi-person input into a single person.
         if first.person_count != 1:
             from dataclasses import replace
             assessment = replace(assessment, findings=(Finding('K1', {
                 'person_count': first.person_count, 'stage': 'original'}),) + assessment.findings)
+        hints = missing_joint_hints(assessment, first.joints, source.size, settings)
+        # This is the precise no-detected-joints precondition of control preparation.
+        # Do not catch PoseReferenceEstimationError: other operational errors must escape.
+        if not any(j.detected for j in second.joints):
+            raise PoseInputError('정규화 후 탐지 관절 0개', assessment, settings.policies,
+                original_overlay=first.overlay.copy(), overlay=second.overlay.copy(),
+                original_hands=first.hands, hands=second.hands, k2_hints=hints)
         control = prepare_onepass_control(second.control_map, second.joints, settings)
         return PreparedPose(normalized, second.overlay.copy(), control, box, second.joints,
-                            assessment, apply_input_policy(assessment, settings.policies))
+                            assessment, apply_input_policy(assessment, settings.policies),
+                            first.overlay.copy(), first.hands, second.hands, hints)
     except Exception:
-        normalized.close()
+        if normalized is not None:
+            normalized.close()
         raise
     finally:
+        first.close()
         if second is not None:
             second.close()

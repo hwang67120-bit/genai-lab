@@ -18,6 +18,7 @@ class GenerationPhase(str, Enum):
     INPUTS_APPROVED = "inputs_approved"
     BASE_RUNNING = "base_running"
     BASE_COMPLETED = "base_completed"
+    ONEPASS_RAW_COMPLETED = "onepass_raw_completed"
     CANDIDATE_SELECTED = "candidate_selected"
     FINAL_RUNNING = "final_running"
     COMPLETED = "completed"
@@ -246,7 +247,15 @@ class GenerationOrchestrator:
 
 
     def generate_base_candidates(self, pipeline: Any, inputs: Any, *,
-                                 reference_pose=None) -> Any:
+                                 reference_pose=None, onepass=None,
+                                 onepass_on_image=None) -> Any:
+        # OFF never imports the new generator or its settings.
+        if onepass is not None:
+            if pipeline is not None or reference_pose is not None:
+                raise GenerationOrchestrationError(
+                    "1회 경로는 자체 파이프라인과 전처리된 자세 입력을 사용합니다."
+                )
+            return self._generate_onepass_candidates(inputs, onepass, onepass_on_image)
         approval = self.require_approved_inputs(inputs)
         from genai_lab.provenance import recorder
         model_observation = getattr(pipeline, "_run_provenance", None)
@@ -327,6 +336,41 @@ class GenerationOrchestrator:
         self._write_base_evidence(batch, approval)
         return batch
 
+    def _generate_onepass_candidates(self, inputs, request, on_image):
+        approval = self.require_approved_inputs(inputs)
+        from genai_lab.onepass_generation import generate_onepass_request, OnePassCancelled
+
+        self.phase = GenerationPhase.BASE_RUNNING
+        directory = self.run_context.base_directory / "onepass"
+        self._record("generate_onepass_candidates", "started",
+                     approval_fingerprint=approval.fingerprint)
+        try:
+            batch = generate_onepass_request(
+                request, directory, cancelled=self.cancelled,
+                on_image=on_image or (lambda _candidate: None),
+            )
+        except BaseException as error:
+            self.phase = (GenerationPhase.CANCELLED if isinstance(error, OnePassCancelled)
+                          else GenerationPhase.FAILED)
+            self.run_context.finish(
+                self.phase.value, failure_stage="generate_onepass_candidates",
+                error_type=type(error).__name__,
+            )
+            self._record("generate_onepass_candidates", self.phase.value,
+                         error_type=type(error).__name__)
+            raise
+        # Do not pass raw candidates into legacy FLUX/refinement or final storage.
+        # Review/exposure gates and GUI handoff belong to stages 5 and 6.
+        self.phase = GenerationPhase.ONEPASS_RAW_COMPLETED
+        self.run_context.record_artifact("onepass_request", directory / "request.json")
+        self.run_context.finish(
+            "onepass_raw_completed", gates_executed=False, final_return_eligible=False,
+        )
+        self._record("generate_onepass_candidates", "raw_completed",
+                     batch_directory=str(batch.directory), gates_executed=False,
+                     final_return_eligible=False)
+        return batch
+
     def close_request(
         self,
         *,
@@ -336,7 +380,7 @@ class GenerationOrchestrator:
         """Close an unfinished request and clear request-owned model state."""
         from genai_lab.request_runtime import reset_request_runtime
 
-        if self.phase is GenerationPhase.COMPLETED:
+        if self.phase in (GenerationPhase.COMPLETED, GenerationPhase.ONEPASS_RAW_COMPLETED):
             return {
                 "version": "request_runtime_reset_v1",
                 "boundary": "request_end",

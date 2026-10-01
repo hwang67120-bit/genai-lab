@@ -68,7 +68,7 @@
 
 | 기능 | 사용자 채택 근거 | 검증 범위 | 운영 반영 | 시험 구현 위치 | 제품 연결 위치 | 남은 위험 | 이번 처리 |
 |---|---|---|---|---|---|---|---|
-| 자동 얼굴·머리 크롭 + 미리보기 확인 | 9/28 "자동 크롭 + 사용자 확인"(face-crop-c5 decision.md) | C6 26장: 팔·손 없음 15/17, 손상 0.06, 과잉 거부 2/26 | 없음 | outputs/face-crop-c5-20260928/crop_c6.py, outputs/e2e-20261001/face.py | 새 모듈 필요. 캐릭터 입력 분석 단계(FLOW 3) 옆. imgutils(dghs-imgutils 0.19, 별도 venv `outputs/pose-identity-20260927/identity-v2/.venv`) | 운영 venv 에 imgutils 없음 → 패키지 설치는 사용자 승인 필요. ordinary-female 류(팔이 머리 뒤)는 거부됨 | 이번 구현 (설치 승인 전제) |
+| 자동 얼굴·머리 크롭 C6 + 미리보기 확인 | 9/28 "자동 크롭 + 사용자 확인"(face-crop-c5 decision.md) | C6 26장: 팔·손 없음 15/17, 손상 0.06, 과잉 거부 2/26 | 없음 | **정식: outputs/face-crop-c5-20260928/crop_c5.py + crop_c6.py (methods_c5.md·methods_c6.md)**. e2e face.py·retarget3 face_crop.py 는 간이판(채택 아님) | 새 모듈. 캐릭터 입력 분석 단계(FLOW 3) 옆. 필요: 머리 검출(dghs-imgutils 0.19, 별도 venv `outputs/pose-identity-20260927/identity-v2/.venv`), DWPose 몸 18점 + 얼굴 68점, isnet 전경(scripts/body_comparison_runner.py:234) | 운영 venv 에 imgutils·DWPose 없음 → 설치 승인 필요. ordinary-female 류(팔이 머리 뒤)는 거부됨 | 이번 구현 (설치 승인 전제) |
 | 골격 정규화·검사(K1~K7)·경고 처리 | "골격 검사 경고 + 사용자 선택 확정", K1·K2 다른 이미지 요청 + 설정값(9/30), K7 범위 확정, 추측 관절 = 제외하지 않고 경고 지표 | 정규화: 붕괴 10→4/30. K7 18장 중 의도대로 1. 처음 보는 자세 7장 판정 | 정규화 없음. 운영은 `pose_estimation.prepare_pose_control_input` 의 크기 맞춤만 | outputs/pose-newimg-20260929/prepare_controls.py, leg-overlap-20260929/measure.py, e2e-20261001/analyze.py (`process_pose`, `check`) | genai_lab/pose_estimation.py:104 `execute_pose_reference_estimation`, :255 `prepare_pose_control_input`; scripts/pose_reference_runner.py:34 `create_pose_preview_and_coordinates`; 검사 문턱 outputs/pose-identity-20260927/skeleton-check/rule-values.json | 받침 물체(의자 등) 자동 검출 없음. 선화 K2 거부 | 이번 구현 |
 | 얼굴 방향 태거 조건 (경고·유사도 안내·조건부 IP) | "③ 안내 넣고…", "조건부 적용으로 진행" | 18장: 놓침 0, 오경보 6(선화 3) | 없음 | outputs/input-direction-20260930/tags.py, e2e analyze.py | genai_lab/clothing_analysis.py:56 `WdTagSession` 재사용 | 오경보(정면인데 경고) 비용은 안내 문구 | 이번 구현 |
 | 사용자 지정 성별 계약 | 기존 제품 계약(FLOW 4·reference_tag_policy). 시나리오별 성별 지정 10/1 | gender-contract GC1·GC2 | **운영 경로엔 있음, 1회 생성 시험 경로엔 없었음** | gender-contract-20261001/make_plan.py (방식 재현만) | genai_lab/character_preferences.py:14 `load_character_gender`; reference_tag_policy.py:45·69; clothing_reference_generation.py:12 `BASE_GENDER_CONDITION_TAGS`, :58 `prepare_design_reference_request`, :105 `gender_guard` | 남성 지정 시 의상 재현 하락(34→23) | **이번 구현 (출시 차단 항목, 5절)** |
@@ -84,6 +84,7 @@
 | 리타게팅 | 시험 결과 불필요(RX2) | retarget3 | — | — | — | — | 구현 안 함 |
 
 ### 시험 코드를 그대로 복사하면 안 되는 부분
+- **(2026-10-01 정정) 얼굴 크롭 C6 정식 정의**: 머리 상자 선택(코 포함 상자 중 신뢰도 최고, 없으면 전체 중 신뢰도 최고) → 확장(좌우·위 10%, 아래 없음) → isnet 전경 ∩ 확장 상자 → DWPose 팔 띠 제거(얼굴 68점 볼록 껍질 보호) → 턱 아래 제거 → 마스크 경계 상자 + 5% 여백, 흰 배경 정사각 → 팔 근접 시 거부. 상세는 face-crop-c5-20260928/methods_c5.md·methods_c6.md. e2e/retarget3 의 "가장 큰 상자 +10% 사각 크롭"은 시험 간이판이며, 이전 구현 프롬프트가 이를 C6 로 잘못 적었다.
 - `run_int.py` 의 UNet forward pre-hook 잔차 주입과 `scheduler.step` 래퍼(x0 미리보기용): 시험 관측 장치다. 제품은 `StableDiffusionXLAdapterPipeline`(pose-edit-compare 에서 SHA 동일 확인) 또는 같은 계약의 명시 함수로.
 - `D:/genai-cache` 하드코딩, `HF_HUB_OFFLINE` 환경변수 설정, `os.chdir('D:/genai-cache/huggingface/easy-dwpose')`(DWPose 모델 위치 의존) → 설정 한 곳으로.
 - 시험의 성별 처리(태거 1boy/1girl, 고정 "1boy" 부정) — 쓰면 안 됨. 제품 함수 재사용.
@@ -144,6 +145,7 @@
    | final-int F_original_raccoon_HIGH_209210101 (조건부 IP 0.5 자세) — 단 성별 계약 적용 전 구성이므로 성별 OFF 비교용 | final-int plan | final-int run.json |
    | gender-contract U_original_raccoon_KNEEL_209210101 (성별 계약 적용) | gender-contract-20261001/plan.json | gender-contract-20261001/cases/…/run.json |
    프롬프트 문자열은 integration plan 120개·final-int plan 120개와 일치(성별 계약으로 바뀌는 항목은 gender-contract plan 기준).
+   **(2026-10-01 정정)** 성별 계약 적용 후에는 1~3번 사례의 프롬프트가 바뀐다. SHA 재현은 시험 문자열을 생성 모듈에 그대로 주입해 확인하고, 성별·조립은 문자열 일치로 따로 확인한다(CODEX_IMPLEMENTATION_PROMPT.md 4절).
    메모리: 최대 reserved ≤ 6.5 GiB(시험 6.41~6.42).
 3. **입력·결과 처리 연결**: K1·K2 거부(정책 설정 변경 시 처리만 바뀜 — 단위 테스트), K3~K7·추측 관절·얼굴 방향 경고와 "진행/다른 이미지" 선택, 얼굴 크롭 C6 거부·미리보기, 성별 3종(남/여/지정 안 함)의 긍정 첫 태그·부정 첫 태그가 `prepare_design_reference_request` 와 같음, 노출 게이트 숨김 "N장 제외됨" 표시. 검증 입력: e2e-20261001 analysis.json 의 5 시나리오 + 입력 검사 시연 3장(U1 경고, U2·U3 K2 거부).
 4. **기존 테스트·회귀**: 기존 tests/ 전체 + 변경 모듈 단위 테스트(tests/test_reference_pose.py 같은 형식).

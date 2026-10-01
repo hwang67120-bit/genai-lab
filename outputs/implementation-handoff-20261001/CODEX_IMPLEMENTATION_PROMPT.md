@@ -45,7 +45,8 @@
 - 자세: DWPose → 몸 bbox 정규화(.20H 위/.10H 아래/.15H 옆, 736:1232, 회색 128) → 재검출 → 검사 K1~K6 + K7(무릎·발목 좌우 거리 모두 < 0.15T) + 추측 관절(팔·다리 신뢰도 0.30~0.50 이 2개 이상) + 얼굴 방향 태거 조건(looking_at_viewer < 0.35 또는 profile·from_side·from_behind·from_above >= 0.35) → 카드 색 반전 제어 이미지.
 - 검사 처리 정책은 설정값: K1·K2 = `reject`, 나머지 = `warn`. 문턱값도 같은 설정에. 모듈은 판정값만 내고 처리는 정책이 정한다.
 - 자세 태그: `outputs/pose-range-20260928/pose_tags.json` 의 allow 목록 + 주머니 규칙.
-- 캐릭터: 태그 선택 규칙(성별 제외 — 단계 1), 마른 체형 판정(DWPose 어깨폭/몸통 < 0.48), 얼굴 자동 크롭 C6(애니 머리 검출 head_detect_v2.0_s 최대 상자 +10%, 팔꿈치·손목이 머리 주변이면 거부 + 안내) + 미리보기. imgutils 미승인 시 크롭은 수동 크롭 경로만.
+- 캐릭터: 태그 선택 규칙(성별 제외 — 단계 1), 마른 체형 판정(DWPose 어깨폭/몸통 < 0.48), 얼굴 자동 크롭 C6 + 미리보기(**정식 정의**: outputs/face-crop-c5-20260928/decision.md, methods_c5.md, methods_c6.md — 사용자 채택 2026-09-28). 요약: ① 머리 검출 head_detect_v2.0_s(conf 0.4, iou 0.7, 원본 RGB). 선택은 DWPose 코(몸 0번) 신뢰도 >= 0.30 이면 코를 포함하는 상자 중 신뢰도 최고, 아니면 전체 중 신뢰도 최고(가장 큰 상자 아님). 검출 0개면 실패 ② 확장 상자: 좌우 각 0.10W, 위 0.10H, 아래 확장 없음, 이미지 경계로 자름 ③ 보존 = isnet-anime 전경 ∩ 확장 상자 ④ 팔 띠 제거: 두께 ceil(0.35 × 어깨폭(몸 2·5번)), 최소 1px, 선분 2-3·3-4·5-6·6-7 중 양 끝 신뢰도 >= 0.30 만, 끝점 반두께 원. DWPose 얼굴 68점 중 신뢰도 >= 0.30 점의 볼록 껍질 안은 지우지 않음(유효점 3개 미만이면 예외 없음). 어깨 신뢰도 미달·폭 0 이면 팔 띠 없이 기록 ⑤ 턱 아래 제거: 얼굴 8번(턱) 신뢰도 >= 0.30 이면 y > 턱y + 0.03H 제거, 미달이면 기록만 ⑥ 크롭: 보존 마스크 경계 상자 + 최대변 × 0.05(올림, 최소 1px) 여백, 보존 밖 흰색, 흰 정사각 여백, 확대 안 함 ⑦ C6 거부 규칙: 팔꿈치·손목(3·4·6·7, 신뢰도 >= 0.30)이 [확장상자 x0−0.15W, y0−0.25H, x1+0.15W, y1+0.15H] 안이면 크롭하지 않고 "팔이 머리를 가리지 않는 캐릭터 이미지를 넣어 주세요" 안내 ⑧ 실패는 조용히 대체하지 않음. 크롭 결과는 사용자가 미리보기로 확인. 필요 입력: DWPose 몸 18점 + 얼굴 68점(신뢰도 포함), isnet 전경 마스크, 머리 검출 결과. 주의: outputs/e2e-20261001/face.py·retarget3 face_crop.py 는 시험용 간이판(가장 큰 상자 +10% 사각 크롭 + 팔 근접 검사)이며 채택 C6 가 아니다. 검증: outputs/face-crop-c5-20260928/crop-results-c6.json 과 crops_c6/<id>/crop.png SHA 대조(같은 입력·같은 검출 결과 주입). imgutils 미승인 시 자동 크롭은 비활성, 수동 크롭 경로만. (2026-10-01 정정: 이전 문구는 간이판을 C6 로 잘못 적었다)
+- 재사용(C6): `scripts/body_comparison_runner.py:234 extract_anime_character_foreground_mask`(isnet), 시험 구현 `outputs/face-crop-c5-20260928/crop_c5.py`·`crop_c6.py`(구조 참고만).
 - 재사용: `genai_lab/pose_estimation.py:104·255`, `scripts/pose_reference_runner.py:34`, `genai_lab/clothing_analysis.py:56 WdTagSession`, 검사 문턱 `outputs/pose-identity-20260927/skeleton-check/rule-values.json`.
 - 검증: `outputs/e2e-20261001/analysis.json` 의 5 시나리오와 시연 3장(U1 경고, U2·U3 K2 거부)에서 같은 판정. 제어 이미지는 `outputs/pose-norm-20260928/control_*.png`, `outputs/pose-newimg-20260929/control_P2.png` 와 SHA 비교.
 
@@ -84,7 +85,10 @@
    | final-int `F_original_raccoon_HIGH_209210101` (초기 IP 0.5, 성별 계약 적용 전 구성) | 51efedaa8de0c4cd | outputs/final-int-20261001/cases/…/run.json |
    | gender-contract `U_original_raccoon_KNEEL_209210101` (성별 계약 적용) | 3383557338b7a727 | outputs/gender-contract-20261001/cases/…/run.json |
    최대 reserved ≤ 6.5 GiB(시험 6.41~6.42), 장당 시간 기록(시험 약 22초).
-   성별 계약 적용 전 구성(위 3번째)은 성별을 "지정 안 함"으로 둔 재현이다. 계약 적용 후 결과가 달라지는 것은 정상.
+   **(2026-10-01 정정)** 위 1~3번 사례는 성별 계약 적용 전 프롬프트로 만들어졌다. 계약을 적용하면 프롬프트가 달라져 SHA 가 같을 수 없다(ordinary-female 은 여성 지정 시 보조 태그가 붙고, 지정 안 함이면 1girl 이 빠짐. raccoon 은 레지스트리상 남성).
+   따라서 재현 검증을 둘로 나눈다:
+   (a) 생성 모듈: 시험 plan 의 긍정·부정 **문자열을 그대로 주입**해 1~4번 SHA 일치(성별·프롬프트 조립을 거치지 않음).
+   (b) 성별·프롬프트 조립: 문자열 일치로 검증 — 남성은 gender-contract-20261001/plan.json(U_*), 여성·지정 안 함은 테스트용 설정 저장소(QSettings 임시 파일)로 기대 문자열을 만들어 비교. 실제 사용자 저장소에는 raccoon(남성)만 저장돼 있다.
 3. **입력·결과 처리 연결**: K1·K2 거부와 정책 변경 테스트, 경고 → 사용자 선택 흐름, 얼굴 크롭 C6 거부·미리보기, 성별 3종 테스트(단계 1), 노출 숨김 표시.
 4. **기존 테스트·회귀**: 기존 `tests/` 전체 + 변경 모듈 단위 테스트.
 

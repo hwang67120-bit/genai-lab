@@ -218,8 +218,8 @@ def normalize_pose_image(source, joints, settings=OnePassInputSettings()):
         return canvas.resize((cfg.width, cfg.height), Image.Resampling.LANCZOS), box
 
 
-def prepare_onepass_control(control_map, joints, settings=OnePassInputSettings()):
-    """Reuse the approved resize/padding function, then RGB -> BGR per model card."""
+def prepare_qwen_control(control_map, joints, settings=OnePassInputSettings()):
+    """Owned RGB map before the T2I channel reversal; same resize/padding rules."""
     validate_joints(joints)
     if len(joints) != 18:
         raise ValueError('제어 지도에는 몸 관절 기록 18개가 필요합니다.')
@@ -229,14 +229,20 @@ def prepare_onepass_control(control_map, joints, settings=OnePassInputSettings()
     cfg = settings.normalization
     prepared = prepare_pose_control_input(approved, cfg.width, cfg.height)
     try:
-        channels = prepared.control_map_image.split()
+        return prepared.control_map_image.copy()
+    finally:
+        prepared.close()
+
+
+def prepare_onepass_control(control_map, joints, settings=OnePassInputSettings()):
+    """Keep the existing T2I output pixel-identical; Qwen uses prepare_qwen_control."""
+    with prepare_qwen_control(control_map, joints, settings) as rgb:
+        channels = rgb.split()
         try:
             return Image.merge('RGB', tuple(reversed(channels)))
         finally:
             for channel in channels:
                 channel.close()
-    finally:
-        prepared.close()
 
 
 @dataclass(frozen=True)
@@ -339,6 +345,15 @@ class PreparedPose:
     original_hands: tuple[HandScoreSummary, ...] = ()
     hands: tuple[HandScoreSummary, ...] = ()
     k2_hints: tuple[MissingJointHint, ...] = ()
+
+    def copy_qwen_control(self):
+        """Return an owned pre-reversal RGB copy; caller closes it, including after self.close()."""
+        channels = self.control_image.split()
+        try:
+            return Image.merge('RGB', tuple(reversed(channels)))
+        finally:
+            for channel in channels:
+                channel.close()
 
     def close(self):
         self.normalized_image.close()

@@ -511,3 +511,16 @@ def test_dwpose_hand_scores_from_selected_person_are_display_only():
         assert right.mean_score==pytest.approx(.8)
     finally:
         result.close()
+
+
+def test_qwen_control_is_before_reversal_and_existing_control_unchanged():
+    from genai_lab.onepass_pose import prepare_qwen_control
+    import numpy as np
+    source = Image.new('RGB', (736, 1232), (12, 70, 190))
+    qwen = prepare_qwen_control(source, standard_joints())
+    old = prepare_onepass_control(source, standard_joints())
+    try:
+        assert np.array_equal(np.asarray(qwen)[..., ::-1], np.asarray(old))
+        assert qwen.tobytes() != old.tobytes()
+    finally:
+        source.close(); qwen.close(); old.close()

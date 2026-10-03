@@ -1,0 +1,222 @@
+{
+  "source": "outputs/qwen-pose-identity-20261003/{preservation,prompts}.json",
+  "characters": {
+    "raccoon": {
+      "items": [
+        {
+          "id": "R1",
+          "kind": "얼굴·눈",
+          "fact": "보라색 눈",
+          "english": "The character has the same face with purple eyes.",
+          "source": "pose-choice N0_NONE_raccoon_209211001 run.json 생성 태그 \"purple eyes\" + 이미지",
+          "approval": "사용자 확인 2026-10-03 (qwen-pose-pilot drafts/candidates.md 4절 \"제안대로\")",
+          "check_at": "얼굴"
+        },
+        {
+          "id": "R2",
+          "kind": "머리",
+          "fact": "짧은 하늘색 머리, 끝으로 갈수록 옅어짐",
+          "english": "The hair is short and light blue, fading paler toward the tips, with the same hairstyle.",
+          "source": "pose-choice N0_NONE_raccoon_209211001 run.json 생성 태그 \"blue hair, multicolored hair, short hair\" + 이미지",
+          "approval": "사용자 확인 2026-10-03 (qwen-pose-pilot drafts/candidates.md 4절 \"제안대로\") (옅어지는 끝: 2026-10-03 확인)",
+          "check_at": "머리"
+        },
+        {
+          "id": "R3",
+          "kind": "체형",
+          "fact": "남성 캐릭터, 기준 이미지와 같은 남성형 실루엣·신체 비율",
+          "english": "The character is male with the same masculine silhouette and body proportions as Picture 1.",
+          "source": "pose-choice N0_NONE_raccoon_209211001 run.json 생성 태그 \"1boy, male focus, masculine silhouette\"",
+          "approval": "승인 태그(생성 요청), 이미지와 일치",
+          "check_at": "몸통·가슴"
+        },
+        {
+          "id": "R4",
+          "kind": "의상 구성·색",
+          "fact": "소매 없는 흰 상의, 옆이 깊게 파인 진동, 진동·밑단에 가는 남색 테두리",
+          "english": "He wears a white sleeveless top with deep armholes and thin dark navy trim along the armholes and hem.",
+          "source": "pose-choice N0_NONE_raccoon_209211001 run.json 생성 태그 \"white camisole\" 과 다름 → 이미지 기준",
+          "approval": "사용자 확인 2026-10-03 (qwen-pose-pilot drafts/candidates.md 4절 \"제안대로\") (진동·밑단 위치: 2026-10-03 확인)",
+          "check_at": "상의"
+        },
+        {
+          "id": "R5",
+          "kind": "장식·목선",
+          "fact": "남색 높은 목깃, 작은 뾰족 장식",
+          "english": "Around the neck is a dark navy high collar with small spikes.",
+          "source": "이미지",
+          "approval": "사용자 확인 2026-10-03 (qwen-pose-pilot drafts/candidates.md 4절 \"제안대로\")",
+          "check_at": "목"
+        },
+        {
+          "id": "R6",
+          "kind": "장식",
+          "fact": "목깃에서 등 쪽으로 내려가는 가는 검은 끈 두 줄",
+          "english": "Two thin black straps run down from the collar over the upper back.",
+          "source": "이미지",
+          "approval": "사용자 확인 2026-10-03 (이번 시험 신규 항목, \"확인\")",
+          "check_at": "목·등"
+        },
+        {
+          "id": "R7",
+          "kind": "의상 구성·색",
+          "fact": "짙은 회색(거의 검정) 반바지",
+          "english": "He wears dark grey, almost black shorts.",
+          "source": "pose-choice N0_NONE_raccoon_209211001 run.json 생성 태그 \"black shorts\" + 이미지",
+          "approval": "사용자 확인 2026-10-03 (qwen-pose-pilot drafts/candidates.md 4절 \"제안대로\")",
+          "check_at": "하의"
+        },
+        {
+          "id": "R7b",
+          "kind": "밑단",
+          "fact": "반바지 밑단이 허벅지 중간, 통이 넓고 무늬 없음",
+          "english": "The shorts are plain and loose, with the hem at mid-thigh.",
+          "source": "이미지(옆선은 옆모습이라 확인 불가 — 적지 않음)",
+          "approval": "사용자 확인 2026-10-03 (이번 시험 신규 항목, \"확인\")",
+          "check_at": "하의 밑단"
+        },
+        {
+          "id": "R8",
+          "kind": "귀",
+          "fact": "회색 동물 귀, 안쪽 황갈색 털",
+          "english": "He has dark grey animal ears with tan inner fur.",
+          "source": "pose-choice N0_NONE_raccoon_209211001 run.json 생성 태그 \"raccoon ears\" + 이미지",
+          "approval": "사용자 확인 2026-10-03 (qwen-pose-pilot drafts/candidates.md 4절 \"제안대로\")",
+          "check_at": "머리 위"
+        },
+        {
+          "id": "R9",
+          "kind": "장식",
+          "fact": "머리 오른쪽(화면 기준)의 초승달 모양 파란 머리핀",
+          "english": "A crescent-shaped blue hair clip is on the side of the hair.",
+          "source": "이미지",
+          "approval": "사용자 확인 2026-10-03 (qwen-pose-pilot drafts/candidates.md 4절 \"제안대로\")",
+          "check_at": "머리"
+        },
+        {
+          "id": "R10",
+          "kind": "꼬리",
+          "fact": "꼬리 2개 — 황갈색에 검은 가로 줄무늬 꼬리 1개",
+          "english": "He has two tails. One is a tan tail with black horizontal stripes.",
+          "source": "pose-choice N0_NONE_raccoon_209211001 run.json 생성 태그 \"raccoon tail, tail\" + 이미지",
+          "approval": "사용자 확인 2026-10-03 (qwen-pose-pilot drafts/candidates.md 4절 \"제안대로\")",
+          "check_at": "허리 뒤"
+        },
+        {
+          "id": "R11",
+          "kind": "꼬리",
+          "fact": "큰 하늘색 털 꼬리 1개",
+          "english": "The other is a large, fluffy light-blue tail.",
+          "source": "이미지",
+          "approval": "사용자 확인 2026-10-03 (qwen-pose-pilot drafts/candidates.md 4절 \"제안대로\")",
+          "check_at": "허리 뒤"
+        },
+        {
+          "id": "R12",
+          "kind": "노출 범위",
+          "fact": "맨팔·맨다리·맨발",
+          "english": "His arms, legs and feet are bare, exactly as in Picture 1.",
+          "source": "pose-choice N0_NONE_raccoon_209211001 run.json 생성 태그 \"bare legs, bare arms\" + 이미지",
+          "approval": "사용자 확인 2026-10-03 (qwen-pose-pilot drafts/candidates.md 4절 \"제안대로\") (맨발)",
+          "check_at": "팔·다리·발"
+        },
+        {
+          "id": "R13",
+          "kind": "그림체",
+          "fact": "기준 이미지의 그림체(참조로만 지정, 화풍 묘사 없음)",
+          "english": "Keep the illustration style of Picture 1.",
+          "source": "이미지 참조",
+          "approval": "사용자 확인 2026-10-03 (qwen-pose-pilot drafts/candidates.md 4절 \"제안대로\")",
+          "check_at": "전체"
+        }
+      ],
+      "expected": "Picture 1 is the approved character and outfit to preserve. Picture 2 is an OpenPose skeleton used only for the target body pose. Redraw the character from Picture 1 in the front-facing body pose of Picture 2. Keep the same character identity, hairstyle, body proportions, outfit design, garment colors, patterns, existing accessories, and illustration style as Picture 1. Adapt folds and occlusion naturally to the new pose. Both arms hang down at the sides of the body, and each hand rests lightly beside the hip, next to the side seam of the shorts. Keep a plain white background and the entire character in frame. Do not add or remove garments, accessories, or body parts, and do not increase exposure beyond the outfit in Picture 1. The character has the same face with purple eyes. The hair is short and light blue, fading paler toward the tips, with the same hairstyle. The character is male with the same masculine silhouette and body proportions as Picture 1. He wears a white sleeveless top with deep armholes and thin dark navy trim along the armholes and hem. Around the neck is a dark navy high collar with small spikes. Two thin black straps run down from the collar over the upper back. He wears dark grey, almost black shorts. The shorts are plain and loose, with the hem at mid-thigh. He has dark grey animal ears with tan inner fur. A crescent-shaped blue hair clip is on the side of the hair. He has two tails. One is a tan tail with black horizontal stripes. The other is a large, fluffy light-blue tail. His arms, legs and feet are bare, exactly as in Picture 1. Keep the illustration style of Picture 1."
+    },
+    "ordinary-female": {
+      "items": [
+        {
+          "id": "O1",
+          "kind": "얼굴·눈",
+          "fact": "파란 눈",
+          "english": "The character has the same face with blue eyes.",
+          "source": "pose-choice N0_NONE_ordinary-female_209211003 run.json 생성 태그 \"blue eyes\" + 이미지",
+          "approval": "사용자 확인 2026-10-03 (qwen-pose-pilot drafts/candidates.md 4절 \"제안대로\")",
+          "check_at": "얼굴"
+        },
+        {
+          "id": "O2",
+          "kind": "머리",
+          "fact": "짧은 검정 단발, 옆으로 흐르는 앞머리",
+          "english": "The hair is a short black bob with the same side-swept bangs.",
+          "source": "pose-choice N0_NONE_ordinary-female_209211003 run.json 생성 태그 \"black hair, short hair\" + 이미지",
+          "approval": "사용자 확인 2026-10-03 (qwen-pose-pilot drafts/candidates.md 4절 \"제안대로\")",
+          "check_at": "머리"
+        },
+        {
+          "id": "O3",
+          "kind": "체형",
+          "fact": "여성 캐릭터, 기준 이미지와 같은 신체 비율",
+          "english": "The character is female with the same body proportions as Picture 1.",
+          "source": "pose-choice N0_NONE_ordinary-female_209211003 run.json 생성 태그 \"1girl, female focus\"",
+          "approval": "승인 태그(생성 요청), 이미지와 일치",
+          "check_at": "몸통"
+        },
+        {
+          "id": "O4",
+          "kind": "의상 구성·색",
+          "fact": "흰 캐미솔, 가는 흰색 끈, 가슴 위 일자 목선",
+          "english": "She wears a white camisole with thin white spaghetti straps and a straight neckline across the chest.",
+          "source": "pose-choice N0_NONE_ordinary-female_209211003 run.json 생성 태그 \"white camisole\" + 이미지",
+          "approval": "사용자 확인 2026-10-03 (qwen-pose-pilot drafts/candidates.md 4절 \"제안대로\") (끈 색·일자 목선: 2026-10-03 확인)",
+          "check_at": "상의"
+        },
+        {
+          "id": "O5",
+          "kind": "밑단",
+          "fact": "캐미솔 밑단이 골반까지 내려오며 넓게 퍼짐",
+          "english": "The camisole is loose and its hem flares out down to the hips.",
+          "source": "이미지",
+          "approval": "사용자 확인 2026-10-03 (qwen-pose-pilot drafts/candidates.md 4절 \"제안대로\")",
+          "check_at": "상의 밑단"
+        },
+        {
+          "id": "O6",
+          "kind": "의상 구성·색",
+          "fact": "무늬 없는 검정 반바지",
+          "english": "She wears plain black shorts.",
+          "source": "pose-choice N0_NONE_ordinary-female_209211003 run.json 생성 태그 \"black shorts\" + 이미지",
+          "approval": "사용자 확인 2026-10-03 (qwen-pose-pilot drafts/candidates.md 4절 \"제안대로\")",
+          "check_at": "하의"
+        },
+        {
+          "id": "O6b",
+          "kind": "밑단",
+          "fact": "반바지 밑단이 허벅지 위쪽, 통이 약간 넓음",
+          "english": "The shorts are short, with a slightly loose hem at the upper thigh.",
+          "source": "이미지(옆선은 확인 불가 — 적지 않음)",
+          "approval": "사용자 확인 2026-10-03 (이번 시험 신규 항목, \"확인\")",
+          "check_at": "하의 밑단"
+        },
+        {
+          "id": "O7",
+          "kind": "노출 범위",
+          "fact": "맨팔·맨다리·맨발",
+          "english": "Her arms, legs and feet are bare, exactly as in Picture 1.",
+          "source": "pose-choice N0_NONE_ordinary-female_209211003 run.json 생성 태그 \"bare legs, bare arms\" + 이미지",
+          "approval": "사용자 확인 2026-10-03 (qwen-pose-pilot drafts/candidates.md 4절 \"제안대로\") (맨발)",
+          "check_at": "팔·다리·발"
+        },
+        {
+          "id": "O8",
+          "kind": "그림체",
+          "fact": "기준 이미지의 그림체(참조로만 지정, 화풍 묘사 없음)",
+          "english": "Keep the illustration style of Picture 1.",
+          "source": "이미지 참조",
+          "approval": "사용자 확인 2026-10-03 (qwen-pose-pilot drafts/candidates.md 4절 \"제안대로\")",
+          "check_at": "전체"
+        }
+      ],
+      "expected": "Picture 1 is the approved character and outfit to preserve. Picture 2 is an OpenPose skeleton used only for the target body pose. Redraw the character from Picture 1 in the front-facing body pose of Picture 2. Keep the same character identity, hairstyle, body proportions, outfit design, garment colors, patterns, existing accessories, and illustration style as Picture 1. Adapt folds and occlusion naturally to the new pose. Both arms hang down at the sides of the body, and each hand rests lightly beside the hip, next to the side seam of the shorts. Keep a plain white background and the entire character in frame. Do not add or remove garments, accessories, or body parts, and do not increase exposure beyond the outfit in Picture 1. The character has the same face with blue eyes. The hair is a short black bob with the same side-swept bangs. The character is female with the same body proportions as Picture 1. She wears a white camisole with thin white spaghetti straps and a straight neckline across the chest. The camisole is loose and its hem flares out down to the hips. She wears plain black shorts. The shorts are short, with a slightly loose hem at the upper thigh. Her arms, legs and feet are bare, exactly as in Picture 1. Keep the illustration style of Picture 1."
+    }
+  }
+}

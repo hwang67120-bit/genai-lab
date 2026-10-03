@@ -26,6 +26,7 @@ class ClothingDesignAnalysisSettings:
     execution_provider: str = "CPUExecutionProvider"
     score_threshold: float = 0.35
     maximum_tag_count: int = 30
+    local_files_only: bool = False
     detail_maximum_views: int = 3
     detail_timeout_seconds: float = 120.0
 
@@ -148,6 +149,8 @@ def download_wd14_model_files(
                 local_files_only=True,
             )
         except LocalEntryNotFoundError:
+            if settings.local_files_only:
+                raise
             return hf_hub_download(
                 repo_id=settings.model_id,
                 filename=filename,

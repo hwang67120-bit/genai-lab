@@ -3119,6 +3119,9 @@ class GenAILabWindow(QMainWindow):
         self.external_candidate_button = QPushButton("기존 외부 편집 결과 확인 (선택 기능)")
         self.external_candidate_button.clicked.connect(self.import_external_candidate)
         layout.addWidget(self.external_candidate_button)
+        self.qwen_pose_button = QPushButton("승인한 완성 이미지 자세 편집 (Qwen, 선택 기능)")
+        self.qwen_pose_button.clicked.connect(self.open_qwen_pose_editor)
+        layout.addWidget(self.qwen_pose_button)
         self.external_candidate_notice = QLabel(
             "외부 편집 결과는 로컬 생성 결과로 간주하지 않으며, 자동 게이트와 "
             "원본 픽셀 보존 검사는 미실행 상태로 기록됩니다."
@@ -3163,6 +3166,39 @@ class GenAILabWindow(QMainWindow):
         save_decision_layout.addWidget(self.save_candidate_button)
         save_decision_layout.addWidget(self.discard_candidate_button)
         layout.addLayout(save_decision_layout)
+
+    def open_qwen_pose_editor(self):
+        # Do not compete with any current generation/analysis worker.
+        if ((self.workflow_context is not None and self.workflow_context.active)
+                or any(value is not None and hasattr(value, 'isRunning') and value.isRunning()
+                       for name, value in vars(self).items() if name.endswith('thread'))):
+            QMessageBox.information(self, "실행 중", "현재 생성·분석이 끝난 뒤 자세 편집을 시작하세요.")
+            return
+        from genai_lab.qwen_pose_settings import QwenPoseSettings
+        from genai_lab.qwen_pose_edit import PoseEditWorkflow
+        from genai_lab.qwen_pose_gui import QwenPoseDialog
+        settings_path, _ = QFileDialog.getOpenFileName(self, "Qwen 런타임 설정 JSON", "", "JSON (*.json)")
+        if not settings_path: return
+        image_path, _ = QFileDialog.getOpenFileName(self, "보존할 완성 이미지", "", "Images (*.png *.jpg *.webp)")
+        if not image_path: return
+        skeleton_path, _ = QFileDialog.getOpenFileName(self, "정규화된 반전 전 RGB 골격", "", "PNG (*.png)")
+        if not skeleton_path: return
+        try:
+            settings = QwenPoseSettings.load(settings_path)
+            def release_generation():
+                pipeline = self.pipeline
+                self.pipeline = None
+                if pipeline is not None:
+                    remove = getattr(pipeline, 'remove_all_hooks', None)
+                    if callable(remove): remove()
+                del pipeline
+                gc.collect()
+                if torch.cuda.is_initialized(): torch.cuda.empty_cache()
+            workflow = PoseEditWorkflow((release_generation,))
+            QwenPoseDialog(image_path, skeleton_path, settings, workflow,
+                           Path(__file__).resolve().parent / "outputs" / "qwen-pose-edits", self).exec()
+        except Exception as error:
+            QMessageBox.warning(self, "Qwen 실행 준비 실패", str(error))
 
     def select_image(self, target_type):
         if self.workflow_context is not None and self.workflow_context.active:

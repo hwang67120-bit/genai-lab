@@ -3,6 +3,34 @@
 작성 2026-10-03. **Codex GPU 실행 0회, 모델 적재 0회, 설치·다운로드 0회. 커밋·푸시 전 검토용 작업본.**
 사용자 승인 범위는 B만이며, 기존 Qwen 환경을 별도 프로세스로 쓴다. 이 문서는 검증 절차이고 지금 자동 실행하는 배치가 아니다. GPU 실행은 사용자와 Claude의 실행 권한에 따라 시작한다.
 
+## 0. 기록 충돌 수정 후 확인 순서 (2026-10-03)
+
+기존 `outputs/qwen-pose-gpu-verify-20261003/raccoon-B` 실패 기록은 보존한다. 아래 GPU 명령은 새 `...20261003b/` 폴더를 사용한다. 실행 설정·프롬프트·기대 raw SHA는 변경하지 않았다.
+
+먼저 Windows CPU 확인 스크립트를 실행한다. 기존 Qwen Python을 사용하지만 torch·모델·GPU를 불러오지 않는다. 새 결과 폴더만 사용하며 재시도 실행에는 새 폴더명을 지정한다.
+
+```powershell
+$qwenPython = 'G:\genai-cache\qwen-test-venv\Scripts\python.exe'
+$env:PYTHONDONTWRITEBYTECODE = '1'
+& $qwenPython -m scripts.qwen_record_io_check --output outputs/qwen-pose-gpu-verify-20261003b/windows-io-check
+# outputs 아래 진입점도 같은 검사를 실행한다:
+# & $qwenPython outputs/qwen-record-fix-20261003/windows_check.py --output <새 폴더>
+```
+
+`result.json`이 passed인지 확인한다. 기존 replace의 WinError 재현, 잠금 해제 후 제한된 재시도 성공, 긴 잠금 동안 최종 사본 보존·잠금 해제 후 run.json 복구, 진행 스냅숏 40개 동시 읽기·최종 기록 일치를 모두 확인한다. raw 보존 검사는 실제 이미지 생성이 아닌 고정 바이트 표본이다.
+
+CPU 확인 통과 → raccoon B 1회 → 기대 SHA 등 기준 통과 시 ordinary-female B 1회 순서다. 실패하면 멈추며 자동 재생성하지 않는다.
+
+기록 방식 변경:
+- 실행 중 부모는 `progress/000000001.json` 등 새 이름으로 발행된 파일만 읽는다. 파일은 발행 후 변경하지 않는다.
+- `run.json`은 시작·종료 기록. 종료 때 완전한 `run.final.json`을 먼저 보존한다.
+- 공유 잠금 PermissionError만 제한된 재시도(대기 합계 최대2초·최대12회 시도). 다른 I/O 오류는 즉시 전파한다. OS/SMB I/O 자체의 지연은 이 대기 상한에 포함되지 않는다.
+- 상한 초과 시 오류로 보고하고 완전한 임시 파일을 보존한다. 부모는 worker 종료를 확인한 뒤 최종 사본으로 run.json을 복구할 수 있다. 추론을 다시 호출하지 않는다.
+- 강제 취소/비정상 종료는 부모가 마지막 진행 기록으로 취소/실패 기록을 남긴다. 수집되지 못한 측정은 `metrics_incomplete=true`로 표시하고 raw 파일이 있으면 보존·해시 기록한다.
+- 디스크 고장·권한 영구 상실까지 파일 기록 성공을 보장할 수는 없다. 이 경우 성공으로 처리하지 않고 run.final.json/완성 tmp 위치와 오류를 보고한다.
+
+수정 보고·파일 SHA: `outputs/qwen-record-fix-20261003/results.md`, `changed-files.sha256.json`. 상세 I/O 설계: `docs/QWEN_RECORD_IO_FIX.md`.
+
 ## 1. 코드와 자료 확인
 
 - 구현 안내: docs/QWEN_POSE_EDIT.md
@@ -19,7 +47,7 @@
 $qwenPython = 'G:\genai-cache\qwen-test-venv\Scripts\python.exe'
 $qwenModel = 'G:\genai-cache\models\Qwen-Image-Edit-2511'
 $qwenGguf = 'G:\genai-cache\models\Qwen-Image-Edit-2511-GGUF\qwen-image-edit-2511-Q4_K_M.gguf'
-$lockDir = 'outputs/qwen-pose-gpu-verify-20261003/runtime'
+$lockDir = 'outputs/qwen-pose-gpu-verify-20261003b/runtime'
 $env:PYTHONDONTWRITEBYTECODE = '1'
 $env:HF_HUB_OFFLINE = '1'
 $env:TRANSFORMERS_OFFLINE = '1'
@@ -32,8 +60,8 @@ $env:TRANSFORMERS_OFFLINE = '1'
 
 ```powershell
 $runtime = "$lockDir/runtime.json"
-& $qwenPython -m scripts.qwen_pose_replay --runtime $runtime --character raccoon --output outputs/qwen-pose-gpu-verify-20261003/preflight-raccoon
-& $qwenPython -m scripts.qwen_pose_replay --runtime $runtime --character ordinary-female --output outputs/qwen-pose-gpu-verify-20261003/preflight-ordinary
+& $qwenPython -m scripts.qwen_pose_replay --runtime $runtime --character raccoon --output outputs/qwen-pose-gpu-verify-20261003b/preflight-raccoon
+& $qwenPython -m scripts.qwen_pose_replay --runtime $runtime --character ordinary-female --output outputs/qwen-pose-gpu-verify-20261003b/preflight-ordinary
 ```
 
 prepare_replay는 기존 사용자 확인 명세와 선택 시점·손 문장을 재현한다. 기준 이미지·골격 SHA 및 B 지시문 전문 일치를 확인하며, --execute 없이는 worker를 띄우지 않는다. 시험 분석 기록을 재사용하는 CLI이므로 새 자동 분석 품질의 검증은 아니다.
@@ -43,9 +71,9 @@ prepare_replay는 기존 사용자 확인 명세와 선택 시점·손 문장을
 다른 생성·분석 작업을 종료한 뒤 실행한다. 앞 명령이 실패하면 다음 명령을 실행하지 않는다. 오류·SHA 불일치 시 자동 재시도나 설정 조정 없이 원인 기록 후 멈춘다.
 
 ```powershell
-& $qwenPython -m scripts.qwen_pose_replay --runtime $runtime --character raccoon --output outputs/qwen-pose-gpu-verify-20261003/raccoon-B --execute
+& $qwenPython -m scripts.qwen_pose_replay --runtime $runtime --character raccoon --output outputs/qwen-pose-gpu-verify-20261003b/raccoon-B --execute
 # 종료 코드와 아래 기준을 확인한 뒤에만 다음 실행
-& $qwenPython -m scripts.qwen_pose_replay --runtime $runtime --character ordinary-female --output outputs/qwen-pose-gpu-verify-20261003/ordinary-B --execute
+& $qwenPython -m scripts.qwen_pose_replay --runtime $runtime --character ordinary-female --output outputs/qwen-pose-gpu-verify-20261003b/ordinary-B --execute
 ```
 
 | 캐릭터 | 비교할 기준 이미지 SHA | B 원시 결과 기대 SHA |
@@ -79,6 +107,6 @@ CPU helper 재저장본은 픽셀이 같아도 PNG 파일 SHA가 다르므로, �
 
 ## 5. 보고·중단
 
-결과는 outputs/qwen-pose-gpu-verify-20261003/results.md에 저장한다. 각 B의 SHA 일치, 입력·프롬프트·호출값, 크기 변환, GPU 해제·메모리, 오류·미측정 항목을 적는다. 원 시험의 모든 항목 동시 충족0/6 한계는 그대로다.
+결과는 outputs/qwen-pose-gpu-verify-20261003b/results.md에 저장한다. 각 B의 SHA 일치, 입력·프롬프트·호출값, 크기 변환, GPU 해제·메모리, 오류·미측정 항목을 적는다. 원 시험의 모든 항목 동시 충족0/6 한계는 그대로다.
 
 사용자가 GPU 검증 결과를 확인하기 전에는 푸시하지 않는다. 버전 불일치·필수 캐시 누락이면 설치로 넘어가지 않고 별도 승인을 요청한다. 본 문서는 패키지 설치·새 모델 다운로드를 승인하지 않는다.

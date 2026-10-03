@@ -65,9 +65,11 @@ GUI는 새로운 분할을 실행하지 않는다. API에 마스크를 주입하
 - GUI는 준비된 골격 PNG를 명시적으로 선택한다. RGB 파일이라는 사실만으로 실제 골격이나 색 순서가 올바름을 자동 판별하지 않으므로 표시된 골격을 확인한다.
 - 그림 1의 비율로 출력 크기를 항상 명시한다. 736×1232 입력은 raw 800×1312, product 736×1207 + 위12/아래13px 흰 여백이다. raw는 수정하지 않는다.
 - outputs/qwen-pose-edits/preparation-*/: analysis.json, draft.json.
-- outputs/qwen-pose-edits/edit-*/: request.json, launcher.json, worker.log, run.json, model_inputs/, raw.png, product.png, user_review.json.
+- outputs/qwen-pose-edits/edit-*/: request.json, launcher.json, worker.log, progress/ (불변 단계 기록), run.json, run.final.json (완전한 종료 사본), model_inputs/, raw.png, product.png, user_review.json.
 - 실제 VL 입력·VAE 입력의 시각화, prompt 전문·SHA, embedding 길이, 호출값, 패키지·모델 해시, raw SHA, 단계 시간, allocated/reserved를 남긴다. Windows 전용·공유 메모리 표본은 현재 미구현이며 null/미측정으로 기록한다.
 - PyTorch의 부모 프로세스 할당·예약 메모리 잔존을 검사한다. GPU를 쓰는 별도 외부 프로그램까지 해제하는 기능은 아니다. 검증 전에 다른 GPU 작업을 종료한다.
+
+기록 동시 읽기·교체 충돌 수정과 제한된 재시도·종료 사본 복구는 [I/O 수정 기록](QWEN_RECORD_IO_FIX.md)을 따른다. 부모는 실행 중 run.json을 폴링하지 않는다.
 
 ## 한계와 검증 범위
 

@@ -285,6 +285,9 @@ def test_cancel_terminates_process_without_retry(image,tmp_path):
     with pytest.raises(RuntimeError,match="취소"):
         run_pose_edit(req,tmp_path/"cancel",ready_workflow(image),popen=Process,cancelled=stop)
     assert events==["spawn","terminate"]
+    final=json.loads((tmp_path/"cancel/run.json").read_text(encoding="utf-8"))
+    assert final["status"]=="cancelled"
+    assert (tmp_path/"cancel/run.final.json").exists()
 
 
 def test_existing_output_never_overwritten(image, tmp_path):
@@ -367,3 +370,34 @@ def test_replay_preparation_cpu_only(image, tmp_path):
     spec, request = prepare_replay(root, 'raccoon', settings(tmp_path))
     assert request['prompt']['positive'] == data['expected']
     assert request['images'] == 2 and request['seed'] == 209212001
+
+
+def test_parent_polls_only_immutable_progress(image, tmp_path, monkeypatch):
+    import genai_lab.qwen_pose_edit as edit
+    from genai_lab.qwen_record_io import publish_progress, write_terminal
+    request=make_request(approved(image),image,file_sha(image),settings=settings(tmp_path))
+    out=tmp_path/'progress-parent'; seen=[]; state={'running':False}
+    real_read=Path.read_text
+    def guarded_read(path,*args,**kwargs):
+        if path.name=='run.json' and state['running']:
+            pytest.fail('parent polled worker-owned run.json')
+        return real_read(path,*args,**kwargs)
+    monkeypatch.setattr(Path,'read_text',guarded_read)
+    monkeypatch.setattr(edit.time,'sleep',lambda _:None)
+    class Process:
+        pid=1; returncode=None; polls=0
+        def __init__(self,*args,**kwargs):
+            state['running']=True
+            publish_progress(out,{'status':'starting','steps':[{'index':0}]})
+        def poll(self):
+            self.polls+=1
+            if self.polls==1: return None
+            if self.returncode is None:
+                Image.new('RGB',(800,1312),'white').save(out/'raw.png')
+                write_terminal(out,{'status':'completed','raw_sha256':file_sha(out/'raw.png'),
+                    'request_sha256':json_sha(request),'steps':list(range(40))})
+                self.returncode=0; state['running']=False
+            return self.returncode
+    result=run_pose_edit(request,out,ready_workflow(image),popen=Process,on_progress=seen.append)
+    assert result.exists() and seen==[{'status':'starting','steps':[{'index':0}]}]
+    assert json.loads((out/'run.json').read_text(encoding='utf-8'))['steps']==list(range(40))

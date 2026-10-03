@@ -15,7 +15,11 @@ import traceback
 from genai_lab.qwen_preservation import PreservationSpec, file_sha, json_sha
 from genai_lab.qwen_pose_prompt import PoseEditInstructions, assemble_pose_edit_prompt
 from genai_lab.qwen_pose_settings import QwenPoseSettings, check_runtime_versions, output_dimensions, validate_model_files
-from genai_lab.qwen_pose_edit import write_json
+from genai_lab.qwen_record_io import write_json, publish_progress, write_terminal
+
+
+class WorkerCancelled(RuntimeError):
+    pass
 
 
 class UntruncatedProcessor:
@@ -77,10 +81,10 @@ def generate(request, directory, record):
     pe = pm = ne = nm = None
     original_preprocess = None
     start = time.perf_counter()
-    def save(): write_json(directory / "run.json", record)
+    def save(): publish_progress(directory, record)
     def check():
         if (directory / "cancel.request").exists():
-            raise RuntimeError("사용자 취소")
+            raise WorkerCancelled("사용자 취소")
     try:
         for path, expected in ((spec.image_path, spec.image_sha256),
                                (request["skeleton_path"], request["skeleton_sha256"])):
@@ -214,7 +218,7 @@ def main(argv=None):
         raise SystemExit("usage: python -m genai_lab.qwen_pose_worker REQUEST.json")
     path = Path(args[0]).resolve()
     directory = path.parent
-    if (directory / "run.json").exists() or (directory / "raw.png").exists():
+    if any((directory / name).exists() for name in ("run.json", "raw.png", "run.final.json", "progress")):
         raise SystemExit("기존 실행 결과를 덮어쓰거나 자동 재시도하지 않습니다.")
     record = {"status": "starting", "gates_executed": False, "final_return_eligible": False}
     code = 1
@@ -226,9 +230,10 @@ def main(argv=None):
         record["status"] = "completed"
         code = 0
     except BaseException as error:
-        record.update(status="failed", error_type=type(error).__name__, error=str(error), traceback=traceback.format_exc())
+        record.update(status="cancelled" if isinstance(error, WorkerCancelled) else "failed",
+                      error_type=type(error).__name__, error=str(error), traceback=traceback.format_exc())
     finally:
-        write_json(directory / "run.json", record)
+        write_terminal(directory, record)
     return code
 
 

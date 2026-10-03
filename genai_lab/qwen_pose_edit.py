@@ -16,11 +16,7 @@ from genai_lab.qwen_pose_prompt import PoseEditInstructions, assemble_pose_edit_
 from genai_lab.qwen_pose_settings import QwenPoseSettings, output_dimensions
 
 
-def write_json(path, value):
-    path = Path(path)
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    temporary.replace(path)
+from genai_lab.qwen_record_io import write_json, latest_progress, finalize_stopped_run
 
 
 def assert_parent_gpu_released():
@@ -170,6 +166,7 @@ def run_pose_edit(request, directory, workflow, *, cancelled=lambda: False, pope
                             stdout=log, stderr=subprocess.STDOUT, shell=False, creationflags=creationflags)
             record.update(status="running", command=command, pid=process.pid)
             write_json(directory / "launcher.json", record)
+            last_progress = None
             while process.poll() is None:
                 if cancelled():
                     (directory / "cancel.request").touch()
@@ -179,9 +176,11 @@ def run_pose_edit(request, directory, workflow, *, cancelled=lambda: False, pope
                         process.kill()
                         process.wait()
                     raise RuntimeError("사용자가 Qwen 실행을 취소했습니다.")
-                progress = directory / "run.json"
-                if progress.exists():
-                    try: on_progress(json.loads(progress.read_text(encoding="utf-8")))
+                progress = latest_progress(directory)
+                if progress is not None and progress[0] != last_progress:
+                    try:
+                        on_progress(progress[1])
+                        last_progress = progress[0]
                     except (OSError, ValueError): pass
                 time.sleep(.2)
         if process.returncode != 0:
@@ -208,4 +207,12 @@ def run_pose_edit(request, directory, workflow, *, cancelled=lambda: False, pope
                 process.wait()
         workflow.phase = "finished"
         if created:
-            write_json(directory / "launcher.json", record)
+            try:
+                finalize_stopped_run(directory, record["request_sha256"],
+                    cancelled=record["status"] == "cancelled", error=record.get("error", "Worker ended without a final record"),
+                    returncode=process.returncode if process is not None else None)
+            except BaseException as final_error:
+                record.update(status="failed", final_record_error=str(final_error))
+                raise
+            finally:
+                write_json(directory / "launcher.json", record)

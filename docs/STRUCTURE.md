@@ -1,152 +1,57 @@
-# 구조 설명
+# 기능별 파일 책임과 연결
 
-현재 작업실 GUI를 따라 읽으려면 [코드 흐름 지도](CODE_FLOW.md)부터 확인한다. 아래 목록에는 이전 생성 경로와 시험 자산도 함께 있으므로, 나열된 모든 파일이 현재 만들기 버튼에서 호출되는 것은 아니다.
+2026-10-04 현재 작업실 코드 기준입니다. 사용자 흐름은 [CODE_FLOW.md](CODE_FLOW.md), 문제 해결 과정과 수치는 [ENGINEERING_REPORT.md](ENGINEERING_REPORT.md)에 설명합니다. 이 문서는 그 과정이 어느 파일에 있는지 찾는 데 사용합니다.
 
-> 현재 제품 목표와 실행 순서는 docs/FLOW.md가 유일한 활성 계약이다. 이 문서는 파일 책임을 설명하며 과거 실험 파일이 존재한다는 이유로 해당 경로를 활성화하지 않는다.
+## 전체 흐름을 연결하는 진입점
 
-## 구조를 이렇게 보는 이유
+[studio_controller.py](../genai_lab/studio_controller.py)는 입력부터 저장까지의 실행 순서를 연결합니다. 파일 앞부분에는 시작·입력 확인·생성 완료·후보 선택·승인·저장 메서드를 배치했습니다. 모델 계산은 각 단계에서 호출하는 세부 모듈이 담당합니다.
 
-파일을 먼저 나누고 역할을 나중에 붙이면 같은 계산이 여러 위치에 생길 수 있습니다. GenAI Lab은 GUI 후보 생성 흐름을 네 블록으로 먼저 나누고, 각 블록의 입력과 출력을 정한 뒤 필요한 파일만 변경합니다.
+화면 배치와 계산이 파일 하나에 모두 들어 있지는 않습니다. 사용자의 작업 순서를 연결하는 부분, 이미지에서 정보를 추출하는 부분, 생성기를 호출하는 부분, 승인한 결과를 저장하는 부분을 나눴습니다. 이 구분의 목적은 파일 수를 늘리는 것이 아니라 **어느 단계가 정보를 만들고 어느 단계가 그 정보를 사용하는지 명확히 하는 것**입니다.
 
-```text
-사용자 입력 → 데이터 가공 → AI 모델 실행 → 결과 출력
-```
+## 현재 작업실의 다섯 책임
 
-한 블록에서 생긴 결과는 다음 블록으로 전달합니다. 다음 블록은 앞 단계의 계산을 다시 하지 않습니다.
+| 책임 | 입력 → 출력 | 담당 파일 | 다른 부분에 맡기는 일 |
+|---|---|---|---|
+| 화면과 작업 순서 | 선택·확인·취소 → 다음 작업 실행 | [gui_main.py](../gui_main.py), [studio_ui.py](../genai_lab/studio_ui.py), [studio_controller.py](../genai_lab/studio_controller.py) | 모델 추론·태그 계산은 세부 모듈에 위임 |
+| 입력 분석 | 캐릭터·의상 이미지 → 얼굴 참조·설명 후보 | [studio_analysis.py](../genai_lab/studio_analysis.py), [onepass_character.py](../genai_lab/onepass_character.py), [clothing_analysis.py](../genai_lab/clothing_analysis.py) | 생성과 최종 이미지 승인은 하지 않음 |
+| 요청 준비 | 사용자가 확인한 정보 → 생성 문장·설정·4개 seed | [studio_generation.py](../genai_lab/studio_generation.py)의 `build_request`, [onepass_gender.py](../genai_lab/onepass_gender.py), [onepass_prompt.py](../genai_lab/onepass_prompt.py) | 입력의 미확인 항목을 임의 승인하지 않음 |
+| 생성 실행 | 생성 요청 → 이미지·실행 기록 | [onepass_generation.py](../genai_lab/onepass_generation.py) | 캐릭터·의상 품질의 최종 사용 여부는 사용자가 판단 |
+| 승인과 저장 | 선택 후보·사용자 확인 → PNG·검토 기록 | [studio_generation.py](../genai_lab/studio_generation.py)의 `StudioResults` | 새 이미지 생성이나 자동 재시도는 하지 않음 |
 
-## 현재 파일의 역할
+`studio_generation.py`에는 현재 입력 분석 프로세스 관리, 요청 준비, 승인·저장 책임이 함께 있습니다. 파일마다 하나의 책임만 완전히 분리됐다고 설명하지 않습니다. 클래스와 함수의 경계로 구분한 현재 상태입니다.
 
-2026-09-05 마스크·복원 모듈: target_masks.py는 기준 캐릭터에 묶인 교체/특수 보호 승인 자료, target_mask_review.py는 기존 SAM2 선택 UI와 수동 내부 구멍 보조 경로, target_mask_repair.py는 SCHP 지지 기반 자동 MORPH_CLOSE·보호/외곽 제한·하드/소프트 Dual Mask를 담당합니다. body_comparison.py는 실제 중립화와 투명 구멍 증거를 만듭니다. body_restoration_masks.py는 `thin|normal|thick|unknown` 두께 계약과 기존 의상 제거 마스크/두꺼운 의상 내부 체형 힌트를 분리하고, original_body_pose.py는 기준 캐릭터 DWPose를 외부 자세와 분리해 승인·실행 직전 검증합니다. garment_inpaint.py와 scripts/garment_inpaint_runner.py는 operation 계약으로 의상 합성과 신체 복원을 구분하며, 현재 GUI의 body_restoration은 기준 캐릭터 OpenPose ControlNet만 연결하고 IP-Adapter와 외부 자세를 차단합니다. 하드 마스크는 모델 입력, 소프트 마스크는 최종 원본 보호 합성에만 사용합니다.
+## 데이터가 오가는 방식
 
-| 위치 | 현재 역할 | 현재 확인된 문제 |
+분석은 완료될 때까지 기다리는 긴 작업이므로 별도 CPU 프로세스에서 실행합니다. 작업실의 작업 스레드가 그 프로세스의 완료를 기다리고, 완료 신호를 받은 GUI가 입력 확인창을 띄웁니다. 생성도 작업 스레드에서 수행하며, 진행 상태와 결과 표시를 GUI에 전달합니다.
+
+따라서 파일을 위에서 아래로 읽는 순서와 실제 실행 시간이 완전히 같지는 않습니다. `launch`는 작업을 시작하는 지점, `finished`는 종료 후 GUI가 다음 단계로 넘어가는 지점입니다. 모델이 실행되는 동안 화면을 갱신하고 취소 요청을 받을 수 있도록 나눈 구조입니다.
+
+기술 근거: [Qt의 스레드와 신호 설명](https://doc.qt.io/qtforpython-6/PySide6/QtCore/QThread.html). 현재 연결 검사는 [작업실 테스트](../tests/test_studio_generation.py)에 있습니다.
+
+## 어휘·검사·설정의 관리 위치
+
+| 수정하려는 내용 | 위치 | 현재 적용 범위 |
 |---|---|---|
-| `run.py` | 명령 실행의 설정 검사와 전체 순서 | GUI 흐름과 동시에 고치지 않고 기존 시험 경로로 유지 |
-| `gui_main.py` | 입력 경로 등록, 사용자 승인 창과 기존 Worker 신호 연결 | 파일 선택 시 AI를 실행하지 않고 전체 생성 버튼 이후에만 Worker 시작 |
-| `genai_lab/workflow.py` | 활성 8단계, 현재 위치, 실패 위치와 재시도 횟수 관리 | 이미지와 모델을 소유하지 않는 GUI 임시 상태 |
-| `genai_lab/model.py` | 자세 승인 유무에 따라 일반 SDXL 또는 SDXL ControlNet Image-to-Image 모델과 GPU 준비 | 두 종류를 동시에 유지하지 않고 요청과 다른 기존 모델은 재사용하지 않음 |
-| `genai_lab/style.py` | 기준 이미지 준비 | 모델 실행을 돕는 역할로 유지 가능 |
-| `genai_lab/pose_reference.py` | 자세 원본 PNG·JPEG 규칙 검사와 첫 사용자 승인 | AI 호출 0회, 파일 저장 0개 |
-| `genai_lab/pose_estimation.py` | DWPose 검토 결과·승인 결과와 생성 크기 ControlNet 지도 준비 | 비율 유지, 자르기 0px, 빈 뼈대 지도 차단 |
-| `genai_lab/pose_fallback.py` | 마지막 승인 자세 PNG 2개·JSON 1개 저장, 관절 품질·SHA-256 검증과 독립 복사 | 임의 자세 선택 0회, 재승인 전 ControlNet 호출 0회 |
-| `scripts/pose_reference_runner.py` | 별도 CPU 환경에서 몸 관절 18개와 표준 OpenPose 지도 생성 | ControlNet과 이미지 생성은 호출하지 않음 |
-| `genai_lab/body_comparison.py` | 같은 생성 후보의 SCHP·DensePose·isnet-anime 결과, 외곽 제한 의상 마스크, 외곽 안 잔여 0픽셀 검사와 Human-Agnostic 검토 자료 생성 | 외곽 밖 SCHP 오탐과 외곽 안 잔여를 분리 검토 |
-| `genai_lab/catvton_preflight.py` | 전처리 전 입력 5개·입력 SHA-256 3개와 공식 CatVTON 전처리·침범 분류 결과 9개·모델 입력 SHA-256 4개를 수집 | 보정 전 침범과 금지 영역 제한 후 최종 침범을 구분 |
-| `genai_lab/guardrails.py` | Human-Agnostic 수치를 `PASS·WARNING·BLOCK` 결과로 바꾸고 승인 가능 여부를 한 곳에서 계산 | 보정 전 제거된 침범은 WARNING, 최종 침범은 BLOCK |
-| `genai_lab/image_digest.py` | 이미지 모드·크기·픽셀 바이트 SHA-256 계산 | GUI 승인본과 실행기 입력 동일성 검증 |
-| `genai_lab/clothing.py` | CatVTON 별도 실행, 의상 허용 영역과 신체 보호 검사 | 합성 실패 시 기본 후보로 복구 |
-| `genai_lab/try_on_metrics.py` | CatVTON 원시 출력·최종 보호 합성의 영역별 변경 픽셀과 4배 차이맵 계산 | 최종 승인 영역 안 0픽셀 변경을 `no_effect`로 분류 |
-| `genai_lab/garment_warp.py` | 같은 캔버스의 의상 RGBA와 최소 5개 대응점을 OpenCV TPS로 변형 | 좌표 자동 추출과 생성 모델 연결 전 독립 PoC |
-| `genai_lab/garment_landmarks.py` | 승인 알파의 연결요소별 상·중·하단 좌우 6점과 노이즈 수치 추출 | 관절 좌표가 아닌 `mask_geometry_v1`; 복수 조각 단일 TPS 차단 |
-| `genai_lab/character_target_landmarks.py` | DWPose 의미 Y축을 생성 캔버스로 투영하고 승인 변경 마스크 안 TPS 목표 6점 추출 | 상의·하의·드레스·전신 의상만 지원; GUI 연결 전 독립 PoC |
-| `genai_lab/garment_component_matching.py` | 복수 의상 조각의 정규화 위치를 상체·하체·전신·좌우 신발 슬롯으로 제안 | 규칙 적합도만 산출하고 사용자 승인 전 TPS 자동 실행 차단 |
-| `genai_lab/garment_warp_review.py` | 조각별 TPS, 원시 통합, 마스크 밖 침범, 보호 결과와 오버레이 승인 후보 생성 | 진단·비교 자산이며 자동 생성 흐름 호출 0회 |
-| `genai_lab/garment_lineart.py` | 승인 TPS 의상의 외곽선·내부 디테일을 분리하고 ControlNet RGB 승인 후보 생성 | 진단·비교 자산이며 자동 생성 흐름 호출 0회 |
-| `genai_lab/garment_reference_board.py` | 승인 RGBA를 OpenCV 연결요소로 분리하고 IP-Adapter Plus용 1024px 참조 보드 구성 | 최대 8조각, 원본 변경 0px, 실제 보드 공개 |
-| `genai_lab/garment_inpaint.py` | `GarmentGenerationEngine`, 승인 Human-Agnostic 시작 이미지·별도 2D Inpaint 실행·영구 벤치마크·승인 마스크 보호 합성 | 원시 출력 직접 채택 금지, GUI 7/8 실행 단계 |
-| `genai_lab/clothing_reference.py` | 의상 입력 정규화, 영역 최대 8개 선택, SAM2 구성 변환, 0~255 알파 마스크 합치기, 원본 RGB 추출과 작은 공백 판정 | 흰 와이셔츠 수동 확인 1건, 체감 약 99%, 자동 정확도 아님 |
-| `genai_lab/clothing_analysis.py` | WD14 모델·CSV 캐시 준비, 투명 의상 전처리, CPU ONNX 추론과 일반 태그 후보 생성 | 모델 378,536,310바이트, 35.0% 이상 최대 30개, 시험 추론 1회 3.735초 |
-| `genai_lab/generator.py` | 모델 실행과 메모리 후보 반환 | Animagine·CatVTON·부분 보정 실행 순서 담당 |
-| `genai_lab/result.py` | 승인된 후보의 PNG와 JSON 기록 | 사용자 저장 승인 전에는 실행하지 않음 |
-| `scripts/catvton_preflight_runner.py` | CatVTON 공식 resize·padding·VAE mask blur만 별도 환경에서 실행 | 모델 다운로드·GPU 추론 0회 |
-| `scripts/garment_inpaint_runner.py` | 실제 SDXL Inpaint·IP-Adapter Plus를 별도 GPU 프로세스에서 실행하고 6단계 진행률 기록 | 모델 입력 PNG 3개·감사 PNG 1개·JSONL 최대 1개, 프로세스 종료 시 모델·GPU 캐시 해제 |
-| `configs/base.yaml` | 비교용 SD 1.5 설정 | 기존 명령 시험을 위해 유지 |
-| `configs/animagine.yaml` | GUI에서 사용하는 Animagine 설정 | 데이터 가공 블록이 읽어서 실행 준비 요청에 반영 |
-| `inputs/prompts.csv` | 명령 실행용 요청 목록 | GUI의 사용자 입력으로 사용하지 않음 |
-| `outputs` | 결과 저장 위치 | 승인된 PNG와 JSON만 남기는 구조로 변경 예정 |
-| docs | 활성 제품 흐름, 결정 기록, 문제 해결과 수치·증거 작성 규칙 | 구현 전 FLOW.md에서 현재 목표와 시나리오를 확인 |
-| `tests` | 자동 확인 | 블록 경계가 다시 섞이지 않는지 확인 |
+| 의상 명사·피복·주머니 판단 | [onepass_garment_vocabulary.py](../genai_lab/onepass_garment_vocabulary.py) | 생성 문장 조립 |
+| 꼬리·귀 문구의 등록 태그 검사 | [reference_tag_policy.py](../genai_lab/reference_tag_policy.py) | 입력 문구 검사. 생성 결과 안전 판정이 아님 |
+| 자세 검사와 사용자 선택 정책 | [onepass_pose.py](../genai_lab/onepass_pose.py), [onepass_input_settings.py](../genai_lab/onepass_input_settings.py) | 자세 입력 처리 모듈. 현재 작업실은 외부 자세 미적용 |
+| 검출·분할 도구 연결 | [onepass_input_backends.py](../genai_lab/onepass_input_backends.py) | 도구의 결과를 공통 입력 형태로 변환 |
+| 문장 기본값·토큰 길이 처리 | [onepass_prompt_settings.py](../genai_lab/onepass_prompt_settings.py), [onepass_prompt_tokenizers.py](../genai_lab/onepass_prompt_tokenizers.py) | 두 텍스트 인코더용 문장·청크 준비 |
+| 생성 크기·단계·메모리 한도 | [onepass_generation_settings.py](../genai_lab/onepass_generation_settings.py) | 1회 생성 실행 |
+| 분석 Python·모델 캐시 위치 | [studio_generation.py](../genai_lab/studio_generation.py)의 `StudioRuntime` | `GENAI_STUDIO_RUNTIME`이 가리키는 JSON으로 경로 변경 가능 |
 
-## 하향식 적용 후의 목표 역할
+`configs/animagine.yaml`은 현재 작업실의 모든 설정을 관리하는 파일이 아닙니다. 특히 분석 환경 경로와 1회 생성 설정은 위 위치를 확인해야 합니다.
 
-### 1. 사용자 입력
+## 별도 기능: 저장한 이미지의 자세 편집
 
-`gui_main.py`가 담당합니다.
+Qwen 편집은 작업실 생성과 다른 실행 환경을 사용합니다. 화면은 [qwen_pose_gui.py](../genai_lab/qwen_pose_gui.py), 보존 항목 준비는 [qwen_preservation_analysis.py](../genai_lab/qwen_preservation_analysis.py)와 [qwen_preservation.py](../genai_lab/qwen_preservation.py), 지시문 조립은 [qwen_pose_prompt.py](../genai_lab/qwen_pose_prompt.py)가 담당합니다.
 
-- 기준 이미지와 화면 범위 입력
-- 생성·승인·거절·저장 버튼 표시
-- 진행 상태와 한글 오류 표시
-- 다음 블록에 사용자 생성 요청 전달
+사용자가 확인한 요청을 [qwen_pose_edit.py](../genai_lab/qwen_pose_edit.py)가 별도 프로세스로 전달하고 [qwen_pose_worker.py](../genai_lab/qwen_pose_worker.py)가 모델을 실행합니다. 실행 환경은 [qwen_pose_settings.py](../genai_lab/qwen_pose_settings.py), 진행·종료 기록 파일 처리는 [qwen_record_io.py](../genai_lab/qwen_record_io.py), 사용자 결과 검토는 [qwen_pose_review.py](../genai_lab/qwen_pose_review.py)에 있습니다.
 
-크기 계산, 생성 문장 조립, 모델 실행과 파일 저장은 하지 않습니다.
+## 남아 있는 이전 경로와 시험 자료
 
-### 2. 데이터 가공
+[GenerationOrchestrator](../genai_lab/generation_orchestrator.py), [generator.py](../genai_lab/generator.py), 기존 Base·의상 정밀화 관련 모듈은 저장소에 남아 있습니다. 현재 만들기 버튼은 작업실 제어기로 진입하므로, 파일이 존재한다는 이유로 기본 GUI에서 실행된다고 판단하면 안 됩니다. 기존 명령행 도구와 `run.py`도 현재 작업실 검증과 구분합니다.
 
-`genai_lab/request.py`가 담당합니다.
+`outputs/`에는 시험 계획·라벨·스크립트·측정·생성 파일이 있습니다. 제품 코드는 원칙적으로 `genai_lab/`에서 읽지만, 현재 머리 검출기 기본 캐시가 `outputs/` 아래를 참조하는 예외가 남아 있습니다. 다른 장비에 배포할 때 해당 캐시를 별도 관리하거나 경로를 지정해야 합니다.
 
-- 사용자 선택 검사
-- 화면 범위를 크기와 생성 문장으로 변환
-- 시드 준비
-- 모델 설정과 사용자 값을 실행 준비 요청으로 묶기
-- GPU 실행 전에 모든 필수 값 검사
-
-새 파일이 필요한 이유는 현재 이 책임을 `gui_main.py`에서 분리하지 않으면 화면 코드 안에 비율과 문장 규칙이 계속 늘어나기 때문입니다.
-
-### 3. AI 모델 실행
-
-`genai_lab/generator.py`가 담당합니다. `model.py`와 `style.py`는 실행을 돕습니다.
-
-- 실행 준비 요청 한 건 받기
-- 후보 이미지 한 장 생성
-- 이미지와 실행 정보를 메모리로 반환
-
-파일 저장, 사용자 상태 변경과 화면 처리는 하지 않습니다.
-
-### 4. 결과 출력
-
-`genai_lab/result.py`와 `gui_main.py`의 결과 표시 부분이 담당합니다.
-
-- 후보를 화면에 표시하고 메모리에 보관
-- 승인·거절과 저장 여부 처리
-- 저장 승인된 PNG와 JSON만 기록
-- 저장 실패 시 같은 후보로 다시 저장
-
-결과를 보여주는 일은 화면이 맡고, 실제 파일명과 저장 작업은 `result.py`가 맡습니다.
-
-## 목표 구조
-
-```text
-genai-lab/
-├─ gui_main.py                 # 사용자 입력과 결과 표시
-├─ run.py                      # 기존 명령 실행 경로
-├─ genai_lab/
-│  ├─ request.py               # 입력 검사와 실행 요청 준비
-│  ├─ model.py                 # 모델과 GPU 준비
-│  ├─ style.py                 # 기준 이미지 준비
-│  ├─ clothing.py              # 의상 변경 허용 영역과 보호 픽셀 검사
-│  ├─ clothing_reference.py    # 의상 정규화·자동 탐지·수동 선택·측정
-│  ├─ generator.py             # 후보 한 장을 메모리로 반환
-│  └─ result.py                # 승인된 PNG와 JSON만 저장
-├─ configs/
-├─ inputs/
-├─ outputs/
-├─ docs/
-└─ tests/
-```
-
-새 파일은 독립된 책임이 생겼을 때만 추가합니다. `clothing.py`는 현재 앱의 처리 계약과 보호 규칙을 담당하고, `scripts/catvton_runner.py`는 Python 3.9 기반 공식 CatVTON 환경 호출만 담당합니다. 파일 이름보다 네 블록의 책임을 지키는 것이 우선입니다.
-
-## 구현 순서
-
-1. 데이터 가공의 입력과 출력 형태를 작성합니다.
-│  ├─ reference.py             # 참조 화질 검사와 사용자 승인 전 복원
-2. 현재 `gui_main.py`의 크기·문장·시드 준비를 데이터 가공 블록으로 옮깁니다.
-│  ├─ detail.py                # 얼굴·손 탐지와 제한 부분 보정
-3. `generator.py`가 저장하지 않고 후보를 반환하도록 바꿉니다.
-4. 승인된 결과만 `result.py`로 저장합니다.
-5. 각 단계를 테스트한 뒤 다음 블록으로 넘어갑니다.
-├─ scripts/
-│  └─ catvton_runner.py        # 별도 CatVTON 환경 연결
-│  └─ pose_reference_runner.py # 승인 자세의 DWPose 관절 추출
-
-기존 `run.py` 명령 실행 경로는 GUI 흐름이 통과할 때까지 동시에 고치지 않습니다.
-
-## 블록별 확인 방법
-
-| 블록 | GPU 없이 확인 | 실제 GPU 확인 |
-|---|---|---|
-| 사용자 입력 | 필수 입력과 버튼 상태 | 필요 없음 |
-| 데이터 가공 | 화면 범위별 크기·문장·시드 | 필요 없음 |
-| AI 모델 실행 | 준비 요청 전달 형태 | 후보 한 장 생성 |
-| 결과 출력 | 승인 전 파일 없음, 파일명과 저장 실패 | 승인 결과 PNG 확인 |
-
-코드를 옮긴 뒤에는 같은 기능이 두 블록에 남아 있지 않은지 검색하고, 실제 후보 한 장 생성까지 확인합니다.
+[DATA_MODELS.md](DATA_MODELS.md)의 객체 목록과 [FLOW.md](FLOW.md)의 기존 공통 실행 계약에는 이전 경로 설명이 포함돼 있습니다. 현재 문서에서는 그 차이를 명시하고 과거 기록을 삭제하지 않았습니다. 이번 문서 변경으로 코드나 제품 정책을 바꾸지는 않았습니다.

@@ -1,0 +1,113 @@
+{
+  "status": "completed",
+  "peak_GiB": 15.971294403076172,
+  "peak_decimal_MB": 17149.046784,
+  "peak_stage": "base / post-sampling analysis and gates",
+  "peak_time_kst": "2026-09-24T16:34:57+09:00",
+  "checkpoint_max_GiB": 15.968391418457031,
+  "peak_gap_GiB": 0.002902984619140625,
+  "Q1_cpu_float32_roles": [
+    "sam2/Sam2Model",
+    "grounding_dino/GroundingDinoForObjectDetection"
+  ],
+  "Q2_checkpoints": [
+    {
+      "checkpoint": "11",
+      "rss_GB": 2.6669464111328125,
+      "live_auxiliary_modules": [],
+      "live_onnx": [],
+      "pids": [
+        4872
+      ]
+    },
+    {
+      "checkpoint": "base actual sampling before",
+      "rss_GB": 4.5766448974609375,
+      "live_auxiliary_modules": [],
+      "live_onnx": [
+        "wd14"
+      ],
+      "pids": [
+        4872
+      ]
+    },
+    {
+      "checkpoint": "base actual sampling after",
+      "rss_GB": 13.111244201660156,
+      "live_auxiliary_modules": [],
+      "live_onnx": [
+        "wd14"
+      ],
+      "pids": [
+        4872
+      ]
+    },
+    {
+      "checkpoint": "12",
+      "rss_GB": 13.51706314086914,
+      "live_auxiliary_modules": [],
+      "live_onnx": [],
+      "pids": [
+        4872
+      ]
+    },
+    {
+      "checkpoint": "13",
+      "rss_GB": 13.517086029052734,
+      "live_auxiliary_modules": [],
+      "live_onnx": [],
+      "pids": [
+        4872
+      ]
+    },
+    {
+      "checkpoint": "inpaint actual sampling before",
+      "rss_GB": 14.386760711669922,
+      "live_auxiliary_modules": [],
+      "live_onnx": [],
+      "pids": [
+        4872
+      ]
+    },
+    {
+      "checkpoint": "inpaint actual sampling after",
+      "rss_GB": 14.608848571777344,
+      "live_auxiliary_modules": [],
+      "live_onnx": [],
+      "pids": [
+        4872
+      ]
+    },
+    {
+      "checkpoint": "14",
+      "rss_GB": 14.652355194091797,
+      "live_auxiliary_modules": [],
+      "live_onnx": [],
+      "pids": [
+        4872
+      ]
+    },
+    {
+      "checkpoint": "15",
+      "rss_GB": 14.652355194091797,
+      "live_auxiliary_modules": [],
+      "live_onnx": [],
+      "pids": [
+        4872
+      ]
+    }
+  ],
+  "Q3_above_1_GB": false,
+  "instrumentation_error_count": 6,
+  "code_changed": [],
+  "accounting": {
+    "runtime_checkpoint_02_GB": 0.5399284362792969,
+    "sdxl_logical_weights_GB": 7.115534937009215,
+    "ip_image_encoder_logical_weights_GB": 3.43640948086977,
+    "auxiliary_logical_weights_GB": 1.4951227493584156,
+    "onnx_sum_representative_load_RSS_deltas_GB": 0.5456809997558594,
+    "auxiliary_combined_GB": 2.040803749114275,
+    "unattributed_arithmetic_residual_GB": 2.8386177998036146,
+    "warning": "Logical module bytes (including GPU tensors) and RSS deltas are different quantities. Roles may not coexist, load deltas contain runtime buffers; this requested subtraction is NOT an additive physical system-RAM allocation."
+  }
+}

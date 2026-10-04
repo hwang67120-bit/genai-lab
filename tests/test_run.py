@@ -95,6 +95,45 @@ def test_config_accepts_animagine_trial_resolution(tmp_path: Path) -> None:
     run.validate_config(config)
 
 
+def test_pose_result_policy_accepts_observe_only_three_samples() -> None:
+    run.validate_pose_result_policy_config(
+        {
+            "mode": "observe_only",
+            "target_sample_count": 3,
+            "block_on_pose_mismatch": False,
+            "switch_to_text_to_image": False,
+            "use_identity_crop": False,
+        }
+    )
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    (
+        ("mode", "enforce"),
+        ("target_sample_count", 2),
+        ("block_on_pose_mismatch", True),
+        ("switch_to_text_to_image", True),
+        ("use_identity_crop", True),
+    ),
+)
+def test_pose_result_policy_rejects_layout_or_blocking_change(
+    key: str,
+    value,
+) -> None:
+    policy = {
+        "mode": "observe_only",
+        "target_sample_count": 3,
+        "block_on_pose_mismatch": False,
+        "switch_to_text_to_image": False,
+        "use_identity_crop": False,
+    }
+    policy[key] = value
+
+    with pytest.raises(run.AppError):
+        run.validate_pose_result_policy_config(policy)
+
+
 def test_style_requires_reference_image(tmp_path: Path) -> None:
     config = valid_config(tmp_path)
     config["style"]["enabled"] = True

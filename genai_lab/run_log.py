@@ -4,23 +4,32 @@
 - Python logging: https://docs.python.org/3.10/library/logging.html
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 import logging
 from pathlib import Path
 import sys
+from uuid import uuid4
 
 
-@dataclass(frozen=True)
+@dataclass
 class GenerationRunLog:
     """한 번의 이미지 생성 실행을 추적하는 로그."""
 
     run_id: str
     file_path: Path
     logger: logging.Logger
+    _closed: bool = field(default=False, init=False, repr=False)
+
+    def _require_open(self) -> None:
+        if self._closed:
+            raise RuntimeError(
+                f"이미 종료된 생성 로그에는 기록할 수 없습니다: {self.file_path}"
+            )
 
     def write_stage(self, stage: str, message: str) -> None:
         """현재 실행 단계와 확인할 값을 기록한다."""
+        self._require_open()
         self.logger.info("[%s] %s", stage, message)
 
     def write_failure(
@@ -30,6 +39,7 @@ class GenerationRunLog:
         recovery_action: str,
     ) -> None:
         """오류, 전체 추적 정보와 사용자가 취할 행동을 기록한다."""
+        self._require_open()
         self.logger.error(
             "[%s] 실패: %s: %s",
             stage,
@@ -41,20 +51,26 @@ class GenerationRunLog:
 
     def close(self) -> None:
         """파일 기록을 끝내고 운영체제의 파일 자원을 해제한다."""
+        if self._closed:
+            return
         for handler in tuple(self.logger.handlers):
             handler.flush()
             handler.close()
             self.logger.removeHandler(handler)
+        self._closed = True
 
 
 def create_generation_run_log(project_root: Path) -> GenerationRunLog:
     """새 실행 ID와 UTF-8 로그 파일을 만들고 추적 객체를 반환한다."""
-    run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
+    run_id = (
+        datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+        + f"-{uuid4().hex[:8]}"
+    )
     log_directory = project_root / "logs"
     log_directory.mkdir(parents=True, exist_ok=True)
     log_file_path = log_directory / f"{run_id}.log"
 
-    logger = logging.getLogger(f"genai_lab.generation.{run_id}")
+    logger = logging.Logger(f"genai_lab.generation.{run_id}")
     logger.setLevel(logging.INFO)
     logger.propagate = False
 

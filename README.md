@@ -1,206 +1,98 @@
 # GenAI Lab
 
-참조 그림의 색감, 선화, 명암과 질감을 반영한 후보 아이콘 3장을 빠르게 만들고 직접 선택하는 Windows 설치형 앱 프로젝트입니다. 최종 앱은 서버 없이 사용자의 PC에서 실행합니다.
+캐릭터 이미지 한 장과 입히고 싶은 의상 이미지 한 장을 넣으면, 해당 의상을 입은 캐릭터 후보를 만드는 Windows 데스크톱 애플리케이션입니다. 사용자는 분석된 내용을 확인한 뒤 이미지 4장을 생성하고, 원본과 비교해 마음에 드는 결과를 승인·저장합니다.
 
-## 개발 방식
+이 프로젝트에서 다루는 문제는 옷을 새로 그리는 것뿐만이 아닙니다. 옷을 바꾸면서 캐릭터의 얼굴·머리색·꼬리까지 달라질 수 있고, 생성에 실패한 중간 이미지가 완성본처럼 표시될 수도 있습니다. 그래서 **입력 분석, 사용자 확인, 모델 실행, 결과 승인, 파일 저장을 각각 구분**했습니다. 생성 모델이 만든 이미지를 곧바로 정답으로 취급하지 않습니다.
 
-- 기간은 짧게 잡되 결과 이미지의 품질 기준은 낮추지 않습니다.
-- 검증된 오픈소스와 공식 기능이 있으면 직접 다시 만들지 않고 먼저 활용합니다.
-- 바이브 코딩은 AI가 제시한 코드를 그대로 붙이는 방식이 아니라, 계획을 먼저 세우고 빠르게 구현·검증하는 도구로 사용합니다.
-- 추가한 코드와 오픈소스는 목적, 입력, 처리, 출력, 실패 조건과 확인 방법을 한글로 설명할 수 있어야 합니다.
-- 실제 오류를 해결하거나 중요한 판단을 확정하면, AI의 평가를 덧붙이지 않고 대화에서 확인된 내용만 `docs/TROUBLESHOOTING.md`에 이어서 기록합니다.
-- 공식 문서, 모델 문서와 라이선스를 확인하지 않은 도구는 프로젝트에 추가하지 않습니다.
-- 품질 문제가 실제로 확인되기 전에는 LoRA, ControlNet 또는 새로운 기능을 미리 추가하지 않습니다.
-- 1차 출시는 작업시간 20~35시간을 목표로 하며, 참조 그림 입력·후보 3장 생성·선택 저장·Windows 설치만 포함합니다.
+2026-10-04 작업 브랜치 기준 설명입니다. 현재 기본 화면은 **자세를 새로 지정하지 않고 캐릭터와 의상을 함께 생성**합니다. 저장한 이미지의 Qwen 자세 편집은 별도 기능입니다. 모든 의상·캐릭터·자세에서 같은 품질을 보장하는 배포 완료 제품은 아닙니다.
 
-## 먼저 알아둘 점
+## 이미지 선택부터 결과 저장까지
 
-- 실행 환경: Windows, Python 3.10.6, NVIDIA RTX 4060 8GB
-- 비교 모델: Stable Diffusion 1.5, 512×512
-- 실제 작업 모델: Animagine XL 3.1, 시험 해상도 768×768
-- 처리 방식: 후보 3장을 한 장씩 순서대로 생성
-- 제외 범위: Java, 백엔드, 웹 서버, DB, API, 로그인, 개인정보 및 보안 기능, 텍스트 생성
-- 현재 단계: IP-Adapter 한 장 생성은 성공했지만 전신 구도 품질은 미통과, 사용자 유사성 판정 시나리오 문서화 완료
+다음은 파란 줄무늬 꼬리가 있는 캐릭터에게 새로운 상의를 적용하는 시나리오입니다.
 
-전문 용어는 한글 뜻을 먼저 적습니다. 예를 들어 **그림체 학습용 추가 가중치(LoRA)**는 큰 모델 전체를 다시 학습하지 않고 그림체에 필요한 작은 부분만 학습하는 방법입니다.
+| 순서 | 사용자가 하는 일 | 프로그램이 확인하고 처리하는 일 | 다음 단계로 전달하는 것 |
+|---|---|---|---|
+| 1. 이미지 선택 | 캐릭터와 의상을 각각 한 장 선택 | 두 파일의 사본과 내용 식별값을 새 실행 폴더에 기록 | 이번 요청에 사용할 입력 이미지 |
+| 2. 자동 분석 | 분석 결과를 기다림 | CPU에서 얼굴·머리를 잘라내고 외형·체형·의상 설명을 추출. 얼굴이나 의상을 준비하지 못하면 오류 안내 | 얼굴 참조 이미지와 설명 후보 |
+| 3. 입력 확인 | 얼굴·성별·의상 설명 확인. 필요하면 꼬리 색·무늬 문구 확인 | 미확인 문구는 생성에 적용하지 않음. 허용하지 않는 성별·체형 등의 입력을 검사 | 사용자가 확인한 생성 조건 |
+| 4. 이미지 생성 | 진행 상태를 확인하거나 취소 | 서로 다른 난수 시작값으로 4장을 순서대로 생성. 오류가 나면 자동 재시도 없이 중단 | 이미지와 각 이미지의 실행 기록 |
+| 5. 결과 검토 | 캐릭터·의상·원치 않는 노출을 원본과 비교. 해당하면 꼬리·귀도 확인 | 후보를 바꾸면 기존 승인 해제. 완료되지 않았거나 변경된 파일은 승인 차단 | 선택한 이미지에 대한 사용자 승인 |
+| 6. 저장 | 저장 위치 선택 | 승인한 파일과 같은 내용인지 다시 검사하고 기존 파일 덮어쓰기 방지 | PNG 한 장과 검토 기록 파일 |
 
-## 전체 흐름
+여기서 내용 식별값은 SHA-256입니다. 이미지 품질 점수가 아니라, **확인한 파일이 중간에 바뀌지 않았는지** 검사하는 데 씁니다. 분석용 사본·생성 원본은 실행 폴더에 남고, 사용자가 승인한 결과만 선택한 위치로 내보냅니다.
 
-```text
-캐릭터 기준 이미지 + 화면 범위 선택
-                 ↓
-         Animagine XL 3.1
-                 ↓
-참조 그림 특징 전달 장치(IP-Adapter)
-                 ↓
-          생성 후보 한 장
-                 ↓
-        사용자가 유사성 판단
-          ├─ 통과 → 승인 결과
-          └─ 재생성 → 새 시드 후보
+얼굴 크롭이나 꼬리 설명을 확인하는 단계는 모델이 입력을 잘못 해석했을 때 수정할 기회입니다. 사용자가 마스크나 유사도 수치를 이해해야만 진행하는 화면으로 만들지 않았습니다. 상세 실행 조건은 개발자가 원인을 추적할 기록으로 남깁니다.
+
+## 구현에서 해결한 문제
+
+| 발견한 문제 | 반영한 처리 | 확인 방법과 남은 한계 |
+|---|---|---|
+| 시험용 생성 모듈은 동작하지만 GUI 버튼은 이전 Base·의상 정밀화 경로로 연결됨 | 작업실 버튼부터 입력 확인·1회 생성·후보 승인·저장까지 연결 | 실제 Qt 버튼 신호와 가짜 생성기를 이용해 저장까지 회귀 검사. 이것만으로 실제 GPU 이미지 품질을 증명하지는 않음 |
+| 실패하거나 취소된 결과가 완성 이미지로 오인될 수 있음 | 생성 완료·사용자 승인·저장 완료를 분리하고, 실패 시 이전 Base를 최종 결과로 제시하지 않음 | 실패·취소·후보 변경·파일 변조·덮어쓰기 사례를 테스트 |
+| 꼬리 종 이름만 전달하면 원본과 다른 색·무늬가 나옴 | 사용자가 확인한 외형 문구로 꼬리 태그를 교체하고 결과에서 다시 확인 | 문구 전달과 미입력 시 기존 동작을 CPU로 검증. 꼬리 개수 보존은 보장하지 않음 |
+| Qwen 진행 기록을 읽는 중 Windows에서 같은 파일 교체가 실패함 | 진행 기록과 종료 기록을 분리하고, 일시적 파일 잠금만 제한적으로 재시도 | Windows 실제 파일 잠금 재현과 운영체제에 독립적인 오류 주입 테스트 |
+
+문제별 원인, 변경 과정, 검증 결과는 [문제 해결과 검증 기록](docs/ENGINEERING_REPORT.md)에 정리했습니다.
+
+## 수치로 확인한 범위
+
+서로 다른 시점의 측정을 현재 제품의 한 가지 성공률로 합치지 않았습니다.
+
+| 확인 대상 | 확인된 값 | 조건과 해석 범위 |
+|---|---|---|
+| 최근 전체 자동 테스트 | **1,529개 통과**, 실패 0개, 경고 2개, 167.07초 | 2026-10-04 Windows CPU 회귀. GUI 테스트에는 가짜 생성기 사용. 경고는 기존 Pillow 사용 중단 예고 |
+| 생성 모듈의 이전 결과 재현 | 자세 적용 **5/5**, 4장 요청 **4/4**, 자세 미적용 **2/2** 파일 해시 일치 | 2026-10-02 Claude의 동일 장비·설정 GPU 검증. 별도 초기 얼굴 참조 진단도 1건 일치. 현재 꼬리 수정의 GPU 검증을 대신하지 않음 |
+| GPU 메모리 처리 수정 | 예약 메모리 **6.52~6.56 → 6.375~6.414 GiB** | RTX 4060 8GB, 이전/수정 후 생성 모듈 검증. 자세 어댑터도 사용 후 GPU에서 내리도록 실행 순서 수정. 시스템 RAM과 전체 GPU 점유량을 뜻하지 않음 |
+| 1회 생성 후보 구성의 과거 품질 시험 | 120장 중 의상 일치 **109장**, 캐릭터 일치 **103장**, 자세 일치 **106장** | 2026-10-01, 캐릭터 2명·의상 3종·자세 5종·조합당 4장. Claude 육안 라벨. 현재 GUI의 자세 미적용 결과에 대한 성공률이 아님 |
+
+근거 파일, 비교 전 수치, 판정자의 한계는 [검증 표와 해석 범위](docs/ENGINEERING_REPORT.md#검증-기록)에서 확인할 수 있습니다. 이번 문서 정리에서는 모델 실행이나 테스트를 다시 돌리지 않았습니다.
+
+## 아직 해결하지 못한 부분
+
+꼬리 중복, 세부 의상 모양 변화, 면적이 작은 의상의 적용 품질은 사용자 확인과 추가 검증이 필요합니다. 과거 품질 시험에서도 의상·캐릭터·자세를 모두 보존한 것은 아닙니다. 특히 원근이 큰 자세와 무릎 자세는 약점으로 남았습니다.
+
+현재 작업실은 이미지 품질이나 노출을 자동으로 합격 처리하지 않습니다. 실행 기록에는 자동 검사를 하지 않았다는 사실과 사용자의 확인을 구분해서 남깁니다. 따라서 과거 시험의 노출 검사 결과를 현재 GUI의 자동 안전 기능으로 설명해서는 안 됩니다.
+
+또한 실행 환경과 모델 캐시가 미리 설치돼 있어야 합니다. 현재 머리 검출 모델의 기본 캐시 위치가 시험 폴더 아래를 참조하는 배포 의존성도 남아 있습니다. 다른 PC 설치·성능과 배포 준비 완료를 현재 수치로 보장하지 않습니다.
+
+## 실행
+
+개발 PC에 준비된 환경에서 PowerShell로 실행하는 예입니다. 다른 PC에서는 Python 실행 파일과 저장소 경로를 실제 설치 위치로 바꿔야 합니다.
+
+```powershell
+& "D:\genai-cache\venv\Scripts\python.exe" "\\192.168.0.109\win_g\genai-lab\gui_main.py"
 ```
 
-현재 GUI는 기준 이미지 등록, 화면 범위 선택과 이미지 한 장 생성까지 지원합니다. 생성 후보의 통과·재생성 판단 화면은 아직 구현되지 않았습니다. 별도의 Java 프로그램이나 서버는 만들지 않습니다.
-
-사용자 판단 흐름은 [SCENARIOS.md](docs/SCENARIOS.md), 자세한 입력과 출력 흐름은 [FLOW.md](docs/FLOW.md), 블록 사이의 데이터는 [DATA_MODELS.md](docs/DATA_MODELS.md), 각 파일이 필요한 이유는 [STRUCTURE.md](docs/STRUCTURE.md)를 먼저 읽습니다. 프로젝트를 진행하며 막힌 점과 내가 이해하게 된 내용은 [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)에 기록합니다.
-
-## 프로젝트 구조
+## 프로젝트 구조와 읽는 순서
 
 ```text
 genai-lab/
-├─ README.md
-├─ run.py
+├─ gui_main.py                    # 앱 진입과 사용자 작업 선택
 ├─ genai_lab/
-│  ├─ model.py              # 모델과 GPU
-│  ├─ style.py              # 참조 그림
-│  ├─ generator.py          # 한 장씩 생성
-│  └─ result.py             # 파일과 실행 기록
-├─ requirements.txt
-├─ configs/
-│  └─ base.yaml
-├─ inputs/
-│  ├─ reference/
-│  │  └─ README.md
-│  └─ prompts.csv
-├─ outputs/
-│  └─ README.md
-├─ docs/
-│  ├─ PROJECT_SCOPE.md
-│  ├─ SCENARIOS.md
-│  ├─ ROADMAP.md
-│  ├─ STRUCTURE.md
-│  ├─ FLOW.md
-│  ├─ DECISIONS.md
-│  ├─ DATA_MODELS.md
-│  ├─ TROUBLESHOOTING.md
-│  └─ GLOSSARY.md
-└─ tests/
-   └─ test_run.py
+│  ├─ studio_ui.py                # 화면 배치
+│  ├─ studio_controller.py        # 입력부터 저장까지의 순서 연결
+│  ├─ studio_analysis.py          # 이미지에서 얼굴·외형·의상 정보 추출
+│  ├─ studio_generation.py        # 실행 요청 준비·사용자 승인·저장
+│  ├─ onepass_*.py                # 입력 검사·문장 조립·SDXL 생성·설정
+│  ├─ qwen_*.py                   # 저장 이미지의 별도 자세 편집
+│  └─ reference_tag_policy.py     # 입력 설명의 공통 어휘 검사
+├─ configs/                       # 기존 생성 설정과 공유 어휘
+├─ scripts/                       # 분석 실행기·검증·기존 명령행 도구
+├─ tests/                         # 자동 테스트와 재현용 자료
+├─ docs/                          # 설계·흐름·검증·결정 기록
+├─ inputs/                        # 로컬 입력 자료
+├─ outputs/                       # 실행 기록·실험·측정 자료
+└─ run.py                         # 기존 배치 실험 도구
 ```
 
-## 설치
+[데이터 흐름](docs/CODE_FLOW.md)은 단계별 입력·검증·처리·출력을 설명하고, [파일별 책임과 연결](docs/STRUCTURE.md)은 각 단계의 구현 위치를 정리합니다.
 
-PowerShell에서 프로젝트 폴더로 이동한 뒤 가상 환경을 만듭니다.
-
-```powershell
-python -m venv D:\genai-cache\venv
-D:\genai-cache\venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-python -m pip install torch==2.9.1 torchvision==0.24.1 --index-url https://download.pytorch.org/whl/cu128
-python -m pip install -r requirements.txt
-```
-
-PyTorch 설치 명령은 [PyTorch 공식 설치 안내](https://pytorch.org/get-started/previous-versions/)의 Windows CUDA 12.8 조합을 따릅니다. Diffusers는 Windows에서 Python 3.8~3.11을 지원하며 가상 환경 사용을 권장합니다. [Diffusers 공식 설치 안내](https://huggingface.co/docs/diffusers/main/installation)
-
-현재 Windows Python은 자체 인증서 묶음이 오래되어 모델 저장소 연결이 실패할 수 있습니다. 프로그램은 인증서 검사를 끄지 않고 `truststore`로 Windows 인증서 저장소를 사용합니다. [truststore 공식 PyPI 안내](https://pypi.org/project/truststore/)
-
-## 실행 전 확인
-
-```powershell
-python run.py --config configs/base.yaml --check-only
-```
-
-이 명령은 모델을 내려받지 않고 Python, GPU, 설정과 입력 파일을 검사합니다.
-
-## 기준 이미지 한 장 생성
-
-`configs/base.yaml`에서 다음 값을 유지합니다.
-
-```yaml
-style:
-  enabled: false
-generation:
-  limit: 1
-```
-
-실행합니다.
-
-```powershell
-python run.py --config configs/base.yaml
-```
-
-첫 실행에는 모델을 `D:\genai-cache\huggingface`로 내려받으므로 시간이 걸립니다. 결과 폴더에는 PNG 한 장과 `result.json`이 생깁니다.
-
-## 참조 그림 적용
-
-1. `inputs/reference/style.png`에 참조 그림을 넣습니다.
-2. `configs/animagine.yaml`에서 `style.enabled`를 `true`로 바꿉니다.
-3. 기능 확인은 `generation.limit: 1`, 후보 비교는 `generation.limit: 3`으로 실행합니다.
-
-참조 그림 특징 전달 장치(IP-Adapter)는 텍스트와 함께 이미지를 조건으로 사용할 수 있습니다. 실제 작업 모델은 `h94/IP-Adapter`의 SDXL용 `ip-adapter_sdxl.bin`을 사용합니다. [Diffusers IP-Adapter 안내](https://huggingface.co/docs/diffusers/using-diffusers/ip_adapter)
-
-## Animagine XL 한 장 시험
-
-기존 SD 1.5 설정은 비교용으로 유지합니다. Animagine XL과 참조 그림 장치로 한 장을 먼저 생성합니다.
-
-```powershell
-& "D:\genai-cache\venv\Scripts\python.exe" .\run.py --config .\configs\animagine.yaml
-```
-
-시험 설정은 768×768, 20단계, 한 장이며 RTX 4060 8GB를 위해 사용하지 않는 모델 부분을 RAM으로 옮깁니다. IP-Adapter 적용 시험은 98.707초, 최대 GPU 메모리 약 5.75GB로 완료되었습니다. 결과의 실행 시간과 최대 GPU 메모리는 `result.json`에 기록됩니다.
-
-## Windows 화면 실행
-
-```powershell
-& "D:\genai-cache\venv\Scripts\python.exe" .\gui_main.py
-```
-
-현재 화면에서 실제 사용하는 입력은 캐릭터 기준 이미지 한 장입니다. 의상과 자세는 아직 생성 기능에 연결되지 않았으므로 버튼이 비활성화되어 있습니다. 생성 작업은 화면과 분리된 작업 흐름에서 실행되며 오류가 나면 상세 내용과 `result.json`을 남깁니다.
-
-PyTorch 2의 기본 효율적인 주의 처리를 사용하므로 별도의 `enable_attention_slicing()`을 적용하지 않습니다. [Diffusers 메모리 처리 안내](https://huggingface.co/docs/diffusers/api/pipelines/overview)
-
-## 후보 3장 생성
-
-한 장 생성과 참조 그림 적용이 모두 확인된 뒤 `generation.limit: 3`으로 실행합니다. 기본 설정도 3장입니다.
-
-```powershell
-python run.py --config configs/base.yaml
-```
-
-중간에 실패하면 오류 메시지에 표시된 결과 폴더를 사용하여 이어서 실행합니다.
-
-```powershell
-python run.py --config configs/base.yaml --resume outputs\20260816-223000
-```
-
-이미 존재하는 `요청번호_시드.png`는 건너뛰고 빠진 이미지만 생성합니다.
-
-## 결과 선택과 다시 생성
-
-생성된 3장을 확인해 마음에 드는 이미지가 있으면 해당 실행 폴더를 보관합니다. 모두 마음에 들지 않으면 `outputs` 아래에서 방금 만든 실행 폴더 이름을 확인한 뒤 그 폴더만 삭제합니다. 그다음 `prompts.csv`의 요청 문장이나 시드를 고치고 다시 실행합니다.
-
-프로그램은 결과를 자동으로 삭제하지 않습니다. 잘못된 폴더 삭제를 막기 위해 사용자가 확인한 실행 폴더만 직접 정리합니다.
-
-## 테스트
-
-```powershell
-python -m pytest -q
-```
-
-자동 테스트는 모델을 다운로드하지 않고 설정 검사, CSV 읽기, 파일명, 이어서 실행과 한글 오류 메시지를 확인합니다. 실제 GPU와 이미지 품질은 별도의 수동 확인 항목입니다.
-
-## 완료 기준
-
-- 512×512 PNG 후보 3장이 오류 없이 생성됩니다.
-- 후보 3장 중 최소 1장을 사용자가 채택합니다.
-- 참조 그림과 다른 장면을 만들면서 그림체가 유지됩니다.
-- 각 이미지의 요청 문장, 제외 문장, 시드, 모델과 실행 시간을 `result.json`에서 확인할 수 있습니다.
-- 같은 환경과 시드로 결과를 다시 만들 수 있습니다.
-
-## 공식 참고 문서
-
-- [PyTorch Windows 설치](https://pytorch.org/get-started/locally/)
-- [Diffusers 설치](https://huggingface.co/docs/diffusers/main/installation)
-- [Diffusers Stable Diffusion 추론](https://huggingface.co/docs/diffusers/using-diffusers/conditional_image_generation)
-- [Diffusers IP-Adapter](https://huggingface.co/docs/diffusers/using-diffusers/ip_adapter)
-- [Diffusers 재현 가능한 시드](https://huggingface.co/docs/diffusers/main/using-diffusers/reusing_seeds)
-
-### 화면 범위 선택
-
-GUI에서 다음 화면 범위를 선택할 수 있습니다.
-
-- 전신: 576×896 세로 화면, 머리부터 발끝과 양발이 보이도록 요청
-- 상반신: 768×768 화면, 허리 위와 얼굴이 보이도록 요청
-- 얼굴 중심: 768×768 화면, 머리와 어깨 중심으로 요청
-
-전신 선택은 잘림 방지 문구를 강하게 적용하지만 생성형 모델 특성상 100% 보장은 아닙니다. 전신 결과는 머리와 발끝이 모두 화면 안에 있는지 확인하고, 계속 실패할 때만 자세·관절 인식(DWPose) 기반 자동 검사를 다음 단계로 추가합니다.
+| 문서 | 읽는 목적 |
+|---|---|
+| [문제 해결과 검증 기록](docs/ENGINEERING_REPORT.md) | 문제를 어떻게 재현하고 고쳤으며 어디까지 확인했는지 |
+| [데이터 흐름](docs/CODE_FLOW.md) | 정상 진행·취소·실패 시 정보가 어디로 전달되는지 |
+| [파일별 책임](docs/STRUCTURE.md) | 위 과정이 어느 파일에 구현돼 있는지 |
+| [제품 계약](docs/FLOW.md) | 제품의 목표와 계약. 현재 작업실과의 차이는 문서 상단에 표시 |
+| [데이터 객체 기록](docs/DATA_MODELS.md) | 이전 경로의 객체와 설계 이력. 현재 흐름 설명과 구분 |
+| [결정 기록](docs/DECISIONS.md) / [백로그](docs/BACKLOG.md) | 선택 이유와 남은 작업 |
+| [문서 작성 기준](docs/DOCUMENTATION_RULES.md) | 수치·근거·한계를 기록하는 방법 |

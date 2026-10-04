@@ -1,0 +1,3984 @@
+{
+  "generation_calls": 0,
+  "model_loads": 0,
+  "detection_rerun": false,
+  "bbox_convention": "xyxy right/bottom exclusive for masks; detector boxes floating xyxy",
+  "cases": [
+    {
+      "id": "male-ferrari",
+      "character": "muscular-male",
+      "garment": "ferrari",
+      "base": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-text-20260926\\cases\\muscular-male\\ferrari\\off\\Base.png",
+      "base_sha256": "2ff31ed03cb8eae2b216b465800a094701a6c8030387e592579f83d814a652c2",
+      "foreground": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-text-20260926\\cases\\muscular-male\\ferrari\\off\\execution\\cases\\muscular-male\\base_candidates\\output_regions\\candidate_1_base\\foreground.png",
+      "foreground_pixels": 495377,
+      "foreground_note": "stored same-Base output-region foreground, not source-reference foreground; refinement fallback temporary foreground was not persisted",
+      "detector_record": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\parts.json",
+      "detector_record_modified_local": "2026-09-27T02:10:49.620335",
+      "components": {
+        "output_hair": {
+          "accepted": true,
+          "hard_protection_member": true,
+          "conditional_member": false,
+          "raw": {
+            "pixels": 498176,
+            "bbox_xyxy_exclusive": [
+              16,
+              16,
+              727,
+              1386
+            ],
+            "mask_pixels_div_foreground_pixels": 1.0056502421388156,
+            "foreground_intersection_pixels": 493479,
+            "pixel_sha256": "3e4d36c08c1484f5c92ac1f3f061b8b49c81467f12de1d4a05a62547f681d2d2"
+          },
+          "maxfilter5": {
+            "pixels": 514975,
+            "bbox_xyxy_exclusive": [
+              14,
+              14,
+              729,
+              1388
+            ],
+            "mask_pixels_div_foreground_pixels": 1.0395617882945716,
+            "foreground_intersection_pixels": 495258,
+            "pixel_sha256": "cb6d65c304f4413e7990325fc455c32ade445ee31ff09a40cd1609a717ae98da"
+          }
+        },
+        "output_face": {
+          "accepted": true,
+          "hard_protection_member": true,
+          "conditional_member": false,
+          "raw": {
+            "pixels": 63209,
+            "bbox_xyxy_exclusive": [
+              225,
+              81,
+              511,
+              611
+            ],
+            "mask_pixels_div_foreground_pixels": 0.12759776897191433,
+            "foreground_intersection_pixels": 63209,
+            "pixel_sha256": "4c1bb2c8fecf6abcb42fe611fbea5c59ce29eecf1becad030162cc30061395c7"
+          },
+          "maxfilter5": {
+            "pixels": 66910,
+            "bbox_xyxy_exclusive": [
+              223,
+              79,
+              513,
+              613
+            ],
+            "mask_pixels_div_foreground_pixels": 0.13506884655524984,
+            "foreground_intersection_pixels": 66910,
+            "pixel_sha256": "83861a6e47e5bc3b0e444871174627d6d30407cc773f50d457be540d128a47c1"
+          }
+        },
+        "output_human_ears": {
+          "accepted": false,
+          "hard_protection_member": false,
+          "conditional_member": false,
+          "raw": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          },
+          "maxfilter5": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          }
+        },
+        "output_animal_ears": {
+          "accepted": false,
+          "hard_protection_member": true,
+          "conditional_member": false,
+          "raw": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          },
+          "maxfilter5": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          }
+        },
+        "output_hair_accessory": {
+          "accepted": false,
+          "hard_protection_member": true,
+          "conditional_member": false,
+          "raw": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          },
+          "maxfilter5": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          }
+        },
+        "output_ears": {
+          "accepted": false,
+          "query_run": false,
+          "hard_protection_member": true,
+          "conditional_member": false,
+          "raw": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          },
+          "maxfilter5": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          }
+        },
+        "output_tail": {
+          "accepted": false,
+          "query_run": false,
+          "hard_protection_member": false,
+          "conditional_member": true,
+          "raw": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          },
+          "maxfilter5": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          }
+        }
+      },
+      "queries": {
+        "output_hair": {
+          "status": "detected",
+          "boxes": [
+            [
+              16.392711639404297,
+              16.60098648071289,
+              725.2182006835938,
+              1384.157958984375
+            ],
+            [
+              299.67596435546875,
+              12.558371543884277,
+              443.58154296875,
+              129.90977478027344
+            ],
+            [
+              299.0074768066406,
+              12.630627632141113,
+              444.00537109375,
+              190.04043579101562
+            ]
+          ],
+          "detection_scores": [
+            0.4986293911933899,
+            0.37483763694763184,
+            0.33132460713386536
+          ],
+          "accepted_masks": 3,
+          "target_status": "unresolved",
+          "semantic_status": "unresolved",
+          "presence": "model_candidate",
+          "query": "hair.",
+          "raw_candidate_fingerprint": "28654ad0ffee4d5044e3a74cc2e9ab87a7eaf6104f4e7c22dd0c645bbb7cc612",
+          "analysis_stage": "independent_detection",
+          "mask_quality_scores": [
+            0.9362038373947144,
+            0.9396414756774902,
+            0.9241709113121033
+          ],
+          "candidate_mask_paths": [
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_hair_candidate_0_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_hair_candidate_1_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_hair_candidate_2_mask.png"
+          ],
+          "area_validity": {
+            "version": "small_part_area_validity_v1",
+            "mask_pixels": 498176,
+            "denominator_pixels": 1024512,
+            "denominator_source": "canvas",
+            "foreground_area_ratio": 0.4862568715642179,
+            "maximum_foreground_area_ratio": null,
+            "valid": true,
+            "status": "not_applicable",
+            "reason": "not_small_part_class"
+          },
+          "automatic_conditioning": true,
+          "outcome_reason": "accepted_mask_available",
+          "accepted_boxes": [
+            [
+              16.392711639404297,
+              16.60098648071289,
+              725.2182006835938,
+              1384.157958984375
+            ],
+            [
+              299.67596435546875,
+              12.558371543884277,
+              443.58154296875,
+              129.90977478027344
+            ],
+            [
+              299.0074768066406,
+              12.630627632141113,
+              444.00537109375,
+              190.04043579101562
+            ]
+          ],
+          "mask_pixels": 498176,
+          "mask_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_hair_mask.png",
+          "crop_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_hair_reference.png",
+          "candidates": [
+            {
+              "index": 0,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_hair_candidate_0_mask.png",
+              "sha256": "161ea2619ca40c38588a16bab1455c3816e0811294398bdc83c5750f5153cc13",
+              "pixels": 498137,
+              "bbox_xyxy_exclusive": [
+                16,
+                16,
+                727,
+                1386
+              ],
+              "mask_pixels_div_foreground_pixels": 1.0055715142204826,
+              "foreground_intersection_pixels": 493469,
+              "pixel_sha256": "0b2e20eba319a50676829f58a8cfc7b13ea431464f532867291ffa34d976f47c"
+            },
+            {
+              "index": 1,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_hair_candidate_1_mask.png",
+              "sha256": "d8de60e167daad79f4a89d50fad9574b6908c99043550f90de177a509d875229",
+              "pixels": 8554,
+              "bbox_xyxy_exclusive": [
+                304,
+                17,
+                441,
+                129
+              ],
+              "mask_pixels_div_foreground_pixels": 0.017267656754350727,
+              "foreground_intersection_pixels": 8440,
+              "pixel_sha256": "5e1aec6d04cc23dfa8e717e83312b40fe83c46acf805af0960d2b55df33cceea"
+            },
+            {
+              "index": 2,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_hair_candidate_2_mask.png",
+              "sha256": "b4c6c6d2c021a246297619b8506833c2e99630fe2653aee49e83e834e86e544a",
+              "pixels": 9937,
+              "bbox_xyxy_exclusive": [
+                303,
+                17,
+                441,
+                190
+              ],
+              "mask_pixels_div_foreground_pixels": 0.020059469858309933,
+              "foreground_intersection_pixels": 9735,
+              "pixel_sha256": "6e220122a4e10595c8714389cff5df0e0cad38989c93b9af05b911c24ee9ba71"
+            }
+          ]
+        },
+        "output_face": {
+          "status": "detected",
+          "boxes": [
+            [
+              318.993408203125,
+              79.93244171142578,
+              423.543701171875,
+              222.79147338867188
+            ],
+            [
+              238.14373779296875,
+              362.45867919921875,
+              504.04693603515625,
+              608.9127807617188
+            ]
+          ],
+          "detection_scores": [
+            0.7664071321487427,
+            0.3129975497722626
+          ],
+          "accepted_masks": 2,
+          "target_status": "unresolved",
+          "semantic_status": "unresolved",
+          "presence": "model_candidate",
+          "query": "face.",
+          "raw_candidate_fingerprint": "bad7e1960f72380f0e27992fb9f3faa0b19e01a7c041000ebfddbaf683fa548f",
+          "analysis_stage": "independent_detection",
+          "mask_quality_scores": [
+            0.9539945721626282,
+            0.9169142246246338
+          ],
+          "candidate_mask_paths": [
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_face_candidate_0_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_face_candidate_1_mask.png"
+          ],
+          "area_validity": {
+            "version": "small_part_area_validity_v1",
+            "mask_pixels": 63209,
+            "denominator_pixels": 1024512,
+            "denominator_source": "canvas",
+            "foreground_area_ratio": 0.06169669071714143,
+            "maximum_foreground_area_ratio": null,
+            "valid": true,
+            "status": "not_applicable",
+            "reason": "not_small_part_class"
+          },
+          "automatic_conditioning": true,
+          "outcome_reason": "accepted_mask_available",
+          "accepted_boxes": [
+            [
+              318.993408203125,
+              79.93244171142578,
+              423.543701171875,
+              222.79147338867188
+            ],
+            [
+              238.14373779296875,
+              362.45867919921875,
+              504.04693603515625,
+              608.9127807617188
+            ]
+          ],
+          "mask_pixels": 63209,
+          "mask_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_face_mask.png",
+          "crop_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_face_reference.png",
+          "candidates": [
+            {
+              "index": 0,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_face_candidate_0_mask.png",
+              "sha256": "8a48bb5a97cd5a2632ef10a3ec2d012e530355f76e6f97f842a7afb79dca7eda",
+              "pixels": 11403,
+              "bbox_xyxy_exclusive": [
+                319,
+                81,
+                424,
+                221
+              ],
+              "mask_pixels_div_foreground_pixels": 0.023018832121798144,
+              "foreground_intersection_pixels": 11403,
+              "pixel_sha256": "18a63050b3fc8e96dd52cc6e2bb137e1a5cb94c7673591e3ac42955a911d24c2"
+            },
+            {
+              "index": 1,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_face_candidate_1_mask.png",
+              "sha256": "a844de672dc82bea1dec7f58561cedb40761dbebd683fd54e7da03a351db0db3",
+              "pixels": 51806,
+              "bbox_xyxy_exclusive": [
+                225,
+                366,
+                511,
+                611
+              ],
+              "mask_pixels_div_foreground_pixels": 0.10457893685011617,
+              "foreground_intersection_pixels": 51806,
+              "pixel_sha256": "010037328206ec86a0d9d8846c47b99a9cb0da974426c9b11addd45c01b8492f"
+            }
+          ]
+        },
+        "output_human_ears": {
+          "status": "uncertain",
+          "boxes": [
+            [
+              18.893836975097656,
+              15.228128433227539,
+              722.3670043945312,
+              1382.9854736328125
+            ],
+            [
+              425.26806640625,
+              101.95825958251953,
+              444.77557373046875,
+              150.05039978027344
+            ],
+            [
+              297.82257080078125,
+              99.08204650878906,
+              317.8825988769531,
+              150.01644897460938
+            ],
+            [
+              297.1520690917969,
+              95.44448852539062,
+              444.93115234375,
+              153.9875946044922
+            ]
+          ],
+          "detection_scores": [
+            0.43876272439956665,
+            0.3475828170776367,
+            0.36141106486320496,
+            0.4000663161277771
+          ],
+          "accepted_masks": 0,
+          "target_status": "unresolved",
+          "semantic_status": "unresolved",
+          "presence": "unresolved",
+          "query": "human ears. person ears.",
+          "raw_candidate_fingerprint": "d15225c5228f6d507f624ae53b7588418d9a22a6c7a13c323574e12ca0e97fd8",
+          "analysis_stage": "independent_detection",
+          "mask_quality_scores": [
+            0.9641072154045105,
+            0.8822765946388245,
+            0.8767945170402527,
+            0.49783703684806824
+          ],
+          "candidate_mask_paths": [
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_human_ears_candidate_0_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_human_ears_candidate_1_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_human_ears_candidate_2_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_human_ears_candidate_3_mask.png"
+          ],
+          "area_validity": {
+            "version": "small_part_area_validity_v1",
+            "mask_pixels": 495600,
+            "denominator_pixels": 1024512,
+            "denominator_source": "canvas",
+            "foreground_area_ratio": 0.48374250374812594,
+            "maximum_foreground_area_ratio": 0.12,
+            "valid": false,
+            "status": "evaluated",
+            "reason": null
+          },
+          "outcome_reason": "small_part_area_upper_bound_exceeded",
+          "automatic_conditioning": false,
+          "measured_mask_pixels": 495600,
+          "rejected_candidate_indices": [
+            0,
+            1,
+            2
+          ],
+          "candidates": [
+            {
+              "index": 0,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_human_ears_candidate_0_mask.png",
+              "sha256": "f5f4f226bb565d8ffefeafe26d7ac7e91a71acecfb62f8dbf33cb0e5d444caad",
+              "pixels": 495600,
+              "bbox_xyxy_exclusive": [
+                16,
+                16,
+                726,
+                1386
+              ],
+              "mask_pixels_div_foreground_pixels": 1.0004501621996984,
+              "foreground_intersection_pixels": 492545,
+              "pixel_sha256": "0b9cf0a35f766075dd25b8fa355ad03da256c700e22111e8b0354d429aa14f67"
+            },
+            {
+              "index": 1,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_human_ears_candidate_1_mask.png",
+              "sha256": "5622479516e680b2981c8dac2c15a77139a4d521f0d5b8039d7671cfa2dea1d9",
+              "pixels": 461,
+              "bbox_xyxy_exclusive": [
+                428,
+                104,
+                443,
+                150
+              ],
+              "mask_pixels_div_foreground_pixels": 0.0009306043679864022,
+              "foreground_intersection_pixels": 454,
+              "pixel_sha256": "4357d717fabb8a22c38204164c027a18f7fd76597da407142d2c023921400f7b"
+            },
+            {
+              "index": 2,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_human_ears_candidate_2_mask.png",
+              "sha256": "9492d0140820125878693912a721a7309a898a7e779461828eb6f1657ea5acdb",
+              "pixels": 497,
+              "bbox_xyxy_exclusive": [
+                300,
+                101,
+                316,
+                146
+              ],
+              "mask_pixels_div_foreground_pixels": 0.0010032762926013925,
+              "foreground_intersection_pixels": 491,
+              "pixel_sha256": "d7ed7f0fda9dded050be77fc5b5de235d18894c29f1b600010529063b63f8e84"
+            },
+            {
+              "index": 3,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_human_ears_candidate_3_mask.png",
+              "sha256": "d91c8e7de40319259879d66c3470357a6cfcb56ea18f577ffe3973a62703207a",
+              "pixels": 6311,
+              "bbox_xyxy_exclusive": [
+                301,
+                84,
+                441,
+                161
+              ],
+              "mask_pixels_div_foreground_pixels": 0.012739792117922309,
+              "foreground_intersection_pixels": 6311,
+              "pixel_sha256": "eea0f88b1eb50ad7d7fcb01bb6c5605f11b03ef412510cfa1ae32ef376c384aa"
+            }
+          ]
+        },
+        "output_animal_ears": {
+          "status": "uncertain",
+          "boxes": [
+            [
+              18.448984146118164,
+              216.52902221679688,
+              724.4603881835938,
+              817.6139526367188
+            ],
+            [
+              17.607006072998047,
+              203.60145568847656,
+              723.1611938476562,
+              1384.21875
+            ],
+            [
+              17.320255279541016,
+              19.342262268066406,
+              722.7975463867188,
+              1383.199951171875
+            ]
+          ],
+          "detection_scores": [
+            0.36645010113716125,
+            0.32626453042030334,
+            0.32993704080581665
+          ],
+          "accepted_masks": 0,
+          "target_status": "unresolved",
+          "semantic_status": "unresolved",
+          "presence": "unresolved",
+          "query": "animal ears.",
+          "raw_candidate_fingerprint": "7b18086f87f74b4cdcf0c6db4713e392cec6fcf6f615d0c55f8580b8f1a865c8",
+          "analysis_stage": "independent_detection",
+          "mask_quality_scores": [
+            0.9413023591041565,
+            0.9440464377403259,
+            0.9562060236930847
+          ],
+          "candidate_mask_paths": [
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_animal_ears_candidate_0_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_animal_ears_candidate_1_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_animal_ears_candidate_2_mask.png"
+          ],
+          "area_validity": {
+            "version": "small_part_area_validity_v1",
+            "mask_pixels": 496908,
+            "denominator_pixels": 1024512,
+            "denominator_source": "canvas",
+            "foreground_area_ratio": 0.4850192091454273,
+            "maximum_foreground_area_ratio": 0.25,
+            "valid": false,
+            "status": "evaluated",
+            "reason": null
+          },
+          "outcome_reason": "small_part_area_upper_bound_exceeded",
+          "automatic_conditioning": false,
+          "measured_mask_pixels": 496908,
+          "rejected_candidate_indices": [
+            0,
+            1,
+            2
+          ],
+          "candidates": [
+            {
+              "index": 0,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_animal_ears_candidate_0_mask.png",
+              "sha256": "8bca68c3309463b47e19554c9cdbbcb4d11abfa68824eab87d355e0de8b1288c",
+              "pixels": 238245,
+              "bbox_xyxy_exclusive": [
+                20,
+                184,
+                724,
+                808
+              ],
+              "mask_pixels_div_foreground_pixels": 0.4809367411082872,
+              "foreground_intersection_pixels": 238136,
+              "pixel_sha256": "927491a1f4be49a956c438359eac5b2a5bcb189738595dfaafe0828f1ccec371"
+            },
+            {
+              "index": 1,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_animal_ears_candidate_1_mask.png",
+              "sha256": "8fdef5152393c13785ff1583ea12d52d033dca2d8f110f4ae6d1f0f3db171c93",
+              "pixels": 431238,
+              "bbox_xyxy_exclusive": [
+                18,
+                181,
+                724,
+                1385
+              ],
+              "mask_pixels_div_foreground_pixels": 0.8705248729755317,
+              "foreground_intersection_pixels": 431039,
+              "pixel_sha256": "8b61efb3bc5f8dbbe29a1877d899ecf58a5e86054c3dc1cffc26508cc9555cce"
+            },
+            {
+              "index": 2,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_animal_ears_candidate_2_mask.png",
+              "sha256": "d00931befb590562760754ded280f3f29470d6e791a074b0e6d21bdfcc7e59e5",
+              "pixels": 496897,
+              "bbox_xyxy_exclusive": [
+                16,
+                16,
+                726,
+                1386
+              ],
+              "mask_pixels_div_foreground_pixels": 1.0030683701504106,
+              "foreground_intersection_pixels": 493177,
+              "pixel_sha256": "330b809bb730e0cf2d778c85c2ab52ca52447c5ad47d3042c69d8199d4962018"
+            }
+          ]
+        },
+        "output_hair_accessory": {
+          "status": "uncertain",
+          "boxes": [],
+          "detection_scores": [],
+          "accepted_masks": 0,
+          "target_status": "unresolved",
+          "semantic_status": "unresolved",
+          "presence": "not_observed",
+          "query": "hair ornament. hair accessory. hair clip.",
+          "raw_candidate_fingerprint": "640f1d16f76064fda39f19c54d1f463fb98e625bc4db8aee5bcd33b5eda932d0",
+          "analysis_stage": "independent_detection",
+          "outcome_reason": "no_candidate_above_threshold",
+          "automatic_conditioning": false,
+          "candidates": []
+        }
+      },
+      "overlap": {
+        "output_hair:output_face": {
+          "raw_pixels": 63209,
+          "expanded_pixels": 66910
+        },
+        "output_hair:output_human_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_hair:output_animal_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_hair:output_hair_accessory": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_hair:output_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_hair:output_tail": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_face:output_human_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_face:output_animal_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_face:output_hair_accessory": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_face:output_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_face:output_tail": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_human_ears:output_animal_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_human_ears:output_hair_accessory": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_human_ears:output_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_human_ears:output_tail": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_animal_ears:output_hair_accessory": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_animal_ears:output_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_animal_ears:output_tail": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_hair_accessory:output_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_hair_accessory:output_tail": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_ears:output_tail": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        }
+      },
+      "protection_equality": {
+        "comparison_path": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-text-20260926\\cases\\muscular-male\\ferrari\\off\\masks\\effective_protection.png",
+        "same_run_saved": true,
+        "pixel_equal": true,
+        "different_pixels": 0
+      },
+      "raw_component_equality": {
+        "output_hair": true,
+        "output_face": true
+      },
+      "request": {
+        "origin": "saved",
+        "metrics": {
+          "source_removal_pixels": 486825,
+          "target_coverage_pixels": 523471,
+          "requested_pixels": 523471,
+          "hard_edit_pixels": 30139,
+          "hard_protection_pixels": 514975,
+          "conditional_protection_pixels": 0,
+          "protection_conflict_pixels": 486049,
+          "target_coverage_missing_pixels": 493332,
+          "target_coverage_missing_ratio": 0.9424246997445895,
+          "soft_nonzero_pixels": 89,
+          "soft_outside_hard_pixels": 0,
+          "soft_outside_hard_ratio": 0.0,
+          "soft_min": 0,
+          "soft_max": 4,
+          "soft_mean": 0.005574172998440559,
+          "requested_feather_radius": 10,
+          "effective_feather_radius": 8
+        },
+        "all_requested_protected_pixels": 492453,
+        "in_domain_conflict_pixels": 486049,
+        "requested_outside_edit_domain_pixels": 7283,
+        "effective_protection_pixels": 514975,
+        "hair_unique_protection_pixels": 448065
+      },
+      "source_sha256": {
+        "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-text-20260926\\cases\\muscular-male\\ferrari\\off\\Base.png": "2ff31ed03cb8eae2b216b465800a094701a6c8030387e592579f83d814a652c2",
+        "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-text-20260926\\cases\\muscular-male\\ferrari\\off\\execution\\cases\\muscular-male\\base_candidates\\output_regions\\candidate_1_base\\foreground.png": "d059664545485fb072afcead4b9b1f6278dc78048b01d35e9c99c9e20559017d",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\parts.json": "00adb9b31fe81fc2b68f9c28ee7d292d5733de6a8c92bf9960e2af6b7d868e96",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_hair_candidate_0_mask.png": "161ea2619ca40c38588a16bab1455c3816e0811294398bdc83c5750f5153cc13",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_hair_candidate_1_mask.png": "d8de60e167daad79f4a89d50fad9574b6908c99043550f90de177a509d875229",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_hair_candidate_2_mask.png": "b4c6c6d2c021a246297619b8506833c2e99630fe2653aee49e83e834e86e544a",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_hair_mask.png": "3ee663a6800be1e182ae6482d3c40feb85f16e592289e0fae4eb5e15f01c55af",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_face_candidate_0_mask.png": "8a48bb5a97cd5a2632ef10a3ec2d012e530355f76e6f97f842a7afb79dca7eda",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_face_candidate_1_mask.png": "a844de672dc82bea1dec7f58561cedb40761dbebd683fd54e7da03a351db0db3",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_face_mask.png": "aa2fe8eac593b4caf51016c2d712788f9c133615e1647e27b890d846da824172",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_human_ears_candidate_0_mask.png": "f5f4f226bb565d8ffefeafe26d7ac7e91a71acecfb62f8dbf33cb0e5d444caad",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_human_ears_candidate_1_mask.png": "5622479516e680b2981c8dac2c15a77139a4d521f0d5b8039d7671cfa2dea1d9",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_human_ears_candidate_2_mask.png": "9492d0140820125878693912a721a7309a898a7e779461828eb6f1657ea5acdb",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_human_ears_candidate_3_mask.png": "d91c8e7de40319259879d66c3470357a6cfcb56ea18f577ffe3973a62703207a",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_animal_ears_candidate_0_mask.png": "8bca68c3309463b47e19554c9cdbbcb4d11abfa68824eab87d355e0de8b1288c",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_animal_ears_candidate_1_mask.png": "8fdef5152393c13785ff1583ea12d52d033dca2d8f110f4ae6d1f0f3db171c93",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-nz9mdn_1\\output_animal_ears_candidate_2_mask.png": "d00931befb590562760754ded280f3f29470d6e791a074b0e6d21bdfcc7e59e5",
+        "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-text-20260926\\cases\\muscular-male\\ferrari\\off\\masks\\effective_protection.png": "bb0ac1e9e40eee0c56a7cfd24de2e1bc836cc363e17987893287e2f5bf5bbddc"
+      },
+      "saved_plan_reconstruction": {
+        "source_garment_removal": 0,
+        "target_garment_coverage": 0,
+        "garment_growth_envelope": 0,
+        "requested_edit": 0,
+        "hard_edit_domain": 0,
+        "hard_protection": 0,
+        "conditional_protection": 0,
+        "effective_protection": 0,
+        "mask_conflict": 0,
+        "soft_guidance": 0
+      },
+      "temp_record_attribution": {
+        "basis": "parts.json mtime inside attempt window + Base dimensions + component pixels and hashes; no run_id in parts.json",
+        "start_local": "2026-09-27T02:03:53.917854",
+        "end_local": "2026-09-27T02:11:33.742430",
+        "parts_time_local": "2026-09-27T02:10:49.620335",
+        "inside_window": true
+      }
+    },
+    {
+      "id": "male-partial",
+      "character": "muscular-male",
+      "garment": "partial",
+      "base": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-text-20260926\\cases\\muscular-male\\partial\\off\\Base.png",
+      "base_sha256": "2ff31ed03cb8eae2b216b465800a094701a6c8030387e592579f83d814a652c2",
+      "foreground": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-text-20260926\\cases\\muscular-male\\partial\\off\\execution\\cases\\muscular-male\\base_candidates\\output_regions\\candidate_1_base\\foreground.png",
+      "foreground_pixels": 495377,
+      "foreground_note": "stored same-Base output-region foreground, not source-reference foreground; refinement fallback temporary foreground was not persisted",
+      "detector_record": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\parts.json",
+      "detector_record_modified_local": "2026-09-27T02:27:24.256051",
+      "components": {
+        "output_hair": {
+          "accepted": true,
+          "hard_protection_member": true,
+          "conditional_member": false,
+          "raw": {
+            "pixels": 498176,
+            "bbox_xyxy_exclusive": [
+              16,
+              16,
+              727,
+              1386
+            ],
+            "mask_pixels_div_foreground_pixels": 1.0056502421388156,
+            "foreground_intersection_pixels": 493479,
+            "pixel_sha256": "3e4d36c08c1484f5c92ac1f3f061b8b49c81467f12de1d4a05a62547f681d2d2"
+          },
+          "maxfilter5": {
+            "pixels": 514975,
+            "bbox_xyxy_exclusive": [
+              14,
+              14,
+              729,
+              1388
+            ],
+            "mask_pixels_div_foreground_pixels": 1.0395617882945716,
+            "foreground_intersection_pixels": 495258,
+            "pixel_sha256": "cb6d65c304f4413e7990325fc455c32ade445ee31ff09a40cd1609a717ae98da"
+          }
+        },
+        "output_face": {
+          "accepted": true,
+          "hard_protection_member": true,
+          "conditional_member": false,
+          "raw": {
+            "pixels": 63209,
+            "bbox_xyxy_exclusive": [
+              225,
+              81,
+              511,
+              611
+            ],
+            "mask_pixels_div_foreground_pixels": 0.12759776897191433,
+            "foreground_intersection_pixels": 63209,
+            "pixel_sha256": "4c1bb2c8fecf6abcb42fe611fbea5c59ce29eecf1becad030162cc30061395c7"
+          },
+          "maxfilter5": {
+            "pixels": 66910,
+            "bbox_xyxy_exclusive": [
+              223,
+              79,
+              513,
+              613
+            ],
+            "mask_pixels_div_foreground_pixels": 0.13506884655524984,
+            "foreground_intersection_pixels": 66910,
+            "pixel_sha256": "83861a6e47e5bc3b0e444871174627d6d30407cc773f50d457be540d128a47c1"
+          }
+        },
+        "output_human_ears": {
+          "accepted": false,
+          "hard_protection_member": false,
+          "conditional_member": false,
+          "raw": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          },
+          "maxfilter5": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          }
+        },
+        "output_animal_ears": {
+          "accepted": false,
+          "hard_protection_member": true,
+          "conditional_member": false,
+          "raw": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          },
+          "maxfilter5": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          }
+        },
+        "output_hair_accessory": {
+          "accepted": false,
+          "hard_protection_member": true,
+          "conditional_member": false,
+          "raw": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          },
+          "maxfilter5": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          }
+        },
+        "output_ears": {
+          "accepted": false,
+          "query_run": false,
+          "hard_protection_member": true,
+          "conditional_member": false,
+          "raw": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          },
+          "maxfilter5": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          }
+        },
+        "output_tail": {
+          "accepted": false,
+          "query_run": false,
+          "hard_protection_member": false,
+          "conditional_member": true,
+          "raw": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          },
+          "maxfilter5": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          }
+        }
+      },
+      "queries": {
+        "output_hair": {
+          "status": "detected",
+          "boxes": [
+            [
+              16.392711639404297,
+              16.60098648071289,
+              725.2182006835938,
+              1384.157958984375
+            ],
+            [
+              299.67596435546875,
+              12.558371543884277,
+              443.58154296875,
+              129.90977478027344
+            ],
+            [
+              299.0074768066406,
+              12.630627632141113,
+              444.00537109375,
+              190.04043579101562
+            ]
+          ],
+          "detection_scores": [
+            0.4986293911933899,
+            0.37483763694763184,
+            0.33132460713386536
+          ],
+          "accepted_masks": 3,
+          "target_status": "unresolved",
+          "semantic_status": "unresolved",
+          "presence": "model_candidate",
+          "query": "hair.",
+          "raw_candidate_fingerprint": "28654ad0ffee4d5044e3a74cc2e9ab87a7eaf6104f4e7c22dd0c645bbb7cc612",
+          "analysis_stage": "independent_detection",
+          "mask_quality_scores": [
+            0.9362038373947144,
+            0.9396414756774902,
+            0.9241709113121033
+          ],
+          "candidate_mask_paths": [
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_hair_candidate_0_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_hair_candidate_1_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_hair_candidate_2_mask.png"
+          ],
+          "area_validity": {
+            "version": "small_part_area_validity_v1",
+            "mask_pixels": 498176,
+            "denominator_pixels": 1024512,
+            "denominator_source": "canvas",
+            "foreground_area_ratio": 0.4862568715642179,
+            "maximum_foreground_area_ratio": null,
+            "valid": true,
+            "status": "not_applicable",
+            "reason": "not_small_part_class"
+          },
+          "automatic_conditioning": true,
+          "outcome_reason": "accepted_mask_available",
+          "accepted_boxes": [
+            [
+              16.392711639404297,
+              16.60098648071289,
+              725.2182006835938,
+              1384.157958984375
+            ],
+            [
+              299.67596435546875,
+              12.558371543884277,
+              443.58154296875,
+              129.90977478027344
+            ],
+            [
+              299.0074768066406,
+              12.630627632141113,
+              444.00537109375,
+              190.04043579101562
+            ]
+          ],
+          "mask_pixels": 498176,
+          "mask_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_hair_mask.png",
+          "crop_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_hair_reference.png",
+          "candidates": [
+            {
+              "index": 0,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_hair_candidate_0_mask.png",
+              "sha256": "161ea2619ca40c38588a16bab1455c3816e0811294398bdc83c5750f5153cc13",
+              "pixels": 498137,
+              "bbox_xyxy_exclusive": [
+                16,
+                16,
+                727,
+                1386
+              ],
+              "mask_pixels_div_foreground_pixels": 1.0055715142204826,
+              "foreground_intersection_pixels": 493469,
+              "pixel_sha256": "0b2e20eba319a50676829f58a8cfc7b13ea431464f532867291ffa34d976f47c"
+            },
+            {
+              "index": 1,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_hair_candidate_1_mask.png",
+              "sha256": "d8de60e167daad79f4a89d50fad9574b6908c99043550f90de177a509d875229",
+              "pixels": 8554,
+              "bbox_xyxy_exclusive": [
+                304,
+                17,
+                441,
+                129
+              ],
+              "mask_pixels_div_foreground_pixels": 0.017267656754350727,
+              "foreground_intersection_pixels": 8440,
+              "pixel_sha256": "5e1aec6d04cc23dfa8e717e83312b40fe83c46acf805af0960d2b55df33cceea"
+            },
+            {
+              "index": 2,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_hair_candidate_2_mask.png",
+              "sha256": "b4c6c6d2c021a246297619b8506833c2e99630fe2653aee49e83e834e86e544a",
+              "pixels": 9937,
+              "bbox_xyxy_exclusive": [
+                303,
+                17,
+                441,
+                190
+              ],
+              "mask_pixels_div_foreground_pixels": 0.020059469858309933,
+              "foreground_intersection_pixels": 9735,
+              "pixel_sha256": "6e220122a4e10595c8714389cff5df0e0cad38989c93b9af05b911c24ee9ba71"
+            }
+          ]
+        },
+        "output_face": {
+          "status": "detected",
+          "boxes": [
+            [
+              318.993408203125,
+              79.93244171142578,
+              423.543701171875,
+              222.79147338867188
+            ],
+            [
+              238.14373779296875,
+              362.45867919921875,
+              504.04693603515625,
+              608.9127807617188
+            ]
+          ],
+          "detection_scores": [
+            0.7664071321487427,
+            0.3129975497722626
+          ],
+          "accepted_masks": 2,
+          "target_status": "unresolved",
+          "semantic_status": "unresolved",
+          "presence": "model_candidate",
+          "query": "face.",
+          "raw_candidate_fingerprint": "bad7e1960f72380f0e27992fb9f3faa0b19e01a7c041000ebfddbaf683fa548f",
+          "analysis_stage": "independent_detection",
+          "mask_quality_scores": [
+            0.9539945721626282,
+            0.9169142246246338
+          ],
+          "candidate_mask_paths": [
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_face_candidate_0_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_face_candidate_1_mask.png"
+          ],
+          "area_validity": {
+            "version": "small_part_area_validity_v1",
+            "mask_pixels": 63209,
+            "denominator_pixels": 1024512,
+            "denominator_source": "canvas",
+            "foreground_area_ratio": 0.06169669071714143,
+            "maximum_foreground_area_ratio": null,
+            "valid": true,
+            "status": "not_applicable",
+            "reason": "not_small_part_class"
+          },
+          "automatic_conditioning": true,
+          "outcome_reason": "accepted_mask_available",
+          "accepted_boxes": [
+            [
+              318.993408203125,
+              79.93244171142578,
+              423.543701171875,
+              222.79147338867188
+            ],
+            [
+              238.14373779296875,
+              362.45867919921875,
+              504.04693603515625,
+              608.9127807617188
+            ]
+          ],
+          "mask_pixels": 63209,
+          "mask_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_face_mask.png",
+          "crop_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_face_reference.png",
+          "candidates": [
+            {
+              "index": 0,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_face_candidate_0_mask.png",
+              "sha256": "8a48bb5a97cd5a2632ef10a3ec2d012e530355f76e6f97f842a7afb79dca7eda",
+              "pixels": 11403,
+              "bbox_xyxy_exclusive": [
+                319,
+                81,
+                424,
+                221
+              ],
+              "mask_pixels_div_foreground_pixels": 0.023018832121798144,
+              "foreground_intersection_pixels": 11403,
+              "pixel_sha256": "18a63050b3fc8e96dd52cc6e2bb137e1a5cb94c7673591e3ac42955a911d24c2"
+            },
+            {
+              "index": 1,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_face_candidate_1_mask.png",
+              "sha256": "a844de672dc82bea1dec7f58561cedb40761dbebd683fd54e7da03a351db0db3",
+              "pixels": 51806,
+              "bbox_xyxy_exclusive": [
+                225,
+                366,
+                511,
+                611
+              ],
+              "mask_pixels_div_foreground_pixels": 0.10457893685011617,
+              "foreground_intersection_pixels": 51806,
+              "pixel_sha256": "010037328206ec86a0d9d8846c47b99a9cb0da974426c9b11addd45c01b8492f"
+            }
+          ]
+        },
+        "output_human_ears": {
+          "status": "uncertain",
+          "boxes": [
+            [
+              18.893836975097656,
+              15.228128433227539,
+              722.3670043945312,
+              1382.9854736328125
+            ],
+            [
+              425.26806640625,
+              101.95825958251953,
+              444.77557373046875,
+              150.05039978027344
+            ],
+            [
+              297.82257080078125,
+              99.08204650878906,
+              317.8825988769531,
+              150.01644897460938
+            ],
+            [
+              297.1520690917969,
+              95.44448852539062,
+              444.93115234375,
+              153.9875946044922
+            ]
+          ],
+          "detection_scores": [
+            0.43876272439956665,
+            0.3475828170776367,
+            0.36141106486320496,
+            0.4000663161277771
+          ],
+          "accepted_masks": 0,
+          "target_status": "unresolved",
+          "semantic_status": "unresolved",
+          "presence": "unresolved",
+          "query": "human ears. person ears.",
+          "raw_candidate_fingerprint": "d15225c5228f6d507f624ae53b7588418d9a22a6c7a13c323574e12ca0e97fd8",
+          "analysis_stage": "independent_detection",
+          "mask_quality_scores": [
+            0.9641072154045105,
+            0.8822765946388245,
+            0.8767945170402527,
+            0.49783703684806824
+          ],
+          "candidate_mask_paths": [
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_human_ears_candidate_0_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_human_ears_candidate_1_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_human_ears_candidate_2_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_human_ears_candidate_3_mask.png"
+          ],
+          "area_validity": {
+            "version": "small_part_area_validity_v1",
+            "mask_pixels": 495600,
+            "denominator_pixels": 1024512,
+            "denominator_source": "canvas",
+            "foreground_area_ratio": 0.48374250374812594,
+            "maximum_foreground_area_ratio": 0.12,
+            "valid": false,
+            "status": "evaluated",
+            "reason": null
+          },
+          "outcome_reason": "small_part_area_upper_bound_exceeded",
+          "automatic_conditioning": false,
+          "measured_mask_pixels": 495600,
+          "rejected_candidate_indices": [
+            0,
+            1,
+            2
+          ],
+          "candidates": [
+            {
+              "index": 0,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_human_ears_candidate_0_mask.png",
+              "sha256": "f5f4f226bb565d8ffefeafe26d7ac7e91a71acecfb62f8dbf33cb0e5d444caad",
+              "pixels": 495600,
+              "bbox_xyxy_exclusive": [
+                16,
+                16,
+                726,
+                1386
+              ],
+              "mask_pixels_div_foreground_pixels": 1.0004501621996984,
+              "foreground_intersection_pixels": 492545,
+              "pixel_sha256": "0b9cf0a35f766075dd25b8fa355ad03da256c700e22111e8b0354d429aa14f67"
+            },
+            {
+              "index": 1,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_human_ears_candidate_1_mask.png",
+              "sha256": "5622479516e680b2981c8dac2c15a77139a4d521f0d5b8039d7671cfa2dea1d9",
+              "pixels": 461,
+              "bbox_xyxy_exclusive": [
+                428,
+                104,
+                443,
+                150
+              ],
+              "mask_pixels_div_foreground_pixels": 0.0009306043679864022,
+              "foreground_intersection_pixels": 454,
+              "pixel_sha256": "4357d717fabb8a22c38204164c027a18f7fd76597da407142d2c023921400f7b"
+            },
+            {
+              "index": 2,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_human_ears_candidate_2_mask.png",
+              "sha256": "9492d0140820125878693912a721a7309a898a7e779461828eb6f1657ea5acdb",
+              "pixels": 497,
+              "bbox_xyxy_exclusive": [
+                300,
+                101,
+                316,
+                146
+              ],
+              "mask_pixels_div_foreground_pixels": 0.0010032762926013925,
+              "foreground_intersection_pixels": 491,
+              "pixel_sha256": "d7ed7f0fda9dded050be77fc5b5de235d18894c29f1b600010529063b63f8e84"
+            },
+            {
+              "index": 3,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_human_ears_candidate_3_mask.png",
+              "sha256": "d91c8e7de40319259879d66c3470357a6cfcb56ea18f577ffe3973a62703207a",
+              "pixels": 6311,
+              "bbox_xyxy_exclusive": [
+                301,
+                84,
+                441,
+                161
+              ],
+              "mask_pixels_div_foreground_pixels": 0.012739792117922309,
+              "foreground_intersection_pixels": 6311,
+              "pixel_sha256": "eea0f88b1eb50ad7d7fcb01bb6c5605f11b03ef412510cfa1ae32ef376c384aa"
+            }
+          ]
+        },
+        "output_animal_ears": {
+          "status": "uncertain",
+          "boxes": [
+            [
+              18.448984146118164,
+              216.52902221679688,
+              724.4603881835938,
+              817.6139526367188
+            ],
+            [
+              17.607006072998047,
+              203.60145568847656,
+              723.1611938476562,
+              1384.21875
+            ],
+            [
+              17.320255279541016,
+              19.342262268066406,
+              722.7975463867188,
+              1383.199951171875
+            ]
+          ],
+          "detection_scores": [
+            0.36645010113716125,
+            0.32626453042030334,
+            0.32993704080581665
+          ],
+          "accepted_masks": 0,
+          "target_status": "unresolved",
+          "semantic_status": "unresolved",
+          "presence": "unresolved",
+          "query": "animal ears.",
+          "raw_candidate_fingerprint": "7b18086f87f74b4cdcf0c6db4713e392cec6fcf6f615d0c55f8580b8f1a865c8",
+          "analysis_stage": "independent_detection",
+          "mask_quality_scores": [
+            0.9413023591041565,
+            0.9440464377403259,
+            0.9562060236930847
+          ],
+          "candidate_mask_paths": [
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_animal_ears_candidate_0_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_animal_ears_candidate_1_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_animal_ears_candidate_2_mask.png"
+          ],
+          "area_validity": {
+            "version": "small_part_area_validity_v1",
+            "mask_pixels": 496908,
+            "denominator_pixels": 1024512,
+            "denominator_source": "canvas",
+            "foreground_area_ratio": 0.4850192091454273,
+            "maximum_foreground_area_ratio": 0.25,
+            "valid": false,
+            "status": "evaluated",
+            "reason": null
+          },
+          "outcome_reason": "small_part_area_upper_bound_exceeded",
+          "automatic_conditioning": false,
+          "measured_mask_pixels": 496908,
+          "rejected_candidate_indices": [
+            0,
+            1,
+            2
+          ],
+          "candidates": [
+            {
+              "index": 0,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_animal_ears_candidate_0_mask.png",
+              "sha256": "8bca68c3309463b47e19554c9cdbbcb4d11abfa68824eab87d355e0de8b1288c",
+              "pixels": 238245,
+              "bbox_xyxy_exclusive": [
+                20,
+                184,
+                724,
+                808
+              ],
+              "mask_pixels_div_foreground_pixels": 0.4809367411082872,
+              "foreground_intersection_pixels": 238136,
+              "pixel_sha256": "927491a1f4be49a956c438359eac5b2a5bcb189738595dfaafe0828f1ccec371"
+            },
+            {
+              "index": 1,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_animal_ears_candidate_1_mask.png",
+              "sha256": "8fdef5152393c13785ff1583ea12d52d033dca2d8f110f4ae6d1f0f3db171c93",
+              "pixels": 431238,
+              "bbox_xyxy_exclusive": [
+                18,
+                181,
+                724,
+                1385
+              ],
+              "mask_pixels_div_foreground_pixels": 0.8705248729755317,
+              "foreground_intersection_pixels": 431039,
+              "pixel_sha256": "8b61efb3bc5f8dbbe29a1877d899ecf58a5e86054c3dc1cffc26508cc9555cce"
+            },
+            {
+              "index": 2,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_animal_ears_candidate_2_mask.png",
+              "sha256": "d00931befb590562760754ded280f3f29470d6e791a074b0e6d21bdfcc7e59e5",
+              "pixels": 496897,
+              "bbox_xyxy_exclusive": [
+                16,
+                16,
+                726,
+                1386
+              ],
+              "mask_pixels_div_foreground_pixels": 1.0030683701504106,
+              "foreground_intersection_pixels": 493177,
+              "pixel_sha256": "330b809bb730e0cf2d778c85c2ab52ca52447c5ad47d3042c69d8199d4962018"
+            }
+          ]
+        },
+        "output_hair_accessory": {
+          "status": "uncertain",
+          "boxes": [],
+          "detection_scores": [],
+          "accepted_masks": 0,
+          "target_status": "unresolved",
+          "semantic_status": "unresolved",
+          "presence": "not_observed",
+          "query": "hair ornament. hair accessory. hair clip.",
+          "raw_candidate_fingerprint": "640f1d16f76064fda39f19c54d1f463fb98e625bc4db8aee5bcd33b5eda932d0",
+          "analysis_stage": "independent_detection",
+          "outcome_reason": "no_candidate_above_threshold",
+          "automatic_conditioning": false,
+          "candidates": []
+        }
+      },
+      "overlap": {
+        "output_hair:output_face": {
+          "raw_pixels": 63209,
+          "expanded_pixels": 66910
+        },
+        "output_hair:output_human_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_hair:output_animal_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_hair:output_hair_accessory": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_hair:output_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_hair:output_tail": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_face:output_human_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_face:output_animal_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_face:output_hair_accessory": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_face:output_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_face:output_tail": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_human_ears:output_animal_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_human_ears:output_hair_accessory": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_human_ears:output_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_human_ears:output_tail": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_animal_ears:output_hair_accessory": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_animal_ears:output_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_animal_ears:output_tail": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_hair_accessory:output_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_hair_accessory:output_tail": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_ears:output_tail": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        }
+      },
+      "protection_equality": {
+        "comparison_path": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-text-20260926\\cases\\muscular-male\\ferrari\\off\\masks\\effective_protection.png",
+        "same_run_saved": false,
+        "pixel_equal": true,
+        "different_pixels": 0
+      },
+      "raw_component_equality": {
+        "output_hair": true,
+        "output_face": true
+      },
+      "request": {
+        "origin": "offline reconstruction from same Base/source, per-garment saved approved tags; compared with exception request count",
+        "metrics": {
+          "source_removal_pixels": 486825,
+          "target_coverage_pixels": 511625,
+          "requested_pixels": 511625,
+          "hard_edit_pixels": 19818,
+          "hard_protection_pixels": 514975,
+          "conditional_protection_pixels": 0,
+          "protection_conflict_pixels": 481807,
+          "target_coverage_missing_pixels": 491807,
+          "target_coverage_missing_ratio": 0.9612645980943073,
+          "soft_nonzero_pixels": 89,
+          "soft_outside_hard_pixels": 0,
+          "soft_outside_hard_ratio": 0.0,
+          "soft_min": 0,
+          "soft_max": 4,
+          "soft_mean": 0.008477141992128368,
+          "requested_feather_radius": 10,
+          "effective_feather_radius": 8
+        },
+        "all_requested_protected_pixels": 490881,
+        "in_domain_conflict_pixels": 481807,
+        "requested_outside_edit_domain_pixels": 10000,
+        "effective_protection_pixels": 514975,
+        "hair_unique_protection_pixels": 448065
+      },
+      "source_sha256": {
+        "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-text-20260926\\cases\\muscular-male\\partial\\off\\Base.png": "2ff31ed03cb8eae2b216b465800a094701a6c8030387e592579f83d814a652c2",
+        "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-text-20260926\\cases\\muscular-male\\partial\\off\\execution\\cases\\muscular-male\\base_candidates\\output_regions\\candidate_1_base\\foreground.png": "d059664545485fb072afcead4b9b1f6278dc78048b01d35e9c99c9e20559017d",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\parts.json": "b22028b78f02d7861f0496ec83eacbf081cf6216094d62c6678857f47e233ddf",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_hair_candidate_0_mask.png": "161ea2619ca40c38588a16bab1455c3816e0811294398bdc83c5750f5153cc13",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_hair_candidate_1_mask.png": "d8de60e167daad79f4a89d50fad9574b6908c99043550f90de177a509d875229",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_hair_candidate_2_mask.png": "b4c6c6d2c021a246297619b8506833c2e99630fe2653aee49e83e834e86e544a",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_hair_mask.png": "3ee663a6800be1e182ae6482d3c40feb85f16e592289e0fae4eb5e15f01c55af",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_face_candidate_0_mask.png": "8a48bb5a97cd5a2632ef10a3ec2d012e530355f76e6f97f842a7afb79dca7eda",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_face_candidate_1_mask.png": "a844de672dc82bea1dec7f58561cedb40761dbebd683fd54e7da03a351db0db3",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_face_mask.png": "aa2fe8eac593b4caf51016c2d712788f9c133615e1647e27b890d846da824172",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_human_ears_candidate_0_mask.png": "f5f4f226bb565d8ffefeafe26d7ac7e91a71acecfb62f8dbf33cb0e5d444caad",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_human_ears_candidate_1_mask.png": "5622479516e680b2981c8dac2c15a77139a4d521f0d5b8039d7671cfa2dea1d9",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_human_ears_candidate_2_mask.png": "9492d0140820125878693912a721a7309a898a7e779461828eb6f1657ea5acdb",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_human_ears_candidate_3_mask.png": "d91c8e7de40319259879d66c3470357a6cfcb56ea18f577ffe3973a62703207a",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_animal_ears_candidate_0_mask.png": "8bca68c3309463b47e19554c9cdbbcb4d11abfa68824eab87d355e0de8b1288c",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_animal_ears_candidate_1_mask.png": "8fdef5152393c13785ff1583ea12d52d033dca2d8f110f4ae6d1f0f3db171c93",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-oeaf38qk\\output_animal_ears_candidate_2_mask.png": "d00931befb590562760754ded280f3f29470d6e791a074b0e6d21bdfcc7e59e5",
+        "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-text-20260926\\cases\\muscular-male\\ferrari\\off\\masks\\effective_protection.png": "bb0ac1e9e40eee0c56a7cfd24de2e1bc836cc363e17987893287e2f5bf5bbddc"
+      },
+      "temp_record_attribution": {
+        "basis": "parts.json mtime inside attempt window + Base dimensions + component pixels and hashes; no run_id in parts.json",
+        "start_local": "2026-09-27T02:20:09.489784",
+        "end_local": "2026-09-27T02:27:26.780378",
+        "parts_time_local": "2026-09-27T02:27:24.256051",
+        "inside_window": true
+      }
+    },
+    {
+      "id": "male-minimal",
+      "character": "muscular-male",
+      "garment": "minimal",
+      "base": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-text-20260926\\cases\\muscular-male\\minimal\\off\\Base.png",
+      "base_sha256": "2ff31ed03cb8eae2b216b465800a094701a6c8030387e592579f83d814a652c2",
+      "foreground": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-text-20260926\\cases\\muscular-male\\minimal\\off\\execution\\cases\\muscular-male\\base_candidates\\output_regions\\candidate_1_base\\foreground.png",
+      "foreground_pixels": 495377,
+      "foreground_note": "stored same-Base output-region foreground, not source-reference foreground; refinement fallback temporary foreground was not persisted",
+      "detector_record": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\parts.json",
+      "detector_record_modified_local": "2026-09-27T02:42:39.069957",
+      "components": {
+        "output_hair": {
+          "accepted": true,
+          "hard_protection_member": true,
+          "conditional_member": false,
+          "raw": {
+            "pixels": 498176,
+            "bbox_xyxy_exclusive": [
+              16,
+              16,
+              727,
+              1386
+            ],
+            "mask_pixels_div_foreground_pixels": 1.0056502421388156,
+            "foreground_intersection_pixels": 493479,
+            "pixel_sha256": "3e4d36c08c1484f5c92ac1f3f061b8b49c81467f12de1d4a05a62547f681d2d2"
+          },
+          "maxfilter5": {
+            "pixels": 514975,
+            "bbox_xyxy_exclusive": [
+              14,
+              14,
+              729,
+              1388
+            ],
+            "mask_pixels_div_foreground_pixels": 1.0395617882945716,
+            "foreground_intersection_pixels": 495258,
+            "pixel_sha256": "cb6d65c304f4413e7990325fc455c32ade445ee31ff09a40cd1609a717ae98da"
+          }
+        },
+        "output_face": {
+          "accepted": true,
+          "hard_protection_member": true,
+          "conditional_member": false,
+          "raw": {
+            "pixels": 63209,
+            "bbox_xyxy_exclusive": [
+              225,
+              81,
+              511,
+              611
+            ],
+            "mask_pixels_div_foreground_pixels": 0.12759776897191433,
+            "foreground_intersection_pixels": 63209,
+            "pixel_sha256": "4c1bb2c8fecf6abcb42fe611fbea5c59ce29eecf1becad030162cc30061395c7"
+          },
+          "maxfilter5": {
+            "pixels": 66910,
+            "bbox_xyxy_exclusive": [
+              223,
+              79,
+              513,
+              613
+            ],
+            "mask_pixels_div_foreground_pixels": 0.13506884655524984,
+            "foreground_intersection_pixels": 66910,
+            "pixel_sha256": "83861a6e47e5bc3b0e444871174627d6d30407cc773f50d457be540d128a47c1"
+          }
+        },
+        "output_human_ears": {
+          "accepted": false,
+          "hard_protection_member": false,
+          "conditional_member": false,
+          "raw": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          },
+          "maxfilter5": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          }
+        },
+        "output_animal_ears": {
+          "accepted": false,
+          "hard_protection_member": true,
+          "conditional_member": false,
+          "raw": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          },
+          "maxfilter5": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          }
+        },
+        "output_hair_accessory": {
+          "accepted": false,
+          "hard_protection_member": true,
+          "conditional_member": false,
+          "raw": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          },
+          "maxfilter5": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          }
+        },
+        "output_ears": {
+          "accepted": false,
+          "query_run": false,
+          "hard_protection_member": true,
+          "conditional_member": false,
+          "raw": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          },
+          "maxfilter5": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          }
+        },
+        "output_tail": {
+          "accepted": false,
+          "query_run": false,
+          "hard_protection_member": false,
+          "conditional_member": true,
+          "raw": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          },
+          "maxfilter5": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          }
+        }
+      },
+      "queries": {
+        "output_hair": {
+          "status": "detected",
+          "boxes": [
+            [
+              16.392711639404297,
+              16.60098648071289,
+              725.2182006835938,
+              1384.157958984375
+            ],
+            [
+              299.67596435546875,
+              12.558371543884277,
+              443.58154296875,
+              129.90977478027344
+            ],
+            [
+              299.0074768066406,
+              12.630627632141113,
+              444.00537109375,
+              190.04043579101562
+            ]
+          ],
+          "detection_scores": [
+            0.4986293911933899,
+            0.37483763694763184,
+            0.33132460713386536
+          ],
+          "accepted_masks": 3,
+          "target_status": "unresolved",
+          "semantic_status": "unresolved",
+          "presence": "model_candidate",
+          "query": "hair.",
+          "raw_candidate_fingerprint": "28654ad0ffee4d5044e3a74cc2e9ab87a7eaf6104f4e7c22dd0c645bbb7cc612",
+          "analysis_stage": "independent_detection",
+          "mask_quality_scores": [
+            0.9362038373947144,
+            0.9396414756774902,
+            0.9241709113121033
+          ],
+          "candidate_mask_paths": [
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_hair_candidate_0_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_hair_candidate_1_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_hair_candidate_2_mask.png"
+          ],
+          "area_validity": {
+            "version": "small_part_area_validity_v1",
+            "mask_pixels": 498176,
+            "denominator_pixels": 1024512,
+            "denominator_source": "canvas",
+            "foreground_area_ratio": 0.4862568715642179,
+            "maximum_foreground_area_ratio": null,
+            "valid": true,
+            "status": "not_applicable",
+            "reason": "not_small_part_class"
+          },
+          "automatic_conditioning": true,
+          "outcome_reason": "accepted_mask_available",
+          "accepted_boxes": [
+            [
+              16.392711639404297,
+              16.60098648071289,
+              725.2182006835938,
+              1384.157958984375
+            ],
+            [
+              299.67596435546875,
+              12.558371543884277,
+              443.58154296875,
+              129.90977478027344
+            ],
+            [
+              299.0074768066406,
+              12.630627632141113,
+              444.00537109375,
+              190.04043579101562
+            ]
+          ],
+          "mask_pixels": 498176,
+          "mask_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_hair_mask.png",
+          "crop_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_hair_reference.png",
+          "candidates": [
+            {
+              "index": 0,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_hair_candidate_0_mask.png",
+              "sha256": "161ea2619ca40c38588a16bab1455c3816e0811294398bdc83c5750f5153cc13",
+              "pixels": 498137,
+              "bbox_xyxy_exclusive": [
+                16,
+                16,
+                727,
+                1386
+              ],
+              "mask_pixels_div_foreground_pixels": 1.0055715142204826,
+              "foreground_intersection_pixels": 493469,
+              "pixel_sha256": "0b2e20eba319a50676829f58a8cfc7b13ea431464f532867291ffa34d976f47c"
+            },
+            {
+              "index": 1,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_hair_candidate_1_mask.png",
+              "sha256": "d8de60e167daad79f4a89d50fad9574b6908c99043550f90de177a509d875229",
+              "pixels": 8554,
+              "bbox_xyxy_exclusive": [
+                304,
+                17,
+                441,
+                129
+              ],
+              "mask_pixels_div_foreground_pixels": 0.017267656754350727,
+              "foreground_intersection_pixels": 8440,
+              "pixel_sha256": "5e1aec6d04cc23dfa8e717e83312b40fe83c46acf805af0960d2b55df33cceea"
+            },
+            {
+              "index": 2,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_hair_candidate_2_mask.png",
+              "sha256": "b4c6c6d2c021a246297619b8506833c2e99630fe2653aee49e83e834e86e544a",
+              "pixels": 9937,
+              "bbox_xyxy_exclusive": [
+                303,
+                17,
+                441,
+                190
+              ],
+              "mask_pixels_div_foreground_pixels": 0.020059469858309933,
+              "foreground_intersection_pixels": 9735,
+              "pixel_sha256": "6e220122a4e10595c8714389cff5df0e0cad38989c93b9af05b911c24ee9ba71"
+            }
+          ]
+        },
+        "output_face": {
+          "status": "detected",
+          "boxes": [
+            [
+              318.993408203125,
+              79.93244171142578,
+              423.543701171875,
+              222.79147338867188
+            ],
+            [
+              238.14373779296875,
+              362.45867919921875,
+              504.04693603515625,
+              608.9127807617188
+            ]
+          ],
+          "detection_scores": [
+            0.7664071321487427,
+            0.3129975497722626
+          ],
+          "accepted_masks": 2,
+          "target_status": "unresolved",
+          "semantic_status": "unresolved",
+          "presence": "model_candidate",
+          "query": "face.",
+          "raw_candidate_fingerprint": "bad7e1960f72380f0e27992fb9f3faa0b19e01a7c041000ebfddbaf683fa548f",
+          "analysis_stage": "independent_detection",
+          "mask_quality_scores": [
+            0.9539945721626282,
+            0.9169142246246338
+          ],
+          "candidate_mask_paths": [
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_face_candidate_0_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_face_candidate_1_mask.png"
+          ],
+          "area_validity": {
+            "version": "small_part_area_validity_v1",
+            "mask_pixels": 63209,
+            "denominator_pixels": 1024512,
+            "denominator_source": "canvas",
+            "foreground_area_ratio": 0.06169669071714143,
+            "maximum_foreground_area_ratio": null,
+            "valid": true,
+            "status": "not_applicable",
+            "reason": "not_small_part_class"
+          },
+          "automatic_conditioning": true,
+          "outcome_reason": "accepted_mask_available",
+          "accepted_boxes": [
+            [
+              318.993408203125,
+              79.93244171142578,
+              423.543701171875,
+              222.79147338867188
+            ],
+            [
+              238.14373779296875,
+              362.45867919921875,
+              504.04693603515625,
+              608.9127807617188
+            ]
+          ],
+          "mask_pixels": 63209,
+          "mask_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_face_mask.png",
+          "crop_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_face_reference.png",
+          "candidates": [
+            {
+              "index": 0,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_face_candidate_0_mask.png",
+              "sha256": "8a48bb5a97cd5a2632ef10a3ec2d012e530355f76e6f97f842a7afb79dca7eda",
+              "pixels": 11403,
+              "bbox_xyxy_exclusive": [
+                319,
+                81,
+                424,
+                221
+              ],
+              "mask_pixels_div_foreground_pixels": 0.023018832121798144,
+              "foreground_intersection_pixels": 11403,
+              "pixel_sha256": "18a63050b3fc8e96dd52cc6e2bb137e1a5cb94c7673591e3ac42955a911d24c2"
+            },
+            {
+              "index": 1,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_face_candidate_1_mask.png",
+              "sha256": "a844de672dc82bea1dec7f58561cedb40761dbebd683fd54e7da03a351db0db3",
+              "pixels": 51806,
+              "bbox_xyxy_exclusive": [
+                225,
+                366,
+                511,
+                611
+              ],
+              "mask_pixels_div_foreground_pixels": 0.10457893685011617,
+              "foreground_intersection_pixels": 51806,
+              "pixel_sha256": "010037328206ec86a0d9d8846c47b99a9cb0da974426c9b11addd45c01b8492f"
+            }
+          ]
+        },
+        "output_human_ears": {
+          "status": "uncertain",
+          "boxes": [
+            [
+              18.893836975097656,
+              15.228128433227539,
+              722.3670043945312,
+              1382.9854736328125
+            ],
+            [
+              425.26806640625,
+              101.95825958251953,
+              444.77557373046875,
+              150.05039978027344
+            ],
+            [
+              297.82257080078125,
+              99.08204650878906,
+              317.8825988769531,
+              150.01644897460938
+            ],
+            [
+              297.1520690917969,
+              95.44448852539062,
+              444.93115234375,
+              153.9875946044922
+            ]
+          ],
+          "detection_scores": [
+            0.43876272439956665,
+            0.3475828170776367,
+            0.36141106486320496,
+            0.4000663161277771
+          ],
+          "accepted_masks": 0,
+          "target_status": "unresolved",
+          "semantic_status": "unresolved",
+          "presence": "unresolved",
+          "query": "human ears. person ears.",
+          "raw_candidate_fingerprint": "d15225c5228f6d507f624ae53b7588418d9a22a6c7a13c323574e12ca0e97fd8",
+          "analysis_stage": "independent_detection",
+          "mask_quality_scores": [
+            0.9641072154045105,
+            0.8822765946388245,
+            0.8767945170402527,
+            0.49783703684806824
+          ],
+          "candidate_mask_paths": [
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_human_ears_candidate_0_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_human_ears_candidate_1_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_human_ears_candidate_2_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_human_ears_candidate_3_mask.png"
+          ],
+          "area_validity": {
+            "version": "small_part_area_validity_v1",
+            "mask_pixels": 495600,
+            "denominator_pixels": 1024512,
+            "denominator_source": "canvas",
+            "foreground_area_ratio": 0.48374250374812594,
+            "maximum_foreground_area_ratio": 0.12,
+            "valid": false,
+            "status": "evaluated",
+            "reason": null
+          },
+          "outcome_reason": "small_part_area_upper_bound_exceeded",
+          "automatic_conditioning": false,
+          "measured_mask_pixels": 495600,
+          "rejected_candidate_indices": [
+            0,
+            1,
+            2
+          ],
+          "candidates": [
+            {
+              "index": 0,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_human_ears_candidate_0_mask.png",
+              "sha256": "f5f4f226bb565d8ffefeafe26d7ac7e91a71acecfb62f8dbf33cb0e5d444caad",
+              "pixels": 495600,
+              "bbox_xyxy_exclusive": [
+                16,
+                16,
+                726,
+                1386
+              ],
+              "mask_pixels_div_foreground_pixels": 1.0004501621996984,
+              "foreground_intersection_pixels": 492545,
+              "pixel_sha256": "0b9cf0a35f766075dd25b8fa355ad03da256c700e22111e8b0354d429aa14f67"
+            },
+            {
+              "index": 1,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_human_ears_candidate_1_mask.png",
+              "sha256": "5622479516e680b2981c8dac2c15a77139a4d521f0d5b8039d7671cfa2dea1d9",
+              "pixels": 461,
+              "bbox_xyxy_exclusive": [
+                428,
+                104,
+                443,
+                150
+              ],
+              "mask_pixels_div_foreground_pixels": 0.0009306043679864022,
+              "foreground_intersection_pixels": 454,
+              "pixel_sha256": "4357d717fabb8a22c38204164c027a18f7fd76597da407142d2c023921400f7b"
+            },
+            {
+              "index": 2,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_human_ears_candidate_2_mask.png",
+              "sha256": "9492d0140820125878693912a721a7309a898a7e779461828eb6f1657ea5acdb",
+              "pixels": 497,
+              "bbox_xyxy_exclusive": [
+                300,
+                101,
+                316,
+                146
+              ],
+              "mask_pixels_div_foreground_pixels": 0.0010032762926013925,
+              "foreground_intersection_pixels": 491,
+              "pixel_sha256": "d7ed7f0fda9dded050be77fc5b5de235d18894c29f1b600010529063b63f8e84"
+            },
+            {
+              "index": 3,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_human_ears_candidate_3_mask.png",
+              "sha256": "d91c8e7de40319259879d66c3470357a6cfcb56ea18f577ffe3973a62703207a",
+              "pixels": 6311,
+              "bbox_xyxy_exclusive": [
+                301,
+                84,
+                441,
+                161
+              ],
+              "mask_pixels_div_foreground_pixels": 0.012739792117922309,
+              "foreground_intersection_pixels": 6311,
+              "pixel_sha256": "eea0f88b1eb50ad7d7fcb01bb6c5605f11b03ef412510cfa1ae32ef376c384aa"
+            }
+          ]
+        },
+        "output_animal_ears": {
+          "status": "uncertain",
+          "boxes": [
+            [
+              18.448984146118164,
+              216.52902221679688,
+              724.4603881835938,
+              817.6139526367188
+            ],
+            [
+              17.607006072998047,
+              203.60145568847656,
+              723.1611938476562,
+              1384.21875
+            ],
+            [
+              17.320255279541016,
+              19.342262268066406,
+              722.7975463867188,
+              1383.199951171875
+            ]
+          ],
+          "detection_scores": [
+            0.36645010113716125,
+            0.32626453042030334,
+            0.32993704080581665
+          ],
+          "accepted_masks": 0,
+          "target_status": "unresolved",
+          "semantic_status": "unresolved",
+          "presence": "unresolved",
+          "query": "animal ears.",
+          "raw_candidate_fingerprint": "7b18086f87f74b4cdcf0c6db4713e392cec6fcf6f615d0c55f8580b8f1a865c8",
+          "analysis_stage": "independent_detection",
+          "mask_quality_scores": [
+            0.9413023591041565,
+            0.9440464377403259,
+            0.9562060236930847
+          ],
+          "candidate_mask_paths": [
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_animal_ears_candidate_0_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_animal_ears_candidate_1_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_animal_ears_candidate_2_mask.png"
+          ],
+          "area_validity": {
+            "version": "small_part_area_validity_v1",
+            "mask_pixels": 496908,
+            "denominator_pixels": 1024512,
+            "denominator_source": "canvas",
+            "foreground_area_ratio": 0.4850192091454273,
+            "maximum_foreground_area_ratio": 0.25,
+            "valid": false,
+            "status": "evaluated",
+            "reason": null
+          },
+          "outcome_reason": "small_part_area_upper_bound_exceeded",
+          "automatic_conditioning": false,
+          "measured_mask_pixels": 496908,
+          "rejected_candidate_indices": [
+            0,
+            1,
+            2
+          ],
+          "candidates": [
+            {
+              "index": 0,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_animal_ears_candidate_0_mask.png",
+              "sha256": "8bca68c3309463b47e19554c9cdbbcb4d11abfa68824eab87d355e0de8b1288c",
+              "pixels": 238245,
+              "bbox_xyxy_exclusive": [
+                20,
+                184,
+                724,
+                808
+              ],
+              "mask_pixels_div_foreground_pixels": 0.4809367411082872,
+              "foreground_intersection_pixels": 238136,
+              "pixel_sha256": "927491a1f4be49a956c438359eac5b2a5bcb189738595dfaafe0828f1ccec371"
+            },
+            {
+              "index": 1,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_animal_ears_candidate_1_mask.png",
+              "sha256": "8fdef5152393c13785ff1583ea12d52d033dca2d8f110f4ae6d1f0f3db171c93",
+              "pixels": 431238,
+              "bbox_xyxy_exclusive": [
+                18,
+                181,
+                724,
+                1385
+              ],
+              "mask_pixels_div_foreground_pixels": 0.8705248729755317,
+              "foreground_intersection_pixels": 431039,
+              "pixel_sha256": "8b61efb3bc5f8dbbe29a1877d899ecf58a5e86054c3dc1cffc26508cc9555cce"
+            },
+            {
+              "index": 2,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_animal_ears_candidate_2_mask.png",
+              "sha256": "d00931befb590562760754ded280f3f29470d6e791a074b0e6d21bdfcc7e59e5",
+              "pixels": 496897,
+              "bbox_xyxy_exclusive": [
+                16,
+                16,
+                726,
+                1386
+              ],
+              "mask_pixels_div_foreground_pixels": 1.0030683701504106,
+              "foreground_intersection_pixels": 493177,
+              "pixel_sha256": "330b809bb730e0cf2d778c85c2ab52ca52447c5ad47d3042c69d8199d4962018"
+            }
+          ]
+        },
+        "output_hair_accessory": {
+          "status": "uncertain",
+          "boxes": [],
+          "detection_scores": [],
+          "accepted_masks": 0,
+          "target_status": "unresolved",
+          "semantic_status": "unresolved",
+          "presence": "not_observed",
+          "query": "hair ornament. hair accessory. hair clip.",
+          "raw_candidate_fingerprint": "640f1d16f76064fda39f19c54d1f463fb98e625bc4db8aee5bcd33b5eda932d0",
+          "analysis_stage": "independent_detection",
+          "outcome_reason": "no_candidate_above_threshold",
+          "automatic_conditioning": false,
+          "candidates": []
+        }
+      },
+      "overlap": {
+        "output_hair:output_face": {
+          "raw_pixels": 63209,
+          "expanded_pixels": 66910
+        },
+        "output_hair:output_human_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_hair:output_animal_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_hair:output_hair_accessory": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_hair:output_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_hair:output_tail": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_face:output_human_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_face:output_animal_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_face:output_hair_accessory": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_face:output_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_face:output_tail": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_human_ears:output_animal_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_human_ears:output_hair_accessory": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_human_ears:output_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_human_ears:output_tail": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_animal_ears:output_hair_accessory": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_animal_ears:output_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_animal_ears:output_tail": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_hair_accessory:output_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_hair_accessory:output_tail": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_ears:output_tail": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        }
+      },
+      "protection_equality": {
+        "comparison_path": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-text-20260926\\cases\\muscular-male\\ferrari\\off\\masks\\effective_protection.png",
+        "same_run_saved": false,
+        "pixel_equal": true,
+        "different_pixels": 0
+      },
+      "raw_component_equality": {
+        "output_hair": true,
+        "output_face": true
+      },
+      "request": {
+        "origin": "offline reconstruction from same Base/source, per-garment saved approved tags; compared with exception request count",
+        "metrics": {
+          "source_removal_pixels": 486825,
+          "target_coverage_pixels": 489874,
+          "requested_pixels": 489874,
+          "hard_edit_pixels": 119,
+          "hard_protection_pixels": 514975,
+          "conditional_protection_pixels": 0,
+          "protection_conflict_pixels": 474910,
+          "target_coverage_missing_pixels": 489755,
+          "target_coverage_missing_ratio": 0.9997570803921009,
+          "soft_nonzero_pixels": 25,
+          "soft_outside_hard_pixels": 0,
+          "soft_outside_hard_ratio": 0.0,
+          "soft_min": 0,
+          "soft_max": 64,
+          "soft_mean": 6.117647058823529,
+          "requested_feather_radius": 10,
+          "effective_feather_radius": 1
+        },
+        "all_requested_protected_pixels": 488635,
+        "in_domain_conflict_pixels": 474910,
+        "requested_outside_edit_domain_pixels": 14845,
+        "effective_protection_pixels": 514975,
+        "hair_unique_protection_pixels": 448065
+      },
+      "source_sha256": {
+        "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-text-20260926\\cases\\muscular-male\\minimal\\off\\Base.png": "2ff31ed03cb8eae2b216b465800a094701a6c8030387e592579f83d814a652c2",
+        "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-text-20260926\\cases\\muscular-male\\minimal\\off\\execution\\cases\\muscular-male\\base_candidates\\output_regions\\candidate_1_base\\foreground.png": "d059664545485fb072afcead4b9b1f6278dc78048b01d35e9c99c9e20559017d",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\parts.json": "3e9bdab8cef1eb4045aeb9df2766f0c677505368600b67b72d257f1bf562c838",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_hair_candidate_0_mask.png": "161ea2619ca40c38588a16bab1455c3816e0811294398bdc83c5750f5153cc13",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_hair_candidate_1_mask.png": "d8de60e167daad79f4a89d50fad9574b6908c99043550f90de177a509d875229",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_hair_candidate_2_mask.png": "b4c6c6d2c021a246297619b8506833c2e99630fe2653aee49e83e834e86e544a",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_hair_mask.png": "3ee663a6800be1e182ae6482d3c40feb85f16e592289e0fae4eb5e15f01c55af",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_face_candidate_0_mask.png": "8a48bb5a97cd5a2632ef10a3ec2d012e530355f76e6f97f842a7afb79dca7eda",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_face_candidate_1_mask.png": "a844de672dc82bea1dec7f58561cedb40761dbebd683fd54e7da03a351db0db3",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_face_mask.png": "aa2fe8eac593b4caf51016c2d712788f9c133615e1647e27b890d846da824172",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_human_ears_candidate_0_mask.png": "f5f4f226bb565d8ffefeafe26d7ac7e91a71acecfb62f8dbf33cb0e5d444caad",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_human_ears_candidate_1_mask.png": "5622479516e680b2981c8dac2c15a77139a4d521f0d5b8039d7671cfa2dea1d9",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_human_ears_candidate_2_mask.png": "9492d0140820125878693912a721a7309a898a7e779461828eb6f1657ea5acdb",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_human_ears_candidate_3_mask.png": "d91c8e7de40319259879d66c3470357a6cfcb56ea18f577ffe3973a62703207a",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_animal_ears_candidate_0_mask.png": "8bca68c3309463b47e19554c9cdbbcb4d11abfa68824eab87d355e0de8b1288c",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_animal_ears_candidate_1_mask.png": "8fdef5152393c13785ff1583ea12d52d033dca2d8f110f4ae6d1f0f3db171c93",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-ohzm1j_5\\output_animal_ears_candidate_2_mask.png": "d00931befb590562760754ded280f3f29470d6e791a074b0e6d21bdfcc7e59e5",
+        "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-text-20260926\\cases\\muscular-male\\ferrari\\off\\masks\\effective_protection.png": "bb0ac1e9e40eee0c56a7cfd24de2e1bc836cc363e17987893287e2f5bf5bbddc"
+      },
+      "temp_record_attribution": {
+        "basis": "parts.json mtime inside attempt window + Base dimensions + component pixels and hashes; no run_id in parts.json",
+        "start_local": "2026-09-27T02:35:22.685123",
+        "end_local": "2026-09-27T02:42:42.390303",
+        "parts_time_local": "2026-09-27T02:42:39.069957",
+        "inside_window": true
+      }
+    },
+    {
+      "id": "male-v2",
+      "character": "muscular-male",
+      "garment": "v2",
+      "base": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\sdxl-local-garment-strength-v2-20260923\\cases\\muscular-male\\base_candidates\\candidate_1.png",
+      "base_sha256": "2ff31ed03cb8eae2b216b465800a094701a6c8030387e592579f83d814a652c2",
+      "foreground": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\sdxl-local-garment-strength-v2-20260923\\cases\\muscular-male\\base_candidates\\output_regions\\candidate_1_base\\foreground.png",
+      "foreground_pixels": 495377,
+      "foreground_note": "stored same-Base output-region foreground, not source-reference foreground; refinement fallback temporary foreground was not persisted",
+      "detector_record": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\parts.json",
+      "detector_record_modified_local": "2026-09-23T02:03:46.456767",
+      "components": {
+        "output_hair": {
+          "accepted": true,
+          "hard_protection_member": true,
+          "conditional_member": false,
+          "raw": {
+            "pixels": 498176,
+            "bbox_xyxy_exclusive": [
+              16,
+              16,
+              727,
+              1386
+            ],
+            "mask_pixels_div_foreground_pixels": 1.0056502421388156,
+            "foreground_intersection_pixels": 493479,
+            "pixel_sha256": "3e4d36c08c1484f5c92ac1f3f061b8b49c81467f12de1d4a05a62547f681d2d2"
+          },
+          "maxfilter5": {
+            "pixels": 514975,
+            "bbox_xyxy_exclusive": [
+              14,
+              14,
+              729,
+              1388
+            ],
+            "mask_pixels_div_foreground_pixels": 1.0395617882945716,
+            "foreground_intersection_pixels": 495258,
+            "pixel_sha256": "cb6d65c304f4413e7990325fc455c32ade445ee31ff09a40cd1609a717ae98da"
+          }
+        },
+        "output_face": {
+          "accepted": true,
+          "hard_protection_member": true,
+          "conditional_member": false,
+          "raw": {
+            "pixels": 63209,
+            "bbox_xyxy_exclusive": [
+              225,
+              81,
+              511,
+              611
+            ],
+            "mask_pixels_div_foreground_pixels": 0.12759776897191433,
+            "foreground_intersection_pixels": 63209,
+            "pixel_sha256": "4c1bb2c8fecf6abcb42fe611fbea5c59ce29eecf1becad030162cc30061395c7"
+          },
+          "maxfilter5": {
+            "pixels": 66910,
+            "bbox_xyxy_exclusive": [
+              223,
+              79,
+              513,
+              613
+            ],
+            "mask_pixels_div_foreground_pixels": 0.13506884655524984,
+            "foreground_intersection_pixels": 66910,
+            "pixel_sha256": "83861a6e47e5bc3b0e444871174627d6d30407cc773f50d457be540d128a47c1"
+          }
+        },
+        "output_human_ears": {
+          "accepted": false,
+          "hard_protection_member": false,
+          "conditional_member": false,
+          "raw": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          },
+          "maxfilter5": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          }
+        },
+        "output_animal_ears": {
+          "accepted": false,
+          "hard_protection_member": true,
+          "conditional_member": false,
+          "raw": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          },
+          "maxfilter5": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          }
+        },
+        "output_hair_accessory": {
+          "accepted": false,
+          "hard_protection_member": true,
+          "conditional_member": false,
+          "raw": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          },
+          "maxfilter5": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          }
+        },
+        "output_ears": {
+          "accepted": false,
+          "query_run": false,
+          "hard_protection_member": true,
+          "conditional_member": false,
+          "raw": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          },
+          "maxfilter5": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          }
+        },
+        "output_tail": {
+          "accepted": false,
+          "query_run": false,
+          "hard_protection_member": false,
+          "conditional_member": true,
+          "raw": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          },
+          "maxfilter5": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "03c58bbd94ecac3f21efd62f1a52a831546d447ea59f77030667f328c48e5d3e"
+          }
+        }
+      },
+      "queries": {
+        "output_hair": {
+          "status": "detected",
+          "boxes": [
+            [
+              16.392711639404297,
+              16.60098648071289,
+              725.2182006835938,
+              1384.157958984375
+            ],
+            [
+              299.67596435546875,
+              12.558371543884277,
+              443.58154296875,
+              129.90977478027344
+            ],
+            [
+              299.0074768066406,
+              12.630627632141113,
+              444.00537109375,
+              190.04043579101562
+            ]
+          ],
+          "detection_scores": [
+            0.4986293911933899,
+            0.37483763694763184,
+            0.33132460713386536
+          ],
+          "accepted_masks": 3,
+          "target_status": "unresolved",
+          "semantic_status": "unresolved",
+          "presence": "model_candidate",
+          "query": "hair.",
+          "raw_candidate_fingerprint": "28654ad0ffee4d5044e3a74cc2e9ab87a7eaf6104f4e7c22dd0c645bbb7cc612",
+          "analysis_stage": "independent_detection",
+          "mask_quality_scores": [
+            0.9362038373947144,
+            0.9396414756774902,
+            0.9241709113121033
+          ],
+          "candidate_mask_paths": [
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_hair_candidate_0_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_hair_candidate_1_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_hair_candidate_2_mask.png"
+          ],
+          "area_validity": {
+            "version": "small_part_area_validity_v1",
+            "mask_pixels": 498176,
+            "denominator_pixels": 1024512,
+            "denominator_source": "canvas",
+            "foreground_area_ratio": 0.4862568715642179,
+            "maximum_foreground_area_ratio": null,
+            "valid": true,
+            "status": "not_applicable",
+            "reason": "not_small_part_class"
+          },
+          "automatic_conditioning": true,
+          "outcome_reason": "accepted_mask_available",
+          "accepted_boxes": [
+            [
+              16.392711639404297,
+              16.60098648071289,
+              725.2182006835938,
+              1384.157958984375
+            ],
+            [
+              299.67596435546875,
+              12.558371543884277,
+              443.58154296875,
+              129.90977478027344
+            ],
+            [
+              299.0074768066406,
+              12.630627632141113,
+              444.00537109375,
+              190.04043579101562
+            ]
+          ],
+          "mask_pixels": 498176,
+          "mask_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_hair_mask.png",
+          "crop_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_hair_reference.png",
+          "candidates": [
+            {
+              "index": 0,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_hair_candidate_0_mask.png",
+              "sha256": "161ea2619ca40c38588a16bab1455c3816e0811294398bdc83c5750f5153cc13",
+              "pixels": 498137,
+              "bbox_xyxy_exclusive": [
+                16,
+                16,
+                727,
+                1386
+              ],
+              "mask_pixels_div_foreground_pixels": 1.0055715142204826,
+              "foreground_intersection_pixels": 493469,
+              "pixel_sha256": "0b2e20eba319a50676829f58a8cfc7b13ea431464f532867291ffa34d976f47c"
+            },
+            {
+              "index": 1,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_hair_candidate_1_mask.png",
+              "sha256": "d8de60e167daad79f4a89d50fad9574b6908c99043550f90de177a509d875229",
+              "pixels": 8554,
+              "bbox_xyxy_exclusive": [
+                304,
+                17,
+                441,
+                129
+              ],
+              "mask_pixels_div_foreground_pixels": 0.017267656754350727,
+              "foreground_intersection_pixels": 8440,
+              "pixel_sha256": "5e1aec6d04cc23dfa8e717e83312b40fe83c46acf805af0960d2b55df33cceea"
+            },
+            {
+              "index": 2,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_hair_candidate_2_mask.png",
+              "sha256": "b4c6c6d2c021a246297619b8506833c2e99630fe2653aee49e83e834e86e544a",
+              "pixels": 9937,
+              "bbox_xyxy_exclusive": [
+                303,
+                17,
+                441,
+                190
+              ],
+              "mask_pixels_div_foreground_pixels": 0.020059469858309933,
+              "foreground_intersection_pixels": 9735,
+              "pixel_sha256": "6e220122a4e10595c8714389cff5df0e0cad38989c93b9af05b911c24ee9ba71"
+            }
+          ]
+        },
+        "output_face": {
+          "status": "detected",
+          "boxes": [
+            [
+              318.993408203125,
+              79.93244171142578,
+              423.543701171875,
+              222.79147338867188
+            ],
+            [
+              238.14373779296875,
+              362.45867919921875,
+              504.04693603515625,
+              608.9127807617188
+            ]
+          ],
+          "detection_scores": [
+            0.7664071321487427,
+            0.3129975497722626
+          ],
+          "accepted_masks": 2,
+          "target_status": "unresolved",
+          "semantic_status": "unresolved",
+          "presence": "model_candidate",
+          "query": "face.",
+          "raw_candidate_fingerprint": "bad7e1960f72380f0e27992fb9f3faa0b19e01a7c041000ebfddbaf683fa548f",
+          "analysis_stage": "independent_detection",
+          "mask_quality_scores": [
+            0.9539945721626282,
+            0.9169142246246338
+          ],
+          "candidate_mask_paths": [
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_face_candidate_0_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_face_candidate_1_mask.png"
+          ],
+          "area_validity": {
+            "version": "small_part_area_validity_v1",
+            "mask_pixels": 63209,
+            "denominator_pixels": 1024512,
+            "denominator_source": "canvas",
+            "foreground_area_ratio": 0.06169669071714143,
+            "maximum_foreground_area_ratio": null,
+            "valid": true,
+            "status": "not_applicable",
+            "reason": "not_small_part_class"
+          },
+          "automatic_conditioning": true,
+          "outcome_reason": "accepted_mask_available",
+          "accepted_boxes": [
+            [
+              318.993408203125,
+              79.93244171142578,
+              423.543701171875,
+              222.79147338867188
+            ],
+            [
+              238.14373779296875,
+              362.45867919921875,
+              504.04693603515625,
+              608.9127807617188
+            ]
+          ],
+          "mask_pixels": 63209,
+          "mask_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_face_mask.png",
+          "crop_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_face_reference.png",
+          "candidates": [
+            {
+              "index": 0,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_face_candidate_0_mask.png",
+              "sha256": "8a48bb5a97cd5a2632ef10a3ec2d012e530355f76e6f97f842a7afb79dca7eda",
+              "pixels": 11403,
+              "bbox_xyxy_exclusive": [
+                319,
+                81,
+                424,
+                221
+              ],
+              "mask_pixels_div_foreground_pixels": 0.023018832121798144,
+              "foreground_intersection_pixels": 11403,
+              "pixel_sha256": "18a63050b3fc8e96dd52cc6e2bb137e1a5cb94c7673591e3ac42955a911d24c2"
+            },
+            {
+              "index": 1,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_face_candidate_1_mask.png",
+              "sha256": "a844de672dc82bea1dec7f58561cedb40761dbebd683fd54e7da03a351db0db3",
+              "pixels": 51806,
+              "bbox_xyxy_exclusive": [
+                225,
+                366,
+                511,
+                611
+              ],
+              "mask_pixels_div_foreground_pixels": 0.10457893685011617,
+              "foreground_intersection_pixels": 51806,
+              "pixel_sha256": "010037328206ec86a0d9d8846c47b99a9cb0da974426c9b11addd45c01b8492f"
+            }
+          ]
+        },
+        "output_human_ears": {
+          "status": "uncertain",
+          "boxes": [
+            [
+              18.893836975097656,
+              15.228128433227539,
+              722.3670043945312,
+              1382.9854736328125
+            ],
+            [
+              425.26806640625,
+              101.95825958251953,
+              444.77557373046875,
+              150.05039978027344
+            ],
+            [
+              297.82257080078125,
+              99.08204650878906,
+              317.8825988769531,
+              150.01644897460938
+            ],
+            [
+              297.1520690917969,
+              95.44448852539062,
+              444.93115234375,
+              153.9875946044922
+            ]
+          ],
+          "detection_scores": [
+            0.43876272439956665,
+            0.3475828170776367,
+            0.36141106486320496,
+            0.4000663161277771
+          ],
+          "accepted_masks": 0,
+          "target_status": "unresolved",
+          "semantic_status": "unresolved",
+          "presence": "unresolved",
+          "query": "human ears. person ears.",
+          "raw_candidate_fingerprint": "d15225c5228f6d507f624ae53b7588418d9a22a6c7a13c323574e12ca0e97fd8",
+          "analysis_stage": "independent_detection",
+          "mask_quality_scores": [
+            0.9641072154045105,
+            0.8822765946388245,
+            0.8767945170402527,
+            0.49783703684806824
+          ],
+          "candidate_mask_paths": [
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_human_ears_candidate_0_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_human_ears_candidate_1_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_human_ears_candidate_2_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_human_ears_candidate_3_mask.png"
+          ],
+          "area_validity": {
+            "version": "small_part_area_validity_v1",
+            "mask_pixels": 495600,
+            "denominator_pixels": 1024512,
+            "denominator_source": "canvas",
+            "foreground_area_ratio": 0.48374250374812594,
+            "maximum_foreground_area_ratio": 0.12,
+            "valid": false,
+            "status": "evaluated",
+            "reason": null
+          },
+          "outcome_reason": "small_part_area_upper_bound_exceeded",
+          "automatic_conditioning": false,
+          "measured_mask_pixels": 495600,
+          "rejected_candidate_indices": [
+            0,
+            1,
+            2
+          ],
+          "candidates": [
+            {
+              "index": 0,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_human_ears_candidate_0_mask.png",
+              "sha256": "f5f4f226bb565d8ffefeafe26d7ac7e91a71acecfb62f8dbf33cb0e5d444caad",
+              "pixels": 495600,
+              "bbox_xyxy_exclusive": [
+                16,
+                16,
+                726,
+                1386
+              ],
+              "mask_pixels_div_foreground_pixels": 1.0004501621996984,
+              "foreground_intersection_pixels": 492545,
+              "pixel_sha256": "0b9cf0a35f766075dd25b8fa355ad03da256c700e22111e8b0354d429aa14f67"
+            },
+            {
+              "index": 1,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_human_ears_candidate_1_mask.png",
+              "sha256": "5622479516e680b2981c8dac2c15a77139a4d521f0d5b8039d7671cfa2dea1d9",
+              "pixels": 461,
+              "bbox_xyxy_exclusive": [
+                428,
+                104,
+                443,
+                150
+              ],
+              "mask_pixels_div_foreground_pixels": 0.0009306043679864022,
+              "foreground_intersection_pixels": 454,
+              "pixel_sha256": "4357d717fabb8a22c38204164c027a18f7fd76597da407142d2c023921400f7b"
+            },
+            {
+              "index": 2,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_human_ears_candidate_2_mask.png",
+              "sha256": "9492d0140820125878693912a721a7309a898a7e779461828eb6f1657ea5acdb",
+              "pixels": 497,
+              "bbox_xyxy_exclusive": [
+                300,
+                101,
+                316,
+                146
+              ],
+              "mask_pixels_div_foreground_pixels": 0.0010032762926013925,
+              "foreground_intersection_pixels": 491,
+              "pixel_sha256": "d7ed7f0fda9dded050be77fc5b5de235d18894c29f1b600010529063b63f8e84"
+            },
+            {
+              "index": 3,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_human_ears_candidate_3_mask.png",
+              "sha256": "d91c8e7de40319259879d66c3470357a6cfcb56ea18f577ffe3973a62703207a",
+              "pixels": 6311,
+              "bbox_xyxy_exclusive": [
+                301,
+                84,
+                441,
+                161
+              ],
+              "mask_pixels_div_foreground_pixels": 0.012739792117922309,
+              "foreground_intersection_pixels": 6311,
+              "pixel_sha256": "eea0f88b1eb50ad7d7fcb01bb6c5605f11b03ef412510cfa1ae32ef376c384aa"
+            }
+          ]
+        },
+        "output_animal_ears": {
+          "status": "uncertain",
+          "boxes": [
+            [
+              18.448984146118164,
+              216.52902221679688,
+              724.4603881835938,
+              817.6139526367188
+            ],
+            [
+              17.607006072998047,
+              203.60145568847656,
+              723.1611938476562,
+              1384.21875
+            ],
+            [
+              17.320255279541016,
+              19.342262268066406,
+              722.7975463867188,
+              1383.199951171875
+            ]
+          ],
+          "detection_scores": [
+            0.36645010113716125,
+            0.32626453042030334,
+            0.32993704080581665
+          ],
+          "accepted_masks": 0,
+          "target_status": "unresolved",
+          "semantic_status": "unresolved",
+          "presence": "unresolved",
+          "query": "animal ears.",
+          "raw_candidate_fingerprint": "7b18086f87f74b4cdcf0c6db4713e392cec6fcf6f615d0c55f8580b8f1a865c8",
+          "analysis_stage": "independent_detection",
+          "mask_quality_scores": [
+            0.9413023591041565,
+            0.9440464377403259,
+            0.9562060236930847
+          ],
+          "candidate_mask_paths": [
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_animal_ears_candidate_0_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_animal_ears_candidate_1_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_animal_ears_candidate_2_mask.png"
+          ],
+          "area_validity": {
+            "version": "small_part_area_validity_v1",
+            "mask_pixels": 496908,
+            "denominator_pixels": 1024512,
+            "denominator_source": "canvas",
+            "foreground_area_ratio": 0.4850192091454273,
+            "maximum_foreground_area_ratio": 0.25,
+            "valid": false,
+            "status": "evaluated",
+            "reason": null
+          },
+          "outcome_reason": "small_part_area_upper_bound_exceeded",
+          "automatic_conditioning": false,
+          "measured_mask_pixels": 496908,
+          "rejected_candidate_indices": [
+            0,
+            1,
+            2
+          ],
+          "candidates": [
+            {
+              "index": 0,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_animal_ears_candidate_0_mask.png",
+              "sha256": "8bca68c3309463b47e19554c9cdbbcb4d11abfa68824eab87d355e0de8b1288c",
+              "pixels": 238245,
+              "bbox_xyxy_exclusive": [
+                20,
+                184,
+                724,
+                808
+              ],
+              "mask_pixels_div_foreground_pixels": 0.4809367411082872,
+              "foreground_intersection_pixels": 238136,
+              "pixel_sha256": "927491a1f4be49a956c438359eac5b2a5bcb189738595dfaafe0828f1ccec371"
+            },
+            {
+              "index": 1,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_animal_ears_candidate_1_mask.png",
+              "sha256": "8fdef5152393c13785ff1583ea12d52d033dca2d8f110f4ae6d1f0f3db171c93",
+              "pixels": 431238,
+              "bbox_xyxy_exclusive": [
+                18,
+                181,
+                724,
+                1385
+              ],
+              "mask_pixels_div_foreground_pixels": 0.8705248729755317,
+              "foreground_intersection_pixels": 431039,
+              "pixel_sha256": "8b61efb3bc5f8dbbe29a1877d899ecf58a5e86054c3dc1cffc26508cc9555cce"
+            },
+            {
+              "index": 2,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_animal_ears_candidate_2_mask.png",
+              "sha256": "d00931befb590562760754ded280f3f29470d6e791a074b0e6d21bdfcc7e59e5",
+              "pixels": 496897,
+              "bbox_xyxy_exclusive": [
+                16,
+                16,
+                726,
+                1386
+              ],
+              "mask_pixels_div_foreground_pixels": 1.0030683701504106,
+              "foreground_intersection_pixels": 493177,
+              "pixel_sha256": "330b809bb730e0cf2d778c85c2ab52ca52447c5ad47d3042c69d8199d4962018"
+            }
+          ]
+        },
+        "output_hair_accessory": {
+          "status": "uncertain",
+          "boxes": [],
+          "detection_scores": [],
+          "accepted_masks": 0,
+          "target_status": "unresolved",
+          "semantic_status": "unresolved",
+          "presence": "not_observed",
+          "query": "hair ornament. hair accessory. hair clip.",
+          "raw_candidate_fingerprint": "640f1d16f76064fda39f19c54d1f463fb98e625bc4db8aee5bcd33b5eda932d0",
+          "analysis_stage": "independent_detection",
+          "outcome_reason": "no_candidate_above_threshold",
+          "automatic_conditioning": false,
+          "candidates": []
+        }
+      },
+      "overlap": {
+        "output_hair:output_face": {
+          "raw_pixels": 63209,
+          "expanded_pixels": 66910
+        },
+        "output_hair:output_human_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_hair:output_animal_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_hair:output_hair_accessory": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_hair:output_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_hair:output_tail": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_face:output_human_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_face:output_animal_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_face:output_hair_accessory": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_face:output_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_face:output_tail": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_human_ears:output_animal_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_human_ears:output_hair_accessory": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_human_ears:output_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_human_ears:output_tail": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_animal_ears:output_hair_accessory": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_animal_ears:output_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_animal_ears:output_tail": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_hair_accessory:output_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_hair_accessory:output_tail": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_ears:output_tail": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        }
+      },
+      "protection_equality": {
+        "comparison_path": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260923-015810-98169b12\\masks\\local-refinement\\effective_protection.png",
+        "same_run_saved": true,
+        "pixel_equal": true,
+        "different_pixels": 0
+      },
+      "raw_component_equality": {
+        "output_hair": true,
+        "output_face": true
+      },
+      "request": {
+        "origin": "saved",
+        "metrics": {
+          "source_removal_pixels": 486825,
+          "target_coverage_pixels": 490735,
+          "requested_pixels": 490735,
+          "hard_edit_pixels": 119,
+          "hard_protection_pixels": 514975,
+          "conditional_protection_pixels": 0,
+          "protection_conflict_pixels": 475771,
+          "target_coverage_missing_pixels": 490616,
+          "target_coverage_missing_ratio": 0.9997575065972469,
+          "soft_nonzero_pixels": 25,
+          "soft_outside_hard_pixels": 0,
+          "soft_outside_hard_ratio": 0.0,
+          "soft_min": 0,
+          "soft_max": 64,
+          "soft_mean": 6.117647058823529,
+          "requested_feather_radius": 10,
+          "effective_feather_radius": 1
+        },
+        "all_requested_protected_pixels": 489496,
+        "in_domain_conflict_pixels": 475771,
+        "requested_outside_edit_domain_pixels": 14845,
+        "effective_protection_pixels": 514975,
+        "hair_unique_protection_pixels": 448065
+      },
+      "source_sha256": {
+        "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\sdxl-local-garment-strength-v2-20260923\\cases\\muscular-male\\base_candidates\\candidate_1.png": "2ff31ed03cb8eae2b216b465800a094701a6c8030387e592579f83d814a652c2",
+        "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\sdxl-local-garment-strength-v2-20260923\\cases\\muscular-male\\base_candidates\\output_regions\\candidate_1_base\\foreground.png": "d059664545485fb072afcead4b9b1f6278dc78048b01d35e9c99c9e20559017d",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\parts.json": "36fecada13680db967ce92e6cc99feb99789636722a4713659f3391fe5fb269a",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_hair_candidate_0_mask.png": "161ea2619ca40c38588a16bab1455c3816e0811294398bdc83c5750f5153cc13",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_hair_candidate_1_mask.png": "d8de60e167daad79f4a89d50fad9574b6908c99043550f90de177a509d875229",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_hair_candidate_2_mask.png": "b4c6c6d2c021a246297619b8506833c2e99630fe2653aee49e83e834e86e544a",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_hair_mask.png": "3ee663a6800be1e182ae6482d3c40feb85f16e592289e0fae4eb5e15f01c55af",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_face_candidate_0_mask.png": "8a48bb5a97cd5a2632ef10a3ec2d012e530355f76e6f97f842a7afb79dca7eda",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_face_candidate_1_mask.png": "a844de672dc82bea1dec7f58561cedb40761dbebd683fd54e7da03a351db0db3",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_face_mask.png": "aa2fe8eac593b4caf51016c2d712788f9c133615e1647e27b890d846da824172",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_human_ears_candidate_0_mask.png": "f5f4f226bb565d8ffefeafe26d7ac7e91a71acecfb62f8dbf33cb0e5d444caad",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_human_ears_candidate_1_mask.png": "5622479516e680b2981c8dac2c15a77139a4d521f0d5b8039d7671cfa2dea1d9",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_human_ears_candidate_2_mask.png": "9492d0140820125878693912a721a7309a898a7e779461828eb6f1657ea5acdb",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_human_ears_candidate_3_mask.png": "d91c8e7de40319259879d66c3470357a6cfcb56ea18f577ffe3973a62703207a",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_animal_ears_candidate_0_mask.png": "8bca68c3309463b47e19554c9cdbbcb4d11abfa68824eab87d355e0de8b1288c",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_animal_ears_candidate_1_mask.png": "8fdef5152393c13785ff1583ea12d52d033dca2d8f110f4ae6d1f0f3db171c93",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-3fw0ur67\\output_animal_ears_candidate_2_mask.png": "d00931befb590562760754ded280f3f29470d6e791a074b0e6d21bdfcc7e59e5",
+        "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generation-runs\\20260923-015810-98169b12\\masks\\local-refinement\\effective_protection.png": "bb0ac1e9e40eee0c56a7cfd24de2e1bc836cc363e17987893287e2f5bf5bbddc"
+      },
+      "saved_plan_reconstruction": {
+        "source_garment_removal": 0,
+        "target_garment_coverage": 0,
+        "garment_growth_envelope": 0,
+        "requested_edit": 0,
+        "hard_edit_domain": 0,
+        "hard_protection": 0,
+        "conditional_protection": 0,
+        "effective_protection": 0,
+        "mask_conflict": 0,
+        "soft_guidance": 0
+      }
+    },
+    {
+      "id": "ordinary-ferrari",
+      "character": "ordinary-female",
+      "garment": "ferrari",
+      "base": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-text-20260926\\cases\\ordinary-female\\ferrari\\off\\Base.png",
+      "base_sha256": "cd1a11ffa5664d37106758e544ca783d0950f868dcebe0ae39bd04f2f5d9d3e0",
+      "foreground": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-text-20260926\\cases\\ordinary-female\\ferrari\\off\\execution\\cases\\ordinary-female\\base_candidates\\output_regions\\candidate_1_base\\foreground.png",
+      "foreground_pixels": 153848,
+      "foreground_note": "stored same-Base output-region foreground, not source-reference foreground; refinement fallback temporary foreground was not persisted",
+      "detector_record": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\parts.json",
+      "detector_record_modified_local": "2026-09-26T23:47:08.415620",
+      "components": {
+        "output_hair": {
+          "accepted": true,
+          "hard_protection_member": true,
+          "conditional_member": false,
+          "raw": {
+            "pixels": 18750,
+            "bbox_xyxy_exclusive": [
+              232,
+              151,
+              447,
+              333
+            ],
+            "mask_pixels_div_foreground_pixels": 0.12187353751754978,
+            "foreground_intersection_pixels": 18608,
+            "pixel_sha256": "a9fc62c9e97368d902eacef8897f820411d51ed91c4fab648022670f2c1fb4ea"
+          },
+          "maxfilter5": {
+            "pixels": 22015,
+            "bbox_xyxy_exclusive": [
+              230,
+              149,
+              449,
+              335
+            ],
+            "mask_pixels_div_foreground_pixels": 0.14309578285060578,
+            "foreground_intersection_pixels": 21218,
+            "pixel_sha256": "b960fb0c7ff36e606d025062be957f73cbecffaad39ccaa8e5afc48acf2b56a9"
+          }
+        },
+        "output_face": {
+          "accepted": true,
+          "hard_protection_member": true,
+          "conditional_member": false,
+          "raw": {
+            "pixels": 5538,
+            "bbox_xyxy_exclusive": [
+              321,
+              231,
+              411,
+              334
+            ],
+            "mask_pixels_div_foreground_pixels": 0.03599656804118351,
+            "foreground_intersection_pixels": 5538,
+            "pixel_sha256": "81fdbdb2a456fe1e8d90fe69addc8e7751bcced9edd2fa1b63e98845588d69b3"
+          },
+          "maxfilter5": {
+            "pixels": 6613,
+            "bbox_xyxy_exclusive": [
+              319,
+              229,
+              413,
+              336
+            ],
+            "mask_pixels_div_foreground_pixels": 0.04298398419218969,
+            "foreground_intersection_pixels": 6613,
+            "pixel_sha256": "43eb26eef4b81d059aa7af8d94e73a6acb48216c28ac4f51d666457b7da99e45"
+          }
+        },
+        "output_human_ears": {
+          "accepted": false,
+          "hard_protection_member": false,
+          "conditional_member": false,
+          "raw": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "1b12f8a9e7658891c49875aaf13b72c3c6e11ad8cad37b9a54bd6a8ec8df59e3"
+          },
+          "maxfilter5": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "1b12f8a9e7658891c49875aaf13b72c3c6e11ad8cad37b9a54bd6a8ec8df59e3"
+          }
+        },
+        "output_animal_ears": {
+          "accepted": false,
+          "hard_protection_member": true,
+          "conditional_member": false,
+          "raw": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "1b12f8a9e7658891c49875aaf13b72c3c6e11ad8cad37b9a54bd6a8ec8df59e3"
+          },
+          "maxfilter5": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "1b12f8a9e7658891c49875aaf13b72c3c6e11ad8cad37b9a54bd6a8ec8df59e3"
+          }
+        },
+        "output_hair_accessory": {
+          "accepted": true,
+          "hard_protection_member": true,
+          "conditional_member": false,
+          "raw": {
+            "pixels": 15352,
+            "bbox_xyxy_exclusive": [
+              282,
+              151,
+              447,
+              316
+            ],
+            "mask_pixels_div_foreground_pixels": 0.0997868025583693,
+            "foreground_intersection_pixels": 15260,
+            "pixel_sha256": "2a7fff3e60693cec976aea2355fb22f58bbb254ace44db154181a21ac4d53789"
+          },
+          "maxfilter5": {
+            "pixels": 18007,
+            "bbox_xyxy_exclusive": [
+              280,
+              149,
+              449,
+              318
+            ],
+            "mask_pixels_div_foreground_pixels": 0.11704409547085436,
+            "foreground_intersection_pixels": 17368,
+            "pixel_sha256": "c4b7f5efa6e3a02f3914f085421807f958052b22b3e8a4e9856f2716d9d4d061"
+          }
+        },
+        "output_ears": {
+          "accepted": false,
+          "query_run": false,
+          "hard_protection_member": true,
+          "conditional_member": false,
+          "raw": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "1b12f8a9e7658891c49875aaf13b72c3c6e11ad8cad37b9a54bd6a8ec8df59e3"
+          },
+          "maxfilter5": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "1b12f8a9e7658891c49875aaf13b72c3c6e11ad8cad37b9a54bd6a8ec8df59e3"
+          }
+        },
+        "output_tail": {
+          "accepted": false,
+          "query_run": false,
+          "hard_protection_member": false,
+          "conditional_member": true,
+          "raw": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "1b12f8a9e7658891c49875aaf13b72c3c6e11ad8cad37b9a54bd6a8ec8df59e3"
+          },
+          "maxfilter5": {
+            "pixels": 0,
+            "bbox_xyxy_exclusive": null,
+            "mask_pixels_div_foreground_pixels": 0.0,
+            "foreground_intersection_pixels": 0,
+            "pixel_sha256": "1b12f8a9e7658891c49875aaf13b72c3c6e11ad8cad37b9a54bd6a8ec8df59e3"
+          }
+        }
+      },
+      "queries": {
+        "output_hair": {
+          "status": "detected",
+          "boxes": [
+            [
+              279.7824401855469,
+              143.71832275390625,
+              449.988525390625,
+              324.2392578125
+            ],
+            [
+              234.2669677734375,
+              143.66268920898438,
+              450.2366027832031,
+              329.697509765625
+            ]
+          ],
+          "detection_scores": [
+            0.4989754855632782,
+            0.36795759201049805
+          ],
+          "accepted_masks": 2,
+          "target_status": "unresolved",
+          "semantic_status": "unresolved",
+          "presence": "model_candidate",
+          "query": "hair.",
+          "raw_candidate_fingerprint": "1f3bec99ef9460e659c749a8cc8b5cebb53c0c117a9a7611094ddf4468a94199",
+          "analysis_stage": "independent_detection",
+          "mask_quality_scores": [
+            0.9359422326087952,
+            0.8688880205154419
+          ],
+          "candidate_mask_paths": [
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_hair_candidate_0_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_hair_candidate_1_mask.png"
+          ],
+          "area_validity": {
+            "version": "small_part_area_validity_v1",
+            "mask_pixels": 18750,
+            "denominator_pixels": 906752,
+            "denominator_source": "canvas",
+            "foreground_area_ratio": 0.020678200875211744,
+            "maximum_foreground_area_ratio": null,
+            "valid": true,
+            "status": "not_applicable",
+            "reason": "not_small_part_class"
+          },
+          "automatic_conditioning": true,
+          "outcome_reason": "accepted_mask_available",
+          "accepted_boxes": [
+            [
+              279.7824401855469,
+              143.71832275390625,
+              449.988525390625,
+              324.2392578125
+            ],
+            [
+              234.2669677734375,
+              143.66268920898438,
+              450.2366027832031,
+              329.697509765625
+            ]
+          ],
+          "mask_pixels": 18750,
+          "mask_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_hair_mask.png",
+          "crop_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_hair_reference.png",
+          "candidates": [
+            {
+              "index": 0,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_hair_candidate_0_mask.png",
+              "sha256": "bb9b56a101bc63d859a3143bccb30d2ef7b624a2a0fad930dc36cd8dd70b8501",
+              "pixels": 15398,
+              "bbox_xyxy_exclusive": [
+                282,
+                151,
+                447,
+                316
+              ],
+              "mask_pixels_div_foreground_pixels": 0.10008579897041235,
+              "foreground_intersection_pixels": 15307,
+              "pixel_sha256": "212f651542d3099ae97011e1aa349c7474a4bc74cbaf86668bf44f64131645b7"
+            },
+            {
+              "index": 1,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_hair_candidate_1_mask.png",
+              "sha256": "4bdf60525ed9a2e46c9d1d0bcebd022c3939c925931b2125f115f32e9c177759",
+              "pixels": 18726,
+              "bbox_xyxy_exclusive": [
+                232,
+                151,
+                447,
+                333
+              ],
+              "mask_pixels_div_foreground_pixels": 0.12171753938952733,
+              "foreground_intersection_pixels": 18594,
+              "pixel_sha256": "5bb8fbb8ca0e7e8e05b41be21026929f24346ba8d7be3904be1e93996b0b1025"
+            }
+          ]
+        },
+        "output_face": {
+          "status": "detected",
+          "boxes": [
+            [
+              317.0378723144531,
+              221.21250915527344,
+              410.4423522949219,
+              327.8930969238281
+            ]
+          ],
+          "detection_scores": [
+            0.6732869744300842
+          ],
+          "accepted_masks": 1,
+          "target_status": "unresolved",
+          "semantic_status": "unresolved",
+          "presence": "model_candidate",
+          "query": "face.",
+          "raw_candidate_fingerprint": "4a8efb39efd414a17432aad30f1b66c558164d451d17904c1c3867c5151123f0",
+          "analysis_stage": "independent_detection",
+          "mask_quality_scores": [
+            0.9284268021583557
+          ],
+          "candidate_mask_paths": [
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_face_candidate_0_mask.png"
+          ],
+          "area_validity": {
+            "version": "small_part_area_validity_v1",
+            "mask_pixels": 5538,
+            "denominator_pixels": 906752,
+            "denominator_source": "canvas",
+            "foreground_area_ratio": 0.006107513410502541,
+            "maximum_foreground_area_ratio": null,
+            "valid": true,
+            "status": "not_applicable",
+            "reason": "not_small_part_class"
+          },
+          "automatic_conditioning": true,
+          "outcome_reason": "accepted_mask_available",
+          "accepted_boxes": [
+            [
+              317.0378723144531,
+              221.21250915527344,
+              410.4423522949219,
+              327.8930969238281
+            ]
+          ],
+          "mask_pixels": 5538,
+          "mask_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_face_mask.png",
+          "crop_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_face_reference.png",
+          "candidates": [
+            {
+              "index": 0,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_face_candidate_0_mask.png",
+              "sha256": "ba739309564afe7cf4910eabab4b7f97d8422f0316ae05c4ba8ff28e52bd86ab",
+              "pixels": 5538,
+              "bbox_xyxy_exclusive": [
+                321,
+                231,
+                411,
+                334
+              ],
+              "mask_pixels_div_foreground_pixels": 0.03599656804118351,
+              "foreground_intersection_pixels": 5538,
+              "pixel_sha256": "81fdbdb2a456fe1e8d90fe69addc8e7751bcced9edd2fa1b63e98845588d69b3"
+            }
+          ]
+        },
+        "output_human_ears": {
+          "status": "uncertain",
+          "boxes": [
+            [
+              176.55331420898438,
+              33.82518768310547,
+              486.76861572265625,
+              1194.8277587890625
+            ],
+            [
+              386.66876220703125,
+              156.3255157470703,
+              438.3167419433594,
+              196.42532348632812
+            ],
+            [
+              292.8756103515625,
+              257.55419921875,
+              327.52557373046875,
+              300.8988037109375
+            ],
+            [
+              292.61468505859375,
+              257.49627685546875,
+              333.1278991699219,
+              337.099853515625
+            ]
+          ],
+          "detection_scores": [
+            0.4587670564651489,
+            0.31050267815589905,
+            0.3454684317111969,
+            0.3078784644603729
+          ],
+          "accepted_masks": 0,
+          "target_status": "unresolved",
+          "semantic_status": "unresolved",
+          "presence": "unresolved",
+          "query": "human ears. person ears.",
+          "raw_candidate_fingerprint": "8e3f06ea839700fc0758d63a7118990da7606bd2501d6a833332153304431382",
+          "analysis_stage": "independent_detection",
+          "mask_quality_scores": [
+            0.9877240657806396,
+            0.8972519040107727,
+            0.8787556290626526,
+            0.8366191387176514
+          ],
+          "candidate_mask_paths": [
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_human_ears_candidate_0_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_human_ears_candidate_1_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_human_ears_candidate_2_mask.png",
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_human_ears_candidate_3_mask.png"
+          ],
+          "area_validity": {
+            "version": "small_part_area_validity_v1",
+            "mask_pixels": 150386,
+            "denominator_pixels": 906752,
+            "denominator_source": "canvas",
+            "foreground_area_ratio": 0.1658513022303783,
+            "maximum_foreground_area_ratio": 0.12,
+            "valid": false,
+            "status": "evaluated",
+            "reason": null
+          },
+          "outcome_reason": "small_part_area_upper_bound_exceeded",
+          "automatic_conditioning": false,
+          "measured_mask_pixels": 150386,
+          "rejected_candidate_indices": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "candidates": [
+            {
+              "index": 0,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_human_ears_candidate_0_mask.png",
+              "sha256": "a6aa3f5befc73e4b32722a564b9c21f41ef3f6d21b6b1666177248345bd0d752",
+              "pixels": 150243,
+              "bbox_xyxy_exclusive": [
+                179,
+                37,
+                482,
+                1195
+              ],
+              "mask_pixels_div_foreground_pixels": 0.9765677811866258,
+              "foreground_intersection_pixels": 149035,
+              "pixel_sha256": "8d79675c1784b7b3e7118b8442261c0a94f2864afa0240e92e49227d451517ea"
+            },
+            {
+              "index": 1,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_human_ears_candidate_1_mask.png",
+              "sha256": "3435ad179625ebb538da38e10fb3138aee9595118be4fa6e831eee27625de32a",
+              "pixels": 809,
+              "bbox_xyxy_exclusive": [
+                389,
+                155,
+                437,
+                198
+              ],
+              "mask_pixels_div_foreground_pixels": 0.0052584368987572145,
+              "foreground_intersection_pixels": 747,
+              "pixel_sha256": "891057e612a6fef39611f87f77f6f5128320364c8f2b6e440dc530a8d76cda1c"
+            },
+            {
+              "index": 2,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_human_ears_candidate_2_mask.png",
+              "sha256": "af39b05512bd92e8bbb51eb67d83e9957530903db60ab4b44b77ae2a5ff5a7cf",
+              "pixels": 625,
+              "bbox_xyxy_exclusive": [
+                296,
+                260,
+                325,
+                301
+              ],
+              "mask_pixels_div_foreground_pixels": 0.004062451250584993,
+              "foreground_intersection_pixels": 625,
+              "pixel_sha256": "702308bafc3402da504373c7c0203e3002f5e792d1e3f3b175c1b77a4d103626"
+            },
+            {
+              "index": 3,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_human_ears_candidate_3_mask.png",
+              "sha256": "bf396fa352c34f20f4c613e8c1afbea21367ab008f6044f663dae2a3d9659845",
+              "pixels": 1244,
+              "bbox_xyxy_exclusive": [
+                295,
+                261,
+                333,
+                337
+              ],
+              "mask_pixels_div_foreground_pixels": 0.00808590296916437,
+              "foreground_intersection_pixels": 925,
+              "pixel_sha256": "d7fcfd405a0f442dc4ca53353eb56ba0ed6d4a4fec47df19476ea27d6d022ea8"
+            }
+          ]
+        },
+        "output_animal_ears": {
+          "status": "uncertain",
+          "boxes": [],
+          "detection_scores": [],
+          "accepted_masks": 0,
+          "target_status": "unresolved",
+          "semantic_status": "unresolved",
+          "presence": "not_observed",
+          "query": "animal ears.",
+          "raw_candidate_fingerprint": "3a6dfa0191d9df9f7da5f0fa590370b41daf673f3b6109150f92b15f224cfed9",
+          "analysis_stage": "independent_detection",
+          "outcome_reason": "no_candidate_above_threshold",
+          "automatic_conditioning": false,
+          "candidates": []
+        },
+        "output_hair_accessory": {
+          "status": "detected",
+          "boxes": [
+            [
+              278.2902526855469,
+              142.4223175048828,
+              451.8194274902344,
+              323.046142578125
+            ]
+          ],
+          "detection_scores": [
+            0.42042648792266846
+          ],
+          "accepted_masks": 1,
+          "target_status": "unresolved",
+          "semantic_status": "unresolved",
+          "presence": "model_candidate",
+          "query": "hair ornament. hair accessory. hair clip.",
+          "raw_candidate_fingerprint": "82ceb1622cd8da91fd403c8e69850abf9d8362c68cf7516edcd502d44fb7ab0f",
+          "analysis_stage": "independent_detection",
+          "mask_quality_scores": [
+            0.935813844203949
+          ],
+          "candidate_mask_paths": [
+            "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_hair_accessory_candidate_0_mask.png"
+          ],
+          "area_validity": {
+            "version": "small_part_area_validity_v1",
+            "mask_pixels": 15352,
+            "denominator_pixels": 906752,
+            "denominator_source": "canvas",
+            "foreground_area_ratio": 0.016930759457933372,
+            "maximum_foreground_area_ratio": 0.2,
+            "valid": true,
+            "status": "evaluated",
+            "reason": null
+          },
+          "automatic_conditioning": true,
+          "outcome_reason": "accepted_mask_available",
+          "accepted_boxes": [
+            [
+              278.2902526855469,
+              142.4223175048828,
+              451.8194274902344,
+              323.046142578125
+            ]
+          ],
+          "mask_pixels": 15352,
+          "mask_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_hair_accessory_mask.png",
+          "crop_path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_hair_accessory_reference.png",
+          "candidates": [
+            {
+              "index": 0,
+              "path": "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_hair_accessory_candidate_0_mask.png",
+              "sha256": "cf7b6278fb8e83ebbd223334b60aa7312a2563fd3fe49737f375299869a0d2bf",
+              "pixels": 15352,
+              "bbox_xyxy_exclusive": [
+                282,
+                151,
+                447,
+                316
+              ],
+              "mask_pixels_div_foreground_pixels": 0.0997868025583693,
+              "foreground_intersection_pixels": 15260,
+              "pixel_sha256": "2a7fff3e60693cec976aea2355fb22f58bbb254ace44db154181a21ac4d53789"
+            }
+          ]
+        }
+      },
+      "overlap": {
+        "output_hair:output_face": {
+          "raw_pixels": 2656,
+          "expanded_pixels": 4783
+        },
+        "output_hair:output_human_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_hair:output_animal_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_hair:output_hair_accessory": {
+          "raw_pixels": 15352,
+          "expanded_pixels": 18007
+        },
+        "output_hair:output_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_hair:output_tail": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_face:output_human_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_face:output_animal_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_face:output_hair_accessory": {
+          "raw_pixels": 394,
+          "expanded_pixels": 2149
+        },
+        "output_face:output_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_face:output_tail": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_human_ears:output_animal_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_human_ears:output_hair_accessory": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_human_ears:output_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_human_ears:output_tail": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_animal_ears:output_hair_accessory": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_animal_ears:output_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_animal_ears:output_tail": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_hair_accessory:output_ears": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_hair_accessory:output_tail": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        },
+        "output_ears:output_tail": {
+          "raw_pixels": 0,
+          "expanded_pixels": 0
+        }
+      },
+      "protection_equality": {
+        "comparison_path": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-text-20260926\\cases\\ordinary-female\\ferrari\\off\\masks\\effective_protection.png",
+        "same_run_saved": true,
+        "pixel_equal": true,
+        "different_pixels": 0
+      },
+      "raw_component_equality": {
+        "output_hair": true,
+        "output_face": true,
+        "output_hair_accessory": true
+      },
+      "request": {
+        "origin": "saved",
+        "metrics": {
+          "source_removal_pixels": 159734,
+          "target_coverage_pixels": 182817,
+          "requested_pixels": 182817,
+          "hard_edit_pixels": 156173,
+          "hard_protection_pixels": 23845,
+          "conditional_protection_pixels": 0,
+          "protection_conflict_pixels": 22662,
+          "target_coverage_missing_pixels": 26644,
+          "target_coverage_missing_ratio": 0.14574136978508564,
+          "soft_nonzero_pixels": 149930,
+          "soft_outside_hard_pixels": 0,
+          "soft_outside_hard_ratio": 0.0,
+          "soft_min": 0,
+          "soft_max": 254,
+          "soft_mean": 189.97854302600322,
+          "requested_feather_radius": 10,
+          "effective_feather_radius": 10
+        },
+        "all_requested_protected_pixels": 23316,
+        "in_domain_conflict_pixels": 22662,
+        "requested_outside_edit_domain_pixels": 3982,
+        "effective_protection_pixels": 23845,
+        "hair_unique_protection_pixels": 1374
+      },
+      "source_sha256": {
+        "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-text-20260926\\cases\\ordinary-female\\ferrari\\off\\Base.png": "cd1a11ffa5664d37106758e544ca783d0950f868dcebe0ae39bd04f2f5d9d3e0",
+        "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-text-20260926\\cases\\ordinary-female\\ferrari\\off\\execution\\cases\\ordinary-female\\base_candidates\\output_regions\\candidate_1_base\\foreground.png": "0a5b7d2028e951095bc6b4e03c8cea9b801db1b6d63ec05939bf571408ff9924",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\parts.json": "d7c19e8b2e8ddab640cc7a595880399344b12e0c9361ec89b9d1703a8add141f",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_hair_candidate_0_mask.png": "bb9b56a101bc63d859a3143bccb30d2ef7b624a2a0fad930dc36cd8dd70b8501",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_hair_candidate_1_mask.png": "4bdf60525ed9a2e46c9d1d0bcebd022c3939c925931b2125f115f32e9c177759",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_hair_mask.png": "ab29bf154c1bfbd70e3f6b14147f00dfca5f3d5eebe438a7052b20588bcd3c47",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_face_candidate_0_mask.png": "ba739309564afe7cf4910eabab4b7f97d8422f0316ae05c4ba8ff28e52bd86ab",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_face_mask.png": "ba739309564afe7cf4910eabab4b7f97d8422f0316ae05c4ba8ff28e52bd86ab",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_human_ears_candidate_0_mask.png": "a6aa3f5befc73e4b32722a564b9c21f41ef3f6d21b6b1666177248345bd0d752",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_human_ears_candidate_1_mask.png": "3435ad179625ebb538da38e10fb3138aee9595118be4fa6e831eee27625de32a",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_human_ears_candidate_2_mask.png": "af39b05512bd92e8bbb51eb67d83e9957530903db60ab4b44b77ae2a5ff5a7cf",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_human_ears_candidate_3_mask.png": "bf396fa352c34f20f4c613e8c1afbea21367ab008f6044f663dae2a3d9659845",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_hair_accessory_candidate_0_mask.png": "cf7b6278fb8e83ebbd223334b60aa7312a2563fd3fe49737f375299869a0d2bf",
+        "C:\\Users\\user\\AppData\\Local\\Temp\\genai-parts-724sww9u\\output_hair_accessory_mask.png": "cf7b6278fb8e83ebbd223334b60aa7312a2563fd3fe49737f375299869a0d2bf",
+        "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-text-20260926\\cases\\ordinary-female\\ferrari\\off\\masks\\effective_protection.png": "e3a2e4454e12b841435c65a56f17ae1d101cb612f4c2b55c5749749ace08d5ce"
+      },
+      "saved_plan_reconstruction": {
+        "source_garment_removal": 0,
+        "target_garment_coverage": 0,
+        "garment_growth_envelope": 0,
+        "requested_edit": 0,
+        "hard_edit_domain": 0,
+        "hard_protection": 0,
+        "conditional_protection": 0,
+        "effective_protection": 0,
+        "mask_conflict": 0,
+        "soft_guidance": 0
+      },
+      "temp_record_attribution": {
+        "basis": "parts.json mtime inside attempt window + Base dimensions + component pixels and hashes; no run_id in parts.json",
+        "start_local": "2026-09-26T23:39:45.509655",
+        "end_local": "2026-09-26T23:47:55.901153",
+        "parts_time_local": "2026-09-26T23:47:08.415620",
+        "inside_window": true
+      }
+    }
+  ],
+  "measurements_note": "No detection rerun: original temporary query records and masks survived. Failed runs did not save final effective masks. Their original query masks compose exactly the completed Ferrari saved protection; own-run pixel comparison is unavailable."
+}

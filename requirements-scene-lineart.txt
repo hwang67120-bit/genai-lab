@@ -1,0 +1,4 @@
+# Optional experimental scene pipeline (Python 3.10).
+# Install the project's CUDA PyTorch first; do not replace it with a CPU wheel.
+scipy==1.15.3
+controlnet-aux>=0.0.9,<0.1

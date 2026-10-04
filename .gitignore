@@ -33,3 +33,8 @@ Venv/
 # Windows 임시 파일
 Thumbs.db
 Desktop.ini
+
+# User-excluded reference and derivatives: do not force-add or publish
+**/143960292_19.*
+**/df5b59198c4641224a9db78024a0d36262d70c5ec87442dff88af477ec067901*/
+**/df5b59198c4641224a9db78024a0d36262d70c5ec87442dff88af477ec067901*

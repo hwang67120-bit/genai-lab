@@ -19,6 +19,8 @@ from PySide6.QtWidgets import (
     QProgressDialog,
 )
 
+from genai_lab.studio_ui import build_studio, refresh_reference_previews
+
 from run import (
     check_environment,
     configure_system_certificates,
@@ -2942,8 +2944,6 @@ class NativeRefinementWorker(QObject):
 class GenAILabWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("GenAI Lab - 캐릭터 후보 이미지 생성기")
-        self.resize(800, 900)
 
         # 생성 엔진 및 설정 저장 변수
         self.pipeline = None
@@ -3006,166 +3006,7 @@ class GenAILabWindow(QMainWindow):
         user_profile = os.environ.get('USERPROFILE', '')
         self.default_get_dir = os.path.join(user_profile, "Downloads") if user_profile else ""
 
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        layout = QVBoxLayout(central_widget)
-
-        # 1. 원본 캐릭터 기준 이미지 선택 UI
-        style_layout = QHBoxLayout()
-        self.style_label = QLabel("1. 원본 캐릭터 기준 이미지: 선택되지 않음")
-        self.style_button = QPushButton("이미지 선택")
-        self.style_button.clicked.connect(lambda: self.select_image("style"))
-        style_layout.addWidget(self.style_label)
-        style_layout.addWidget(self.style_button)
-        layout.addLayout(style_layout)
-
-        # 의상 참조는 추출 이미지와 승인된 특징으로 생성 조건에 전달한다.
-        outfit_layout = QHBoxLayout()
-        self.outfit_label = QLabel("2. 의상 참조: 선택하지 않음")
-        self.outfit_button = QPushButton("의상 이미지 선택")
-        self.outfit_button.clicked.connect(lambda: self.select_image("outfit"))
-        self.clear_outfit_button = QPushButton("의상 선택 해제")
-        self.clear_outfit_button.clicked.connect(self.clear_outfit_reference)
-        outfit_layout.addWidget(self.clear_outfit_button)
-        outfit_layout.addWidget(self.outfit_label)
-        outfit_layout.addWidget(self.outfit_button)
-        layout.addLayout(outfit_layout)
-        # 구형 신체 비교 호환 객체. 참조 생성 UI에는 노출하지 않는다.
-        self.body_comparison_button = QPushButton("캐릭터 신체 비교 시작", self)
-        self.body_comparison_button.setEnabled(False)
-        self.body_comparison_button.clicked.connect(self.start_character_body_comparison)
-        self.body_comparison_button.setVisible(False)
-
-        pose_layout = QHBoxLayout()
-        self.pose_label = QLabel("3. 자세 참조: 선택하지 않음")
-        self.pose_button = QPushButton("자세 이미지 선택")
-        self.pose_button.clicked.connect(lambda: self.select_image("pose"))
-        self.pose_estimation_button = QPushButton("관절 추출 시작")
-        self.pose_estimation_button.setEnabled(False)
-        self.pose_estimation_button.clicked.connect(
-            self.start_pose_reference_estimation
-        )
-        self.pose_estimation_button.setVisible(False)
-        self.clear_pose_button = QPushButton("자세 선택 해제")
-        self.clear_pose_button.clicked.connect(self.clear_pose_reference)
-        pose_layout.addWidget(self.pose_label)
-        pose_layout.addWidget(self.pose_button)
-        pose_layout.addWidget(self.pose_estimation_button)
-        pose_layout.addWidget(self.clear_pose_button)
-        layout.addLayout(pose_layout)
-        if CLOTHING_REFERENCE_GENERATION_MODE:
-            self.pose_button.setEnabled(False)
-            self.clear_pose_button.setEnabled(False)
-            self.pose_label.setText('3. 자세 참조: 최소 구성 검증 중에는 사용하지 않음')
-
-        framing_layout = QHBoxLayout()
-        framing_label = QLabel("4. 화면 범위:")
-        self.framing_combo = QComboBox()
-        for framing_type, label in FRAMING_OPTIONS:
-            self.framing_combo.addItem(label, framing_type.value)
-        self.framing_combo.setCurrentIndex(0)
-        framing_layout.addWidget(framing_label)
-        framing_layout.addWidget(self.framing_combo)
-        layout.addLayout(framing_layout)
-
-        refinement_layout = QHBoxLayout()
-        refinement_label = QLabel("6. 최종 정밀화 모드:")
-        self.refinement_mode_combo = QComboBox()
-        self.refinement_mode_combo.addItem(
-            "SDXL 국소 정밀화", "sdxl_local"
-        )
-        self.refinement_mode_combo.setCurrentIndex(0)
-        refinement_layout.addWidget(refinement_label)
-        refinement_layout.addWidget(self.refinement_mode_combo)
-        layout.addLayout(refinement_layout)
-
-        self.refinement_diagnostics_label = QLabel(
-            "정밀화 진단: 실행 전 - 선택한 Base와 모드가 기록됩니다."
-        )
-        self.refinement_diagnostics_label.setWordWrap(True)
-        layout.addWidget(self.refinement_diagnostics_label)
-        self.refinement_diagnostics_button = QPushButton(
-            "정밀화 마스크·진단 보기"
-        )
-        self.refinement_diagnostics_button.setEnabled(False)
-        self.refinement_diagnostics_button.clicked.connect(
-            self.show_refinement_diagnostics
-        )
-        layout.addWidget(self.refinement_diagnostics_button)
-        self.refinement_diagnostic_paths = {}
-        self.refinement_diagnostic_summary = ""
-
-        self.framing_help = QLabel(
-            "실행 경로: 의상 조건이 없는 Animagine 캐릭터 Base 생성·게이트 → "
-            "사용자 Base 선택 → SDXL 국소 정밀화 → "
-            "구조·인물 수·유사도 진단."
-        )
-        self.framing_help.setWordWrap(True)
-        layout.addWidget(self.framing_help)
-        self.local_engine_status_label = QLabel("실행 엔진: SDXL 국소 정밀화")
-        layout.addWidget(self.local_engine_status_label)
-        self.pipeline_stage_label = QLabel(
-            "실행 단계: 입력 대기 → 캐릭터 전용 Base → 선택 정밀화 1회 → 최종 검토"
-        )
-        self.pipeline_stage_label.setWordWrap(True)
-        layout.addWidget(self.pipeline_stage_label)
-        self.generate_button = QPushButton(
-            "전체 로컬 파이프라인 실행"
-        )
-        self.generate_button.setEnabled(False)
-        self.generate_button.clicked.connect(self.start_generation)
-        layout.addWidget(self.generate_button)
-
-        self.external_candidate_button = QPushButton("기존 외부 편집 결과 확인 (선택 기능)")
-        self.external_candidate_button.clicked.connect(self.import_external_candidate)
-        layout.addWidget(self.external_candidate_button)
-        self.qwen_pose_button = QPushButton("승인한 완성 이미지 자세 편집 (Qwen, 선택 기능)")
-        self.qwen_pose_button.clicked.connect(self.open_qwen_pose_editor)
-        layout.addWidget(self.qwen_pose_button)
-        self.external_candidate_notice = QLabel(
-            "외부 편집 결과는 로컬 생성 결과로 간주하지 않으며, 자동 게이트와 "
-            "원본 픽셀 보존 검사는 미실행 상태로 기록됩니다."
-        )
-        self.external_candidate_notice.setWordWrap(True)
-        layout.addWidget(self.external_candidate_notice)
-
-        self.status_label = QLabel("상태: 캐릭터 기준 이미지를 선택해 주세요")
-        layout.addWidget(self.status_label)
-
-        self.candidate_preview = QLabel("생성 후보가 여기에 표시됩니다.")
-        self.candidate_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.candidate_preview.setMinimumSize(420, 480)
-        self.candidate_preview.setStyleSheet(
-            "border: 1px solid #777; background-color: #202020; color: #dddddd;"
-        )
-        layout.addWidget(self.candidate_preview)
-
-        self.open_original_size_button = QPushButton("원본 크기로 보기")
-        self.open_original_size_button.setEnabled(False)
-        self.open_original_size_button.clicked.connect(self.show_candidate_original_size)
-        layout.addWidget(self.open_original_size_button)
-
-        candidate_decision_layout = QHBoxLayout()
-        self.approve_candidate_button = QPushButton("결과 비교·승인")
-        self.reject_candidate_button = QPushButton("거절 사유 기록")
-        self.approve_candidate_button.setEnabled(False)
-        self.reject_candidate_button.setEnabled(False)
-        self.approve_candidate_button.clicked.connect(self.approve_candidate)
-        self.reject_candidate_button.clicked.connect(self.reject_candidate)
-        candidate_decision_layout.addWidget(self.approve_candidate_button)
-        candidate_decision_layout.addWidget(self.reject_candidate_button)
-        layout.addLayout(candidate_decision_layout)
-
-        save_decision_layout = QHBoxLayout()
-        self.save_candidate_button = QPushButton("저장 위치 선택 후 저장")
-        self.discard_candidate_button = QPushButton("저장하지 않음")
-        self.save_candidate_button.setEnabled(False)
-        self.discard_candidate_button.setEnabled(False)
-        self.save_candidate_button.clicked.connect(self.save_approved_candidate)
-        self.discard_candidate_button.clicked.connect(self.discard_approved_candidate)
-        save_decision_layout.addWidget(self.save_candidate_button)
-        save_decision_layout.addWidget(self.discard_candidate_button)
-        layout.addLayout(save_decision_layout)
+        build_studio(self, FRAMING_OPTIONS, CLOTHING_REFERENCE_GENERATION_MODE)
 
     def open_qwen_pose_editor(self):
         # Do not compete with any current generation/analysis worker.
@@ -3277,7 +3118,7 @@ class GenAILabWindow(QMainWindow):
                 self.release_pending_clothing_base_candidate()
                 self.release_confirmed_character_body_comparison()
                 self.style_label.setText(
-                    f"1. 원본 캐릭터 기준 이미지: {file_name} (등록)"
+                    f"캐릭터 · {file_name} (등록)"
                 )
 
             elif target_type == "outfit":
@@ -3290,7 +3131,7 @@ class GenAILabWindow(QMainWindow):
                 self.clothing_source_size = None
                 self.clothing_region_measurements = ()
                 self.outfit_label.setText(
-                    f"2. 의상 참조: {file_name} (등록)"
+                    f"의상 · {file_name} (등록)"
                 )
 
             elif target_type == "pose":
@@ -3342,12 +3183,11 @@ class GenAILabWindow(QMainWindow):
 
     def update_input_ready_status(self) -> None:
         """등록된 입력 수와 전체 자동 실행 가능 여부를 표시한다."""
+        refresh_reference_previews(self)
+        required_input_count = 2 if CLOTHING_REFERENCE_GENERATION_MODE else 3
         registered_input_count = sum(
-            (
-                self.style_path is not None,
-                self.selected_outfit_path is not None,
-                self.selected_pose_path is not None,
-            )
+            (self.style_path is not None, self.selected_outfit_path is not None)
+            + (() if CLOTHING_REFERENCE_GENERATION_MODE else (self.selected_pose_path is not None,))
         )
         ready = self.can_start_registered_generation()
         self.generate_button.setEnabled(ready)
@@ -3377,15 +3217,15 @@ class GenAILabWindow(QMainWindow):
             active_generation_state or not missing_required_outfit
         ):
             return  # Preserve the active work/review status and button label.
-        self.generate_button.setText("전체 로컬 파이프라인 실행 (Animagine → SDXL 국소 정밀화)")
+        self.generate_button.setText("이미지 생성 시작")
         self.status_label.setText(
             "상태: 입력 등록 "
-            f"{registered_input_count}/3개 - "
+            f"{registered_input_count}/{required_input_count}개 - "
             + (
                 "캐릭터 기준 이미지와 의상 이미지를 모두 등록하세요."
                 if (CLOTHING_REFERENCE_GENERATION_MODE
                     and self.selected_outfit_path is None)
-                else ("전체 로컬 파이프라인 실행 버튼을 누르세요."
+                else ("이미지 생성 시작 버튼을 누르세요."
                       if self.style_path is not None
                       else "캐릭터 기준 이미지는 필수입니다.")
             )
@@ -6643,12 +6483,7 @@ class GenAILabWindow(QMainWindow):
         candidate_pixmap = self.create_character_candidate_pixmap(
             character_candidate
         )
-        scaled_pixmap = candidate_pixmap.scaled(
-            self.candidate_preview.size(),
-            Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.SmoothTransformation,
-        )
-        self.candidate_preview.setPixmap(scaled_pixmap)
+        self.candidate_preview.setPixmap(candidate_pixmap)
 
     def create_character_candidate_pixmap(
         self,
@@ -6996,7 +6831,7 @@ class GenAILabWindow(QMainWindow):
         self.external_candidate_button.setEnabled(
             self.can_import_external_candidate()
         )
-        self.generate_button.setText("전체 로컬 파이프라인 실행 (Animagine → SDXL 국소 정밀화)")
+        self.generate_button.setText("이미지 생성 시작")
         self.status_label.setText(status_message)
 
     @Slot(str, str, object)

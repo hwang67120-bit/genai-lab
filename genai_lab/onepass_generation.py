@@ -15,7 +15,7 @@ from typing import Callable
 from PIL import Image
 
 from genai_lab.onepass_generation_settings import OnePassGenerationSettings, scheduler_config
-from genai_lab.onepass_prompt import OnePassPrompt, assemble_onepass_prompt
+from genai_lab.onepass_prompt import OnePassPrompt, AppearanceOverrides, assemble_onepass_prompt
 from genai_lab.onepass_prompt_settings import OnePassPromptSettings
 from genai_lab.onepass_pose import InputDecision
 
@@ -78,7 +78,7 @@ class OnePassInputs:
 def prepare_onepass_inputs(*, choice, decision, gender, groups, garment_tags, pose_tags,
                            slim, tokenizers, face_file, face_sha256, control_file=None,
                            control_sha256=None, ip_early=0.0,
-                           prompt_settings=OnePassPromptSettings()):
+                           prompt_settings=OnePassPromptSettings(), appearance=AppearanceOverrides()):
     """Build from an explicit UI choice; no default choice and no prompt rewriting.
 
     Without pose uses the existing assembler with an empty pose tag tuple and
@@ -89,7 +89,7 @@ def prepare_onepass_inputs(*, choice, decision, gender, groups, garment_tags, po
         raise ValueError('생성 가능한 명시적 사용자 선택이 필요합니다.')
     without = choice == 'proceed_without_pose'
     prompt = assemble_onepass_prompt(gender, groups, garment_tags, () if without else pose_tags,
-                                    slim=slim, tokenizers=tokenizers, settings=prompt_settings)
+                                    slim=slim, tokenizers=tokenizers, settings=prompt_settings, appearance=appearance)
     return OnePassInputs(prompt, None if without else control_file, face_file,
                          None if without else control_sha256, face_sha256,
                          0.0 if without else ip_early,

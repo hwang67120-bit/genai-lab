@@ -17,7 +17,7 @@ from genai_lab.onepass_generation import (OnePassRequest, OnePassCancelled,
     prepare_onepass_inputs, generate_onepass_request)
 from genai_lab.onepass_generation_settings import OnePassGenerationSettings
 from genai_lab.onepass_prompt_settings import OnePassPromptSettings
-from genai_lab.onepass_prompt import CharacterTagGroups
+from genai_lab.onepass_prompt import CharacterTagGroups, AppearanceOverrides
 from genai_lab.onepass_prompt_tokenizers import load_onepass_tokenizers
 from genai_lab.onepass_pose import InputDecision
 from genai_lab.onepass_gender import prepare_onepass_gender
@@ -87,6 +87,27 @@ def cpu_process(command, log, cancelled, timeout):
                     process.wait()
 
 
+def save_analysis_reference(image, destination):
+    """Flatten actual transparency on white; retain the opaque conversion path."""
+    from PIL import Image
+    transparent = False
+    if "A" in image.getbands() or "transparency" in image.info:
+        with image.convert("RGBA") as rgba:
+            with rgba.getchannel("A") as alpha:
+                transparent = alpha.getextrema()[0] < 255
+            if transparent:
+                with Image.new("RGBA", rgba.size, (255, 255, 255, 255)) as white:
+                    with Image.alpha_composite(white, rgba) as composite:
+                        with composite.convert("RGB") as rgb:
+                            rgb.save(destination)
+    if not transparent:
+        with image.convert("RGB") as rgb:
+            rgb.save(destination)
+    return {"alpha_composited": transparent,
+            "background_rgb": [255, 255, 255] if transparent else None,
+            "analysis_sha256": digest(destination)}
+
+
 def analyze_inputs(character, garment, directory, runtime, *, cancelled=lambda: False):
     """Snapshot references; isolate CPU models from generation and UI preferences."""
     from PIL import Image
@@ -100,8 +121,8 @@ def analyze_inputs(character, garment, directory, runtime, *, cancelled=lambda: 
         # Decode the same bytes we hashed; never re-open a changed reference for analysis.
         import io
         with Image.open(io.BytesIO(data)) as im:
-            with im.convert("RGB") as rgb:
-                rgb.save(directory / f"{name}.png")
+            references[name]["preprocessing"] = save_analysis_reference(
+                im, directory / f"{name}.png")
     record(directory / "references.json", references)
     script = Path(__file__).with_name("studio_analysis.py")
     for interpreter, mode in ((runtime.pose_python, "pose"), (runtime.analysis_python, "features")):
@@ -116,7 +137,7 @@ def analyze_inputs(character, garment, directory, runtime, *, cancelled=lambda: 
 
 
 def build_request(analysis, garment_tags, gender, *, confirmed, runtime, preferences=None,
-                  tokenizers=None, seeds=None):
+                  tokenizers=None, seeds=None, appearance=AppearanceOverrides()):
     """Preferences are written only by a confirmed explicit user choice."""
     if not confirmed:
         raise ValueError("입력 이미지 확인이 필요합니다.")
@@ -142,22 +163,27 @@ def build_request(analysis, garment_tags, gender, *, confirmed, runtime, prefere
         decision=InputDecision("not_requested", (), (), ("proceed_without_pose",)),
         gender=conditions, groups=groups, garment_tags=tuple(garment_tags), pose_tags=(),
         slim=analysis["slim"], tokenizers=tokenizers or load_onepass_tokenizers(runtime.prompt),
-        face_file=face, face_sha256=analysis["face_sha256"], prompt_settings=runtime.prompt)
+        face_file=face, face_sha256=analysis["face_sha256"], prompt_settings=runtime.prompt, appearance=appearance)
     start = secrets.randbelow(2**62)
     request = OnePassRequest(inputs, seeds or tuple(start+i for i in range(4)), runtime.generation)
     record(directory / "approval.json", {"approved": True, "gender": gender,
         "garment_tags": list(garment_tags), "face_sha256": analysis["face_sha256"],
         "references": analysis["references"], "pose_mode": inputs.pose_mode,
-        "prompt": inputs.prompt.positive, "negative": inputs.prompt.negative})
+        "prompt": inputs.prompt.positive, "negative": inputs.prompt.negative,
+        "appendage_appearance": inputs.prompt.rules["appendage_appearance"],
+        "appendage_review_required": inputs.prompt.rules["appendage_review_required"]})
     return request
 
 
 class StudioResults:
     """Separate human-review/export ledger; never falsify raw gate evidence."""
-    def __init__(self, batch):
+    def __init__(self, batch, *, appendage_review_required=False):
         if not batch.candidates:
             raise ValueError("완료된 후보가 없습니다.")
         self.batch = batch
+        self.appendage_review_required = appendage_review_required or any(
+            c.record.get("prompt", {}).get("rules", {}).get("appendage_review_required", False)
+            for c in batch.candidates)
         self.selected = 0
         self.approved_sha = None
         self.checks = {}
@@ -168,7 +194,7 @@ class StudioResults:
         record(self.batch.directory / "user-review.json", {
             "status": self.status, "selected": self.selected,
             "approved_sha256": self.approved_sha, "automatic_gates_executed": False,
-            "reviewer": "user", "checks": self.checks, **extra})
+            "reviewer": "user", "checks": self.checks, "appendage_review_required": self.appendage_review_required, **extra})
 
     def select(self, index):
         if not 0 <= index < len(self.batch.candidates):
@@ -184,8 +210,11 @@ class StudioResults:
         return self.batch.candidates[self.selected]
 
     def approve(self, checks):
-        if set(checks) != {"character", "garment", "exposure"} or not all(checks.values()):
-            raise ValueError("캐릭터·의상·원치 않는 노출 여부를 확인해 주세요.")
+        required = {"character", "garment", "exposure"}
+        if self.appendage_review_required:
+            required.add("appendages")
+        if set(checks) != required or not all(checks.values()):
+            raise ValueError("캐릭터·의상·노출 및 해당하는 꼬리·귀 확인을 완료해 주세요.")
         candidate = self.candidate
         data = json.loads(candidate.record_path.read_text(encoding="utf-8"))
         if not data.get("valid") or not data.get("completed") or digest(candidate.path) != data.get("raw_sha256"):

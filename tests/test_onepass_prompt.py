@@ -169,3 +169,96 @@ def test_k1_display_dedup_preserves_both_observations_and_policy():
     assert assessment.findings==findings and apply_input_policy(assessment)==before
     display[0].observations[0]['count']=99
     assert assessment.findings[0].values['count']==2
+
+
+# Confirmed appendage descriptions must not alter the original gender/tag contract.
+from genai_lab.onepass_prompt import (
+    AppearanceOverrides, PartAppearance, appendage_tags,
+)
+
+
+def appearance_prompt(tmp_path, store, appearance=AppearanceOverrides(), *,
+                      groups=None, settings=None):
+    groups = groups or CharacterTagGroups(
+        ("blue hair",), (), ("animal ears", "tail", "raccoon tail", "raccoon ears"))
+    cfg = settings or OnePassPromptSettings()
+    source = tmp_path / "appendage-source.png"
+    save_character_gender(source, "male", store)
+    gender = prepare_onepass_gender(source, (*groups.appearance, *groups.body, *groups.fixed),
+                                    cfg.negative_template, settings=store)
+    return assemble_onepass_prompt(gender, groups, ("white camisole", "black shorts"), (),
+        slim=False, tokenizers=TOKS, settings=cfg, appearance=appearance)
+
+
+def test_unconfirmed_appearance_preserves_strings_and_encoder_ids(tmp_path, store):
+    baseline = appearance_prompt(tmp_path, store)
+    draft = appearance_prompt(tmp_path, store, AppearanceOverrides(
+        tail=PartAppearance("light blue tail, striped tail")))
+    assert draft.positive.encode() == baseline.positive.encode()
+    assert draft.negative.encode() == baseline.negative.encode()
+    assert draft.encoders == baseline.encoders
+    assert not draft.rules["appendage_appearance"]["tail"]["applied"]
+
+
+def test_tail_override_keeps_ears_gender_negative_and_records_replacement(tmp_path, store):
+    baseline = appearance_prompt(tmp_path, store)
+    out = appearance_prompt(tmp_path, store, AppearanceOverrides(
+        tail=PartAppearance("light blue tail, striped tail", True)))
+    assert out.positive == baseline.positive.replace(
+        "animal ears, tail, raccoon tail, raccoon ears",
+        "animal ears, light blue tail, striped tail, raccoon ears")
+    assert out.negative == baseline.negative
+    r = out.rules["appendage_appearance"]
+    assert r["tail"]["removed_tags"] == ("tail", "raccoon tail")
+    assert r["tail"]["reason"] == "user_confirmed_appearance"
+    assert not r["ears"]["applied"] and out.rules["appendage_review_required"]
+
+
+def test_trial_d_difference_is_only_preserved_animal_ears(tmp_path, store):
+    fixture = json.loads((Path(__file__).parent/"fixtures/tail_appearance_trial.json").read_text())
+    groups = CharacterTagGroups(("blue hair", "multicolored hair", "short hair", "purple eyes"),
+        (), ("animal ears", "tail", "raccoon tail", "raccoon ears"))
+    baseline = appearance_prompt(tmp_path, store, groups=groups)
+    out = appearance_prompt(tmp_path, store, AppearanceOverrides(
+        tail=PartAppearance("light blue tail, striped tail", True)), groups=groups)
+    assert baseline.positive == fixture["baseline_positive"]
+    assert out.negative == fixture["negative"]
+    assert out.positive != fixture["D_positive"]
+    assert out.positive.replace("animal ears, ", "", 1) == fixture["D_positive"]
+
+
+def test_ear_override_requires_explicit_setting(tmp_path, store):
+    appearance = AppearanceOverrides(ears=PartAppearance("blue animal ears", True))
+    with pytest.raises(ValueError, match="귀 외형"):
+        appearance_prompt(tmp_path, store, appearance)
+    enabled = appearance_prompt(tmp_path, store, appearance,
+        settings=replace(OnePassPromptSettings(), enable_ear_override=True))
+    assert "blue animal ears" in enabled.positive and "raccoon ears" not in enabled.positive
+    assert "raccoon tail" in enabled.positive
+
+
+def test_appendage_boundaries_do_not_match_hairstyles():
+    found = appendage_tags(("twintails", "ponytail", "tail", "snake_tail", "animal_ears", "cat ears"))
+    assert found == {"tail": ("tail", "snake_tail"), "ears": ("animal_ears", "cat ears")}
+    assert not any(appendage_tags(("twintails", "ponytail")).values())
+
+
+@pytest.mark.parametrize("text", ["", " ", "tail,,striped tail", "파란 꼬리", "tail\n", "1girl", "male_focus"])
+def test_confirmed_description_rejects_invalid_or_gender_terms(text):
+    with pytest.raises(ValueError):
+        PartAppearance(text, True)
+
+
+def test_unknown_part_cannot_be_injected(tmp_path, store):
+    with pytest.raises(ValueError, match="감지되지"):
+        appearance_prompt(tmp_path, store, AppearanceOverrides(
+            tail=PartAppearance("blue tail", True)), groups=CharacterTagGroups(("blue hair",)))
+
+
+def test_appearance_records_chunk_growth_without_truncation(tmp_path, store):
+    long_text = " ".join(["blue"] * 80) + " tail"
+    out = appearance_prompt(tmp_path, store, AppearanceOverrides(tail=PartAppearance(long_text, True)))
+    assert out.rules["appearance_chunks_before"] == 1
+    assert out.rules["appearance_chunks_after"] == 2
+    assert long_text in out.positive
+    assert all(len(chunk.token_ids) == 77 for e in out.encoders for chunk in e.positive)

@@ -73,7 +73,8 @@ def wait_for(app, condition):
     app.processEvents()
 
 
-def test_create_button_to_review_and_export_without_legacy_fallback(tmp_path, monkeypatch):
+@pytest.mark.parametrize("use_description", [False, True])
+def test_create_button_to_review_and_export_without_legacy_fallback(tmp_path, monkeypatch, use_description):
     app = QApplication.instance() or QApplication([])
     w = GenAILabWindow()
     w.studio.output_root = tmp_path / "runs"
@@ -82,9 +83,15 @@ def test_create_button_to_review_and_export_without_legacy_fallback(tmp_path, mo
     w.selected_outfit_path = Path(initial["directory"])/"garment.png"
     w.update_input_ready_status()
     monkeypatch.setattr(ui, "validate_local_models", lambda _: None)
-    monkeypatch.setattr(ui, "analyze_inputs", lambda c,g,d,r,**kw: analysis_at(d))
-    monkeypatch.setattr(ui, "confirm_inputs", lambda *a: ("male", ("white camisole", "black shorts")))
-    monkeypatch.setattr(ui, "build_request", lambda a,*args,**kw: request_at(tmp_path, a))
+    def analyze(c,g,d,r,**kw):
+        analysis = analysis_at(d)
+        analysis["groups"]["fixed"] += ["tail", "raccoon_tail"]
+        return analysis
+    monkeypatch.setattr(ui, "analyze_inputs", analyze)
+    appearance = ui.AppearanceOverrides(
+        tail=ui.PartAppearance("light blue tail, striped tail", use_description))
+    monkeypatch.setattr(ui, "confirm_inputs", lambda *a: ("male", ("white camisole", "black shorts"), appearance))
+    monkeypatch.setattr(ui, "build_request", lambda a,*args,**kw: request_at(tmp_path, a, appearance=kw["appearance"]))
     calls = []
     def generate(req, folder, **kw):
         calls.append(req)
@@ -92,7 +99,7 @@ def test_create_button_to_review_and_export_without_legacy_fallback(tmp_path, mo
     monkeypatch.setattr(ui, "generate_onepass_request", generate)
     monkeypatch.setattr(w, "start_legacy_generation", lambda: pytest.fail("legacy must not run"))
     monkeypatch.setattr(w, "start_native_refinement", lambda *a: pytest.fail("refinement must not run"))
-    monkeypatch.setattr(ui, "confirm_result", lambda *a: {"character":True,"garment":True,"exposure":True})
+    monkeypatch.setattr(ui, "confirm_result", lambda *a: {"character":True,"garment":True,"exposure":True,"appendages":True})
     destination = tmp_path/"chosen.png"
     monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *a: (str(destination), ""))
     try:
@@ -102,6 +109,8 @@ def test_create_button_to_review_and_export_without_legacy_fallback(tmp_path, mo
         assert len(calls)==1 and calls[0].inputs.pose_mode == "without_pose"
         assert "white camisole" in calls[0].inputs.prompt.positive
         assert "raccoon ears" in calls[0].inputs.prompt.positive
+        assert ("light blue tail" in calls[0].inputs.prompt.positive) == use_description
+        assert ("raccoon tail" in calls[0].inputs.prompt.positive) != use_description
         assert len(w.studio.results.batch.candidates)==4
         assert not w.save_candidate_button.isEnabled()
         w.studio_candidate_combo.setCurrentIndex(2)
@@ -132,7 +141,7 @@ def test_export_requires_explicit_review_and_unchanged_bytes(tmp_path):
         results.export(tmp_path/"not-approved.png")
     with pytest.raises(ValueError):
         results.approve({"character": True})
-    results.approve(dict(character=True,garment=True,exposure=True))
+    results.approve(dict(character=True,garment=True,exposure=True,appendages=True))
     results.candidate.path.write_bytes(b"changed")
     with pytest.raises(ValueError):
         results.export(tmp_path/"changed.png")
@@ -141,7 +150,7 @@ def test_export_requires_explicit_review_and_unchanged_bytes(tmp_path):
 
 def test_export_does_not_overwrite_existing_file(tmp_path):
     results = service.StudioResults(batch_at(tmp_path))
-    results.approve(dict(character=True,garment=True,exposure=True))
+    results.approve(dict(character=True,garment=True,exposure=True,appendages=True))
     path = tmp_path/"existing.png"
     path.write_bytes(b"user file")
     with pytest.raises(FileExistsError):
@@ -250,7 +259,7 @@ def test_invalid_generated_record_cannot_be_user_approved(tmp_path):
     data["valid"]=False
     service.record(path,data)
     with pytest.raises(ValueError):
-        results.approve(dict(character=True,garment=True,exposure=True))
+        results.approve(dict(character=True,garment=True,exposure=True,appendages=True))
 
 
 def test_cpu_process_forces_offline_cpu_and_no_console(tmp_path,monkeypatch):
@@ -289,3 +298,126 @@ def test_new_preflight_failure_does_not_rewrite_previous_run(tmp_path,monkeypatc
         assert json.loads((w.studio.run_directory/"gui-status.json").read_text())["status"]=="failed"
     finally:
         w.close()
+
+
+def test_confirmed_tail_reaches_request_approval_and_raw_record(tmp_path):
+    a = analysis_at(tmp_path/"source")
+    a["groups"]["fixed"] = ["tail", "raccoon_tail", "raccoon_ears"]
+    override = ui.AppearanceOverrides(tail=ui.PartAppearance("light blue tail, striped tail", True))
+    request = request_at(tmp_path, a, appearance=override)
+    batch = engine.generate_onepass_request(request, tmp_path/"batch", backend_factory=Backend)
+    approval = json.loads((Path(a["directory"])/"approval.json").read_text())
+    raw = json.loads(batch.candidates[0].record_path.read_text())
+    assert "light blue tail, striped tail" in raw["prompt"]["positive"]
+    assert "raccoon tail" not in raw["prompt"]["positive"]
+    assert raw["prompt"]["rules"]["appendage_appearance"]["tail"]["applied"]
+    assert approval["appendage_appearance"]["tail"]["confirmed"]
+    results = service.StudioResults(batch)
+    with pytest.raises(ValueError):
+        results.approve(dict(character=True, garment=True, exposure=True))
+    results.approve(dict(character=True, garment=True, exposure=True, appendages=True))
+    results.select(1)
+    assert results.checks == {} and results.status == "awaiting_user_review"
+    with pytest.raises(ValueError):
+        results.export(tmp_path/"unreviewed.png")
+
+
+def test_no_appendage_keeps_three_review_checks(tmp_path):
+    a = analysis_at(tmp_path/"source")
+    a["groups"]["fixed"] = []
+    req = request_at(tmp_path, a)
+    batch = engine.generate_onepass_request(req, tmp_path/"batch", backend_factory=Backend)
+    results = service.StudioResults(batch)
+    assert not results.appendage_review_required
+    results.approve(dict(character=True, garment=True, exposure=True))
+    assert results.status == "user_approved"
+
+
+@pytest.mark.parametrize("mode", ["RGB", "RGBA", "P"])
+def test_opaque_analysis_snapshot_is_byte_identical(tmp_path, mode):
+    image = Image.new(mode, (3, 3), (40, 90, 180, 255) if mode == "RGBA" else
+                      (40, 90, 180) if mode == "RGB" else 1)
+    if mode == "P":
+        image.putpalette([0,0,0,40,90,180]+[0]*762)
+    original = tmp_path/"old.png"
+    image.convert("RGB").save(original)
+    output = tmp_path/"new.png"
+    record = service.save_analysis_reference(image, output)
+    assert output.read_bytes() == original.read_bytes()
+    assert not record["alpha_composited"]
+
+
+def test_transparent_and_partial_alpha_are_composited_on_white(tmp_path):
+    image = Image.new("RGBA", (3, 1))
+    image.putdata([(12,34,56,0), (200,0,0,128), (40,90,180,255)])
+    before = image.tobytes()
+    path = tmp_path/"snapshot.png"
+    info = service.save_analysis_reference(image, path)
+    with Image.open(path) as out:
+        assert [out.getpixel((x, 0)) for x in range(out.width)] == [(255,255,255), (227,127,127), (40,90,180)]
+    assert image.tobytes() == before
+    assert info == {"alpha_composited":True, "background_rgb":[255,255,255],
+                    "analysis_sha256":service.digest(path)}
+
+
+def test_palette_transparency_uses_white(tmp_path):
+    image = Image.new("P", (2,1))
+    image.putpalette([0,0,0,20,40,60]+[0]*762)
+    image.putdata([0,1])
+    image.info["transparency"] = 0
+    path = tmp_path/"p.png"
+    info = service.save_analysis_reference(image, path)
+    with Image.open(path) as out:
+        assert [out.getpixel((x, 0)) for x in range(out.width)] == [(255,255,255), (20,40,60)]
+    assert info["alpha_composited"]
+
+
+def test_input_dialog_preserves_draft_and_resets_confirmation(tmp_path, monkeypatch):
+    from PySide6.QtWidgets import QDialog, QLineEdit, QCheckBox, QPushButton
+    app = QApplication.instance() or QApplication([])
+    a = analysis_at(tmp_path/"source")
+    a["groups"]["fixed"] = ["tail", "snake_tail", "animal_ears"]
+    monkeypatch.setattr(ui, "load_character_gender", lambda _: "male")
+    def inspect(dialog):
+        tail = dialog.findChild(QLineEdit, "tail_appearance_text")
+        checked = dialog.findChild(QCheckBox, "tail_appearance_confirmed")
+        ears = dialog.findChild(QLineEdit, "ears_appearance_text")
+        assert tail.text() == "" and not checked.isEnabled()
+        assert not ears.isEnabled()
+        tail.setText("grey tail")
+        assert checked.isEnabled()
+        checked.setChecked(True)
+        tail.setText("grey tail, scaly tail")
+        assert not checked.isChecked()
+        checked.setChecked(True)
+        general = next(c for c in dialog.findChildren(QCheckBox) if c.text().startswith("얼굴에 팔"))
+        general.setChecked(True)
+        create = next(b for b in dialog.findChildren(QPushButton) if b.text()=="이 조건으로 만들기")
+        assert create.isEnabled()
+        return QDialog.DialogCode.Accepted
+    monkeypatch.setattr(QDialog, "exec", inspect)
+    gender, tags, appearance = ui.confirm_inputs(None, a)
+    assert appearance.tail == ui.PartAppearance("grey tail, scaly tail", True)
+    assert not appearance.ears.confirmed
+
+
+@pytest.mark.parametrize("has_tail", [True, False])
+def test_result_dialog_requires_appendage_check_only_when_present(tmp_path, monkeypatch, has_tail):
+    from PySide6.QtWidgets import QDialog, QCheckBox, QPushButton
+    app = QApplication.instance() or QApplication([])
+    a = analysis_at(tmp_path/"source")
+    a["groups"]["fixed"] = ["tail"] if has_tail else []
+    def inspect(dialog):
+        checks = dialog.findChildren(QCheckBox)
+        assert len(checks) == (4 if has_tail else 3)
+        accept = next(b for b in dialog.findChildren(QPushButton) if b.text()=="이 결과 사용")
+        for c in checks[:3]:
+            c.setChecked(True)
+        assert accept.isEnabled() == (not has_tail)
+        for c in checks:
+            c.setChecked(True)
+        assert accept.isEnabled()
+        return QDialog.DialogCode.Accepted
+    monkeypatch.setattr(QDialog, "exec", inspect)
+    checks = ui.confirm_result(None, SimpleNamespace(path=Path(a["source"])), a)
+    assert ("appendages" in checks) == has_tail

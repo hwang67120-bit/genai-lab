@@ -8,22 +8,27 @@
 - 자신이 만든 캐릭터에게 새로운 의상을 입히고 싶은 사용자
 - 캐릭터의 얼굴·체형·헤어 특징을 유지하면서 의상만 바꾼 후보를 비교하고 싶은 사용자
 
-## 현재 제품 흐름
+## 현재 작업실 GUI 흐름
+
+코드를 읽으려면 [작업실 코드 흐름 지도](docs/CODE_FLOW.md)에서 시작하세요.
+중심 파일은 [studio_controller.py](genai_lab/studio_controller.py)이며,
+사용자 작업 순서대로 입력 준비 → 확인 → 생성 → 선택 → 승인 → 저장을 읽을 수 있습니다.
 
 ```text
 캐릭터 참조 이미지 + 의상 참조 이미지
-→ 두 이미지의 영역 마스크 분석
-→ 마스크 영역별 태그와 프롬프트 추출
-→ 사용자가 입력과 추출 조건 확인
-→ 두 참조 이미지와 승인된 태그·프롬프트로 새 이미지 생성
-→ 기술적 손상 검사와 유사도 진단
-→ 사용자가 결과 승인 또는 재생성
-→ 승인한 이미지와 실행 기록 저장
+→ CPU 분석: 얼굴 크롭·외형·체형·의상 태그 준비
+→ 사용자가 얼굴·성별·의상 설명 확인
+→ 승인 정보로 자세 없이 이미지 4장 생성
+→ 사용자가 결과를 비교하고 캐릭터·의상·노출 확인
+→ 승인한 이미지와 검토 기록 저장
 ```
 
-마스크는 참조 이미지에서 캐릭터·얼굴·헤어·선택적 동물 특징·의상 정보를 분리하기 위해 사용합니다. 서로 다른 이미지의 픽셀을 잘라 붙이는 합성에는 사용하지 않습니다.
+분석에서 얻는 캐릭터 골격은 얼굴 크롭·체형 분석용입니다.
+현재 작업실 생성 요청에는 자세 제어를 넣지 않습니다.
+저장 이미지의 Qwen 자세 편집은 별도 사용자 작업이며 자동으로 이어지지 않습니다.
 
-현재 활성 제품 계약과 단계별 책임은 [FLOW.md](docs/FLOW.md)에만 정의합니다. 다른 문서의 과거 실험, 실패 원인, 측정 결과는 활성 계약이 아니라 개발 기록입니다.
+제품 계약은 [FLOW.md](docs/FLOW.md), 현재 구현의 호출 관계는 [CODE_FLOW.md](docs/CODE_FLOW.md)로 구분합니다.
+아래 구현 지도는 계약을 변경하거나 과거 시험 결과를 새로 검증한 기록이 아닙니다.
 
 ## 실행
 
@@ -33,7 +38,7 @@ PowerShell에서 다음 명령으로 GUI를 실행합니다.
 & "D:\genai-cache\venv\Scripts\python.exe" "\\192.168.0.109\win_g\genai-lab\gui_main.py"
 ```
 
-제품 GUI·CLI·GPU 검증은 모두 `genai_lab/generation_orchestrator.py`의 `GenerationOrchestrator`를 통해 같은 생성 서비스를 호출해야 합니다. 제품 CLI 진입점은 `scripts/run_product_generation.py`입니다.
+현재 작업실 GUI는 `StudioController → studio_generation → onepass_generation`으로 실행됩니다. 기존 `GenerationOrchestrator`와 `scripts/run_product_generation.py` CLI는 별도 경로이므로, 작업실의 동작 확인에는 작업실 경로의 테스트를 사용합니다.
 
 루트의 `run.py`는 설정 검사 함수와 과거 프롬프트 파일 배치 생성을 제공하는 실험용 도구입니다. 승인 fingerprint, 요청별 `GenerationRunContext`, 8단계 비교 증거를 만들지 않으므로 제품 생성 결과나 제품 GPU 검증에 사용하지 않습니다.
 
@@ -41,6 +46,7 @@ PowerShell에서 다음 명령으로 GUI를 실행합니다.
 
 - [활성 제품 계약과 전체 흐름](docs/FLOW.md)
 - [데이터 객체 정의](docs/DATA_MODELS.md)
+- [작업실 코드 읽기 순서와 실제 연결](docs/CODE_FLOW.md)
 - [프로젝트 구조](docs/STRUCTURE.md)
 - [결정 기록](docs/DECISIONS.md)
 - [문제 해결 기록](docs/TROUBLESHOOTING.md)

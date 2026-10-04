@@ -2999,7 +2999,7 @@ class GenAILabWindow(QMainWindow):
         self.selected_outfit_path: Path | None = None
         self.selected_pose_path: Path | None = None
 
-        # 현재 구현에서 실제 사용하는 입력은 캐릭터 기준 이미지 하나다.
+        # 작업실 입력: 캐릭터는 style_path, 의상은 selected_outfit_path로 전달한다.
         self.style_path = None
         self.outfit_path = None
 
@@ -5258,11 +5258,11 @@ class GenAILabWindow(QMainWindow):
         self.reference_worker_thread = None
 
     def start_generation(self) -> None:
-        """Primary product action: character + outfit, no pose, one-pass generation."""
+        """현재 작업실 진입점. 다음은 studio_controller.py의 start부터 읽는다."""
         self.studio.start()
 
     def start_legacy_generation(self) -> None:
-        """등록 입력으로 자동 실행을 시작하거나 실패 단계부터 재시도한다."""
+        """이전 생성 경로. 현재 만들기 버튼은 위의 start_generation을 사용한다."""
         if self.pending_character_candidate is not None:
             QMessageBox.information(
                 self,

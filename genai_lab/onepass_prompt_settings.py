@@ -15,5 +15,10 @@ class OnePassPromptSettings:
     # Decision pending: ps default is owned by CharacterInputSettings, not duplicated.
     character: CharacterInputSettings = field(default_factory=CharacterInputSettings)
 
+    # Ear replacement has no experiment evidence; explicit opt-in only.
+    enable_ear_override: bool = False
+
     def __post_init__(self):
+        if type(self.enable_ear_override) is not bool:
+            raise ValueError('귀 외형 적용 설정은 bool이어야 합니다.')
         validate_onepass_negative_template(self.negative_template)

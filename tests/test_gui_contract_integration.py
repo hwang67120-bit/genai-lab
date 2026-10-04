@@ -230,7 +230,7 @@ def test_gui_full_contract_routes_approved_inputs_to_final_review(
     )
 
     try:
-        window.start_generation()
+        window.start_legacy_generation()
 
         assert trace == [
             "reference_approved",

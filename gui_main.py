@@ -3007,8 +3007,13 @@ class GenAILabWindow(QMainWindow):
         self.default_get_dir = os.path.join(user_profile, "Downloads") if user_profile else ""
 
         build_studio(self, FRAMING_OPTIONS, CLOTHING_REFERENCE_GENERATION_MODE)
+        from genai_lab.studio_controller import StudioController
+        self.studio = StudioController(self)
 
     def open_qwen_pose_editor(self):
+        if hasattr(self, "studio") and self.studio.occupied:
+            QMessageBox.information(self, "작업 확인", "현재 작업을 마치거나 결과를 저장하지 않음으로 정리한 뒤 계속해 주세요.")
+            return
         # Do not compete with any current generation/analysis worker.
         if ((self.workflow_context is not None and self.workflow_context.active)
                 or any(value is not None and hasattr(value, 'isRunning') and value.isRunning()
@@ -3042,6 +3047,9 @@ class GenAILabWindow(QMainWindow):
             QMessageBox.warning(self, "Qwen 실행 준비 실패", str(error))
 
     def select_image(self, target_type):
+        if hasattr(self, "studio") and self.studio.occupied:
+            QMessageBox.information(self, "작업 확인", "현재 작업을 마치거나 결과를 저장하지 않음으로 정리한 뒤 계속해 주세요.")
+            return
         if self.workflow_context is not None and self.workflow_context.active:
             QMessageBox.information(
                 self,
@@ -3144,6 +3152,8 @@ class GenAILabWindow(QMainWindow):
             self.update_input_ready_status()
 
     def can_start_registered_generation(self) -> bool:
+        if hasattr(self, "studio") and self.studio.occupied:
+            return False
         """Registration permits starting; approvals happen inside the workflow."""
         if not self.style_path or self.pending_character_candidate is not None:
             return False
@@ -3165,6 +3175,8 @@ class GenAILabWindow(QMainWindow):
         )
 
     def can_import_external_candidate(self) -> bool:
+        if hasattr(self, "studio") and self.studio.occupied:
+            return False
         """실행 중인 작업이나 검토 후보가 없을 때만 외부 결과를 받는다."""
         if self.pending_character_candidate is not None or self.approval_dialog_open:
             return False
@@ -3182,6 +3194,9 @@ class GenAILabWindow(QMainWindow):
         )
 
     def update_input_ready_status(self) -> None:
+        if hasattr(self, "studio") and self.studio.occupied:
+            self.studio.controls()
+            return
         """등록된 입력 수와 전체 자동 실행 가능 여부를 표시한다."""
         refresh_reference_previews(self)
         required_input_count = 2 if CLOTHING_REFERENCE_GENERATION_MODE else 3
@@ -5086,6 +5101,9 @@ class GenAILabWindow(QMainWindow):
 
     @Slot()
     def clear_outfit_reference(self) -> None:
+        if hasattr(self, "studio") and self.studio.occupied:
+            QMessageBox.information(self, "작업 확인", "현재 작업을 마치거나 결과를 저장하지 않음으로 정리한 뒤 계속해 주세요.")
+            return
         """선택 의상 입력만 해제하고 캐릭터 기준 이미지는 유지한다."""
         if (
             self.outfit_worker_thread is not None
@@ -5240,6 +5258,10 @@ class GenAILabWindow(QMainWindow):
         self.reference_worker_thread = None
 
     def start_generation(self) -> None:
+        """Primary product action: character + outfit, no pose, one-pass generation."""
+        self.studio.start()
+
+    def start_legacy_generation(self) -> None:
         """등록 입력으로 자동 실행을 시작하거나 실패 단계부터 재시도한다."""
         if self.pending_character_candidate is not None:
             QMessageBox.information(
@@ -5444,6 +5466,9 @@ class GenAILabWindow(QMainWindow):
 
     @Slot()
     def import_external_candidate(self) -> None:
+        if hasattr(self, "studio") and self.studio.occupied:
+            QMessageBox.information(self, "작업 확인", "현재 작업을 마치거나 결과를 저장하지 않음으로 정리한 뒤 계속해 주세요.")
+            return
         """외부 편집 결과를 자동 검증 미실행 후보로 미리보기에 올린다."""
         if not self.can_import_external_candidate():
             QMessageBox.information(
@@ -6438,31 +6463,16 @@ class GenAILabWindow(QMainWindow):
         base = self.pending_native_base_candidate
         self.pending_native_base_candidate = None
         if base is not None:
-            record = dict(base.design_reference_record or {})
-            record["native_refinement"] = {
-                "status": "ERROR",
-                "error": message,
-                "image_merge_used": False,
-            }
-            candidate = replace(
-                base,
-                original_generated_image=None,
-                detail_correction_status="native_refinement_execution_error",
-                detail_verification_warning_ko=(
-                    "정밀화 실행 오류로 승인 Base를 표시합니다. "
-                    "선택한 정밀화 모드의 최종 검사는 완료되지 않았습니다."
-                ),
-                design_reference_record=record,
-            )
-            self._present_native_candidate(
-                candidate,
-                status_message=(
-                    f"상태: 로컬 정밀화 실행 오류 - 승인 Base 표시 ({message})"
-                ),
-                stage_message=(
-                    "최종 검토: 정밀화 실행 오류, 승인 Base 표시"
-                ),
-            )
+            # Keep raw execution artifacts on disk, but do not promote Base to a final result.
+            self.pending_character_candidate = None
+            self.pending_final_review_evidence = None
+        self.pause_generation_workflow(GenerationWorkflowStage.CLOTHING_COMPOSITING, message)
+        self.candidate_preview.clear()
+        self.candidate_preview.setText("의상 적용을 완료하지 못했습니다. 완성된 결과가 없습니다.")
+        self.status_label.setText("상태: 의상 적용 실패 · 완성된 결과 없음")
+        for button in (self.approve_candidate_button, self.reject_candidate_button,
+                       self.save_candidate_button, self.open_original_size_button):
+            button.setEnabled(False)
         dialog = QMessageBox(self)
         dialog.setIcon(QMessageBox.Icon.Critical)
         dialog.setWindowTitle("로컬 정밀화 실행 실패")
@@ -6503,6 +6513,8 @@ class GenAILabWindow(QMainWindow):
 
     @Slot()
     def show_candidate_original_size(self) -> None:
+        if self.studio.results is not None:
+            return self.studio.original()
         """저장하지 않은 후보를 100% 크기의 스크롤 화면으로 표시한다."""
         if self.pending_character_candidate is None:
             return
@@ -6630,16 +6642,22 @@ class GenAILabWindow(QMainWindow):
 
     @Slot()
     def approve_candidate(self) -> None:
+        if self.studio.results is not None:
+            return self.studio.approve()
         """Open Stage 8 comparison with final approval selected."""
         self._review_final_candidate(APPROVED)
 
     @Slot()
     def reject_candidate(self) -> None:
+        if self.studio.results is not None:
+            return self.studio.reject()
         """Open Stage 8 comparison and require a rejection reason."""
         self._review_final_candidate(REJECTED)
 
     @Slot()
     def save_approved_candidate(self) -> None:
+        if self.studio.results is not None:
+            return self.studio.save()
         """Save a Stage 8-approved result to a user-selected directory."""
         candidate = self.pending_character_candidate
         evidence = self.pending_final_review_evidence
@@ -6745,6 +6763,8 @@ class GenAILabWindow(QMainWindow):
 
     @Slot()
     def discard_approved_candidate(self) -> None:
+        if self.studio.results is not None:
+            return self.studio.discard()
         """Record the Stage 9 no-save choice without writing an image."""
         candidate = self.pending_character_candidate
         evidence = self.pending_final_review_evidence

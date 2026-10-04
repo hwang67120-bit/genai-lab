@@ -154,7 +154,7 @@ def build_studio(window, framing_options, clothing_mode):
     heading.addWidget(_label("GenAI Lab", "brand"))
     heading.addWidget(_label("캐릭터 작업실", "windowTitle"))
     header.addLayout(heading, 1)
-    header.addWidget(QLabel("입력 선택  →  조건 확인  →  생성  →  검토·저장"))
+    header.addWidget(QLabel("캐릭터·옷 선택  →  만들기  →  결과 선택  →  저장"))
     root.addLayout(header)
 
     window.workspace_splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -191,17 +191,18 @@ def build_studio(window, framing_options, clothing_mode):
     input_layout.addWidget(card)
 
     card, box = _card("생성 설정")
-    box.addWidget(_label("화면 범위", "muted"))
+    box.addWidget(_label("전신 이미지 · 캐릭터와 옷을 함께 생성합니다.", "muted"))
     window.framing_combo = QComboBox()
     window.framing_combo.setAccessibleName("화면 범위")
     for framing_type, label in framing_options:
         window.framing_combo.addItem(label, framing_type.value)
-    box.addWidget(window.framing_combo)
-    box.addWidget(_label("실행 중 참조·분석 결과와 생성 조건을 확인합니다.", "muted"))
+    window.framing_combo.setParent(window)
+    window.framing_combo.hide()
+    box.addWidget(_label("자세는 적용하지 않습니다. 저장한 뒤 선택적으로 편집할 수 있습니다.", "muted"))
     input_layout.addWidget(card)
 
     card, box = _card("완성 이미지로 이어서 작업", "필요할 때 선택하는 별도 기능입니다.")
-    window.qwen_pose_button = _button("자세 편집 열기 · Qwen", window.open_qwen_pose_editor)
+    window.qwen_pose_button = _button("저장한 이미지 자세 바꾸기", window.open_qwen_pose_editor)
     window.qwen_pose_button.setToolTip("실행 설정, 승인한 완성 이미지, 자세 골격을 선택합니다.")
     box.addWidget(window.qwen_pose_button)
     box.addWidget(_label("승인한 이미지와 자세 골격을 불러와 보존할 항목을 확인합니다.", "muted"))
@@ -225,13 +226,14 @@ def build_studio(window, framing_options, clothing_mode):
     window.refinement_mode_combo = QComboBox()
     window.refinement_mode_combo.setAccessibleName("정밀화 모드")
     window.refinement_mode_combo.addItem("SDXL 국소 정밀화", "sdxl_local")
-    box.addWidget(window.refinement_mode_combo)
+    window.refinement_mode_combo.setParent(window)
+    window.refinement_mode_combo.hide()
     window.framing_help = _label(
-        "실행 경로: 의상 조건이 없는 Animagine 캐릭터 Base 생성·게이트 → "
-        "사용자 Base 선택 → SDXL 국소 정밀화 → 구조·인물 수·유사도 진단.", "muted")
-    window.local_engine_status_label = _label("실행 엔진: SDXL 국소 정밀화", "muted")
-    window.pipeline_stage_label = _label("실행 단계: 입력 대기 → 캐릭터 전용 Base → 선택 정밀화 1회 → 최종 검토", "muted")
-    window.refinement_diagnostics_label = _label("정밀화 진단: 실행 전 - 선택한 Base와 모드가 기록됩니다.", "muted")
+        "실행 경로: CPU 입력 분석 → without_pose 1회 생성(4개 seed) → 사용자 확인 → 저장. "
+        "자동 품질·노출 게이트는 미실행이며 사용자 확인을 별도로 기록합니다.", "muted")
+    window.local_engine_status_label = _label("실행 엔진: SDXL 1회 생성 · 자세 미적용", "muted")
+    window.pipeline_stage_label = _label("실행 단계: 입력 → 분석 → 확인 → 생성 → 결과 선택 → 저장", "muted")
+    window.refinement_diagnostics_label = _label("실행 기록: outputs/studio-runs/ · 입력·생성·사용자 확인 기록", "muted")
     for label in (window.framing_help, window.local_engine_status_label,
                   window.pipeline_stage_label, window.refinement_diagnostics_label):
         box.addWidget(label)
@@ -266,8 +268,11 @@ def build_studio(window, framing_options, clothing_mode):
     left_layout.addWidget(window.input_scroll, 1)
     window.generate_button = _button("이미지 생성 시작", window.start_generation, enabled=False, primary=True)
     window.generate_button.setMinimumHeight(46)
-    window.generate_button.setToolTip("전체 로컬 파이프라인 실행: 참조 확인 → Base 생성 → 의상 정밀화 → 결과 검토")
+    window.generate_button.setToolTip("선택한 캐릭터와 옷으로 이미지 4장을 만들고 결과를 비교합니다.")
     left_layout.addWidget(window.generate_button)
+    window.studio_cancel_button = QPushButton("현재 작업 취소")
+    window.studio_cancel_button.hide()
+    left_layout.addWidget(window.studio_cancel_button)
     left_layout.addWidget(_label("결과는 검토·승인한 뒤 저장할 수 있습니다.", "muted"))
     window.workspace_splitter.addWidget(left)
 
@@ -278,6 +283,10 @@ def build_studio(window, framing_options, clothing_mode):
     window.candidate_preview.setMinimumSize(240, 220)
     window.candidate_preview.setContentsMargins(16, 16, 16, 16)
     window.candidate_preview.setAccessibleName("생성 결과 미리보기")
+    window.studio_candidate_combo = QComboBox()
+    window.studio_candidate_combo.setAccessibleName("생성 결과 선택")
+    window.studio_candidate_combo.hide()
+    result.addWidget(window.studio_candidate_combo)
     result.addWidget(window.candidate_preview, 1)
     window.open_original_size_button = _button("원본 크기로 보기", window.show_candidate_original_size, enabled=False)
     result.addWidget(window.open_original_size_button, 0, Qt.AlignmentFlag.AlignRight)
@@ -286,8 +295,8 @@ def build_studio(window, framing_options, clothing_mode):
     window.status_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
     result.addWidget(window.status_label)
     result.addWidget(_label("결과를 비교·승인하면 저장 버튼이 활성화됩니다.", "muted"))
-    window.approve_candidate_button = _button("결과 비교·승인", window.approve_candidate, enabled=False, primary=True)
-    window.reject_candidate_button = _button("거절 사유 기록", window.reject_candidate, enabled=False)
+    window.approve_candidate_button = _button("이 결과 확인", window.approve_candidate, enabled=False, primary=True)
+    window.reject_candidate_button = _button("다른 결과 고르기", window.reject_candidate, enabled=False)
     window.save_candidate_button = _button("저장 위치 선택 후 저장", window.save_approved_candidate, enabled=False, primary=True)
     window.discard_candidate_button = _button("저장하지 않음", window.discard_approved_candidate, enabled=False)
     for buttons in ((window.approve_candidate_button, window.reject_candidate_button),

@@ -1,12 +1,13 @@
 """Explicit input approval and advisory-score candidate selection."""
-from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QWidget, QComboBox
+from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QWidget, QComboBox, QToolButton
 from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtCore import Qt
 from PIL import Image
 
 
-def preview(image):
+def preview(image, max_size=(220, 360)):
     rgb = image.convert('RGB')
-    rgb.thumbnail((220, 360))
+    rgb.thumbnail(max_size)
     qimage = QImage(rgb.tobytes(), rgb.width, rgb.height, rgb.width * 3, QImage.Format.Format_RGB888).copy()
     label = QLabel()
     label.setPixmap(QPixmap.fromImage(qimage))
@@ -187,32 +188,58 @@ class VisualCandidateReview(QDialog):
         super().__init__(parent)
         native_base_review = batch.review_stage == 'native_base'
         self.setWindowTitle(
-            'Animagine Base 선택 — 다음 단계 FLUX'
+            '의상 적용 전 · 캐릭터 후보 선택'
             if native_base_review
             else '후보 비교 — 선택 후 기존 승인·저장 단계로 이동'
         )
         self.resize(950, 650)
         layout = QVBoxLayout(self)
-        stage_text = (
-            '표시된 후보는 의상 조건 없이 생성된 캐릭터 전용 Base이며, '
-            '픽셀 무결성·성별·명백한 구조 오염 검사를 통과했습니다.\n'
-            '얼굴·헤어 유사도는 탈락 조건이 아니며 낮은 항목은 미세 조정 대상으로 기록됩니다.\n'
-            '오른쪽 의상 보드는 Base에 사용되지 않고, 선택 후 FLUX, '
-            'FLUX 의상 편집 단계에만 전달됩니다.\n'
-            if native_base_review
-            else ''
+        self.stage_banner = QLabel(
+            '의상 적용 전 — 아직 최종 결과가 아닙니다.\n'
+            '원본 캐릭터와 닮은 후보를 고르세요. 선택한 뒤 목표 의상을 적용합니다.'
+            if native_base_review else
+            '생성 후보 비교 — 아직 승인·저장되지 않았습니다.\n'
+            '후보를 선택하면 최종 검토 화면으로 이동합니다.'
         )
-        label = QLabel(stage_text
-                       + '유사도는 0~100 지표로 표시하며 확률이나 정확도가 아닙니다.\n'
-                       '후보에서 다시 검출한 출력 좌표 영역으로 비교합니다.\n'
-                       '게이트 기록과 이미지를 함께 확인하세요.\n' + batch.warning)
-        label.setWordWrap(True)
-        layout.addWidget(label)
+        self.stage_banner.setWordWrap(True)
+        self.stage_banner.setStyleSheet(
+            'background: #fff2cf; color: #59400c; border: 1px solid #d3b466; '
+            'border-radius: 8px; padding: 12px; font-size: 15px; font-weight: 600;')
+        layout.addWidget(self.stage_banner)
+        self.stage_progress = QLabel(
+            '현재: 캐릭터 후보 선택  →  다음: 목표 의상 적용  →  최종 결과 검토·저장'
+            if native_base_review else '현재: 후보 선택  →  다음: 최종 결과 검토·저장')
+        self.stage_progress.setWordWrap(True)
+        layout.addWidget(self.stage_progress)
+        self.diagnostics_toggle = QToolButton()
+        self.diagnostics_toggle.setText('기술 진단 펼치기')
+        self.diagnostics_toggle.setCheckable(True)
+        self.diagnostics_toggle.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.diagnostics_toggle.setArrowType(Qt.ArrowType.RightArrow)
+        layout.addWidget(self.diagnostics_toggle)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        body = QWidget()
+        body_layout = QVBoxLayout(body)
+        self.diagnostics_label = QLabel(
+            ('캐릭터 후보는 의상 조건 없이 생성되었습니다. 목표 의상은 다음 단계에 사용합니다.\n'
+             if native_base_review else '')
+            + '유사도는 참고 지표이며 확률이나 정확도가 아닙니다. '
+            '검사 통과는 최종 이미지 승인이나 의상 적용 완료를 뜻하지 않습니다.\n'
+            + batch.warning)
+        self.diagnostics_label.setWordWrap(True)
+        self.diagnostics_label.hide()
+        body_layout.addWidget(self.diagnostics_label)
+        def toggle_diagnostics(checked):
+            self.diagnostics_label.setVisible(checked)
+            self.diagnostics_toggle.setArrowType(Qt.ArrowType.DownArrow if checked else Qt.ArrowType.RightArrow)
+            self.diagnostics_toggle.setText('기술 진단 접기' if checked else '기술 진단 펼치기')
+        self.diagnostics_toggle.toggled.connect(toggle_diagnostics)
         reference_row = QHBoxLayout()
         for name, filename in (
-            ('기준 이미지', 'input_source.png'),
+            ('원본 캐릭터 · 비교 기준', 'input_source.png'),
             (
-                '2단계 격리 의상 보드'
+                '다음 단계에 적용할 목표 의상 · 아직 미적용'
                 if native_base_review
                 else '참조 의상',
                 'input_garment.png',
@@ -223,18 +250,23 @@ class VisualCandidateReview(QDialog):
                 column = QVBoxLayout()
                 column.addWidget(QLabel(name))
                 with Image.open(path) as reference:
-                    column.addWidget(preview(reference))
+                    column.addWidget(preview(reference, (140, 180)))
                 reference_row.addLayout(column)
-        layout.addLayout(reference_row)
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
+        body_layout.addLayout(reference_row)
         container = QWidget()
         row = QHBoxLayout(container)
         self.selection = QComboBox()
         self.batch = batch
         self.part_reviews = []
+        self.candidate_stage_labels = []
         for index, candidate in enumerate(batch.candidates):
             column = QVBoxLayout()
+            stage_label = QLabel(
+                f'캐릭터 후보 {index + 1} · 의상 적용 전'
+                if native_base_review else f'생성 후보 {index + 1} · 최종 검토 전')
+            stage_label.setStyleSheet('background: #fff2cf; color: #59400c; padding: 8px; font-weight: 600;')
+            column.addWidget(stage_label)
+            self.candidate_stage_labels.append(stage_label)
             scores = candidate.design_reference_record['similarity']
             from genai_lab.reference_tag_policy import GENDER_LABELS
             gender = candidate.design_reference_record.get('character_gender', 'unspecified')
@@ -269,7 +301,7 @@ class VisualCandidateReview(QDialog):
             quality_text = (
                 '미세 조정 필요: ' + ', '.join(refinement_targets)
                 if decision.get('refinement_required')
-                else '유사도 목표 충족'
+                else '참고 유사도 기준 충족 · 최종 승인 아님'
             )
             column.addWidget(QLabel(quality_text))
             column.addWidget(preview(candidate.image))
@@ -291,7 +323,7 @@ class VisualCandidateReview(QDialog):
                 ('hair', '헤어 디자인'),
                 ('human_ears', '사람 귀 형태·개수·위치'),
                 ('animal_ears', '동물 귀 형태·종·개수·위치'),
-                ('tail', '꼬리 형태·배색'), ('garment', '의상 디자인'), ('anatomy', '인체 비율')):
+                ('tail', '꼬리 형태·배색'), ('garment', '현재 옷 관찰 (목표 의상 미적용)' if native_base_review else '의상 디자인'), ('anatomy', '인체 비율')):
                 selector = QComboBox()
                 for value, label in (
                     ('not_reviewed', '미확인'), ('similar', '유사'),
@@ -308,20 +340,28 @@ class VisualCandidateReview(QDialog):
             column.addWidget(view)
             row.addLayout(column)
             self.selection.addItem(f'후보 {index + 1}', index)
-        scroll.setWidget(container)
-        layout.addWidget(scroll)
+        body_layout.addWidget(container)
+        scroll.setWidget(body)
+        layout.addWidget(scroll, 1)
+        self.next_action_hint = QLabel(
+            "선택해도 완성·저장되지 않습니다. 다음 단계에서 목표 의상을 적용합니다."
+            if native_base_review else "선택 후 최종 검토에서 승인·저장을 결정합니다.")
+        self.next_action_hint.setWordWrap(True)
+        layout.addWidget(self.next_action_hint)
         layout.addWidget(self.selection)
         choose = QPushButton(
-            '선택한 Base로 FLUX 실행'
+            '이 캐릭터를 선택하고 의상 적용하기'
             if native_base_review
             else '선택한 후보를 최종 검토로 전달'
         )
+        self.choose_button = choose
+        choose.setMinimumHeight(40)
         choose.clicked.connect(self.confirm_selection)
-        reject = QPushButton('선택하지 않음')
+        reject = QPushButton('선택하지 않고 돌아가기')
         reject.clicked.connect(self.reject)
         layout.addWidget(choose)
         layout.addWidget(reject)
-        layout.addWidget(QLabel(f'미승인 후보 임시 보관: {batch.directory}'))
+        self.diagnostics_label.setText(self.diagnostics_label.text() + f'\n미승인 후보 임시 보관: {batch.directory}')
 
     def confirm_selection(self):
         # 체크를 강요하거나 점수로 자동 합격시키지 않는다.

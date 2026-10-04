@@ -124,9 +124,11 @@ def test_gui_shows_local_pipeline_as_primary_action() -> None:
     window = GenAILabWindow()
     try:
         assert window.generate_button.text() == "이미지 생성 시작"
-        assert "전체 로컬 파이프라인" in window.generate_button.toolTip()
+        assert "이미지 4장" in window.generate_button.toolTip()
         assert window.refinement_mode_combo.count() == 1
-        assert "의상 조건이 없는 Animagine 캐릭터 Base" in window.framing_help.text()
+        assert "without_pose 1회 생성" in window.framing_help.text()
+        assert window.refinement_mode_combo.isHidden()
+        assert window.framing_combo.isHidden()
         assert "선택 기능" in window.external_candidate_button.text()
         assert "SDXL" in window.local_engine_status_label.text()
         assert "OmniGen" not in window.local_engine_status_label.text()

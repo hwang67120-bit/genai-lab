@@ -8,6 +8,7 @@ GPU 실행 0회. 새 모델·패키지 설치 없음. 자세·Qwen·비키니·C
 
 - 입력 확인창에서 fixed 그룹의 꼬리·귀 태그와 원문을 표시한다.
 - 꼬리 문구는 영어 쉼표 구분, 기본 빈칸·미확인. 수정하면 확인 해제.
+- 검토 후 보강: 기존 excluded_garment_tag를 재사용하고, 꼬리·귀 입력에만 노출 어휘 검사(APPENDAGE_EXPOSURE_TAGS)를 추가한다. 대소문자·밑줄·공백을 정규화한다. 기존 의상 승인이나 출력 노출 게이트의 정책을 바꾸지 않는다. 등록 태그 검사이며 자유로운 자연어의 모든 우회를 막는 분류기는 아니다.
 - 귀 문구는 표시하되 기본 비활성. OnePassPromptSettings.enable_ear_override=False.
 - 확인된 꼬리 문구만 fixed 자리의 일반 tail과 *_tail을 대체한다.
   종 이름 오인을 자동 수정하지 않고 사용자 문구를 전달한다.
@@ -23,11 +24,11 @@ GPU 실행 0회. 새 모델·패키지 설치 없음. 자세·Qwen·비키니·C
 Codex의 회귀는 가짜 생성 백엔드와 임시 QSettings를 쓴다.
 실제 Qt 버튼 → 확인 데이터 → 요청 → 원시 기록 → 결과 승인·내보내기까지 검사한다.
 GPU 출력 SHA 재현을 CPU 통과로 주장하지 않는다.
-정확한 테스트 결과와 파일 SHA는 outputs/tail-appearance-implementation-20261004/results.md 및 file-hashes.json에 기록한다.
+811cc108 기준 테스트 결과·SHA는 outputs/tail-appearance-implementation-20261004/results.md 및 file-hashes.json에 있다. 이후 입력 제한 보강 결과는 같은 폴더의 review-fix.md, pytest-review-fix.txt, review-fix-hashes.json을 따른다.
 
-기존 미커밋 리팩터링은 유지됐다. 이번 시작 직전 사본:
+사용자의 “리팩토링한것도 포함 해서” 승인에 따라 기능과 리팩터링은 811cc108에 함께 커밋·푸시됐다. 구현 시작 직전 사본:
 outputs/tail-appearance-implementation-20261004/before/.
-현재 HEAD와 비교하면 리팩터링 변경도 함께 나타나므로, 이번 기능만 검토하려면 before 사본과 비교한다.
+811cc108의 변경에는 리팩터링도 포함된다. 해당 기능 구현만 구분해 검토하려면 before 사본과 비교한다.
 
 ## 3. 시험 D와 차이 — 승인된 동작
 

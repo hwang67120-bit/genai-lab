@@ -6,7 +6,7 @@ Unspecified gender does not restore discarded detector gender candidates.
 """
 from dataclasses import dataclass, field
 from genai_lab.gender_prompt import BASE_GENDER_CONDITION_TAGS, prepare_gender_negative_terms
-from genai_lab.reference_tag_policy import CHARACTER_GENDERS, normalize_tag, gender_tag_kind
+from genai_lab.reference_tag_policy import CHARACTER_GENDERS, normalize_tag, excluded_appendage_tag
 from genai_lab.onepass_gender import OnePassGenderConditions, validate_onepass_negative_template
 from genai_lab.onepass_garment_vocabulary import garment_nouns, uncovered_parts, filter_pocket_tags
 from genai_lab.onepass_prompt_settings import OnePassPromptSettings
@@ -36,10 +36,10 @@ class PartAppearance:
         if not self.text.isascii() or any(ord(c) < 32 for c in self.text):
             raise ValueError("외형 문구는 한 줄의 영어 태그로 입력해 주세요.")
         tags = _tags(values)
-        if any(gender_tag_kind(normalize_tag(t)) is not None or
+        if any(excluded_appendage_tag(t) or
                any(normalize_tag(t) in support for support in BASE_GENDER_CONDITION_TAGS.values())
                for t in tags):
-            raise ValueError("외형 문구로 사용자 성별 선택을 바꿀 수 없습니다.")
+            raise ValueError("꼬리·귀 외형 문구에는 성별·체형·노출·다른 의상 지시를 넣을 수 없습니다.")
         return tags
 
 

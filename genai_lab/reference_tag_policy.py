@@ -77,3 +77,24 @@ def resolve_character_gender(tags, gender='unspecified'):
     # The explicit user choice replaces detector gender labels, not appearance.
     retained = tuple(tag for tag in normalized if gender_tag_kind(tag) is None)
     return (CHARACTER_GENDERS[gender], *retained), removed
+
+
+# Input-field scope only: exposure-v2/rule_v2.md A/B/C + recorded exposure terms,
+# plus the existing negative template's nsfw/buruma. This is NOT an output gate:
+# even legitimate garment exposure belongs in garment approval, not a tail/ear field.
+APPENDAGE_EXPOSURE_TAGS = frozenset({
+    "nsfw", "panties", "underwear", "bra", "lingerie", "nude", "completely nude",
+    "topless", "bottomless", "nipples", "leotard", "swimsuit", "one-piece swimsuit",
+    "bikini", "school swimsuit", "midriff", "navel", "ass", "cleavage", "sideboob",
+    "underboob", "midriff peek", "bare legs", "bare shoulders", "bare arms", "buruma",
+})
+
+
+def excluded_appendage_tag(tag):
+    """Tail/ear descriptions cannot inject known character/body/exposure tags.
+
+    Reuse the garment field's exclusion contract without broadening garment
+    policy. This is a finite tag check, not a natural-language safety classifier.
+    """
+    normalized = normalize_tag(tag)
+    return excluded_garment_tag(normalized) or normalized in APPENDAGE_EXPOSURE_TAGS

@@ -262,3 +262,35 @@ def test_appearance_records_chunk_growth_without_truncation(tmp_path, store):
     assert out.rules["appearance_chunks_after"] == 2
     assert long_text in out.positive
     assert all(len(chunk.token_ids) == 77 for e in out.encoders for chunk in e.positive)
+
+
+from genai_lab.reference_tag_policy import APPENDAGE_EXPOSURE_TAGS, excluded_appendage_tag
+
+
+@pytest.mark.parametrize("tag", sorted(APPENDAGE_EXPOSURE_TAGS) + [
+    "large breasts", "small breasts", "medium_breasts", "flat chest", "muscular",
+    "slender", "broad shoulders", "male focus", "feminine silhouette",
+])
+def test_appendage_field_rejects_body_and_exposure_tags(tag):
+    for variant in (tag, tag.upper().replace(" ", "_")):
+        with pytest.raises(ValueError, match="성별·체형·노출"):
+            PartAppearance("grey tail, " + variant, True)
+
+
+@pytest.mark.parametrize("text", [
+    "light blue tail, striped tail", "grey tail, scaly tail",
+    "teal tail, spiral tail", "blue animal ears", "grass green tail",
+])
+def test_valid_appendage_descriptions_are_not_changed(text):
+    choice = PartAppearance(text, True)
+    assert choice.tags() == tuple(text.split(", "))
+    assert not any(excluded_appendage_tag(tag) for tag in choice.tags())
+
+
+def test_rejected_draft_is_never_injected_when_unconfirmed(tmp_path, store):
+    baseline = appearance_prompt(tmp_path, store)
+    draft = appearance_prompt(tmp_path, store, AppearanceOverrides(
+        tail=PartAppearance("large breasts, nsfw", False)))
+    assert draft.positive == baseline.positive and draft.negative == baseline.negative
+    assert draft.encoders == baseline.encoders
+    assert not draft.rules["appendage_appearance"]["tail"]["applied"]

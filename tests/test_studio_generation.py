@@ -384,6 +384,9 @@ def test_input_dialog_preserves_draft_and_resets_confirmation(tmp_path, monkeypa
         ears = dialog.findChild(QLineEdit, "ears_appearance_text")
         assert tail.text() == "" and not checked.isEnabled()
         assert not ears.isEnabled()
+        for invalid in ("grey tail, large breasts", "scaly tail, NSFW", "blue tail, bare_legs"):
+            tail.setText(invalid)
+            assert not checked.isEnabled() and not checked.isChecked()
         tail.setText("grey tail")
         assert checked.isEnabled()
         checked.setChecked(True)

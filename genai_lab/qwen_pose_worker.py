@@ -42,6 +42,12 @@ class UntruncatedProcessor:
 
 
 def validate_request(request):
+    kind = request.get("task_kind", "pose_edit")
+    if kind == "tail_edit":
+        from genai_lab.qwen_tail_edit import validate_tail_request
+        return validate_tail_request(request)
+    if kind != "pose_edit":
+        raise ValueError("지원하지 않는 편집 종류")
     if request.get("schema_version") != 1 or request.get("images") != 2:
         raise ValueError("B 조건은 기준 이미지와 골격 2장만 지원합니다.")
     if request.get("skeleton_color_order") != "openpose_rgb_before_t2i_reversal":
@@ -86,8 +92,10 @@ def generate(request, directory, record):
         if (directory / "cancel.request").exists():
             raise WorkerCancelled("사용자 취소")
     try:
-        for path, expected in ((spec.image_path, spec.image_sha256),
-                               (request["skeleton_path"], request["skeleton_sha256"])):
+        reference = ((spec.crop_path, spec.crop_sha256) if request.get("task_kind") == "tail_edit"
+                     else (request["skeleton_path"], request["skeleton_sha256"]))
+        record["task_kind"] = request.get("task_kind", "pose_edit")
+        for path, expected in ((spec.image_path, spec.image_sha256), reference):
             data = Path(path).read_bytes()
             import hashlib
             if hashlib.sha256(data).hexdigest() != expected:

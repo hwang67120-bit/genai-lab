@@ -185,6 +185,7 @@ class StudioResults:
             c.record.get("prompt", {}).get("rules", {}).get("appendage_review_required", False)
             for c in batch.candidates)
         self.selected = 0
+        self.tail_edit = None
         self.approved_sha = None
         self.checks = {}
         self.status = "awaiting_user_review"
@@ -194,12 +195,14 @@ class StudioResults:
         record(self.batch.directory / "user-review.json", {
             "status": self.status, "selected": self.selected,
             "approved_sha256": self.approved_sha, "automatic_gates_executed": False,
-            "reviewer": "user", "checks": self.checks, "appendage_review_required": self.appendage_review_required, **extra})
+            "reviewer": "user", "checks": self.checks, "appendage_review_required": self.appendage_review_required,
+            **({"tail_edit": self.tail_edit} if self.tail_edit else {}), **extra})
 
     def select(self, index):
         if not 0 <= index < len(self.batch.candidates):
             raise ValueError("후보 번호 오류")
         self.selected = index
+        self.tail_edit = None
         self.approved_sha = None
         self.checks = {}
         self.status = "awaiting_user_review"
@@ -209,23 +212,48 @@ class StudioResults:
     def candidate(self):
         return self.batch.candidates[self.selected]
 
+    @property
+    def current_path(self):
+        return Path(self.tail_edit["directory"]) / "product.png" if self.tail_edit else self.candidate.path
+
+    def verify_original(self):
+        candidate = self.candidate
+        data = json.loads(candidate.record_path.read_text(encoding="utf-8"))
+        if not data.get("valid") or not data.get("completed") or digest(candidate.path) != data.get("raw_sha256"):
+            raise ValueError("생성 기록이 정상 완료 상태가 아니거나 이미지가 변경됐습니다.")
+        return data["raw_sha256"]
+
+    def verify_current(self):
+        original_sha = self.verify_original()
+        if self.tail_edit:
+            from genai_lab.qwen_tail_edit import tail_product_info
+            if tail_product_info(self.tail_edit["directory"], original_sha) != self.tail_edit:
+                raise ValueError("채택한 꼬리 편집 기록이 변경됐습니다.")
+            return self.tail_edit["product_sha256"]
+        return original_sha
+
+    def adopt_tail_edit(self, directory):
+        from genai_lab.qwen_tail_edit import tail_product_info
+        info = tail_product_info(directory, self.verify_original())
+        self.tail_edit = info
+        self.approved_sha = None
+        self.checks = {}
+        self.status = "awaiting_user_review"
+        self.persist()
+
     def approve(self, checks):
         required = {"character", "garment", "exposure"}
         if self.appendage_review_required:
             required.add("appendages")
         if set(checks) != required or not all(checks.values()):
             raise ValueError("캐릭터·의상·노출 및 해당하는 꼬리·귀 확인을 완료해 주세요.")
-        candidate = self.candidate
-        data = json.loads(candidate.record_path.read_text(encoding="utf-8"))
-        if not data.get("valid") or not data.get("completed") or digest(candidate.path) != data.get("raw_sha256"):
-            raise ValueError("생성 기록이 정상 완료 상태가 아니거나 이미지가 변경됐습니다.")
-        self.approved_sha = data["raw_sha256"]
+        self.approved_sha = self.verify_current()
         self.status = "user_approved"
         self.checks = dict(checks)
         self.persist()
 
     def export(self, destination):
-        if self.status != "user_approved" or digest(self.candidate.path) != self.approved_sha:
+        if self.status != "user_approved" or self.verify_current() != self.approved_sha:
             raise ValueError("현재 결과를 먼저 확인해 주세요.")
         destination = Path(destination)
         if destination.suffix.lower() != ".png":
@@ -233,12 +261,14 @@ class StudioResults:
         sidecar = destination.with_suffix(".review.json")
         if destination.exists() or sidecar.exists():
             raise FileExistsError("같은 이름의 파일이 있습니다. 다른 이름을 선택하세요.")
-        data = self.candidate.path.read_bytes()
+        data = self.current_path.read_bytes()
         if hashlib.sha256(data).hexdigest() != self.approved_sha:
             raise ValueError("확인한 이미지가 변경됐습니다.")
         metadata = {"source_run": str(self.candidate.record_path), "sha256": self.approved_sha,
                     "approval_record": str(self.batch.directory / "user-review.json"),
                     "reviewer": "user", "automatic_gates_executed": False}
+        if self.tail_edit:
+            metadata["tail_edit"] = dict(self.tail_edit)
         created = []
         try:
             with sidecar.open("x", encoding="utf-8") as f:

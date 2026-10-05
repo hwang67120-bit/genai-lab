@@ -10,6 +10,7 @@ gui_main.GenAILabWindow.start_generation → StudioController.start
 """
 
 from pathlib import Path
+from dataclasses import replace
 import threading
 import traceback
 import uuid
@@ -36,10 +37,14 @@ class StudioController(QObject):
         self.run_directory = None
         self.confirming = False
         self.pending_action = None
+        self.pending_error = None
+        self.tail_context = None
+        self.tail_settings_path = ""
         self.last_saved = None
         self.output_root = Path(__file__).resolve().parents[1] / "outputs" / "studio-runs"
         window.studio_candidate_combo.currentIndexChanged.connect(self.select)
         window.studio_cancel_button.clicked.connect(self.cancel)
+        window.tail_edit_button.clicked.connect(self.edit_tail)
 
     @property
     def occupied(self):
@@ -116,7 +121,7 @@ class StudioController(QObject):
         if self.results is None or index < 0:
             return
         self.results.select(index)
-        self.window.candidate_preview.setPixmap(QPixmap(str(self.results.candidate.path)))
+        self.window.candidate_preview.setPixmap(QPixmap(str(self.results.current_path)))
         self.window.status_label.setText(f"상태: 결과 {index+1} 확인 전 · 다른 결과와 비교할 수 있습니다.")
         self.controls()
 
@@ -125,7 +130,7 @@ class StudioController(QObject):
     def approve(self):
         if self.results is None:
             return
-        checks = confirm_result(self.window, self.results.candidate, self.analysis)
+        checks = confirm_result(self.window, replace(self.results.candidate, path=self.results.current_path), self.analysis)
         if checks is not None:
             try:
                 self.results.approve(checks)
@@ -182,10 +187,112 @@ class StudioController(QObject):
         layout = QVBoxLayout(dialog)
         scroll = QScrollArea()
         image = QLabel()
-        image.setPixmap(QPixmap(str(self.results.candidate.path)))
+        image.setPixmap(QPixmap(str(self.results.current_path)))
         scroll.setWidget(image)
         layout.addWidget(scroll)
         dialog.exec()
+
+    # 선택적 꼬리 보정: 정상 완료 후보만 사용하며, 실패해도 후보 묶음을 버리지 않는다.
+
+    def edit_tail(self):
+        if (self.results is None or self.task is not None or self.confirming or not self.analysis
+                or not appendage_tags(self.analysis["groups"]["fixed"])["tail"]):
+            return
+        if any(value is not None and hasattr(value, "isRunning") and value.isRunning()
+               for name, value in vars(self.window).items() if name.endswith("thread")):
+            QMessageBox.information(self.window, "실행 중", "현재 작업이 끝난 뒤 꼬리를 고쳐 주세요.")
+            return
+        from genai_lab.qwen_tail_gui import TailInputDialog
+        from genai_lab.qwen_tail_edit import prepare_tail_spec, make_tail_request, TailEditWorkflow, run_tail_edit
+        from genai_lab.qwen_preservation import file_sha
+        self.confirming = True
+        self.controls()
+        try:
+            basis_sha = self.results.verify_original()
+            source = self.analysis["source"]
+            source_sha = self.analysis["references"].get("character", {}).get("sha256") or file_sha(source)
+            dialog = TailInputDialog(source, source_sha, self.window, settings_path=self.tail_settings_path)
+            if dialog.exec() != QDialog.DialogCode.Accepted:
+                return
+            self.tail_settings_path = dialog.settings_path
+            root = self.results.batch.directory / "tail-edits" / uuid.uuid4().hex
+            spec = prepare_tail_spec(self.results.candidate.path, source, dialog.canvas.box,
+                pattern=dialog.pattern.currentData(), tip=dialog.tip.text(), confirmed=dialog.confirm.isChecked(),
+                directory=root / "inputs", source_sha256=source_sha, image_sha256=basis_sha)
+            request = make_tail_request(spec, settings=dialog.settings)
+            flow = TailEditWorkflow(spec)
+            directory = root / "edit"
+            self.tail_context = {"directory": directory, "source": spec.source_path,
+                                 "before": spec.image_path, "basis_sha256": basis_sha,
+                                 "selected": self.results.selected}
+            # Initial one-pass backend already closes in generate_onepass_request's finally.
+            # Release any idle legacy pipeline too; the runner then probes actual allocations.
+            pipeline = getattr(self.window, "pipeline", None)
+            self.window.pipeline = None
+            if pipeline is not None:
+                remove = getattr(pipeline, "remove_all_hooks", None)
+                if callable(remove):
+                    remove()
+                del remove  # A bound hook method also retains the pipeline.
+            del pipeline
+            def operation(cancel, progress):
+                def report(data):
+                    steps = data.get("steps", [])
+                    progress(f"상태: 꼬리 고치는 중 · {len(steps)}/40 · 고치기 전 결과는 보관 중")
+                return run_tail_edit(request, directory, flow, cancelled=cancel, on_progress=report)
+            self.window.status_label.setText("상태: 꼬리 편집 준비 중 · 약 30분 걸릴 수 있습니다.")
+            self.launch(operation, self.tail_edited, on_error=self.tail_failed)
+        except Exception as error:
+            self.tail_failed(error, traceback.format_exc())
+        finally:
+            self.confirming = False
+            self.controls()
+
+    def tail_edited(self, product):
+        from genai_lab.qwen_tail_gui import review_tail_result
+        from genai_lab.qwen_tail_edit import tail_product_info
+        from genai_lab.qwen_record_io import write_json
+        context = self.tail_context
+        if self.results is None or self.results.selected != context["selected"]:
+            raise ValueError("편집을 시작한 후보가 현재 선택과 다릅니다.")
+        info = tail_product_info(context["directory"], self.results.verify_original())
+        if Path(product).resolve() != (context["directory"] / "product.png").resolve():
+            raise ValueError("실행 기록과 다른 편집 미리보기입니다.")
+        self.confirming = True
+        self.controls()
+        try:
+            checks = review_tail_result(self.window, context["source"], context["before"], product)
+            write_json(context["directory"] / "tail-review.json", {
+                **info, "adopted": checks is not None, "checks": checks or {},
+                "reviewer": "user", "automatic_verdict": False})
+            if checks is not None:
+                self.results.adopt_tail_edit(context["directory"])
+                self.results.approve(checks)
+                self.window.candidate_preview.setPixmap(QPixmap(str(self.results.current_path)))
+                self.window.status_label.setText("상태: 꼬리 편집본 확인 완료 · 저장 위치를 선택해 주세요.")
+            else:
+                self.window.status_label.setText("상태: 편집본을 사용하지 않았습니다. 이전 결과를 유지합니다.")
+        finally:
+            self.confirming = False
+            self.tail_context = None
+            self.controls()
+
+    def tail_failed(self, error, details=""):
+        # Never route an optional edit failure through fail(), which clears the batch.
+        context = self.tail_context
+        if context is not None:
+            from genai_lab.qwen_record_io import write_json
+            try:
+                write_json(context["directory"].parent / "gui-error.json", {"error": str(error), "detail": details})
+            except OSError as record_error:
+                details += f"\n편집 화면 오류 기록 실패: {record_error}"
+                error = RuntimeError(f"{error}\n편집 화면 오류 기록도 저장하지 못했습니다: {record_error}")
+        self.tail_context = None
+        self.window.status_label.setText("상태: 꼬리 편집을 마치지 못했습니다. 이전 결과는 그대로 남아 있습니다.")
+        if self.results is not None:
+            self.window.candidate_preview.setPixmap(QPixmap(str(self.results.current_path)))
+        if not isinstance(error, OnePassCancelled):
+            QMessageBox.warning(self.window, "꼬리 편집 중단", str(error))
 
     # 실행 보조: 아래 코드는 버튼 상태와 비동기 실행·실패 처리를 담당한다.
 
@@ -205,8 +312,11 @@ class StudioController(QObject):
         w.discard_candidate_button.setEnabled(ready)
         w.save_candidate_button.setEnabled(ready and self.results.status == "user_approved")
         w.open_original_size_button.setEnabled(ready)
+        has_tail = bool(self.analysis and appendage_tags(self.analysis["groups"]["fixed"])["tail"])
+        w.tail_edit_button.setVisible(self.results is not None and has_tail)
+        w.tail_edit_button.setEnabled(ready and has_tail)
 
-    def launch(self, action, complete):
+    def launch(self, action, complete, *, on_error=None):
         if self.task is not None:
             raise RuntimeError("이미 실행 중입니다.")
         task = StudioTask(action, self.window)
@@ -215,6 +325,7 @@ class StudioController(QObject):
         self.window.worker_thread = task
         task.progress.connect(self.window.status_label.setText)
         self.pending_action = complete
+        self.pending_error = on_error or self.fail
         task.finished.connect(self.finished)
         self.controls()
         task.start()
@@ -224,16 +335,18 @@ class StudioController(QObject):
     def finished(self):
         task = self.task
         complete = self.pending_action
+        failed = self.pending_error or self.fail
         self.task = None
         self.window.worker_thread = None
         self.pending_action = None
+        self.pending_error = None
         try:
             if task.error:
-                self.fail(task.error, task.detail)
+                failed(task.error, task.detail)
             else:
                 complete(task.result)
         except Exception as error:
-            self.fail(error, traceback.format_exc())
+            failed(error, traceback.format_exc())
         finally:
             task.deleteLater()
             self.controls()

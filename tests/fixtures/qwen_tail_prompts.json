@@ -1,0 +1,26 @@
+[
+  {
+    "source": "outputs/qwen-tail-edit-20261004/prompts.json",
+    "key": "E2",
+    "pattern": true,
+    "tip": "",
+    "positive": "Picture 1 is the character image to edit. Picture 2 is a close-up of the reference tail. Edit only the tail in Picture 1: the character must have exactly one tail, attached at the lower back, with no extra or disconnected tail parts. Make that single tail match the tail in Picture 2 in shape, thickness, color, and pattern. Keep everything else in Picture 1 unchanged: the same face, hair, ears, body, pose, outfit, garment colors, illustration style, framing, and plain white background. Do not copy the outfit, accessories, or background from Picture 2, and do not increase exposure.",
+    "negative": " "
+  },
+  {
+    "source": "outputs/qwen-tail-edit-20261004/stripe2/prompts.json",
+    "key": "E2",
+    "pattern": false,
+    "tip": "",
+    "positive": "Picture 1 is the character image to edit. Picture 2 is a close-up of the reference tail. Edit only the tail in Picture 1: the character must have exactly one tail, attached at the lower back, with no extra or disconnected tail parts. Make that single tail match the tail in Picture 2 in shape, thickness, and color. Keep everything else in Picture 1 unchanged: the same face, hair, ears, body, pose, outfit, garment colors, illustration style, framing, and plain white background. Do not copy the outfit, accessories, or background from Picture 2, and do not increase exposure.",
+    "negative": " "
+  },
+  {
+    "source": "outputs/qwen-tail-edit-20261004/shape/prompts.json",
+    "key": "E2P",
+    "pattern": true,
+    "tip": "The tip of the tail curls into a tight spiral, as in Picture 2.",
+    "positive": "Picture 1 is the character image to edit. Picture 2 is a close-up of the reference tail. Edit only the tail in Picture 1: the character must have exactly one tail, attached at the lower back, with no extra or disconnected tail parts. Make that single tail match the tail in Picture 2 in shape, thickness, color, and pattern. The tip of the tail curls into a tight spiral, as in Picture 2. Keep everything else in Picture 1 unchanged: the same face, hair, ears, body, pose, outfit, garment colors, illustration style, framing, and plain white background. Do not copy the outfit, accessories, or background from Picture 2, and do not increase exposure.",
+    "negative": " "
+  }
+]

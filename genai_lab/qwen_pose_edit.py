@@ -157,6 +157,13 @@ def product_preview(raw_path, destination, *, basis_size):
 def run_pose_edit(request, directory, workflow, *, cancelled=lambda: False, popen=subprocess.Popen,
                   on_progress=lambda _: None):
     spec = PreservationSpec.from_record(request["spec"])
+    return _run_image_edit(request, directory, workflow, spec, cancelled=cancelled,
+                           popen=popen, on_progress=on_progress)
+
+
+def _run_image_edit(request, directory, workflow, spec, *, cancelled=lambda: False,
+                    popen=subprocess.Popen, on_progress=lambda _: None):
+    """Shared process lifecycle; caller validates its own pose or tail contract."""
     settings = QwenPoseSettings(**request["settings"])
     if cancelled():
         raise RuntimeError("실행 전 취소")

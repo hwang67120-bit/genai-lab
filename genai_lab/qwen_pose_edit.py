@@ -113,7 +113,8 @@ def make_request(spec, skeleton_path, skeleton_sha256, *, instructions=PoseEditI
     if file_sha(skeleton_path) != skeleton_sha256:
         raise ValueError("반전 전 골격 SHA 불일치")
     with Image.open(spec.image_path) as image:
-        size = output_dimensions(*image.size)
+        basis_size = image.size
+        size = output_dimensions(*basis_size)
     with Image.open(skeleton_path) as image:
         if image.mode != "RGB":
             raise ValueError("정규화된 반전 전 RGB 골격이 필요합니다.")
@@ -123,19 +124,34 @@ def make_request(spec, skeleton_path, skeleton_sha256, *, instructions=PoseEditI
     return {"schema_version": 1, "spec": spec.record(), "prompt": assemble_pose_edit_prompt(spec, instructions),
             "instructions": asdict(instructions), "skeleton_path": str(skeleton_path),
             "skeleton_sha256": skeleton_sha256, "skeleton_color_order": "openpose_rgb_before_t2i_reversal",
-            "settings": settings.record(), "seed": seed, "output_size": list(size), "images": 2}
+            "settings": settings.record(), "seed": seed, "output_size": list(size), "basis_size": list(basis_size), "images": 2}
 
 
-def product_preview(raw_path, destination):
+def product_preview(raw_path, destination, *, basis_size):
+    """Map raw pixels to the approved basis canvas; never alter raw.
+
+    Pillow resize uses pixel centers: x_out = (x_in + .5)*sx - .5
+    (and likewise for y). This restores the canvas mapping, not changes
+    made by the model. No letterboxing or inferred feature alignment.
+    https://pillow.readthedocs.io/en/stable/reference/Image.html#PIL.Image.Image.resize
+    """
+    if (not isinstance(basis_size, (tuple, list)) or len(basis_size) != 2
+            or any(type(v) is not int or v <= 0 for v in basis_size)):
+        raise ValueError("기준 이미지 크기는 양의 정수 2개가 필요합니다.")
+    raw_path, destination = Path(raw_path), Path(destination)
+    if (raw_path.resolve() == destination.resolve()
+            or (destination.exists() and raw_path.samefile(destination))):
+        raise ValueError("Qwen 원시 결과를 미리보기로 덮어쓸 수 없습니다.")
+    size = tuple(basis_size)
     with Image.open(raw_path) as raw:
-        ratio = min(736 / raw.width, 1232 / raw.height)
-        size = (round(raw.width * ratio), round(raw.height * ratio))
+        raw_size = raw.size
         with raw.convert("RGB") as rgb, rgb.resize(size, Image.Resampling.LANCZOS) as resized:
-            with Image.new("RGB", (736, 1232), "white") as canvas:
-                offset = ((736 - size[0]) // 2, (1232 - size[1]) // 2)
-                canvas.paste(resized, offset)
-                canvas.save(destination)
-    return {"size": list(size), "offset": list(offset), "canvas": [736, 1232], "filter": "LANCZOS"}
+            resized.save(destination)
+    return {"version": 2, "kind": "resize_to_approved_basis", "raw_size": list(raw_size),
+            "size": list(size), "offset": [0, 0], "canvas": list(size),
+            "scale": [size[0] / raw_size[0], size[1] / raw_size[1]],
+            "pixel_coordinates": "centers: (input + 0.5) * scale - 0.5",
+            "filter": "LANCZOS"}
 
 
 def run_pose_edit(request, directory, workflow, *, cancelled=lambda: False, popen=subprocess.Popen,
@@ -146,6 +162,14 @@ def run_pose_edit(request, directory, workflow, *, cancelled=lambda: False, pope
         raise RuntimeError("실행 전 취소")
     if not Path(settings.python_executable).is_file():
         raise FileNotFoundError("설정된 Qwen Python 실행 파일이 없습니다. 설치하지 않습니다.")
+    # Bind output coordinates to the approved bytes, before starting the worker.
+    basis_data = Path(spec.image_path).read_bytes()
+    if hashlib.sha256(basis_data).hexdigest() != spec.image_sha256:
+        raise ValueError("승인 기준 이미지 SHA 불일치")
+    with Image.open(io.BytesIO(basis_data)) as basis:
+        basis_size = basis.size
+    if "basis_size" in request and request["basis_size"] != list(basis_size):
+        raise ValueError("요청의 기준 이미지 크기가 승인 이미지와 다릅니다.")
     workflow.before_launch(spec)
     directory = Path(directory).resolve()
     process = None
@@ -190,9 +214,10 @@ def run_pose_edit(request, directory, workflow, *, cancelled=lambda: False, pope
             raise RuntimeError("불완전하거나 다른 요청의 Qwen 결과")
         if file_sha(directory / "raw.png") != result.get("raw_sha256"):
             raise RuntimeError("Qwen 원시 결과 SHA 불일치")
-        derived = product_preview(directory / "raw.png", directory / "product.png")
+        derived = product_preview(directory / "raw.png", directory / "product.png", basis_size=basis_size)
         record.update(status="awaiting_review", raw_sha256=result["raw_sha256"], product_transform=derived,
-                      product_sha256=file_sha(directory / "product.png"))
+                      product_sha256=file_sha(directory / "product.png"),
+                      basis_sha256=spec.image_sha256)
         return directory / "product.png"
     except BaseException as error:
         record.update(status="cancelled" if cancelled() else "failed", error=str(error))

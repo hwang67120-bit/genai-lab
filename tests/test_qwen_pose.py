@@ -134,19 +134,58 @@ def test_unknown_offload_rejected(tmp_path):
     with pytest.raises(ValueError, match="오프로드"): replace(settings(tmp_path), offload="unknown")
 
 
-def test_dimensions_and_product_preview_preserve_raw(tmp_path):
+@pytest.mark.parametrize("basis_size", [(736, 1232), (936, 2048), (1024, 1024)])
+def test_dimensions_and_product_preview_preserve_raw(tmp_path, basis_size):
     assert output_dimensions(736, 1232) == (800, 1312)
     raw = tmp_path / "raw.png"; product = tmp_path / "product.png"
-    Image.new("RGB", (800, 1312), "red").save(raw)
+    raw_size = output_dimensions(*basis_size)
+    Image.new("RGB", raw_size, "red").save(raw)
     before = file_sha(raw)
-    record = product_preview(raw, product)
-    assert record["size"] == [736, 1207] and record["offset"] == [0, 12]
+    record = product_preview(raw, product, basis_size=basis_size)
+    assert record["size"] == list(basis_size) and record["offset"] == [0, 0]
+    assert record["raw_size"] == list(raw_size) and record["version"] == 2
     assert file_sha(raw) == before
     with Image.open(product) as p:
-        assert p.size == (736,1232)
-        assert p.getpixel((0,11)) == (255,255,255)
-        assert p.getpixel((0,12)) == (255,0,0)
-        assert p.getpixel((0,1219)) == (255,255,255)
+        assert p.size == basis_size
+        assert p.getextrema() == ((255,255),(0,0),(0,0))  # No white bars.
+
+
+@pytest.mark.parametrize("basis_size", [(736, 1232), (936, 2048), (1024, 1024)])
+def test_product_preview_marker_roundtrip_within_one_pixel(tmp_path, basis_size):
+    from PIL import ImageDraw
+    import numpy as np
+    points = [(31, 43), (basis_size[0]//2, basis_size[1]//2),
+              (basis_size[0]-37, basis_size[1]-49)]
+    with Image.new("RGB", basis_size, "white") as basis:
+        draw = ImageDraw.Draw(basis)
+        for x, y in points:
+            draw.rectangle((x-4,y-4,x+4,y+4), fill="black")
+        # Known geometric resize substitutes for Qwen: no model or GPU.
+        with basis.resize(output_dimensions(*basis_size), Image.Resampling.LANCZOS) as raw:
+            raw.save(tmp_path/'raw.png')
+    product_preview(tmp_path/'raw.png', tmp_path/'product.png', basis_size=basis_size)
+    with Image.open(tmp_path/'product.png') as result:
+        for x, y in points:
+            region = np.asarray(result.crop((x-10,y-10,x+11,y+11)))
+            ys, xs = np.where((region < 128).all(axis=2))
+            assert len(xs), f"marker disappeared at {(x,y)}"
+            error = max(abs(xs.mean()-10), abs(ys.mean()-10))
+            assert error <= 1, f"raw -> product at {(x,y)}: error={error}px"
+
+
+@pytest.mark.parametrize("size", [None, (0,1232), (736,-1), (True,1232), (736.0,1232), (736,)])
+def test_product_preview_rejects_invalid_basis_size(tmp_path, size):
+    with pytest.raises(ValueError, match="크기"):
+        product_preview(tmp_path/'raw.png', tmp_path/'out.png', basis_size=size)
+
+
+def test_product_preview_cannot_overwrite_raw(tmp_path):
+    raw = tmp_path/'raw.png'
+    Image.new('RGB',(800,1312),'red').save(raw)
+    before = file_sha(raw)
+    with pytest.raises(ValueError, match="덮어쓸"):
+        product_preview(raw, raw, basis_size=(736,1232))
+    assert file_sha(raw) == before
 
 
 def ready_workflow(image):
@@ -236,8 +275,13 @@ def test_processor_records_without_truncation():
     with pytest.raises(ValueError): wrapped(text=["x"], truncation=True)
 
 
-def test_subprocess_request_and_user_review(image, tmp_path):
+@pytest.mark.parametrize("basis_size,legacy", [((736,1232),False), ((936,2048),False), ((1024,1024),True)])
+def test_subprocess_request_and_user_review(image, tmp_path, basis_size, legacy):
+    Image.new("RGB", basis_size, "white").save(image)
     req = make_request(approved(image), image, file_sha(image), settings=settings(tmp_path))
+    assert req["basis_size"] == list(basis_size)
+    if legacy:
+        req.pop("basis_size")  # Existing requests remain replayable.
     flow = ready_workflow(image)
     out = tmp_path / "edit"
     seen = []
@@ -245,7 +289,7 @@ def test_subprocess_request_and_user_review(image, tmp_path):
         pid=123; returncode=0
         def __init__(self, command, **kwargs):
             seen.append((command,kwargs))
-            Image.new("RGB", (800,1312), "white").save(out / "raw.png")
+            Image.new("RGB", tuple(req["output_size"]), "white").save(out / "raw.png")
             write_json(out / "run.json", {"status":"completed", "raw_sha256":file_sha(out/"raw.png"),
                                           "request_sha256":json_sha(req)})
         def poll(self): return self.returncode
@@ -253,6 +297,12 @@ def test_subprocess_request_and_user_review(image, tmp_path):
     assert result.exists() and seen[0][0][1:3] == ["-m", "genai_lab.qwen_pose_worker"]
     assert seen[0][1]["shell"] is False
     assert "gguf" not in seen[0][0]
+    with Image.open(result) as product:
+        assert product.size == basis_size
+    launcher = json.loads((out/'launcher.json').read_text(encoding='utf-8'))
+    assert launcher['product_transform']['canvas'] == list(basis_size)
+    assert launcher['basis_sha256'] == file_sha(image)
+    assert launcher['raw_sha256'] == file_sha(out/'raw.png')
     with pytest.raises(ValueError): save_user_review(out, approved(image), {}, {}, adopted=True, reviewer="user")
     record = save_user_review(out, approved(image), {"a":"변형"}, dict.fromkeys(GLOBAL_FIELDS,"확인 불가"),
                              adopted=False, reviewer="user")
@@ -401,3 +451,12 @@ def test_parent_polls_only_immutable_progress(image, tmp_path, monkeypatch):
     result=run_pose_edit(request,out,ready_workflow(image),popen=Process,on_progress=seen.append)
     assert result.exists() and seen==[{'status':'starting','steps':[{'index':0}]}]
     assert json.loads((out/'run.json').read_text(encoding='utf-8'))['steps']==list(range(40))
+
+
+def test_request_basis_size_mismatch_stops_before_worker(image, tmp_path):
+    req = make_request(approved(image), image, file_sha(image), settings=settings(tmp_path))
+    req['basis_size'] = [1024,1024]
+    with pytest.raises(ValueError, match="기준 이미지 크기"):
+        run_pose_edit(req, tmp_path/'blocked', ready_workflow(image),
+                      popen=lambda *a, **k: pytest.fail('must not spawn'))
+    assert not (tmp_path/'blocked').exists()

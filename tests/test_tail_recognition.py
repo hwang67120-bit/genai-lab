@@ -290,3 +290,46 @@ def test_species_guess_is_excluded_instead_of_becoming_a_preservation_command():
     filtered,notes=filter_unobserved_fields("basis",values)
     assert filtered["ears"] is None and "종" in notes["ears"]
     assert filtered["outfit"]==values["outfit"]
+
+
+@pytest.mark.parametrize("settings_exist", [False, True])
+def test_tail_recognition_requires_opt_in_even_with_saved_settings(tmp_path, monkeypatch, settings_exist):
+    from genai_lab import tail_recognition, qwen_tail_gui
+    app = QApplication.instance() or QApplication([])
+    source, _ = assets(tmp_path)
+    saved = tmp_path / "vision-settings.json"
+    if settings_exist:
+        saved.write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(tail_recognition, "settings_path", lambda: saved)
+    dialog = qwen_tail_gui.TailInputDialog(source, file_sha(source), settings_path="runtime.json")
+    try:
+        assert dialog.recognition_settings_path == str(saved)
+        assert not dialog.recognition_enabled.isChecked()
+        dialog.recognition_enabled.setChecked(True)
+        assert dialog.recognition_enabled.isChecked()
+    finally:
+        dialog.close()
+
+
+@pytest.mark.parametrize("enabled", [False, True])
+def test_selecting_recognition_environment_preserves_user_opt_in(tmp_path, monkeypatch, enabled):
+    from genai_lab import tail_recognition, qwen_tail_gui
+    app = QApplication.instance() or QApplication([])
+    source, _ = assets(tmp_path)
+    monkeypatch.setattr(tail_recognition, "settings_path", lambda: tmp_path / "missing.json")
+    selected = str(tmp_path / "selected.json")
+    monkeypatch.setattr(qwen_tail_gui.QFileDialog, "getOpenFileName", lambda *a, **k: (selected, ""))
+    dialog = qwen_tail_gui.TailInputDialog(source, file_sha(source), settings_path="runtime.json")
+    try:
+        dialog.canvas.box = (560, 1100, 936, 1700)
+        dialog.pattern.setCurrentIndex(1)
+        dialog.recognition_enabled.setChecked(enabled)
+        dialog.confirm.setChecked(True)
+        assert dialog.run.isEnabled()
+        dialog.choose_recognition_settings()
+        assert dialog.recognition_settings_path == selected
+        assert dialog.recognition_enabled.isChecked() == enabled
+        assert not dialog.confirm.isChecked()
+        assert not dialog.run.isEnabled()
+    finally:
+        dialog.close()

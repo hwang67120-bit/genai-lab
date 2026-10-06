@@ -129,9 +129,13 @@ class TailInputDialog(QDialog):
         layout.addWidget(example)
         from genai_lab.tail_recognition import settings_path
         self.recognition_settings_path = str(settings_path())
-        self.recognition_enabled = QCheckBox("그림을 읽어 색·형태 설명 보강 (확인 후 전달)")
-        self.recognition_enabled.setChecked(settings_path().is_file())
+        self.recognition_enabled = QCheckBox("시험 기능: 이미지 인식 설명을 편집에 추가")
+        self.recognition_enabled.setChecked(False)
         layout.addWidget(self.recognition_enabled)
+        recognition_notice = QLabel("비교 시험에서 보존 개선이 확인되지 않았고, 꼬리·머리 색이 원본과 달라진 사례가 있습니다. "
+                                    "직접 켠 경우에만 확인한 설명을 편집에 추가합니다.")
+        recognition_notice.setWordWrap(True)
+        layout.addWidget(recognition_notice)
         self.recognition_enabled.toggled.connect(self.changed)
         recognition_config = QPushButton("이미지 인식 실행 환경 선택")
         recognition_config.clicked.connect(self.choose_recognition_settings)
@@ -172,7 +176,7 @@ class TailInputDialog(QDialog):
         path, _ = QFileDialog.getOpenFileName(self, "이미지 인식 실행 환경", self.recognition_settings_path, "JSON (*.json)")
         if path:
             self.recognition_settings_path = path
-            self.recognition_enabled.setChecked(True)
+            # Choosing an environment does not opt into the experimental feature.
             self.changed()
 
     def changed(self):

@@ -4,10 +4,10 @@ import os
 from pathlib import Path
 
 from PIL import Image
-from PySide6.QtCore import Qt, QRectF, Signal
+from PySide6.QtCore import Qt, QRectF, Signal, QTimer
 from PySide6.QtGui import QColor, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QWidget,
-    QPushButton, QComboBox, QLineEdit, QCheckBox, QMessageBox, QFileDialog)
+    QPushButton, QComboBox, QLineEdit, QCheckBox, QMessageBox, QFileDialog, QScrollArea)
 from genai_lab.qwen_tail_edit import (LIMITATIONS, SPIRAL_EXAMPLE, assemble_tail_prompt,
     crop_bytes, validate_box)
 from genai_lab.qwen_pose_settings import QwenPoseSettings
@@ -95,7 +95,7 @@ class TailCropCanvas(QWidget):
 
 
 class TailInputDialog(QDialog):
-    def __init__(self, source, source_sha256, parent=None, *, settings_path=""):
+    def __init__(self, source, source_sha256, parent=None, *, settings_path="", complexity_runner=None):
         super().__init__(parent)
         self.source, self.source_sha256 = Path(source), source_sha256
         self.settings_path = settings_path or os.environ.get("GENAI_QWEN_SETTINGS", "")
@@ -111,8 +111,8 @@ class TailInputDialog(QDialog):
         row.addWidget(self.canvas, 2)
         self.preview = QLabel("지정한 꼬리 영역")
         self.preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.preview.setMinimumSize(220, 220)
-        row.addWidget(self.preview, 1)
+        self.preview.setFixedHeight(180)
+        row.addWidget(self.create_complexity_panel(complexity_runner), 1)
         layout.addLayout(row, 1)
         self.pattern = QComboBox()
         self.pattern.setObjectName("tail_pattern")
@@ -161,10 +161,91 @@ class TailInputDialog(QDialog):
         buttons.addWidget(self.run)
         layout.addLayout(buttons)
         self.canvas.selectionChanged.connect(self.changed)
+        self.canvas.selectionChanged.connect(self.queue_complexity_analysis)
         self.pattern.currentIndexChanged.connect(self.changed)
         self.tip.textChanged.connect(self.changed)
         self.confirm.toggled.connect(self.validate)
         self.validate()
+
+    def create_complexity_panel(self, complexity_runner):
+        """Keep advisory setup separate from the editable tail reference controls."""
+        panel = QWidget()
+        side = QVBoxLayout(panel)
+        self.complexity_enabled = QCheckBox("꼬리 특징 안내 (CPU)")
+        self.complexity_enabled.setChecked(True)
+        side.addWidget(self.complexity_enabled)
+        self.complexity_overlay = QLabel()
+        self.complexity_overlay.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.complexity_overlay.setFixedHeight(180)
+        pictures = QHBoxLayout()
+        pictures.addWidget(self.preview, 1)
+        pictures.addWidget(self.complexity_overlay, 1)
+        side.addLayout(pictures)
+        self.complexity_hint = QLabel("꼬리 영역을 고르면 분석합니다. 무늬·끝 모양은 직접 선택해 주세요.")
+        self.complexity_hint.setWordWrap(True)
+        side.addWidget(self.complexity_hint)
+        from genai_lab.tail_complexity_gui import TailComplexityRunner
+        self.complexity_runner = complexity_runner or TailComplexityRunner(self)
+        self.complexity_result = {"status": "not_selected", "advisory_only": True}
+        self.complexity_timer = QTimer(self)
+        self.complexity_timer.setSingleShot(True)
+        self.complexity_timer.setInterval(350)
+        self.complexity_timer.timeout.connect(self.start_complexity_analysis)
+        self.complexity_runner.completed.connect(self.complexity_finished)
+        self.complexity_enabled.toggled.connect(self.queue_complexity_analysis)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setMinimumWidth(330)
+        scroll.setWidget(panel)
+        return scroll
+
+    def queue_complexity_analysis(self):
+        """Invalidate old advisory data immediately; leave edit inputs untouched."""
+        self.complexity_timer.stop()
+        self.complexity_runner.cancel()
+        self.complexity_overlay.clear()
+        enabled = self.complexity_enabled.isChecked()
+        self.complexity_result = {"status": "pending" if enabled else "disabled", "advisory_only": True}
+        if not enabled:
+            self.complexity_hint.setText("꼬리 특징 안내를 껐습니다. 편집 입력은 바뀌지 않습니다.")
+        elif self.canvas.box is None:
+            self.complexity_hint.setText("꼬리 영역을 고르면 분석합니다.")
+        else:
+            self.complexity_hint.setText("꼬리 특징 분석 중 · 기다리지 않고 편집할 수 있습니다.")
+            self.complexity_timer.start()
+
+    def start_complexity_analysis(self):
+        if self.complexity_enabled.isChecked() and self.canvas.box is not None:
+            try:
+                self.complexity_runner.start(self.source, self.source_sha256, self.canvas.box)
+            except Exception as error:
+                self.complexity_finished({"status": "failed", "advisory_only": True, "error": str(error)})
+
+    def complexity_finished(self, record):
+        from genai_lab.tail_complexity import advisory_text
+        if not self.complexity_enabled.isChecked():
+            return
+        if record.get('status') == 'completed':
+            if record.get('box') != list(self.canvas.box or ()) or record.get('source_sha256') != self.source_sha256:
+                return
+            pixmap = QPixmap(record.get('overlay_path', ''))
+            if not pixmap.isNull():
+                self.complexity_overlay.setPixmap(pixmap.scaled(145, 180, Qt.AspectRatioMode.KeepAspectRatio,
+                                                               Qt.TransformationMode.SmoothTransformation))
+        self.complexity_result = record
+        self.complexity_hint.setText(advisory_text(record))
+
+    def done(self, result):
+        self.complexity_timer.stop()
+        self.complexity_runner.cancel()
+        if self.complexity_result.get('status') == 'pending':
+            self.complexity_result = {"status": "cancelled", "advisory_only": True}
+        super().done(result)
+
+    def closeEvent(self, event):
+        self.complexity_timer.stop()
+        self.complexity_runner.cancel()
+        super().closeEvent(event)
 
     def choose_settings(self):
         path, _ = QFileDialog.getOpenFileName(self, "Qwen 실행 환경 설정", self.settings_path, "JSON (*.json)")
@@ -192,7 +273,7 @@ class TailInputDialog(QDialog):
             data = crop_bytes(self.source, self.canvas.box, self.source_sha256)
             pixmap = QPixmap()
             pixmap.loadFromData(data)
-            self.preview.setPixmap(pixmap.scaled(260, 300, Qt.AspectRatioMode.KeepAspectRatio,
+            self.preview.setPixmap(pixmap.scaled(145, 180, Qt.AspectRatioMode.KeepAspectRatio,
                                                   Qt.TransformationMode.SmoothTransformation))
             assemble_tail_prompt(self.pattern.currentData(), self.tip.text())
             if not self.settings_path:

@@ -220,7 +220,10 @@ class StudioController(QObject):
             spec = prepare_tail_spec(self.results.candidate.path, source, dialog.canvas.box,
                 pattern=dialog.pattern.currentData(), tip=dialog.tip.text(), confirmed=dialog.confirm.isChecked(),
                 directory=root / "inputs", source_sha256=source_sha, image_sha256=basis_sha)
+            from genai_lab.tail_complexity import persist_advisory
+            advisory = persist_advisory(root / "complexity", spec, getattr(dialog, "complexity_result", None))
             self.tail_context = {"directory": root / "edit", "source": spec.source_path,
+                                 "tail_complexity": advisory,
                                  "before": spec.image_path, "basis_sha256": basis_sha,
                                  "selected": self.results.selected}
             self.release_tail_predecessor()
@@ -278,10 +281,16 @@ class StudioController(QObject):
         request = make_tail_request(spec, settings=settings)
         flow = TailEditWorkflow(spec)
         directory = self.tail_context["directory"]
+        advisory = self.tail_context.get("tail_complexity")
         def operation(cancel, progress):
             def report(data):
                 progress(f"상태: 꼬리 고치는 중 · {len(data.get('steps', []))}/40 · 고치기 전 결과는 보관 중")
-            return run_tail_edit(request, directory, flow, cancelled=cancel, on_progress=report)
+            try:
+                return run_tail_edit(request, directory, flow, cancelled=cancel, on_progress=report)
+            finally:
+                if advisory is not None:
+                    from genai_lab.tail_complexity import annotate_finished_run
+                    annotate_finished_run(directory, advisory)
         self.window.status_label.setText("상태: 꼬리 편집 준비 중 · 약 30분 걸릴 수 있습니다.")
         self.launch(operation, self.tail_edited, on_error=self.tail_failed)
 

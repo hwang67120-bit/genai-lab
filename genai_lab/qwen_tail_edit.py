@@ -1,6 +1,6 @@
 """Optional tail correction: human crop/choices -> fixed prompt -> existing Qwen runner.
 
-No detection, automatic approval, retry, or new model settings. Source images and
+Optional confirmed recognition; no automatic approval, retry, or new generation settings. Source images and
 initial generated candidates remain immutable. Crop coordinates are original pixels.
 """
 from dataclasses import asdict, dataclass
@@ -48,13 +48,17 @@ def validate_tip(text):
         raise ValueError("끝 모양에는 종 이름·성별·체형·노출·의상 지시를 넣을 수 없습니다.")
 
 
-def assemble_tail_prompt(pattern, tip=""):
+def assemble_tail_prompt(pattern, tip="", recognition=None):
     if type(pattern) is not bool:
         raise ValueError("무늬 있음 또는 없음을 직접 선택해 주세요.")
     validate_tip(tip)
     match = ("Make that single tail match the tail in Picture 2 in shape, thickness, "
              + ("color, and pattern. " if pattern else "and color. "))
-    positive = PREFIX + match + (tip + " " if tip else "") + SUFFIX
+    details = ""
+    if recognition is not None:
+        from genai_lab.tail_recognition import recognition_sentences
+        details = recognition_sentences(recognition, pattern, tip)
+    positive = PREFIX + match + (tip + " " if tip else "") + details + SUFFIX
     return {"positive": positive, "negative": " ",
             "positive_sha256": hashlib.sha256(positive.encode("utf-8")).hexdigest()}
 
@@ -96,9 +100,13 @@ class TailEditSpec:
     pattern: bool
     tip: str = ""
     confirmed: bool = False
+    recognition: dict | None = None
 
     def record(self):
-        return asdict(self)
+        value = asdict(self)
+        if self.recognition is None:
+            value.pop("recognition")  # Preserve the original request contract when analysis is off.
+        return value
 
     @property
     def sha256(self):
@@ -109,7 +117,10 @@ class TailEditSpec:
             require_sha(value)
         if self.confirmed is not True:
             raise ValueError("꼬리 영역과 편집 조건을 확인해 주세요.")
-        assemble_tail_prompt(self.pattern, self.tip)
+        if self.recognition is not None:
+            from genai_lab.tail_recognition import verify_approval
+            verify_approval(self.recognition, self.image_sha256, self.crop_sha256)
+        assemble_tail_prompt(self.pattern, self.tip, self.recognition)
         if file_sha(self.image_path) != self.image_sha256:
             raise ValueError("선택한 생성 결과가 변경됐습니다.")
         expected = crop_bytes(self.source_path, self.box, self.source_sha256)
@@ -154,7 +165,7 @@ def make_tail_request(spec, *, settings):
     with Image.open(spec.image_path) as im:
         size = im.size
     return {"schema_version": 1, "task_kind": "tail_edit", "images": 2,
-            "tail_spec": spec.record(), "prompt": assemble_tail_prompt(spec.pattern, spec.tip),
+            "tail_spec": spec.record(), "prompt": assemble_tail_prompt(spec.pattern, spec.tip, spec.recognition),
             "settings": settings.record(), "seed": settings.default_seed,
             "basis_size": list(size), "output_size": list(output_dimensions(*size))}
 
@@ -167,7 +178,7 @@ def validate_tail_request(request):
     settings = QwenPoseSettings(**request["settings"])
     if settings.default_seed != TAIL_SEED or request.get("seed") != TAIL_SEED or type(request.get("seed")) is not int:
         raise ValueError("꼬리 편집 seed 계약 오류")
-    if request["prompt"] != assemble_tail_prompt(spec.pattern, spec.tip):
+    if request["prompt"] != assemble_tail_prompt(spec.pattern, spec.tip, spec.recognition):
         raise ValueError("확인한 꼬리 조건과 지시문이 다릅니다.")
     with Image.open(spec.image_path) as im:
         if request.get("basis_size") != list(im.size) or request.get("output_size") != list(output_dimensions(*im.size)):
@@ -176,7 +187,7 @@ def validate_tail_request(request):
 
 
 class TailEditWorkflow:
-    """No automatic analysis: bind human crop approval, then check GPU ownership."""
+    """Bind confirmed crop/optional recognition, then check actual GPU ownership."""
     def __init__(self, spec, *, gpu_probe=None):
         from genai_lab.qwen_pose_edit import assert_parent_gpu_released
         spec.verify_image()

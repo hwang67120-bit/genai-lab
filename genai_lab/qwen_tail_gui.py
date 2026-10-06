@@ -127,6 +127,15 @@ class TailInputDialog(QDialog):
         example = QLabel("예: " + SPIRAL_EXAMPLE)
         example.setWordWrap(True)
         layout.addWidget(example)
+        from genai_lab.tail_recognition import settings_path
+        self.recognition_settings_path = str(settings_path())
+        self.recognition_enabled = QCheckBox("그림을 읽어 색·형태 설명 보강 (확인 후 전달)")
+        self.recognition_enabled.setChecked(settings_path().is_file())
+        layout.addWidget(self.recognition_enabled)
+        self.recognition_enabled.toggled.connect(self.changed)
+        recognition_config = QPushButton("이미지 인식 실행 환경 선택")
+        recognition_config.clicked.connect(self.choose_recognition_settings)
+        layout.addWidget(recognition_config)
         config = QPushButton("편집 실행 환경 설정 파일 선택")
         config.clicked.connect(self.choose_settings)
         layout.addWidget(config)
@@ -157,6 +166,13 @@ class TailInputDialog(QDialog):
         path, _ = QFileDialog.getOpenFileName(self, "Qwen 실행 환경 설정", self.settings_path, "JSON (*.json)")
         if path:
             self.settings_path = path
+            self.changed()
+
+    def choose_recognition_settings(self):
+        path, _ = QFileDialog.getOpenFileName(self, "이미지 인식 실행 환경", self.recognition_settings_path, "JSON (*.json)")
+        if path:
+            self.recognition_settings_path = path
+            self.recognition_enabled.setChecked(True)
             self.changed()
 
     def changed(self):
@@ -190,6 +206,9 @@ class TailInputDialog(QDialog):
             return
         try:
             self.settings = QwenPoseSettings.load(self.settings_path)
+            if self.recognition_enabled.isChecked():
+                from genai_lab.tail_recognition import RecognitionSettings
+                RecognitionSettings.load(self.recognition_settings_path)
         except (ValueError, OSError, TypeError) as error:
             QMessageBox.warning(self, "실행 환경 확인", str(error))
             return
@@ -225,3 +244,59 @@ def review_tail_result(window, source, before, after):
     if dialog.exec() == QDialog.DialogCode.Accepted:
         return {key: c.isChecked() for key, c in checks.items()}
     return None
+
+
+def review_tail_recognition(window, spec, report):
+    """No approval by inference: each visible observation can be excluded before confirmation."""
+    from PySide6.QtWidgets import QScrollArea
+    from genai_lab.studio_controller import picture
+    from genai_lab.tail_recognition import FIELDS, LABELS, approve_observations
+    dialog=QDialog(window)
+    dialog.setWindowTitle("읽은 내용 확인 · 아직 편집하지 않았습니다")
+    dialog.resize(940,780)
+    layout=QVBoxLayout(dialog)
+    notice=QLabel("그림에서 읽은 설명입니다. 틀린 항목은 체크를 빼 주세요. 가려져 확인할 수 없는 부분은 전달하지 않습니다. "
+                 "설명을 전달해도 편집 결과가 반드시 보존되는 것은 아닙니다.")
+    notice.setWordWrap(True)
+    layout.addWidget(notice)
+    images=QHBoxLayout()
+    images.addLayout(picture(spec.image_path,"그대로 유지할 이미지",220,260))
+    images.addLayout(picture(spec.crop_path,"참고할 꼬리",220,260))
+    layout.addLayout(images)
+    scroll=QScrollArea()
+    scroll.setWidgetResizable(True)
+    contents=QWidget(); fields_layout=QVBoxLayout(contents)
+    checks={role:{} for role in FIELDS}
+    for role in ("tail","basis"):
+        fields_layout.addWidget(QLabel("꼬리에 반영할 특징" if role=="tail" else "현재 이미지에서 유지할 특징"))
+        for field in FIELDS[role]:
+            value=report["observations"][role]["fields"][field]
+            omitted=(role=="tail" and ((field=="pattern" and not spec.pattern) or (field=="tip" and bool(spec.tip))))
+            check=QCheckBox(LABELS[field])
+            check.setObjectName("recognition_"+role+"_"+field)
+            check.setChecked(value is not None and not omitted)
+            check.setEnabled(value is not None and not omitted)
+            fields_layout.addWidget(check)
+            reason=report["observations"][role].get("unmeasured",{}).get(field,"모델이 확인하지 못함")
+            text=QLabel((value or "확인 불가: "+reason)+(" — 직접 선택한 조건을 우선하므로 전달하지 않음" if omitted else ""))
+            text.setWordWrap(True); fields_layout.addWidget(text)
+            checks[role][field]=check
+    scroll.setWidget(contents); layout.addWidget(scroll,1)
+    confirmed=QCheckBox("선택한 설명을 확인했고 편집 지시문에 반영합니다.")
+    confirmed.setObjectName("recognition_confirm")
+    layout.addWidget(confirmed)
+    start=QPushButton("확인한 설명으로 꼬리 고치기")
+    start.setObjectName("recognition_apply")
+    start.setEnabled(False)
+    def changed():
+        start.setEnabled(confirmed.isChecked() and any(c.isChecked() for role in checks.values() for c in role.values()))
+    confirmed.toggled.connect(changed)
+    for role in checks.values():
+        for c in role.values(): c.toggled.connect(lambda: confirmed.setChecked(False))
+    start.clicked.connect(dialog.accept)
+    layout.addWidget(start)
+    cancel=QPushButton("편집하지 않고 돌아가기")
+    cancel.clicked.connect(dialog.reject); layout.addWidget(cancel)
+    if dialog.exec()!=QDialog.DialogCode.Accepted: return None
+    selected={role:[field for field,c in items.items() if c.isChecked()] for role,items in checks.items()}
+    return approve_observations(report,selected)

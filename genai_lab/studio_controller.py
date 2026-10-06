@@ -40,6 +40,7 @@ class StudioController(QObject):
         self.pending_error = None
         self.tail_context = None
         self.tail_settings_path = ""
+        self.pending_tail_recognition = None
         self.last_saved = None
         self.output_root = Path(__file__).resolve().parents[1] / "outputs" / "studio-runs"
         window.studio_candidate_combo.currentIndexChanged.connect(self.select)
@@ -203,7 +204,7 @@ class StudioController(QObject):
             QMessageBox.information(self.window, "실행 중", "현재 작업이 끝난 뒤 꼬리를 고쳐 주세요.")
             return
         from genai_lab.qwen_tail_gui import TailInputDialog
-        from genai_lab.qwen_tail_edit import prepare_tail_spec, make_tail_request, TailEditWorkflow, run_tail_edit
+        from genai_lab.qwen_tail_edit import prepare_tail_spec
         from genai_lab.qwen_preservation import file_sha
         self.confirming = True
         self.controls()
@@ -219,34 +220,70 @@ class StudioController(QObject):
             spec = prepare_tail_spec(self.results.candidate.path, source, dialog.canvas.box,
                 pattern=dialog.pattern.currentData(), tip=dialog.tip.text(), confirmed=dialog.confirm.isChecked(),
                 directory=root / "inputs", source_sha256=source_sha, image_sha256=basis_sha)
-            request = make_tail_request(spec, settings=dialog.settings)
-            flow = TailEditWorkflow(spec)
-            directory = root / "edit"
-            self.tail_context = {"directory": directory, "source": spec.source_path,
+            self.tail_context = {"directory": root / "edit", "source": spec.source_path,
                                  "before": spec.image_path, "basis_sha256": basis_sha,
                                  "selected": self.results.selected}
-            # Initial one-pass backend already closes in generate_onepass_request's finally.
-            # Release any idle legacy pipeline too; the runner then probes actual allocations.
-            pipeline = getattr(self.window, "pipeline", None)
-            self.window.pipeline = None
-            if pipeline is not None:
-                remove = getattr(pipeline, "remove_all_hooks", None)
-                if callable(remove):
-                    remove()
-                del remove  # A bound hook method also retains the pipeline.
-            del pipeline
-            def operation(cancel, progress):
-                def report(data):
-                    steps = data.get("steps", [])
-                    progress(f"상태: 꼬리 고치는 중 · {len(steps)}/40 · 고치기 전 결과는 보관 중")
-                return run_tail_edit(request, directory, flow, cancelled=cancel, on_progress=report)
-            self.window.status_label.setText("상태: 꼬리 편집 준비 중 · 약 30분 걸릴 수 있습니다.")
-            self.launch(operation, self.tail_edited, on_error=self.tail_failed)
+            self.release_tail_predecessor()
+            recognition = getattr(dialog, "recognition_enabled", None)
+            if recognition is not None and recognition.isChecked():
+                from genai_lab.tail_recognition import RecognitionSettings, recognize_tail
+                config = RecognitionSettings.load(dialog.recognition_settings_path)
+                self.pending_tail_recognition = (spec, dialog.settings)
+                def analyze(cancel, progress):
+                    return recognize_tail(spec, config, root / "recognition", cancelled=cancel, progress=progress)
+                self.launch(analyze, self.tail_recognized, on_error=self.tail_failed)
+            else:
+                self.launch_tail_edit(spec, dialog.settings)
         except Exception as error:
             self.tail_failed(error, traceback.format_exc())
         finally:
             self.confirming = False
             self.controls()
+
+    def release_tail_predecessor(self):
+        """Drop the prior generation model before either recognition or editing starts."""
+        pipeline = getattr(self.window, "pipeline", None)
+        self.window.pipeline = None
+        if pipeline is not None:
+            remove = getattr(pipeline, "remove_all_hooks", None)
+            if callable(remove):
+                remove()
+            del remove
+        del pipeline
+
+    def tail_recognized(self, report):
+        from genai_lab.qwen_tail_gui import review_tail_recognition
+        from genai_lab.qwen_record_io import write_json
+        spec, settings = self.pending_tail_recognition
+        self.pending_tail_recognition = None
+        self.confirming = True
+        self.controls()
+        try:
+            if self.results.selected != self.tail_context["selected"]:
+                raise ValueError("인식 중 선택 이미지가 변경됐습니다.")
+            approval = review_tail_recognition(self.window, spec, report)
+            root = self.tail_context["directory"].parent
+            write_json(root / "recognition-review.json", {"adopted": approval is not None, "approval": approval})
+            if approval is None:
+                self.tail_context = None
+                self.window.status_label.setText("상태: 이미지 인식 내용 미채택 · 편집하지 않았습니다.")
+                return
+            self.launch_tail_edit(replace(spec, recognition=approval), settings)
+        finally:
+            self.confirming = False
+            self.controls()
+
+    def launch_tail_edit(self, spec, settings):
+        from genai_lab.qwen_tail_edit import make_tail_request, TailEditWorkflow, run_tail_edit
+        request = make_tail_request(spec, settings=settings)
+        flow = TailEditWorkflow(spec)
+        directory = self.tail_context["directory"]
+        def operation(cancel, progress):
+            def report(data):
+                progress(f"상태: 꼬리 고치는 중 · {len(data.get('steps', []))}/40 · 고치기 전 결과는 보관 중")
+            return run_tail_edit(request, directory, flow, cancelled=cancel, on_progress=report)
+        self.window.status_label.setText("상태: 꼬리 편집 준비 중 · 약 30분 걸릴 수 있습니다.")
+        self.launch(operation, self.tail_edited, on_error=self.tail_failed)
 
     def tail_edited(self, product):
         from genai_lab.qwen_tail_gui import review_tail_result
@@ -278,6 +315,7 @@ class StudioController(QObject):
             self.controls()
 
     def tail_failed(self, error, details=""):
+        self.pending_tail_recognition = None
         # Never route an optional edit failure through fail(), which clears the batch.
         context = self.tail_context
         if context is not None:

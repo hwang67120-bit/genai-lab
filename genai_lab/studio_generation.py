@@ -21,6 +21,8 @@ from genai_lab.onepass_prompt import CharacterTagGroups, AppearanceOverrides
 from genai_lab.onepass_prompt_tokenizers import load_onepass_tokenizers
 from genai_lab.onepass_pose import InputDecision
 from genai_lab.onepass_gender import prepare_onepass_gender
+from genai_lab.studio_garment_warnings import GarmentWarningSettings, garment_review
+from genai_lab.studio_background import read_background
 
 
 def digest(path):
@@ -44,6 +46,8 @@ class StudioRuntime:
     generation: OnePassGenerationSettings = field(default_factory=OnePassGenerationSettings)
     prompt: OnePassPromptSettings = field(default_factory=OnePassPromptSettings)
     analysis_timeout: float = 600.0
+    proportion_sketch_root: Path = Path("G:/genai-cache/models/t2i-adapter-sketch-sdxl-1.0")
+    garment_warnings: GarmentWarningSettings = field(default_factory=GarmentWarningSettings.load)
 
     @classmethod
     def from_environment(cls):
@@ -51,10 +55,11 @@ class StudioRuntime:
         if not config:
             return cls()
         values = json.loads(Path(config).read_text(encoding="utf-8"))
-        allowed = {"pose_python", "pose_models", "model_cache", "analysis_python", "head_cache"}
+        allowed = {"pose_python", "pose_models", "model_cache", "analysis_python", "head_cache", "garment_warning_rules", "proportion_sketch_root"}
         if set(values) - allowed:
             raise ValueError("작업실 실행 설정에 알 수 없는 항목이 있습니다.")
-        return cls(**{key: Path(value) for key, value in values.items()})
+        warnings = GarmentWarningSettings.load(values.pop("garment_warning_rules")) if "garment_warning_rules" in values else GarmentWarningSettings.load()
+        return cls(**{key: Path(value) for key, value in values.items()}, garment_warnings=warnings)
 
 
 def cpu_process(command, log, cancelled, timeout):
@@ -137,7 +142,7 @@ def analyze_inputs(character, garment, directory, runtime, *, cancelled=lambda: 
 
 
 def build_request(analysis, garment_tags, gender, *, confirmed, runtime, preferences=None,
-                  tokenizers=None, seeds=None, appearance=AppearanceOverrides()):
+                  tokenizers=None, seeds=None, appearance=AppearanceOverrides(), proportion_pose=None):
     """Preferences are written only by a confirmed explicit user choice."""
     if not confirmed:
         raise ValueError("입력 이미지 확인이 필요합니다.")
@@ -159,8 +164,18 @@ def build_request(analysis, garment_tags, gender, *, confirmed, runtime, prefere
     face = directory / "face.png"
     if digest(face) != analysis["face_sha256"]:
         raise ValueError("확인한 얼굴 이미지가 변경됐습니다. 다시 확인해 주세요.")
-    inputs = prepare_onepass_inputs(choice="proceed_without_pose",
-        decision=InputDecision("not_requested", (), (), ("proceed_without_pose",)),
+    pose_args = {}
+    choice = "proceed_without_pose"
+    decision = InputDecision("not_requested", (), (), ("proceed_without_pose",))
+    if proportion_pose is not None:
+        from genai_lab.studio_proportion import verify_pose
+        decision = verify_pose(proportion_pose)
+        if Path(proportion_pose["source_file"]).resolve() != (directory / "character.png").resolve():
+            raise ValueError("다른 캐릭터에서 준비한 비율 입력입니다.")
+        choice = "proceed_with_pose"
+        pose_args = dict(control_file=Path(proportion_pose["control_file"]),
+                        control_sha256=proportion_pose["control_sha256"], ip_early=proportion_pose["ip_early"])
+    inputs = prepare_onepass_inputs(choice=choice, decision=decision, **pose_args,
         gender=conditions, groups=groups, garment_tags=tuple(garment_tags), pose_tags=(),
         slim=analysis["slim"], tokenizers=tokenizers or load_onepass_tokenizers(runtime.prompt),
         face_file=face, face_sha256=analysis["face_sha256"], prompt_settings=runtime.prompt, appearance=appearance)
@@ -168,7 +183,9 @@ def build_request(analysis, garment_tags, gender, *, confirmed, runtime, prefere
     request = OnePassRequest(inputs, seeds or tuple(start+i for i in range(4)), runtime.generation)
     record(directory / "approval.json", {"approved": True, "gender": gender,
         "garment_tags": list(garment_tags), "face_sha256": analysis["face_sha256"],
+        "garment_review": garment_review(garment_tags, inputs.prompt.negative, runtime.garment_warnings),
         "references": analysis["references"], "pose_mode": inputs.pose_mode,
+        "proportion_mode": "two_pass" if proportion_pose is not None else "off",
         "prompt": inputs.prompt.positive, "negative": inputs.prompt.negative,
         "appendage_appearance": inputs.prompt.rules["appendage_appearance"],
         "appendage_review_required": inputs.prompt.rules["appendage_review_required"]})
@@ -181,6 +198,11 @@ class StudioResults:
         if not batch.candidates:
             raise ValueError("완료된 후보가 없습니다.")
         self.batch = batch
+        from genai_lab.proportion_generation import ProportionBatch
+        self.two_pass = isinstance(batch, ProportionBatch)
+        self.product_records = tuple(json.loads(c.record_path.read_text(encoding="utf-8"))
+                                     for c in batch.candidates) if self.two_pass else ()
+        self.backgrounds = tuple(None if self.two_pass else read_background(c) for c in batch.candidates)
         self.appendage_review_required = appendage_review_required or any(
             c.record.get("prompt", {}).get("rules", {}).get("appendage_review_required", False)
             for c in batch.candidates)
@@ -196,6 +218,8 @@ class StudioResults:
             "status": self.status, "selected": self.selected,
             "approved_sha256": self.approved_sha, "automatic_gates_executed": False,
             "reviewer": "user", "checks": self.checks, "appendage_review_required": self.appendage_review_required,
+            "background": self.backgrounds[self.selected],
+            "proportion_mode": "two_pass" if self.two_pass else "off",
             **({"tail_edit": self.tail_edit} if self.tail_edit else {}), **extra})
 
     def select(self, index):
@@ -213,18 +237,62 @@ class StudioResults:
         return self.batch.candidates[self.selected]
 
     @property
+    def raw_path(self):
+        return self.candidate.raw.path if self.two_pass else self.candidate.path
+
+    @property
+    def basis_path(self):
+        if self.two_pass:
+            return self.candidate.path
+        background = self.backgrounds[self.selected]
+        if background and background["status"] == "completed":
+            return self.candidate.path.parent / "product.png"
+        return self.candidate.path
+
+    @property
+    def background_notice(self):
+        if self.two_pass:
+            return "2단계 비율 생성·흰 배경 정리 완료 · 비율과 의상 색을 직접 확인해 주세요."
+        background = self.backgrounds[self.selected]
+        if not background or background["status"] != "completed":
+            return "배경 정리 안 됨 · 생성 원본을 표시합니다."
+        return "흰 배경 정리 완료 · 몸에 붙은 장식·줄은 남을 수 있습니다."
+
+    @property
     def current_path(self):
-        return Path(self.tail_edit["directory"]) / "product.png" if self.tail_edit else self.candidate.path
+        return Path(self.tail_edit["directory"]) / "product.png" if self.tail_edit else self.basis_path
+
+    def verify_basis(self):
+        raw_sha = self.verify_original()
+        if self.two_pass:
+            data = json.loads(self.candidate.record_path.read_text(encoding="utf-8"))
+            if (data != self.product_records[self.selected] or not data.get("valid") or not data.get("completed")
+                    or data.get("raw_sha256") != raw_sha or data.get("product_sha256") != digest(self.basis_path)
+                    or Path(data["raw_file"]).resolve() != self.raw_path.resolve()
+                    or Path(data["product_file"]).resolve() != self.basis_path.resolve()):
+                raise ValueError("2단계 생성 결과나 기록이 변경됐습니다.")
+            return data["product_sha256"]
+        background = self.backgrounds[self.selected]
+        if read_background(self.candidate) != background:
+            raise ValueError("배경 정리 기록이 변경됐습니다.")
+        if background:
+            if background["raw_sha256"] != raw_sha:
+                raise ValueError("배경 정리 기준 원본이 다릅니다.")
+            if background["status"] == "completed":
+                if digest(self.basis_path) != background["product_sha256"]:
+                    raise ValueError("배경 정리 결과가 변경됐습니다.")
+                return background["product_sha256"]
+        return raw_sha
 
     def verify_original(self):
-        candidate = self.candidate
+        candidate = self.candidate.raw if self.two_pass else self.candidate
         data = json.loads(candidate.record_path.read_text(encoding="utf-8"))
         if not data.get("valid") or not data.get("completed") or digest(candidate.path) != data.get("raw_sha256"):
             raise ValueError("생성 기록이 정상 완료 상태가 아니거나 이미지가 변경됐습니다.")
         return data["raw_sha256"]
 
     def verify_current(self):
-        original_sha = self.verify_original()
+        original_sha = self.verify_basis()
         if self.tail_edit:
             from genai_lab.qwen_tail_edit import tail_product_info
             if tail_product_info(self.tail_edit["directory"], original_sha) != self.tail_edit:
@@ -234,7 +302,7 @@ class StudioResults:
 
     def adopt_tail_edit(self, directory):
         from genai_lab.qwen_tail_edit import tail_product_info
-        info = tail_product_info(directory, self.verify_original())
+        info = tail_product_info(directory, self.verify_basis())
         self.tail_edit = info
         self.approved_sha = None
         self.checks = {}
@@ -267,6 +335,9 @@ class StudioResults:
         metadata = {"source_run": str(self.candidate.record_path), "sha256": self.approved_sha,
                     "approval_record": str(self.batch.directory / "user-review.json"),
                     "reviewer": "user", "automatic_gates_executed": False}
+        metadata["raw_sha256"] = self.verify_original()
+        metadata["proportion_mode"] = "two_pass" if self.two_pass else "off"
+        metadata["background"] = self.backgrounds[self.selected]
         if self.tail_edit:
             metadata["tail_edit"] = dict(self.tail_edit)
         created = []

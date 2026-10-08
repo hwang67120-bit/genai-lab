@@ -92,6 +92,8 @@ def test_create_button_to_review_and_export_without_legacy_fallback(tmp_path, mo
         tail=ui.PartAppearance("light blue tail, striped tail", use_description))
     monkeypatch.setattr(ui, "confirm_inputs", lambda *a: ("male", ("white camisole", "black shorts"), appearance))
     monkeypatch.setattr(ui, "build_request", lambda a,*args,**kw: request_at(tmp_path, a, appearance=kw["appearance"]))
+    monkeypatch.setattr(service.StudioRuntime, "from_environment",
+        lambda: service.StudioRuntime(model_cache=tmp_path/"missing-model-cache"))
     calls = []
     def generate(req, folder, **kw):
         calls.append(req)
@@ -124,11 +126,11 @@ def test_create_button_to_review_and_export_without_legacy_fallback(tmp_path, mo
         w.save_candidate_button.click()
         assert destination.read_bytes() == selected.path.read_bytes()
         assert "저장 완료" in w.status_label.text()
-        raw = json.loads(selected.record_path.read_text())
+        raw = json.loads(selected.record_path.read_text(encoding="utf-8"))
         assert raw["gates_executed"] is False and raw["final_return_eligible"] is False
         assert raw["adapter_applied_calls"]==[]
         assert len(raw["unet_calls"])==28
-        ledger = json.loads((selected.path.parents[1]/"user-review.json").read_text())
+        ledger = json.loads((selected.path.parents[1]/"user-review.json").read_text(encoding="utf-8"))
         assert ledger["status"]=="saved" and all(ledger["checks"].values())
         assert w.generate_button.isEnabled()
     finally:
@@ -172,7 +174,7 @@ def test_failure_and_cancel_never_offer_base_as_completed(tmp_path, monkeypatch,
         assert not w.save_candidate_button.isEnabled()
         assert not w.approve_candidate_button.isEnabled()
         assert w.studio.results is None
-        state = json.loads((tmp_path/"gui-status.json").read_text())
+        state = json.loads((tmp_path/"gui-status.json").read_text(encoding="utf-8"))
         assert state["status"] in ("failed", "cancelled")
         assert "5/5" not in w.status_label.text()
     finally:
@@ -247,7 +249,7 @@ def test_cancel_button_ends_running_task_without_result(tmp_path):
         wait_for(app,lambda:w.studio.task is None)
         assert not w.approve_candidate_button.isEnabled()
         assert not w.save_candidate_button.isEnabled()
-        assert json.loads((tmp_path/"gui-status.json").read_text())["status"]=="cancelled"
+        assert json.loads((tmp_path/"gui-status.json").read_text(encoding="utf-8"))["status"]=="cancelled"
     finally:
         w.close()
 
@@ -255,7 +257,7 @@ def test_cancel_button_ends_running_task_without_result(tmp_path):
 def test_invalid_generated_record_cannot_be_user_approved(tmp_path):
     results=service.StudioResults(batch_at(tmp_path))
     path=results.candidate.record_path
-    data=json.loads(path.read_text())
+    data=json.loads(path.read_text(encoding="utf-8"))
     data["valid"]=False
     service.record(path,data)
     with pytest.raises(ValueError):
@@ -295,7 +297,7 @@ def test_new_preflight_failure_does_not_rewrite_previous_run(tmp_path,monkeypatc
         w.studio.start()
         assert (previous/"gui-status.json").read_bytes()==original
         assert w.studio.run_directory!=previous
-        assert json.loads((w.studio.run_directory/"gui-status.json").read_text())["status"]=="failed"
+        assert json.loads((w.studio.run_directory/"gui-status.json").read_text(encoding="utf-8"))["status"]=="failed"
     finally:
         w.close()
 
@@ -306,8 +308,8 @@ def test_confirmed_tail_reaches_request_approval_and_raw_record(tmp_path):
     override = ui.AppearanceOverrides(tail=ui.PartAppearance("light blue tail, striped tail", True))
     request = request_at(tmp_path, a, appearance=override)
     batch = engine.generate_onepass_request(request, tmp_path/"batch", backend_factory=Backend)
-    approval = json.loads((Path(a["directory"])/"approval.json").read_text())
-    raw = json.loads(batch.candidates[0].record_path.read_text())
+    approval = json.loads((Path(a["directory"])/"approval.json").read_text(encoding="utf-8"))
+    raw = json.loads(batch.candidates[0].record_path.read_text(encoding="utf-8"))
     assert "light blue tail, striped tail" in raw["prompt"]["positive"]
     assert "raccoon tail" not in raw["prompt"]["positive"]
     assert raw["prompt"]["rules"]["appendage_appearance"]["tail"]["applied"]

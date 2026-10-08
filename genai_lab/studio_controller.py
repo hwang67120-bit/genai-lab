@@ -22,6 +22,10 @@ from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QCheck
 from genai_lab.studio_generation import (StudioRuntime, StudioResults, analyze_inputs,
     build_request, generate_onepass_request, record)
 from genai_lab.onepass_generation import OnePassCancelled, validate_local_models
+from genai_lab.studio_background import prepare_backgrounds
+from genai_lab.studio_proportion import prepare_studio_pose, prepare_studio_head, confirmed_options
+from genai_lab.studio_proportion_gui import select_head_region, review_head_outline
+from genai_lab.studio_garment_warnings import garment_warnings, garment_review
 from genai_lab.character_preferences import load_character_gender
 from genai_lab.onepass_prompt import AppearanceOverrides, PartAppearance, appendage_tags
 
@@ -35,6 +39,9 @@ class StudioController(QObject):
         self.analysis = None
         self.results = None
         self.runtime = None
+        self.proportion_enabled = False
+        self.proportion_pending = None
+        self.prepared_proportion_pose = None
         self.run_directory = None
         self.confirming = False
         self.pending_action = None
@@ -47,6 +54,7 @@ class StudioController(QObject):
         window.studio_candidate_combo.currentIndexChanged.connect(self.select)
         window.studio_cancel_button.clicked.connect(self.cancel)
         window.tail_edit_button.clicked.connect(self.edit_tail)
+        window.studio_raw_button.clicked.connect(lambda: self.original(raw=True))
 
     @property
     def occupied(self):
@@ -63,6 +71,9 @@ class StudioController(QObject):
             self.run_directory = self.output_root / uuid.uuid4().hex
             self.run_directory.mkdir(parents=True)
             self.runtime = StudioRuntime.from_environment()
+            self.proportion_enabled = w.studio_proportion_checkbox.isChecked()
+            self.proportion_pending = None
+            self.prepared_proportion_pose = None
             validate_local_models(self.runtime.generation)
             w.candidate_preview.clear()
             w.candidate_preview.setText("선택한 캐릭터와 옷을 준비하고 있습니다.")
@@ -82,7 +93,7 @@ class StudioController(QObject):
         self.controls()
         try:
             decision = confirm_inputs(self.window, analysis,
-                self.runtime.prompt.enable_ear_override if self.runtime else False)
+                self.runtime.prompt.enable_ear_override if self.runtime else False, self.runtime)
         finally:
             self.confirming = False
         if decision is None:
@@ -90,17 +101,78 @@ class StudioController(QObject):
             self.window.candidate_preview.clear()
             self.window.candidate_preview.setText("아직 생성하지 않았습니다.")
             return
+        if self.proportion_enabled:
+            self.proportion_pending = decision
+            self.window.status_label.setText("상태: 원본 자세 준비 중 · CPU 분석")
+            self.launch(lambda cancel, progress: prepare_studio_pose(analysis, self.runtime,
+                self.run_directory / "proportion-inputs/pose", cancelled=cancel), self.proportion_pose_ready)
+        else:
+            self.begin_generation(decision)
+
+    def proportion_pose_ready(self, pose):
+        self.prepared_proportion_pose = pose
+        self.confirming = True
+        self.controls()
+        try:
+            selection = select_head_region(self.window, pose)
+        finally:
+            self.confirming = False
+            self.controls()
+        if selection is None:
+            self.cancel_proportion_setup()
+            return
+        self.window.status_label.setText("상태: 머리 윤곽 준비 중 · CPU 분석 · 아직 생성하지 않았습니다.")
+        directory = self.run_directory / "proportion-inputs" / ("head-" + uuid.uuid4().hex)
+        self.launch(lambda cancel, progress: prepare_studio_head(pose, selection, self.runtime,
+            directory, cancelled=cancel), self.proportion_head_ready)
+
+    def proportion_head_ready(self, draft):
+        pose = self.prepared_proportion_pose
+        self.confirming = True
+        self.controls()
+        try:
+            choice = review_head_outline(self.window, pose, draft)
+        finally:
+            self.confirming = False
+            self.controls()
+        if choice == "retry":
+            self.proportion_pose_ready(pose)
+        elif choice == "confirm":
+            options = confirmed_options(pose, draft, self.runtime)
+            self.begin_generation(self.proportion_pending, pose=pose, options=options)
+        else:
+            self.cancel_proportion_setup()
+
+    def cancel_proportion_setup(self):
+        self.proportion_pending = None
+        self.prepared_proportion_pose = None
+        record(self.run_directory / "gui-status.json", {"status":"cancelled", "stage":"proportion_confirmation"})
+        self.window.candidate_preview.setText("머리 확인을 취소했습니다. 이미지를 생성하지 않았습니다.")
+        self.window.status_label.setText("상태: 비율 확인 취소 · 설정을 바꾸거나 다시 시작할 수 있습니다.")
+        self.controls()
+
+    def begin_generation(self, decision, *, pose=None, options=None):
         gender, tags, appearance = decision
+        kwargs = {"proportion_pose": pose} if pose is not None else {}
         # Preferences access stays on GUI thread. Tokenizers only read local files.
-        request = build_request(analysis, tags, gender, confirmed=True, runtime=self.runtime, appearance=appearance)
-        self.window.status_label.setText("상태: 이미지 만드는 중 · 0/4")
+        request = build_request(self.analysis, tags, gender, confirmed=True, runtime=self.runtime,
+                                appearance=appearance, **kwargs)
+        self.window.status_label.setText("상태: 2단계 비율 생성 중 · 먼저 1단계 4장을 만듭니다." if options
+                                         else "상태: 이미지 만드는 중 · 0/4")
         def generate(cancel, progress):
             count = [0]
             def on_image(candidate):
+                record(candidate.path.parent / "garment-review.json",
+                       garment_review(tags, request.inputs.prompt.negative, self.runtime.garment_warnings))
                 count[0] += 1
-                progress(f"상태: 이미지 만드는 중 · {count[0]}/4 · 아직 결과 확인 전")
-            return generate_onepass_request(request, self.run_directory / "generation",
-                                           cancelled=cancel, on_image=on_image)
+                progress(f"상태: {'2단계 결과 준비' if options else '이미지 만드는 중'} · {count[0]}/4 · 아직 결과 확인 전")
+            generation_options = {"proportion": options} if options is not None else {}
+            batch = generate_onepass_request(request, self.run_directory / "generation",
+                                             cancelled=cancel, on_image=on_image, **generation_options)
+            if options is not None:
+                return batch  # ProportionBatch already contains its final white-background products.
+            # The generation backend is closed before loading the CPU foreground model.
+            return prepare_backgrounds(batch, self.runtime.model_cache, cancelled=cancel, progress=progress)
         self.launch(generate, self.generated)
 
     # 3. 생성 완료: 원시 결과를 검토 대기로 표시한다. 아직 승인·저장 상태가 아니다.
@@ -116,6 +188,7 @@ class StudioController(QObject):
         combo.blockSignals(False)
         self.select(0)
         self.window.status_label.setText("상태: 결과 4장 준비됨 · 마음에 드는 결과를 골라 확인해 주세요.")
+        self.controls()
 
     # 4. 결과 선택: 후보를 바꾸면 기존 승인은 해제된다.
 
@@ -180,16 +253,16 @@ class StudioController(QObject):
             self.task.stop.set()
             self.window.status_label.setText("상태: 취소 중 · 현재 단계를 안전하게 마칠 때까지 기다려 주세요.")
 
-    def original(self):
+    def original(self, *, raw=False):
         if self.results is None:
             return
         dialog = QDialog(self.window)
-        dialog.setWindowTitle("결과 원본 크기")
+        dialog.setWindowTitle("생성 원본(raw) · 배경 정리 전" if raw else "결과 원본 크기")
         dialog.resize(850, 800)
         layout = QVBoxLayout(dialog)
         scroll = QScrollArea()
         image = QLabel()
-        image.setPixmap(QPixmap(str(self.results.current_path)))
+        image.setPixmap(QPixmap(str(self.results.raw_path if raw else self.results.current_path)))
         scroll.setWidget(image)
         layout.addWidget(scroll)
         dialog.exec()
@@ -210,7 +283,7 @@ class StudioController(QObject):
         self.confirming = True
         self.controls()
         try:
-            basis_sha = self.results.verify_original()
+            basis_sha = self.results.verify_basis()
             source = self.analysis["source"]
             source_sha = self.analysis["references"].get("character", {}).get("sha256") or file_sha(source)
             dialog = TailInputDialog(source, source_sha, self.window, settings_path=self.tail_settings_path)
@@ -218,7 +291,7 @@ class StudioController(QObject):
                 return
             self.tail_settings_path = dialog.settings_path
             root = self.results.batch.directory / "tail-edits" / uuid.uuid4().hex
-            spec = prepare_tail_spec(self.results.candidate.path, source, dialog.canvas.box,
+            spec = prepare_tail_spec(self.results.basis_path, source, dialog.canvas.box,
                 pattern=dialog.pattern.currentData(), tip=dialog.tip.text(), confirmed=dialog.confirm.isChecked(),
                 directory=root / "inputs", source_sha256=source_sha, image_sha256=basis_sha)
             from genai_lab.tail_complexity import persist_advisory
@@ -306,7 +379,7 @@ class StudioController(QObject):
         context = self.tail_context
         if self.results is None or self.results.selected != context["selected"]:
             raise ValueError("편집을 시작한 후보가 현재 선택과 다릅니다.")
-        info = tail_product_info(context["directory"], self.results.verify_original())
+        info = tail_product_info(context["directory"], self.results.verify_basis())
         if Path(product).resolve() != (context["directory"] / "product.png").resolve():
             raise ValueError("실행 기록과 다른 편집 미리보기입니다.")
         self.confirming = True
@@ -354,6 +427,7 @@ class StudioController(QObject):
         for control in (w.style_button, w.outfit_button, w.clear_outfit_button,
                         w.qwen_pose_button, w.external_candidate_button):
             control.setEnabled(not self.occupied)
+        w.studio_proportion_checkbox.setEnabled(not self.occupied)
         w.generate_button.setEnabled(not self.occupied and bool(w.style_path and w.selected_outfit_path))
         w.studio_cancel_button.setVisible(self.task is not None)
         w.studio_candidate_combo.setVisible(self.results is not None)
@@ -364,6 +438,11 @@ class StudioController(QObject):
         w.discard_candidate_button.setEnabled(ready)
         w.save_candidate_button.setEnabled(ready and self.results.status == "user_approved")
         w.open_original_size_button.setEnabled(ready)
+        w.studio_raw_button.setEnabled(ready)
+        w.studio_raw_button.setVisible(self.results is not None)
+        w.studio_background_notice.setVisible(self.results is not None)
+        if self.results is not None:
+            w.studio_background_notice.setText(self.results.background_notice)
         has_tail = bool(self.analysis and appendage_tags(self.analysis["groups"]["fixed"])["tail"])
         w.tail_edit_button.setVisible(self.results is not None and has_tail)
         w.tail_edit_button.setEnabled(ready and has_tail)
@@ -499,7 +578,7 @@ def appearance_field(layout, part, detected, enabled):
     return text, confirmed
 
 
-def confirm_inputs(window, analysis, enable_ear_override=False):
+def confirm_inputs(window, analysis, enable_ear_override=False, runtime=None):
     from genai_lab.onepass_garment_vocabulary import garment_nouns
     dialog = QDialog(window)
     dialog.setWindowTitle("만들 이미지 확인")
@@ -511,7 +590,12 @@ def confirm_inputs(window, analysis, enable_ear_override=False):
     layout = QVBoxLayout(content)
     scroll.setWidget(content)
     outer.addWidget(scroll)
-    layout.addWidget(QLabel("이 캐릭터에 선택한 옷을 입힌 이미지 4장을 만듭니다. 자세는 저장 후 따로 바꿀 수 있습니다."))
+    mode = bool(window and window.studio_proportion_checkbox.isChecked())
+    note = QLabel("이 캐릭터에 선택한 옷을 입힌 이미지 4장을 만듭니다. " +
+                  ("이후 원본 자세와 머리 윤곽을 확인해 2단계 생성합니다." if mode
+                   else "자세는 저장 후 따로 바꿀 수 있습니다."))
+    note.setWordWrap(True)
+    layout.addWidget(note)
     pictures = QHBoxLayout()
     directory = Path(analysis["directory"])
     for filename, title in (("character.png", "캐릭터"), ("face.png", "생성에 사용할 얼굴"), ("garment.png", "입힐 옷")):
@@ -531,10 +615,24 @@ def confirm_inputs(window, analysis, enable_ear_override=False):
     details = QCheckBox("옷 설명 자세히 보기·수정 (선택)")
     layout.addWidget(details)
     tags = QPlainTextEdit(", ".join(analysis["garment_tags"]))
+    tags.setObjectName("garment_tags_editor")
     tags.setMaximumHeight(85)
     tags.hide()
     details.toggled.connect(tags.setVisible)
     layout.addWidget(tags)
+    runtime = runtime or StudioRuntime()
+    warning_label = QLabel()
+    warning_label.setObjectName("garment_warnings")
+    warning_label.setWordWrap(True)
+    warning_label.setTextFormat(Qt.TextFormat.PlainText)
+    layout.addWidget(warning_label)
+    def show_warnings():
+        current = tuple(t.strip() for t in tags.toPlainText().split(",") if t.strip())
+        warnings = garment_warnings(current, runtime.prompt.negative_template, runtime.garment_warnings)
+        warning_label.setText("\n".join(w["message"] + " (" + ", ".join(w["tags"]) + ")" for w in warnings))
+        warning_label.setVisible(bool(warnings))
+    tags.textChanged.connect(show_warnings)
+    show_warnings()
     fields = {}
     for part, detected in appendage_tags(analysis["groups"]["fixed"]).items():
         if detected:
@@ -554,6 +652,7 @@ def confirm_inputs(window, analysis, enable_ear_override=False):
     update = lambda: create.setEnabled(checked.isChecked() and gender.currentData() is not None and bool(tags.toPlainText().strip()))
     checked.toggled.connect(update)
     gender.currentIndexChanged.connect(update)
+    tags.textChanged.connect(lambda: checked.setChecked(False))
     tags.textChanged.connect(update)
     create.clicked.connect(dialog.accept)
     buttons.addWidget(back)

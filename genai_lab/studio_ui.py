@@ -8,7 +8,7 @@ from pathlib import Path
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QFont, QImageReader, QPixmap
 from PySide6.QtWidgets import (
-    QComboBox, QFrame, QHBoxLayout, QLabel, QPushButton, QScrollArea,
+    QComboBox, QFrame, QHBoxLayout, QLabel, QPushButton, QCheckBox, QScrollArea,
     QSizePolicy, QSplitter, QToolButton, QVBoxLayout, QWidget,
 )
 
@@ -198,7 +198,15 @@ def build_studio(window, framing_options, clothing_mode):
         window.framing_combo.addItem(label, framing_type.value)
     window.framing_combo.setParent(window)
     window.framing_combo.hide()
-    box.addWidget(_label("자세는 적용하지 않습니다. 저장한 뒤 선택적으로 편집할 수 있습니다.", "muted"))
+    window.studio_proportion_checkbox = QCheckBox("원본 비율 참고 (2단계 생성)")
+    window.studio_proportion_checkbox.setObjectName("studio_proportion_checkbox")
+    window.studio_proportion_checkbox.setChecked(False)
+    box.addWidget(window.studio_proportion_checkbox)
+    window.studio_mode_note = _label("자세는 적용하지 않습니다. 저장한 뒤 선택적으로 편집할 수 있습니다.", "muted")
+    box.addWidget(window.studio_mode_note)
+    window.studio_proportion_checkbox.toggled.connect(lambda enabled: window.studio_mode_note.setText(
+        "원본 자세와 확인한 머리 윤곽을 참고합니다. 생성량은 2배이며, 다른 캐릭터의 효과는 아직 미검증입니다."
+        if enabled else "자세는 적용하지 않습니다. 저장한 뒤 선택적으로 편집할 수 있습니다."))
     input_layout.addWidget(card)
 
     card, box = _card("완성 이미지로 이어서 작업", "필요할 때 선택하는 별도 기능입니다.")
@@ -289,7 +297,18 @@ def build_studio(window, framing_options, clothing_mode):
     result.addWidget(window.studio_candidate_combo)
     result.addWidget(window.candidate_preview, 1)
     window.open_original_size_button = _button("원본 크기로 보기", window.show_candidate_original_size, enabled=False)
-    result.addWidget(window.open_original_size_button, 0, Qt.AlignmentFlag.AlignRight)
+    window.studio_raw_button = QPushButton("원본(raw) 보기")
+    window.studio_raw_button.setEnabled(False)
+    window.studio_raw_button.hide()
+    image_actions = QHBoxLayout()
+    image_actions.addStretch(1)
+    image_actions.addWidget(window.open_original_size_button)
+    image_actions.addWidget(window.studio_raw_button)
+    result.addLayout(image_actions)
+    window.studio_background_notice = _label("", "muted")
+    window.studio_background_notice.setWordWrap(True)
+    window.studio_background_notice.hide()
+    result.addWidget(window.studio_background_notice)
     window.tail_edit_button = QPushButton("꼬리 고치기")
     window.tail_edit_button.setObjectName("tail_edit_button")
     window.tail_edit_button.hide()

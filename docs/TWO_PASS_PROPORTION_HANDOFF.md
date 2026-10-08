@@ -1,6 +1,8 @@
 # 2단계 비율 생성 내부 연결과 GPU 재현 인수인계
 
-내부 생성 경로를 연결했다. 기본 OFF이며 GUI는 연결하지 않았다. CPU 픽셀 대조에서 R6 6건의 스케치와 흰 배경 결과가 기존 시험과 SHA까지 일치했다. **새 내부 경로의 GPU 생성 재현은 아직 확인하지 않았다.**
+> **2026-10-08 후속 검증:** Claude가 내부 제품 경로를 GPU로 재현했으며 6 seed의 1단계·스케치·2단계·흰 배경이 모두 이전 시험 SHA와 일치했다. 최대 reserved 6.416 GiB, 전체 385초였다. [GPU 결과](../outputs/proportion-product-verify-20261008/results_gpu01.md). 아래 미검증·GUI 미연결 문구는 최초 내부 연결 당시 기록이다. 이후 사용자 승인으로 선택형 GUI를 연결했으며, 새 GUI의 실제 GPU 검사는 남아 있다. [GUI 연결 인수인계](PROPORTION_GUI_HANDOFF.md).
+
+내부 생성 경로는 기본 OFF이며, R6 6 seed의 GPU 재현을 통과했다. 이후 선택형 GUI 연결까지 구현했다. **새 GUI를 통한 GPU 생성 확인과 다른 캐릭터 일반화는 아직 남아 있다.** 아래는 내부 생성 계약과 완료된 재현 절차다.
 
 ## 입력부터 결과까지
 
@@ -18,7 +20,7 @@ ON일 때는 다음 순서로 실행한다.
 
 ## 머리 확인 계약
 
-`prepare_head_outline(normalized_file, control_file, mask_file, directory, nose=..., neck=...)`는 **기존 골격과 같은 좌표의 머리 마스크**를 받아 4px 윤곽과 겹친 미리보기를 만든다. 자동 검출·자동 승인은 하지 않으며 반환값의 `confirmed`는 False다. 사람이 범위를 확인한 뒤에만 True로 바꿔 전달한다. 사각형 선택 UI와 분할 도구 연결은 다음 GUI 작업 범위다.
+`prepare_head_outline(normalized_file, control_file, mask_file, directory, nose=..., neck=...)`는 **기존 골격과 같은 좌표의 머리 마스크**를 받아 4px 윤곽과 겹친 미리보기를 만든다. 자동 검출·자동 승인은 하지 않으며 반환값의 `confirmed`는 False다. 사람이 범위를 확인한 뒤에만 True로 바꿔 전달한다. 사각형 선택 UI와 CPU 분할 도구는 후속 GUI 작업에서 연결했다. 승인 전 초안은 여전히 미확인 상태다.
 
 머리 윤곽은 머리카락을 포함한 확인 범위다. 등신 수 측정에서 사용하는 해부학적 머리 상자와 구분하며 귀·뿔 포함 여부를 시스템이 추측하지 않는다. 운영 함수에서는 좌표를 새로 변환하거나 윤곽을 임의로 확대하지 않는다.
 
@@ -50,7 +52,7 @@ options = ProportionOptions(
 batch = generate_onepass_request(request, new_directory, proportion=options)
 ```
 
-OFF는 기존 `OnePassBatch`, ON은 `ProportionBatch`를 반환한다. ON의 각 후보는 `candidate.raw`에 2단계 raw 후보를, `candidate.path`에 흰 배경 결과를 둔다. 원본 SHA와 product SHA를 서로 대신 사용하지 않는다. 결과는 `proportion_unreviewed`, 자동 승인 불가 상태다. 기존 GUI의 raw 승인·저장 함수에 그대로 끼워 넣지 말고, GUI 승인 시 이 구분을 연결해야 한다.
+OFF는 기존 `OnePassBatch`, ON은 `ProportionBatch`를 반환한다. ON의 각 후보는 `candidate.raw`에 2단계 raw 후보를, `candidate.path`에 흰 배경 결과를 둔다. 원본 SHA와 product SHA를 서로 대신 사용하지 않는다. 결과는 `proportion_unreviewed`, 자동 승인 불가 상태다. 후속 GUI 연결은 이 구분을 적용해 product를 승인·저장하고 raw를 따로 확인하도록 했다.
 
 ## 기록과 읽기 시작점
 
@@ -70,7 +72,7 @@ OFF는 기존 `OnePassBatch`, ON은 `ProportionBatch`를 반환한다. ON의 각
 
 커밋·푸시는 구현 검증 후 사용자의 별도 요청(2026-10-08)에 따라 진행한다. 함께 검증한 인식·꼬리 분석 수정도 포함한다. 자료 폴더와 잠금 시험 자료는 수정하지 않았다.
 
-## Claude GPU 재현 순서
+## 완료된 Claude GPU 재현 절차
 
 기존 gpu-05와 모든 잠금 자료는 그대로 둔다. 새 폴더에서 **6 seed × BASE·CONTOUR = 12장**을 생성한다. 이전 BASE를 그대로 가져다 쓰는 우회가 아니라 제품의 처음부터 끝까지 연결을 확인하기 위해서다. CPU 검사 도구는 기존 결과를 읽었지만 GPU 재현 도구는 BASE도 새로 생성한다.
 
@@ -84,4 +86,4 @@ OFF는 기존 `OnePassBatch`, ON은 `ProportionBatch`를 반환한다. ON의 각
 & 'D:\genai-cache\venv\Scripts\python.exe' -B '\\192.168.0.109\win_g\genai-lab\scripts\verify_proportion_product.py' --run --foreground-model 'D:\genai-cache\huggingface\models--skytnt--anime-seg\snapshots\493cb60893f47441b26ec4fb9a306bce9e342982\isnetis.onnx' --output '\\192.168.0.109\win_g\genai-lab\outputs\proportion-product-verify-20261008\gpu-01'
 ```
 
-남은 한계: GPU 운영 재현 미검증, R6 한 캐릭터만 품질 근거가 있음, 바지 아랫단 색·머리 테두리 문제 유지, 생성 시간 약 2배. GUI 연결·자동 머리 검출·자세 UI·금지 조합 생성은 이번 작업에 포함하지 않았다.
+남은 한계: 새 GUI 경로의 GPU 실행 미검증, R6 한 캐릭터만 품질 근거가 있음, 바지 아랫단 색·머리 테두리 문제 유지, 생성량 2배. 외부 자세 UI는 연결하지 않았다. 후속 GUI의 머리 초안은 자동 승인하지 않는다.

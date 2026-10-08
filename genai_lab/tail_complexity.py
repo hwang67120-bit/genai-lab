@@ -164,7 +164,9 @@ def save_overlay(rgb, mask, box, directory):
     directory = Path(directory)
     Image.fromarray(mask.astype(np.uint8) * 255).save(directory / 'mask.png')
     overlay = rgb.copy()
-    overlay[mask] = (rgb[mask].astype(np.float32) * .65 + np.array([0, 220, 130]) * .35).astype(np.uint8)
+    import cv2
+    contours, _ = cv2.findContours(mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    cv2.drawContours(overlay, contours, -1, (0, 220, 130), 1)
     Image.fromarray(overlay).crop(box).save(directory / 'overlay.png')
 
 

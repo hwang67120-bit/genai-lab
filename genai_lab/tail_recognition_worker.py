@@ -8,7 +8,7 @@ import traceback
 from genai_lab.qwen_preservation import file_sha, json_sha
 from genai_lab.qwen_record_io import write_json
 from genai_lab.tail_recognition import (RecognitionSettings, PROMPTS, validate_fields, validate_model,
-                                       check_versions, observation_key, filter_unobserved_fields)
+                                       check_versions, observation_key, filter_observation)
 
 
 def parse_observation(text, role):
@@ -39,12 +39,11 @@ def inspect_image(model, processor, torch, job, settings):
                  "output_tokens":int(generated.shape[-1])-input_count,"source_size":list(image.size),
                  "image_grid_thw":inputs["image_grid_thw"].tolist()}
         if metrics["output_tokens"]>=settings.max_new_tokens:
-            return {"raw_text":raw,"error":"인식 응답 길이 한도 도달", "metrics":metrics}
+            return {"raw_text":raw,"error":"인식 응답 길이 한도 도달", "reason_code":"run_error", "metrics":metrics}
         try: fields=parse_observation(raw,job["role"])
         except (ValueError,TypeError) as error:
-            return {"raw_text":raw,"error":str(error),"metrics":metrics}
-        fields, unmeasured=filter_unobserved_fields(job["role"],fields)
-        return {"fields":fields,"unmeasured":unmeasured,"raw_text":raw,"metrics":metrics}
+            return {"raw_text":raw,"error":str(error),"reason_code":"run_error","metrics":metrics}
+        return filter_observation(job["role"], {"fields":fields,"raw_text":raw,"metrics":metrics})
     finally:
         image.close()
 
@@ -92,7 +91,7 @@ def main():
         result=infer(request,directory)
         record.update(result,status="completed")
     except Exception as error:
-        record.update(error=str(error))
+        record.update(error=str(error), reason_code="run_error")
         traceback.print_exc()
         raise
     finally:

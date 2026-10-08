@@ -333,3 +333,152 @@ def test_selecting_recognition_environment_preserves_user_opt_in(tmp_path, monke
         assert not dialog.run.isEnabled()
     finally:
         dialog.close()
+
+
+@pytest.mark.parametrize("value,code", [
+    ("cat-like, pointed, with inner ear fur", "filtered_species"),
+    (None, "model_null"),
+])
+def test_filter_diagnostics_survive_parent_and_cache(tmp_path, value, code):
+    from genai_lab.tail_recognition import filter_observation, read_cache
+    original = {**fields("basis"), "ears": value}
+    worker = filter_observation("basis", {"fields": original, "raw_text": json.dumps(original)})
+    parent = filter_observation("basis", worker)
+    assert parent == worker
+    assert parent["unmeasured_codes"]["ears"] == code
+    assert parent["fields"]["ears"] is None
+    assert parent["filtered_raw"] == ({"ears": value} if value is not None else {})
+    cached = {**parent, "key": "test-key", "role": "basis"}
+    path = tmp_path / "cache.json"
+    write_json(path, {**cached, "sha256": json_sha(cached)})
+    assert read_cache(path, "test-key", "basis") == cached
+
+
+def test_legacy_cache_recovers_reason_from_raw_without_inference(tmp_path):
+    from genai_lab.tail_recognition import read_cache
+    original = {**fields("basis"), "ears": "cat ears"}
+    cached = {"key": "legacy", "role": "basis", "fields": {**original, "ears": None},
+              "unmeasured": {"ears": "모델이 확인하지 못함"}, "raw_text": json.dumps(original)}
+    path = tmp_path / "cache.json"
+    write_json(path, {**cached, "sha256": json_sha(cached)})
+    result = read_cache(path, "legacy", "basis")
+    assert result["unmeasured_codes"]["ears"] == "filtered_species"
+    assert result["filtered_raw"] == {"ears": "cat ears"}
+    assert result["fields"]["ears"] is None
+    assert read_cache(path, "legacy", "basis") == result
+    saved = json.loads(path.read_text(encoding="utf-8"))
+    digest = saved.pop("sha256")
+    assert digest == json_sha(saved)
+
+
+def test_missing_legacy_raw_does_not_invent_filter_reason():
+    from genai_lab.tail_recognition import filter_observation
+    result = filter_observation("basis", {"fields": {**fields("basis"), "ears": None}})
+    assert result["unmeasured_codes"]["ears"] == "model_null"
+    assert result["filtered_raw"] == {}
+
+
+def test_filtered_raw_cannot_be_approved_for_edit(tmp_path):
+    from genai_lab.tail_recognition import filter_observation
+    spec = spec_at(tmp_path)
+    observation = report(spec)
+    observation["observations"]["basis"] = filter_observation("basis", {
+        "fields": {**fields("basis"), "ears": "cat-like, pointed, with inner ear fur"}})
+    selected = {role: list(names) for role, names in FIELDS.items()}
+    with pytest.raises(ValueError, match="미확인"):
+        approve_observations(observation, selected)
+    selected["basis"].remove("ears")
+    approved = approve_observations(observation, selected)
+    prompt = assemble_tail_prompt(spec.pattern, spec.tip, approved)["positive"]
+    assert "cat-like" not in prompt
+    assert "inner ear fur" not in prompt
+    assert approved["report"]["observations"]["basis"]["filtered_raw"]["ears"].startswith("cat-like")
+
+
+def test_recognition_failure_has_run_error_reason(tmp_path):
+    spec = spec_at(tmp_path)
+    def fail():
+        raise RuntimeError("failed probe")
+    with pytest.raises(RuntimeError, match="failed probe"):
+        recognize_tail(spec, config(tmp_path), tmp_path / "run", gpu_probe=fail)
+    record = json.loads((tmp_path / "run/run.json").read_text(encoding="utf-8"))
+    assert record["status"] == "failed"
+    assert record["reason_code"] == "run_error"
+
+
+def test_review_shows_filter_reason_and_readonly_raw(tmp_path, monkeypatch):
+    app = QApplication.instance() or QApplication([])
+    from PySide6.QtWidgets import QLabel, QPlainTextEdit
+    from genai_lab.tail_recognition import filter_observation
+    from genai_lab.qwen_tail_gui import review_tail_recognition
+    spec = spec_at(tmp_path)
+    observation = report(spec)
+    observation["observations"]["basis"] = filter_observation("basis", {
+        "fields": {**fields("basis"), "ears": "cat ears"}})
+    def inspect(dialog):
+        check = dialog.findChild(QCheckBox, "recognition_basis_ears")
+        assert not check.isEnabled() and not check.isChecked()
+        raw = dialog.findChild(QPlainTextEdit, "recognition_raw_basis_ears")
+        assert raw.isReadOnly() and raw.toPlainText() == "cat ears"
+        assert any("동물 종 이름이 있어 제외" in label.text() for label in dialog.findChildren(QLabel))
+        button = dialog.findChild(QPushButton, "recognition_raw_toggle_basis_ears")
+        assert button is not None and "전달하지 않음" in button.text()
+        return QDialog.Rejected
+    monkeypatch.setattr(QDialog, "exec", inspect)
+    assert review_tail_recognition(None, spec, observation) is None
+
+
+
+def test_worker_parent_cache_preserve_excluded_raw_end_to_end(tmp_path):
+    from genai_lab.tail_recognition import filter_observation
+    seen = []
+    original = {**fields("basis"), "ears": "cat-like, pointed, with inner ear fur"}
+    class Process:
+        returncode = 0
+        def __init__(self, command, **kwargs):
+            request_path = Path(command[-1])
+            request = json.loads(request_path.read_text(encoding="utf-8"))
+            seen.append(request)
+            observations = {}
+            for job in request["jobs"]:
+                values = original if job["role"] == "basis" else fields("tail")
+                observations[job["role"]] = filter_observation(job["role"], {
+                    "fields": values, "raw_text": json.dumps(values)})
+            write_json(request_path.parent / "result.json", {
+                "status": "completed", "request_sha256": json_sha(request), "observations": observations})
+        def poll(self):
+            return 0
+    spec, cfg = spec_at(tmp_path), config(tmp_path)
+    for index in (1, 2):
+        result = recognize_tail(spec, cfg, tmp_path / str(index), popen=Process, gpu_probe=lambda: {})
+        item = result["observations"]["basis"]
+        assert item["fields"]["ears"] is None
+        assert item["unmeasured_codes"]["ears"] == "filtered_species"
+        assert item["filtered_raw"]["ears"] == original["ears"]
+        assert item["cache_hit"] is (index == 2)
+    assert len(seen) == 1
+
+
+
+def test_question_echo_reason_is_preserved_and_prompt_unchanged(tmp_path):
+    from copy import deepcopy
+    from genai_lab.tail_recognition import filter_observation
+    spec = spec_at(tmp_path)
+    observation = report(spec)
+    item = filter_observation("basis", {"fields": {
+        **fields("basis"), "face": "visible eye color and face shape"}})
+    assert filter_observation("basis", item) == item
+    assert item["unmeasured_codes"]["face"] == "filtered_question_echo"
+    assert item["filtered_raw"]["face"] == "visible eye color and face shape"
+    observation["observations"]["basis"] = item
+    selected = {role: [key for key, value in data["fields"].items() if value is not None]
+                for role, data in observation["observations"].items()}
+    current = approve_observations(observation, selected)
+    legacy = deepcopy(observation)
+    legacy["observations"]["basis"].pop("unmeasured_codes")
+    legacy["observations"]["basis"].pop("filtered_raw")
+    previous = approve_observations(legacy, selected)
+    actual = assemble_tail_prompt(spec.pattern, spec.tip, current)
+    expected = assemble_tail_prompt(spec.pattern, spec.tip, previous)
+    assert actual == expected
+    assert actual["positive"].encode("utf-8") == expected["positive"].encode("utf-8")

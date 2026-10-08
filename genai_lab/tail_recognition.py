@@ -138,6 +138,68 @@ def filter_unobserved_fields(role, fields):
     return cleaned,notes
 
 
+REASON_LABELS = {
+    "model_null": "모델이 확인하지 못함",
+    "filtered_species": "모델 응답에 동물 종 이름이 있어 제외",
+    "filtered_question_echo": "이미지 특징 대신 질문 문구를 반복하여 제외",
+    "run_error": "인식 실행 오류로 확인하지 못함",
+}
+LEGACY_REASON_CODES = {
+    "모델이 확인하지 못함": "model_null",
+    "보이는 특징 대신 동물 종 이름 추정": "filtered_species",
+    "이미지 특징 대신 질문 문구 반복": "filtered_question_echo",
+}
+
+
+def recover_filtered_raw(role, item, cleaned):
+    """Recover legacy diagnostics only when the raw JSON explains the same filtered fields."""
+    raw = item.get("raw_text", "").strip()
+    if raw.startswith("```json") and raw.endswith("```"):
+        raw = raw[7:-3].strip()
+    try:
+        values = json.loads(raw)
+        filtered, notes = filter_unobserved_fields(role, values)
+    except (ValueError, TypeError):
+        return {}, {}
+    if filtered != cleaned:
+        return {}, {}
+    removed = {key: values[key] for key in notes if values[key] is not None}
+    codes = {key: LEGACY_REASON_CODES[notes[key]] for key in removed}
+    return removed, codes
+
+
+def filter_observation(role, item):
+    """Keep filter diagnostics through worker, parent and cache; never restore excluded fields."""
+    cleaned, notes = filter_unobserved_fields(role, item["fields"])
+    recovered, recovered_codes = recover_filtered_raw(role, item, cleaned)
+    previous_notes = item.get("unmeasured", {})
+    previous_codes = item.get("unmeasured_codes", {})
+    previous_raw = item.get("filtered_raw", {})
+    reasons, codes, removed = {}, {}, {}
+    for key, note in notes.items():
+        code = LEGACY_REASON_CODES[note]
+        original = item["fields"][key]
+        if original is not None:
+            removed[key] = original
+        else:
+            prior = previous_codes.get(key, LEGACY_REASON_CODES.get(previous_notes.get(key)))
+            if prior in REASON_LABELS:
+                code = prior
+            if key in previous_notes:
+                note = previous_notes[key]
+            if key in previous_raw:
+                removed[key] = previous_raw[key]
+            elif key in recovered:
+                removed[key] = recovered[key]
+            # Old parent code overwrote filter reasons with model_null. Raw JSON is evidence, not a guess.
+            if code == "model_null" and key in recovered_codes:
+                code = recovered_codes[key]
+                note = REASON_LABELS[code]
+        reasons[key], codes[key] = note, code
+    return {**item, "fields": cleaned, "unmeasured": reasons,
+            "unmeasured_codes": codes, "filtered_raw": removed}
+
+
 def observation_key(role, image_sha, settings):
     require_sha(image_sha)
     return json_sha({"role":role,"image_sha256":image_sha,"settings":settings.fingerprint(),"prompt":PROMPTS[role]})
@@ -149,8 +211,10 @@ def read_cache(path, key, role):
     digest=report.pop("sha256",None)
     if digest!=json_sha(report) or report.get("key")!=key or report.get("role")!=role:
         raise ValueError("저장된 인식 결과가 변경됐습니다. 재사용하지 않습니다.")
-    validate_fields(role,report["fields"])
-    return report
+    normalized = filter_observation(role, report)
+    if normalized != report:
+        write_json(path, {**normalized, "sha256": json_sha(normalized)})
+    return normalized
 
 
 def stop_process(process):
@@ -223,11 +287,11 @@ def recognize_tail(spec, settings, directory, *, cancelled=lambda:False, progres
             if set(result["observations"])!={j["role"] for j in jobs}: raise ValueError("인식 응답 누락")
             for job in jobs:
                 item=result["observations"][job["role"]]
-                filtered, notes=filter_unobserved_fields(job["role"],item["fields"])
-                item={**item,"fields":filtered,"unmeasured":{**item.get("unmeasured",{}),**notes}}
+                item=filter_observation(job["role"],item)
                 report={"role":job["role"],"key":job["key"],"image_sha256":job["image_sha256"],
                         "fields":item["fields"],"raw_text":item.get("raw_text",""),"metrics":item.get("metrics",{}),
-                        "unmeasured":item.get("unmeasured",{})}
+                        "unmeasured":item["unmeasured"], "unmeasured_codes":item["unmeasured_codes"],
+                        "filtered_raw":item["filtered_raw"]}
                 write_json(cache/(job["key"]+".json"),{**report,"sha256":json_sha(report)})
                 observations[job["role"]]={**report,"cache_hit":False}
         if cancelled(): raise OnePassCancelled("이미지 인식을 취소했습니다.")
@@ -239,6 +303,8 @@ def recognize_tail(spec, settings, directory, *, cancelled=lambda:False, progres
         return result
     except Exception as error:
         record.update(status="cancelled" if isinstance(error,OnePassCancelled) else "failed",error=str(error))
+        if not isinstance(error, OnePassCancelled):
+            record["reason_code"] = "run_error"
         raise
     finally:
         record["elapsed_seconds"]=time.monotonic()-started

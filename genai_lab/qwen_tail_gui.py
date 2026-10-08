@@ -333,9 +333,9 @@ def review_tail_result(window, source, before, after):
 
 def review_tail_recognition(window, spec, report):
     """No approval by inference: each visible observation can be excluded before confirmation."""
-    from PySide6.QtWidgets import QScrollArea
+    from PySide6.QtWidgets import QScrollArea, QPlainTextEdit
     from genai_lab.studio_controller import picture
-    from genai_lab.tail_recognition import FIELDS, LABELS, approve_observations
+    from genai_lab.tail_recognition import FIELDS, LABELS, REASON_LABELS, approve_observations
     dialog=QDialog(window)
     dialog.setWindowTitle("읽은 내용 확인 · 아직 편집하지 않았습니다")
     dialog.resize(940,780)
@@ -362,9 +362,24 @@ def review_tail_recognition(window, spec, report):
             check.setChecked(value is not None and not omitted)
             check.setEnabled(value is not None and not omitted)
             fields_layout.addWidget(check)
-            reason=report["observations"][role].get("unmeasured",{}).get(field,"모델이 확인하지 못함")
+            observation=report["observations"][role]
+            reason=REASON_LABELS.get(observation.get("unmeasured_codes",{}).get(field),
+                observation.get("unmeasured",{}).get(field,"모델이 확인하지 못함"))
             text=QLabel((value or "확인 불가: "+reason)+(" — 직접 선택한 조건을 우선하므로 전달하지 않음" if omitted else ""))
+            text.setTextFormat(Qt.TextFormat.PlainText)
             text.setWordWrap(True); fields_layout.addWidget(text)
+            raw=observation.get("filtered_raw",{}).get(field)
+            if raw is not None:
+                raw_box=QPlainTextEdit(str(raw))
+                raw_box.setReadOnly(True)
+                raw_box.setMaximumHeight(80)
+                raw_box.setObjectName("recognition_raw_"+role+"_"+field)
+                raw_box.setVisible(False)
+                raw_button=QPushButton("제외된 원문 보기 · 편집에는 전달하지 않음")
+                raw_button.setObjectName("recognition_raw_toggle_"+role+"_"+field)
+                raw_button.clicked.connect(lambda checked=False, box=raw_box: box.setVisible(not box.isVisible()))
+                fields_layout.addWidget(raw_button)
+                fields_layout.addWidget(raw_box)
             checks[role][field]=check
     scroll.setWidget(contents); layout.addWidget(scroll,1)
     confirmed=QCheckBox("선택한 설명을 확인했고 편집 지시문에 반영합니다.")

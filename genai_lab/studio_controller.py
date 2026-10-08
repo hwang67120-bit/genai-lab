@@ -12,6 +12,7 @@ gui_main.GenAILabWindow.start_generation → StudioController.start
 from pathlib import Path
 from dataclasses import replace
 import threading
+import logging
 import traceback
 import uuid
 from PySide6.QtCore import QThread, Qt, Signal, QObject
@@ -290,7 +291,11 @@ class StudioController(QObject):
             finally:
                 if advisory is not None:
                     from genai_lab.tail_complexity import annotate_finished_run
-                    annotate_finished_run(directory, advisory)
+                    try:
+                        annotate_finished_run(directory, advisory)
+                    except Exception:
+                        logging.getLogger(__name__).warning(
+                            "꼬리 분석 부가 기록 저장 실패: %s (편집 결과는 유지)", directory, exc_info=True)
         self.window.status_label.setText("상태: 꼬리 편집 준비 중 · 약 30분 걸릴 수 있습니다.")
         self.launch(operation, self.tail_edited, on_error=self.tail_failed)
 

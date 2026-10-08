@@ -446,6 +446,9 @@ def generate_onepass_image(
         key: str(value) if isinstance(value, Path) else value
         for key, value in record["settings"].items()
     }
+    metadata = getattr(backend, "record_metadata", None)
+    if metadata is not None:
+        record.update(metadata(seed))
     record_path = directory / "run.json"
     write_record(record_path, record)
     try:
@@ -482,11 +485,24 @@ def generate_onepass_image(
 
 def generate_onepass_request(
     request, directory, *, on_image: Callable[[OnePassCandidate], None] = lambda _image: None,
-    cancelled=lambda: False, backend_factory=DiffusersOnePassBackend,
+    cancelled=lambda: False, backend_factory=DiffusersOnePassBackend, proportion=None,
 ):
-    """Exactly four seeds, sequential, no retry; stop immediately on any failure."""
+    """Four seeds, no retry. OFF returns OnePassBatch with the original raw candidates.
+
+    Explicit proportion.enabled returns ProportionBatch with separate raw/product
+    references. No GUI sets this option until its review integration is approved.
+    """
     if not isinstance(request, OnePassRequest):
         raise TypeError("명시적 OnePassRequest가 필요합니다.")
+    if proportion is not None:
+        from genai_lab.proportion_inputs import ProportionOptions
+        if not isinstance(proportion, ProportionOptions):
+            raise TypeError("명시적 ProportionOptions가 필요합니다.")
+        if proportion.enabled:
+            from genai_lab.proportion_generation import generate_proportion_batch
+            return generate_proportion_batch(
+                request.inputs, request.seeds, directory, settings=request.settings, options=proportion,
+                cancelled=cancelled, on_image=on_image, base_factory=backend_factory)
     if cancelled():
         raise OnePassCancelled("요청 시작 전에 취소됐습니다.")
     for image in read_inputs(request.inputs, request.settings):

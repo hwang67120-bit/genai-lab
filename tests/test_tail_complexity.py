@@ -345,3 +345,53 @@ def test_missing_advisory_overlay_does_not_block_edit(tmp_path):
     record = complexity.persist_advisory(tmp_path/'advisory', spec, report)
     assert 'overlay' in record['artifact_errors']
     assert record['advisory_only'] is True
+
+
+
+def test_overlay_preserves_interior_colors_and_saved_mask(tmp_path):
+    rgb = np.full((30, 30, 3), (53, 109, 177), dtype=np.uint8)
+    mask = np.zeros((30, 30), dtype=bool)
+    mask[5:25, 5:25] = True
+    before = rgb.copy()
+    complexity.save_overlay(rgb, mask, (0, 0, 30, 30), tmp_path)
+    overlay = np.asarray(Image.open(tmp_path / "overlay.png"))
+    assert np.array_equal(overlay[6:24, 6:24], before[6:24, 6:24])
+    assert np.array_equal(overlay[0, 0], before[0, 0])
+    assert tuple(overlay[5, 5]) == (0, 220, 130)
+    assert np.array_equal(rgb, before)
+    assert np.array_equal(np.asarray(Image.open(tmp_path / "mask.png")), mask * 255)
+
+
+@pytest.mark.parametrize("outcome", ["success", "failed", "cancelled"])
+def test_advisory_write_failure_preserves_edit_outcome(tmp_path, monkeypatch, caplog, outcome):
+    from genai_lab.studio_controller import StudioController
+    from genai_lab import qwen_tail_edit
+    from genai_lab.onepass_generation import OnePassCancelled
+    spec = spec_at(tmp_path)
+    product = tmp_path / "product.png"
+    Image.new("RGB", (2, 2), "blue").save(product)
+    original = product.read_bytes()
+    failure = OnePassCancelled("cancel edit") if outcome == "cancelled" else RuntimeError("edit failed")
+    def edit(*args, **kwargs):
+        if outcome != "success":
+            raise failure
+        return product
+    def annotation(*args):
+        raise OSError("annotation locked")
+    captured = []
+    controller = SimpleNamespace(
+        tail_context={"directory": tmp_path, "tail_complexity": {"status": "completed"}},
+        window=SimpleNamespace(status_label=SimpleNamespace(setText=lambda text: None)),
+        tail_edited=lambda result: None, tail_failed=lambda error: None,
+        launch=lambda operation, *args, **kwargs: captured.append(operation))
+    monkeypatch.setattr(qwen_tail_edit, "run_tail_edit", edit)
+    monkeypatch.setattr(complexity, "annotate_finished_run", annotation)
+    StudioController.launch_tail_edit(controller, spec, runtime(tmp_path))
+    if outcome == "success":
+        assert captured[0](lambda: False, lambda data: None) == product
+    else:
+        with pytest.raises(type(failure)) as caught:
+            captured[0](lambda: False, lambda data: None)
+        assert caught.value is failure
+    assert product.read_bytes() == original
+    assert "annotation locked" in caplog.text

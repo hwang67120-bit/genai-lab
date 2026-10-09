@@ -11,10 +11,11 @@ from genai_lab.onepass_generation import (
 from genai_lab.onepass_generation_settings import OnePassGenerationSettings
 from genai_lab.proportion_inputs import (
     ProportionOptions, validate_proportion_request, validate_models, make_sketch, white_background,
-    sha, require, json_value)
+    sha, require, json_value, checked_image)
 from genai_lab.proportion_foreground import AnimeForeground
 from genai_lab.proportion_backend import ProportionBackend, GuardedBase
 from genai_lab.qwen_record_io import write_json
+from genai_lab.head_lines import compose_head_lines
 
 
 @dataclass(frozen=True)
@@ -80,7 +81,7 @@ def build_maps(bases, head_mask, head_contour, directory, foreground_factory, op
             with Image.open(base.path) as image:
                 alpha = foreground.alpha(image)
             check_cancel(cancelled)
-            sketch = make_sketch(alpha, head_mask, head_contour)
+            sketch, head_lines = compose_head_lines(make_sketch(alpha, head_mask, head_contour),options)
             path = directory / f"sketch_{base.seed}.png"
             Image.fromarray(alpha).save(directory / f"base_alpha_{base.seed}.png")
             Image.fromarray(sketch).save(path)
@@ -88,8 +89,42 @@ def build_maps(bases, head_mask, head_contour, directory, foreground_factory, op
             require(base.seed not in expected or digest == expected[base.seed], "재현 스케치 SHA 불일치")
             maps[base.seed] = {"path": str(path), "sha256": digest,
                                "base_raw": str(base.path), "base_raw_sha256": base.record["raw_sha256"],
-                               "mode": "body_outline_plus_confirmed_head_4px"}
+                               "mode": "body_outline_plus_confirmed_head_4px", "outline_source": "base",
+                               "original_sha256": options.head.normalized_sha256}
+            if head_lines is not None:
+                maps[base.seed]["head_lines"] = head_lines
             write_json(directory / "maps.json", {str(key): value for key, value in maps.items()})
+        return maps
+    finally:
+        if foreground is not None:
+            foreground.close()
+
+
+
+def build_original_maps(seeds, head_mask, head_contour, directory, foreground_factory, options, cancelled, expected):
+    """One normalized source, one CPU inference, one shared map; no generated body."""
+    check_cancel(cancelled)
+    head = options.head
+    pixels = checked_image(head.normalized_file, head.normalized_sha256,
+                           (head_mask.shape[1], head_mask.shape[0]), "RGB")
+    foreground = None
+    try:
+        foreground = foreground_factory(options)
+        with Image.fromarray(pixels) as image:
+            alpha = foreground.alpha(image)
+        check_cancel(cancelled)
+        sketch = make_sketch(alpha, head_mask, head_contour)
+        path = directory / "sketch_original.png"
+        Image.fromarray(alpha).save(directory / "original_alpha.png")
+        Image.fromarray(sketch).save(path)
+        digest = sha(path)
+        for seed in seeds:
+            require(seed not in expected or digest == expected[seed], "원본 스케치 SHA 불일치")
+        entry = {"path": str(path), "sha256": digest, "outline_source": "original",
+                 "original_file": str(head.normalized_file), "original_sha256": head.normalized_sha256,
+                 "mode": "body_outline_plus_confirmed_head_4px"}
+        maps = {seed: dict(entry) for seed in seeds}
+        write_json(directory / "maps.json", {str(key): value for key, value in maps.items()})
         return maps
     finally:
         if foreground is not None:
@@ -147,6 +182,7 @@ def generate_proportion_batch(inputs, seeds, directory, *, settings=OnePassGener
     expected_base, expected_sketch, expected_raw = expected_base or {}, expected_sketch or {}, expected_raw or {}
     for expected in (expected_base, expected_sketch, expected_raw):
         require(set(expected) <= set(seeds), "재현 SHA에 요청 밖 seed가 있습니다.")
+    require(options.outline_source == "base" or not expected_base, "원본 윤곽 모드에서는 1단계 SHA를 검사할 수 없습니다.")
     check_cancel(cancelled)
     # Validation before output creation/loading: rejected inputs cannot consume GPU work.
     mask, contour, models = validate_proportion_request(inputs, settings, options)
@@ -155,24 +191,33 @@ def generate_proportion_batch(inputs, seeds, directory, *, settings=OnePassGener
     lock = json_value({"inputs": asdict(inputs), "settings": asdict(settings), "options": asdict(options),
                        "seeds": seeds, "models": models, "adapter_strengths": [1.2, .5],
                        "shared_adapter_steps": list(range(11)), "expected_base": expected_base,
-                       "expected_sketch": expected_sketch, "expected_raw": expected_raw})
+                       "expected_sketch": expected_sketch, "expected_raw": expected_raw,
+                       "outline_source": options.outline_source, "original_sha256": options.head.normalized_sha256,
+                       "base_stage": "generated" if options.outline_source == "base" else "skipped_unused_outline"})
     lock["code_sha256"] = {name: sha(Path(__file__).parent / name) for name in (
         "proportion_generation.py", "proportion_inputs.py", "proportion_foreground.py", "proportion_backend.py",
         "onepass_generation.py", "onepass_generation_settings.py")}
     write_json(directory / "preflight.json", lock)
     (directory / "preflight.sha256").write_text(sha(directory / "preflight.json") + "\n")
-    state = {"status": "started", "phase": "BASE", "BASE": [], "CONTOUR": [], "products": [],
-             "seeds": list(seeds), "adapter_strengths": [1.2, .5], "proportion_mode": "two_pass"}
+    state = {"status": "started", "phase": "BASE" if options.outline_source == "base" else "sketch", "BASE": [], "CONTOUR": [], "products": [],
+             "seeds": list(seeds), "adapter_strengths": [1.2, .5], "proportion_mode": "two_pass",
+             "outline_source": options.outline_source, "base_stage": lock["base_stage"]}
     started = time.monotonic()
     save_state(directory, state)
     try:
         def first_backend():
             require(validate_models(settings, options) == models, "로딩 전 모델 파일 변경")
             return GuardedBase(base_factory(settings), settings)
-        bases = generate_stage(inputs, seeds, directory, settings, first_backend, cancelled, state, "BASE", expected_base)
-        state["phase"] = "sketch"
-        save_state(directory, state)
-        maps = build_maps(bases, mask, contour, directory, foreground_factory, options, cancelled, expected_sketch)
+        if options.outline_source == "base":
+            bases = generate_stage(inputs, seeds, directory, settings, first_backend, cancelled, state, "BASE", expected_base)
+            state["phase"] = "sketch"
+            save_state(directory, state)
+            maps = build_maps(bases, mask, contour, directory, foreground_factory, options, cancelled, expected_sketch)
+        else:
+            state["phase"] = "sketch"
+            save_state(directory, state)
+            maps = build_original_maps(seeds, mask, contour, directory, foreground_factory, options, cancelled, expected_sketch)
+        state["sketch_sha256"] = {str(seed): entry["sha256"] for seed, entry in maps.items()}
         state["phase"] = "CONTOUR"
         save_state(directory, state)
         def second_backend():

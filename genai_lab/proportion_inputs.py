@@ -62,9 +62,17 @@ class ProportionOptions:
     foreground_model: Path | None = None
     foreground_sha256: str | None = None
     sketch_revision: str = SKETCH_REVISION
+    outline_source: str = "base"
+    head_lines: str = "none"
+    head_lines_file: Path | None = None
+    head_lines_sha256: str | None = None
+    head_lines_confirmed: bool = False
 
     def __post_init__(self):
+        require(self.head_lines in ("none","hair","all"), "머리 선은 none, hair, all 중 하나여야 합니다.")
+        require(type(self.head_lines_confirmed) is bool,"머리 선 확인 여부는 bool입니다.")
         require(type(self.enabled) is bool, "비율 생성 사용 여부는 bool입니다.")
+        require(self.outline_source in ("base", "original"), "윤곽 출처는 base 또는 original이어야 합니다.")
 
 
 def checked_image(path, digest, size, mode):
@@ -158,6 +166,8 @@ def validate_proportion_request(inputs, settings, options):
     from genai_lab.onepass_generation import read_inputs
     for image in read_inputs(inputs, settings):
         image.close()
+    from genai_lab.head_lines import checked_lines
+    checked_lines(options,(settings.width,settings.height))
     models = validate_models(settings, options)
     return mask, contour, models
 

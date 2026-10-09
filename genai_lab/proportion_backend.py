@@ -82,7 +82,9 @@ class ProportionBackend(DiffusersOnePassBackend):
         return {"models": {**self.settings.model_record(), "adapters": [self.models["pose"], self.models["sketch"]]},
                 "adapter_input": "pose_and_head_sketch", "adapter_strengths": [1.2, .5],
                 "shared_adapter_steps": list(range(11)), "sketch": self.maps[seed],
-                "proportion_stage": "second_pass"}
+                "proportion_stage": "second_pass",
+                "outline_source": self.maps[seed].get("outline_source", "base"),
+                "original_sha256": self.maps[seed].get("original_sha256")}
 
     def generate(self, inputs, images, seed, observation, cancelled):
         torch, pipe, settings = self.torch, self.pipe, self.settings

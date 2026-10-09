@@ -23,6 +23,8 @@ from genai_lab.studio_generation import (StudioRuntime, StudioResults, analyze_i
     build_request, generate_onepass_request, record)
 from genai_lab.onepass_generation import OnePassCancelled, validate_local_models
 from genai_lab.studio_background import prepare_backgrounds
+from genai_lab.studio_optional_finishing import finish_selected
+from genai_lab.studio_finishing_gui import choose_finished, NOTICE as FINISHING_NOTICE
 from genai_lab.studio_proportion import prepare_studio_pose, prepare_studio_head, confirmed_options
 from genai_lab.studio_proportion_gui import select_head_region, review_head_outline
 from genai_lab.studio_garment_warnings import garment_warnings, garment_review
@@ -49,11 +51,13 @@ class StudioController(QObject):
         self.tail_context = None
         self.tail_settings_path = ""
         self.pending_tail_recognition = None
+        self.finishing_context = None
         self.last_saved = None
         self.output_root = Path(__file__).resolve().parents[1] / "outputs" / "studio-runs"
         window.studio_candidate_combo.currentIndexChanged.connect(self.select)
         window.studio_cancel_button.clicked.connect(self.cancel)
         window.tail_edit_button.clicked.connect(self.edit_tail)
+        window.studio_finish_button.clicked.connect(self.finish_selected_image)
         window.studio_raw_button.clicked.connect(lambda: self.original(raw=True))
 
     @property
@@ -171,6 +175,10 @@ class StudioController(QObject):
                                              cancelled=cancel, on_image=on_image, **generation_options)
             if options is not None:
                 return batch  # ProportionBatch already contains its final white-background products.
+            if self.runtime.finishing:
+                from genai_lab.studio_finishing import finish_batch
+                finish_batch(batch, request.inputs.prompt, replace(self.runtime, finishing_face_reference=True), cancelled=cancel, progress=progress)
+                return prepare_backgrounds(batch, self.runtime.model_cache, cancelled=cancel, progress=progress, finishing=True)
             # The generation backend is closed before loading the CPU foreground model.
             return prepare_backgrounds(batch, self.runtime.model_cache, cancelled=cancel, progress=progress)
         self.launch(generate, self.generated)
@@ -235,6 +243,7 @@ class StudioController(QObject):
     def reject(self):
         if self.results is not None:
             self.results.select(self.results.selected)
+            self.window.candidate_preview.setPixmap(QPixmap(str(self.results.current_path)))
             self.window.status_label.setText("상태: 이 결과를 승인하지 않았습니다. 다른 결과를 선택하거나 다시 만드세요.")
         self.controls()
 
@@ -266,6 +275,73 @@ class StudioController(QObject):
         scroll.setWidget(image)
         layout.addWidget(scroll)
         dialog.exec()
+
+    def finish_selected_image(self):
+        if self.results is None or self.task is not None or self.confirming:
+            return
+        if self.results.finishing_unavailable_reason:
+            return
+        if any(value is not None and hasattr(value, "isRunning") and value.isRunning()
+               for name, value in vars(self.window).items() if name.endswith("thread")):
+            QMessageBox.information(self.window, "실행 중", "현재 작업이 끝난 뒤 마무리해 주세요.")
+            return
+        try:
+            before_sha = self.results.verify_current()
+            destination = self.results.batch.directory / "optional-finishing" / uuid.uuid4().hex
+            context = {"selected": self.results.selected, "before": str(self.results.current_path),
+                       "before_sha256": before_sha, "directory": str(destination)}
+            self.finishing_context = context
+            candidate = self.results.candidate
+            runtime = self.runtime or StudioRuntime.from_environment()
+            self.release_tail_predecessor()
+            self.window.status_label.setText("상태: 선택한 한 장 고화질 마무리 중 · 원본은 그대로 보관합니다.")
+            self.launch(lambda cancel, progress: finish_selected(candidate, context["before"], before_sha,
+                destination, runtime, cancelled=cancel, progress=progress), self.finishing_ready,
+                on_error=self.finishing_failed)
+        except Exception as error:
+            self.finishing_failed(error, traceback.format_exc())
+
+    def finishing_ready(self, info):
+        context = self.finishing_context
+        if (not context or self.results is None or self.results.selected != context["selected"]
+                or self.results.verify_current() != context["before_sha256"]):
+            raise ValueError("마무리 중 선택한 기준 이미지가 변경됐습니다.")
+        self.confirming = True
+        self.controls()
+        try:
+            # Validate on the GUI thread before showing any derived output.
+            from genai_lab.studio_optional_finishing import finishing_info
+            verified = finishing_info(context["directory"], self.results.verify_original(), context["before_sha256"])
+            if verified != info:
+                raise ValueError("마무리 결과 기록이 변경됐습니다.")
+            adopted = choose_finished(self.window, context["before"], info)
+            record(Path(context["directory"]) / "selection.json",
+                   {"selection": "finished" if adopted else "original", "reviewer": "user"})
+            if adopted:
+                self.results.adopt_finishing(context["directory"])
+            self.window.candidate_preview.setPixmap(QPixmap(str(self.results.current_path)))
+            self.window.status_label.setText("상태: 마무리본 선택 · 저장 전 결과를 확인해 주세요." if adopted
+                                            else "상태: 마무리 전 원본을 유지합니다.")
+            self.finishing_context = None
+        finally:
+            self.confirming = False
+            self.controls()
+
+    def finishing_failed(self, error, details=""):
+        cancelled = isinstance(error, OnePassCancelled)
+        context, self.finishing_context = self.finishing_context, None
+        if context:
+            try:
+                record(Path(context["directory"]) / "gui-status.json",
+                       {"status": "cancelled" if cancelled else "failed", "error": str(error), "detail": details})
+            except Exception:
+                logging.getLogger(__name__).exception("마무리 실패 기록 저장 실패")
+        if self.results is not None:
+            self.window.candidate_preview.setPixmap(QPixmap(str(self.results.current_path)))
+        self.window.status_label.setText("상태: 마무리 취소 · 원본 유지" if cancelled else "상태: 마무리 실패 · 원본 유지")
+        if not cancelled:
+            QMessageBox.warning(self.window, "원본을 유지합니다", str(error))
+        self.controls()
 
     # 선택적 꼬리 보정: 정상 완료 후보만 사용하며, 실패해도 후보 묶음을 버리지 않는다.
 
@@ -446,6 +522,12 @@ class StudioController(QObject):
         has_tail = bool(self.analysis and appendage_tags(self.analysis["groups"]["fixed"])["tail"])
         w.tail_edit_button.setVisible(self.results is not None and has_tail)
         w.tail_edit_button.setEnabled(ready and has_tail)
+        reason = self.results.finishing_unavailable_reason if self.results else ""
+        w.studio_finish_button.setVisible(self.results is not None)
+        w.studio_finish_button.setEnabled(ready and not reason)
+        w.studio_finish_button.setToolTip(reason or FINISHING_NOTICE)
+        w.studio_finish_notice.setText(reason or FINISHING_NOTICE)
+        w.studio_finish_notice.setVisible(self.results is not None)
 
     def launch(self, action, complete, *, on_error=None):
         if self.task is not None:

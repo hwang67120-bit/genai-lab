@@ -3,7 +3,7 @@
 Only explicit input confirmation can build a request. Only an explicitly reviewed,
 unchanged candidate can be exported. No legacy Base/refinement fallback is used.
 """
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 import hashlib
 import json
@@ -45,9 +45,16 @@ class StudioRuntime:
     analysis_python: Path = field(default_factory=lambda: Path(sys.executable))
     generation: OnePassGenerationSettings = field(default_factory=OnePassGenerationSettings)
     prompt: OnePassPromptSettings = field(default_factory=OnePassPromptSettings)
+    quality_tags: bool = False  # Final default decision is pending; preserve existing prompts.
+    finishing: bool = False
+    finishing_face_reference: bool = False
     analysis_timeout: float = 600.0
     proportion_sketch_root: Path = Path("G:/genai-cache/models/t2i-adapter-sketch-sdxl-1.0")
     garment_warnings: GarmentWarningSettings = field(default_factory=GarmentWarningSettings.load)
+
+    def __post_init__(self):
+        if any(type(value) is not bool for value in (self.quality_tags, self.finishing, self.finishing_face_reference)):
+            raise ValueError("품질 태그·마무리 설정은 bool이어야 합니다.")
 
     @classmethod
     def from_environment(cls):
@@ -55,11 +62,12 @@ class StudioRuntime:
         if not config:
             return cls()
         values = json.loads(Path(config).read_text(encoding="utf-8"))
-        allowed = {"pose_python", "pose_models", "model_cache", "analysis_python", "head_cache", "garment_warning_rules", "proportion_sketch_root"}
+        allowed = {"pose_python", "pose_models", "model_cache", "analysis_python", "head_cache", "garment_warning_rules", "proportion_sketch_root", "quality_tags", "finishing", "finishing_face_reference"}
         if set(values) - allowed:
             raise ValueError("작업실 실행 설정에 알 수 없는 항목이 있습니다.")
         warnings = GarmentWarningSettings.load(values.pop("garment_warning_rules")) if "garment_warning_rules" in values else GarmentWarningSettings.load()
-        return cls(**{key: Path(value) for key, value in values.items()}, garment_warnings=warnings)
+        return cls(**{key: value if key in ("quality_tags", "finishing", "finishing_face_reference") else Path(value)
+                      for key, value in values.items()}, garment_warnings=warnings)
 
 
 def cpu_process(command, log, cancelled, timeout):
@@ -175,10 +183,14 @@ def build_request(analysis, garment_tags, gender, *, confirmed, runtime, prefere
         choice = "proceed_with_pose"
         pose_args = dict(control_file=Path(proportion_pose["control_file"]),
                         control_sha256=proportion_pose["control_sha256"], ip_early=proportion_pose["ip_early"])
+    tokens = tokenizers or load_onepass_tokenizers(runtime.prompt)
     inputs = prepare_onepass_inputs(choice=choice, decision=decision, **pose_args,
         gender=conditions, groups=groups, garment_tags=tuple(garment_tags), pose_tags=(),
-        slim=analysis["slim"], tokenizers=tokenizers or load_onepass_tokenizers(runtime.prompt),
+        slim=analysis["slim"], tokenizers=tokens,
         face_file=face, face_sha256=analysis["face_sha256"], prompt_settings=runtime.prompt, appearance=appearance)
+    if runtime.quality_tags and proportion_pose is None:
+        from genai_lab.finishing_prompt import apply_quality_format
+        inputs = replace(inputs, prompt=apply_quality_format(inputs.prompt, tokens))
     start = secrets.randbelow(2**62)
     request = OnePassRequest(inputs, seeds or tuple(start+i for i in range(4)), runtime.generation)
     record(directory / "approval.json", {"approved": True, "gender": gender,
@@ -188,7 +200,9 @@ def build_request(analysis, garment_tags, gender, *, confirmed, runtime, prefere
         "proportion_mode": "two_pass" if proportion_pose is not None else "off",
         "prompt": inputs.prompt.positive, "negative": inputs.prompt.negative,
         "appendage_appearance": inputs.prompt.rules["appendage_appearance"],
-        "appendage_review_required": inputs.prompt.rules["appendage_review_required"]})
+        "appendage_review_required": inputs.prompt.rules["appendage_review_required"],
+        **({"quality_format":"diagnostic_2b", "quality_default_decision":"pending"}
+           if runtime.quality_tags and proportion_pose is None else {})})
     return request
 
 
@@ -203,11 +217,14 @@ class StudioResults:
         self.product_records = tuple(json.loads(c.record_path.read_text(encoding="utf-8"))
                                      for c in batch.candidates) if self.two_pass else ()
         self.backgrounds = tuple(None if self.two_pass else read_background(c) for c in batch.candidates)
+        from genai_lab.studio_finishing import read_finishing
+        self.finishings = tuple(None if self.two_pass else read_finishing(c) for c in batch.candidates)
         self.appendage_review_required = appendage_review_required or any(
             c.record.get("prompt", {}).get("rules", {}).get("appendage_review_required", False)
             for c in batch.candidates)
         self.selected = 0
         self.tail_edit = None
+        self.optional_finishing = None
         self.approved_sha = None
         self.checks = {}
         self.status = "awaiting_user_review"
@@ -218,7 +235,10 @@ class StudioResults:
             "status": self.status, "selected": self.selected,
             "approved_sha256": self.approved_sha, "automatic_gates_executed": False,
             "reviewer": "user", "checks": self.checks, "appendage_review_required": self.appendage_review_required,
-            "background": self.backgrounds[self.selected],
+            "background": self.active_background,
+            "finishing_applied": bool(self.active_finishing),
+            **({"finishing": self.active_finishing} if self.active_finishing else {}),
+            **({"optional_finishing": self.optional_finishing} if self.optional_finishing else {}),
             "proportion_mode": "two_pass" if self.two_pass else "off",
             **({"tail_edit": self.tail_edit} if self.tail_edit else {}), **extra})
 
@@ -227,6 +247,7 @@ class StudioResults:
             raise ValueError("후보 번호 오류")
         self.selected = index
         self.tail_edit = None
+        self.optional_finishing = None
         self.approved_sha = None
         self.checks = {}
         self.status = "awaiting_user_review"
@@ -242,20 +263,64 @@ class StudioResults:
 
     @property
     def basis_path(self):
+        if self.optional_finishing:
+            return Path(self.optional_finishing["product_file"])
+        return self.original_basis_path
+
+    @property
+    def original_basis_path(self):
         if self.two_pass:
             return self.candidate.path
         background = self.backgrounds[self.selected]
         if background and background["status"] == "completed":
             return self.candidate.path.parent / "product.png"
+        if self.finishings[self.selected]:
+            return self.candidate.path.parent / "finished.png"
         return self.candidate.path
 
     @property
+    def finishing_unavailable_reason(self):
+        if self.tail_edit:
+            return "꼬리를 고친 뒤에는 고화질 마무리를 적용할 수 없습니다."
+        if self.two_pass:
+            return "원본 비율 참고로 만든 결과에는 이번 마무리를 적용하지 않습니다."
+        if self.optional_finishing or self.finishings[self.selected]:
+            return "이미 마무리한 결과입니다. 중복 마무리는 지원하지 않습니다."
+        return ""
+
+    @property
+    def active_finishing(self):
+        return self.optional_finishing["finishing"] if self.optional_finishing else self.finishings[self.selected]
+
+    @property
+    def active_background(self):
+        return self.optional_finishing["background"] if self.optional_finishing else self.backgrounds[self.selected]
+
+    def adopt_finishing(self, directory):
+        from genai_lab.studio_optional_finishing import finishing_info
+        if self.finishing_unavailable_reason:
+            raise ValueError(self.finishing_unavailable_reason)
+        info = finishing_info(directory, self.verify_original(), self.verify_basis())
+        previous = (self.optional_finishing, self.approved_sha, self.checks, self.status)
+        try:
+            self.optional_finishing = info
+            self.approved_sha = None
+            self.checks = {}
+            self.status = "awaiting_user_review"
+            self.persist()
+        except Exception:
+            self.optional_finishing, self.approved_sha, self.checks, self.status = previous
+            raise
+
+    @property
     def background_notice(self):
+        if self.optional_finishing:
+            return "고화질 마무리·흰 배경 정리 완료 · 눈색과 장식을 직접 확인해 주세요."
         if self.two_pass:
             return "2단계 비율 생성·흰 배경 정리 완료 · 비율과 의상 색을 직접 확인해 주세요."
         background = self.backgrounds[self.selected]
         if not background or background["status"] != "completed":
-            return "배경 정리 안 됨 · 생성 원본을 표시합니다."
+            return "배경 정리 안 됨 · 마무리 결과를 표시합니다." if self.finishings[self.selected] else "배경 정리 안 됨 · 생성 원본을 표시합니다."
         return "흰 배경 정리 완료 · 몸에 붙은 장식·줄은 남을 수 있습니다."
 
     @property
@@ -263,26 +328,44 @@ class StudioResults:
         return Path(self.tail_edit["directory"]) / "product.png" if self.tail_edit else self.basis_path
 
     def verify_basis(self):
+        before_sha = self.verify_original_basis()
+        if self.optional_finishing:
+            from genai_lab.studio_optional_finishing import finishing_info
+            info = finishing_info(self.optional_finishing["directory"], self.verify_original(), before_sha)
+            if info != self.optional_finishing:
+                raise ValueError("선택한 마무리 기록이 변경됐습니다.")
+            return info["product_sha256"]
+        return before_sha
+
+    def verify_original_basis(self):
         raw_sha = self.verify_original()
         if self.two_pass:
             data = json.loads(self.candidate.record_path.read_text(encoding="utf-8"))
             if (data != self.product_records[self.selected] or not data.get("valid") or not data.get("completed")
-                    or data.get("raw_sha256") != raw_sha or data.get("product_sha256") != digest(self.basis_path)
+                    or data.get("raw_sha256") != raw_sha or data.get("product_sha256") != digest(self.original_basis_path)
                     or Path(data["raw_file"]).resolve() != self.raw_path.resolve()
-                    or Path(data["product_file"]).resolve() != self.basis_path.resolve()):
+                    or Path(data["product_file"]).resolve() != self.original_basis_path.resolve()):
                 raise ValueError("2단계 생성 결과나 기록이 변경됐습니다.")
             return data["product_sha256"]
+        if self.finishings[self.selected]:
+            from genai_lab.studio_finishing import finishing_source
+            source, finishing = finishing_source(self.candidate)
+            if finishing != self.finishings[self.selected]:
+                raise ValueError("마무리 기록이 변경됐습니다.")
         background = self.backgrounds[self.selected]
         if read_background(self.candidate) != background:
             raise ValueError("배경 정리 기록이 변경됐습니다.")
         if background:
             if background["raw_sha256"] != raw_sha:
                 raise ValueError("배경 정리 기준 원본이 다릅니다.")
+            if self.finishings[self.selected] and (background.get("source_sha256") != finishing["finished_sha256"]
+                    or Path(background.get("source_file", "")).resolve() != source.resolve()):
+                raise ValueError("배경 정리와 마무리 결과의 연결이 다릅니다.")
             if background["status"] == "completed":
-                if digest(self.basis_path) != background["product_sha256"]:
+                if digest(self.original_basis_path) != background["product_sha256"]:
                     raise ValueError("배경 정리 결과가 변경됐습니다.")
                 return background["product_sha256"]
-        return raw_sha
+        return self.finishings[self.selected]["finished_sha256"] if self.finishings[self.selected] else raw_sha
 
     def verify_original(self):
         candidate = self.candidate.raw if self.two_pass else self.candidate
@@ -337,7 +420,12 @@ class StudioResults:
                     "reviewer": "user", "automatic_gates_executed": False}
         metadata["raw_sha256"] = self.verify_original()
         metadata["proportion_mode"] = "two_pass" if self.two_pass else "off"
-        metadata["background"] = self.backgrounds[self.selected]
+        metadata["background"] = self.active_background
+        metadata["finishing_applied"] = bool(self.active_finishing)
+        if self.active_finishing:
+            metadata["finishing"] = self.active_finishing
+        if self.optional_finishing:
+            metadata["optional_finishing"] = self.optional_finishing
         if self.tail_edit:
             metadata["tail_edit"] = dict(self.tail_edit)
         created = []

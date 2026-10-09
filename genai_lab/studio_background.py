@@ -20,7 +20,7 @@ class BackgroundOptions:
     foreground_sha256: str = FOREGROUND_SHA
 
 
-def prepare_candidate(candidate, foreground, options, load_error=None):
+def prepare_candidate(candidate, foreground, options, load_error=None, *, source_file=None):
     """Persist either a verified product or an explicit raw fallback, with separate hashes."""
     destination = candidate.path.parent
     record_path = destination / "background.json"
@@ -35,11 +35,15 @@ def prepare_candidate(candidate, foreground, options, load_error=None):
               "model": str(options.foreground_model), "model_sha256_expected": options.foreground_sha256,
               "provider": "CPUExecutionProvider", "composition": "soft_alpha_white_no_component_filter",
               "automatic_gates_executed": False, "limitation": BACKGROUND_LIMIT}
+    source = Path(source_file) if source_file is not None else candidate.path
+    source_sha = sha(source)
+    if source_file is not None:
+        result.update(source_file=str(source), source_sha256=source_sha)
     started = time.monotonic()
     try:
         if load_error is not None:
             raise load_error
-        with Image.open(candidate.path) as image:
+        with Image.open(source) as image:
             rgb = image.convert("RGB")
         with rgb:
             alpha = foreground.alpha(rgb)
@@ -51,8 +55,8 @@ def prepare_candidate(candidate, foreground, options, load_error=None):
     except OnePassCancelled:
         raise
     except Exception as error:
-        result.update(error_type=type(error).__name__, error=str(error), message="배경 정리 안 됨 · 원본 표시")
-    if sha(candidate.path) != raw_sha:
+        result.update(error_type=type(error).__name__, error=str(error), message="배경 정리 안 됨 · 마무리 결과 표시" if source_file is not None else "배경 정리 안 됨 · 원본 표시")
+    if sha(candidate.path) != raw_sha or sha(source) != source_sha:
         raise ValueError("배경 정리 중 생성 원본이 변경됐습니다.")
     result["seconds"] = time.monotonic() - started
     with record_path.open("x", encoding="utf-8") as stream:
@@ -61,7 +65,7 @@ def prepare_candidate(candidate, foreground, options, load_error=None):
 
 
 def prepare_backgrounds(batch, model_cache, *, cancelled=lambda: False, progress=lambda _: None,
-                        foreground_factory=AnimeForeground):
+                        foreground_factory=AnimeForeground, finishing=False):
     """Load the pinned local CPU model once for a batch; never download on fallback."""
     options = BackgroundOptions(Path(model_cache) / MODEL_RELATIVE)
     foreground, load_error = None, None
@@ -79,7 +83,11 @@ def prepare_backgrounds(batch, model_cache, *, cancelled=lambda: False, progress
             if cancelled():
                 raise OnePassCancelled("배경 정리를 취소했습니다. 생성 원본은 보관됩니다.")
             progress(f"상태: 배경 정리 중 · {i+1}/{len(batch.candidates)} · CPU 처리")
-            prepare_candidate(candidate, foreground, options, load_error)
+            source = None
+            if finishing:
+                from genai_lab.studio_finishing import finishing_source
+                source, _ = finishing_source(candidate)
+            prepare_candidate(candidate, foreground, options, load_error, source_file=source)
         if cancelled():
             raise OnePassCancelled("배경 정리를 취소했습니다. 생성 원본은 보관됩니다.")
         return batch

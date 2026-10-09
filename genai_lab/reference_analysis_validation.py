@@ -1,4 +1,4 @@
-"""Offline validation for animal-ear, hair-accessory, and tail analysis."""
+"""동물 귀·머리 장식·꼬리 분석을 오프라인에서 검증한다."""
 
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ FORBIDDEN_DATASET_DIRECTORIES = {
 
 
 class ReferencePartValidationError(ValueError):
-    """Validation data or analyzer output violates the offline contract."""
+    """검증 자료나 분석 결과가 오프라인 규칙을 위반한 오류다."""
 
 
 @dataclass(frozen=True)

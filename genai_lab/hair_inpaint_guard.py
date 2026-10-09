@@ -1,4 +1,4 @@
-"""Pixel and feature gates for isolated hair inpaint promotion."""
+"""머리카락 인페인트 채택에 필요한 픽셀·특징 검사를 관리한다."""
 
 from __future__ import annotations
 
@@ -140,7 +140,7 @@ def _difference_metrics(base, proposed, region, threshold):
 
 def guarded_hair_composite(
         generated_image, proposed, repair_mask, protected_mask, settings):
-    """Composite a hair proposal while preserving every protected pixel."""
+    """보호한 모든 픽셀을 유지하면서 머리 보정 후보를 합성한다."""
     if generated_image.size != proposed.size:
         raise ValueError("헤어 보정 전후 이미지 크기가 다릅니다.")
     size = generated_image.size
@@ -262,7 +262,7 @@ def evaluate_hair_promotion(
         source_image, source_mask, before_image, before_hair_mask,
         before_face_mask, corrected_image, after_hair_mask, after_face_mask,
         settings):
-    """Evaluate color plus same-coordinate pre/post hair geometry."""
+    """색과 같은 좌표의 보정 전후 머리 모양을 평가한다."""
     report = {
         "version": "hair_promotion_gate_v1",
         "status": "disabled" if not settings.enabled else "running",

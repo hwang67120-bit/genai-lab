@@ -1,4 +1,4 @@
-"""Design-reference regeneration, without garment erasure or body reconstruction."""
+"""의상 디자인 참조로 재생성한다. 의상 제거나 인체 복원은 하지 않는다."""
 
 from dataclasses import replace
 from genai_lab.request import CharacterFramingType
@@ -7,7 +7,7 @@ from genai_lab.reference_prompt_budget import build_reference_prompt
 from genai_lab.reference_tag_policy import (
     excluded_garment_tag, CHARACTER_GENDERS, normalize_tag,
 )
-# Keep this name importable for existing native Base consumers.
+# 기존 기준 이미지 사용처에서 이 이름을 계속 가져올 수 있게 유지한다.
 from genai_lab.gender_prompt import (
     BASE_GENDER_CONDITION_TAGS, prepare_gender_character_tags,
     prepare_gender_negative_terms,

@@ -1,8 +1,4 @@
-"""Presentation-only workspace for the existing generation and approval workflow.
-
-Split panes retain their actions when resized; input details scroll independently.
-No generation settings, approvals, or model lifetimes are owned by this module.
-"""
+"""기존 생성·승인 흐름의 화면 표시만 담당한다. 크기를 바꿔도 각 작업은 유지하고 입력 상세는 별도로 스크롤한다. 생성 설정·승인·모델 수명은 관리하지 않는다."""
 from pathlib import Path
 
 from PySide6.QtCore import QSize, Qt
@@ -14,7 +10,7 @@ from PySide6.QtWidgets import (
 
 
 class ImagePreview(QLabel):
-    """Keep the original pixmap so resizing never rescales an already small copy."""
+    """원본 이미지를 보관해 크기 변경 때 작은 사본을 다시 확대하지 않게 한다."""
 
     def __init__(self, text="", parent=None):
         super().__init__(text, parent)
@@ -49,7 +45,7 @@ class ImagePreview(QLabel):
 
 
 class ReferencePreview(ImagePreview):
-    """Small, bounded file preview. A failed preview never changes input validation."""
+    """파일 미리보기 크기를 제한한다. 미리보기 실패가 입력 검증을 바꾸지 않는다."""
 
     def __init__(self, title):
         super().__init__(title)
@@ -133,7 +129,7 @@ def _reference_row(layout, preview, label, select, clear=None):
 
 
 def build_studio(window, framing_options, clothing_mode):
-    """Attach existing controller widget names to a two-pane, scrollable studio."""
+    """기존 제어기 위젯 이름을 두 영역의 스크롤 가능한 작업실에 연결한다."""
     central = QWidget()
     central.setObjectName("studio")
     central.setFont(QFont("Malgun Gothic", 10))
@@ -202,18 +198,27 @@ def build_studio(window, framing_options, clothing_mode):
     window.studio_proportion_checkbox.setObjectName("studio_proportion_checkbox")
     window.studio_proportion_checkbox.setChecked(False)
     box.addWidget(window.studio_proportion_checkbox)
-    window.studio_mode_note = _label("자세는 적용하지 않습니다. 저장한 뒤 선택적으로 편집할 수 있습니다.", "muted")
+    window.studio_shoulder_checkbox = QCheckBox("어깨 보정(마른 체형 각진 어깨 줄이기)")
+    window.studio_shoulder_checkbox.setObjectName("studio_shoulder_checkbox")
+    window.studio_shoulder_checkbox.setChecked(False)
+    window.studio_shoulder_checkbox.setEnabled(False)
+    window.studio_shoulder_checkbox.setToolTip("모델이 어깨를 넓게 그리는 경향을 줄입니다. 어깨가 넓은 캐릭터에는 효과가 없거나 좁아질 수 있습니다.")
+    window.studio_proportion_checkbox.toggled.connect(window.studio_shoulder_checkbox.setEnabled)
+    window.studio_proportion_checkbox.toggled.connect(lambda enabled: None if enabled else window.studio_shoulder_checkbox.setChecked(False))
+    box.addWidget(window.studio_shoulder_checkbox)
+    window.studio_mode_note = _label("자세를 따로 지정하지 않고 생성합니다. 자세 변경은 이번 범위에서 제외합니다.", "muted")
     box.addWidget(window.studio_mode_note)
     window.studio_proportion_checkbox.toggled.connect(lambda enabled: window.studio_mode_note.setText(
         "원본 자세와 확인한 머리 윤곽을 참고합니다. 생성량은 2배이며, 다른 캐릭터의 효과는 아직 미검증입니다."
-        if enabled else "자세는 적용하지 않습니다. 저장한 뒤 선택적으로 편집할 수 있습니다."))
+        if enabled else "자세를 따로 지정하지 않고 생성합니다. 자세 변경은 이번 범위에서 제외합니다."))
     input_layout.addWidget(card)
 
     card, box = _card("완성 이미지로 이어서 작업", "필요할 때 선택하는 별도 기능입니다.")
     window.qwen_pose_button = _button("저장한 이미지 자세 바꾸기", window.open_qwen_pose_editor)
     window.qwen_pose_button.setToolTip("실행 설정, 승인한 완성 이미지, 자세 골격을 선택합니다.")
-    box.addWidget(window.qwen_pose_button)
-    box.addWidget(_label("승인한 이미지와 자세 골격을 불러와 보존할 항목을 확인합니다.", "muted"))
+    # D-077: 처리 경로는 보존하되 이번 배포에서는 자세 편집을 표시하지 않는다.
+    window.qwen_pose_button.setParent(window)
+    window.qwen_pose_button.hide()
     window.external_candidate_button = _button("외부 결과 불러오기 (선택 기능)", window.import_external_candidate)
     box.addWidget(window.external_candidate_button)
     window.external_candidate_notice = _label(
@@ -250,7 +255,7 @@ def build_studio(window, framing_options, clothing_mode):
     window.refinement_diagnostic_paths = {}
     window.refinement_diagnostic_summary = ""
 
-    # Compatibility controls retain their controller contracts, including the inactive pose route.
+    # 비활성 자세 경로를 포함해 호환 위젯의 제어기 연결 규칙을 유지한다.
     window.body_comparison_button = _button("캐릭터 신체 비교 시작", window.start_character_body_comparison, enabled=False)
     window.body_comparison_button.setParent(window)
     window.body_comparison_button.hide()
@@ -261,7 +266,7 @@ def build_studio(window, framing_options, clothing_mode):
     window.pose_estimation_button.setParent(window)
     window.pose_estimation_button.hide()
     if clothing_mode:
-        window.pose_label.setText("생성 단계의 자세 참조는 현재 사용하지 않습니다. 완성 이미지의 자세 편집은 Qwen에서 진행합니다.")
+        window.pose_label.setText("자세 변경은 향후 외부 연동 단계에서 제공합니다. 원본 비율 참고는 유지합니다.")
     box.addWidget(window.pose_label)
     for button in (window.pose_button, window.clear_pose_button):
         box.addWidget(button)
@@ -305,6 +310,13 @@ def build_studio(window, framing_options, clothing_mode):
     image_actions.addWidget(window.open_original_size_button)
     image_actions.addWidget(window.studio_raw_button)
     result.addLayout(image_actions)
+    window.identity_report_label = _label("", "muted")
+    window.identity_report_label.setWordWrap(True)
+    window.identity_report_label.hide()
+    window.identity_report_button = QPushButton("측정 자세히 보기")
+    window.identity_report_button.hide()
+    image_actions.addWidget(window.identity_report_button)  # 미리보기 동작과 같은 행에 둬 1024×700에서 미리보기 높이를 유지한다.
+    result.addWidget(window.identity_report_label)
     window.studio_background_notice = _label("", "muted")
     window.studio_background_notice.setWordWrap(True)
     window.studio_background_notice.hide()
@@ -369,6 +381,8 @@ QWidget#studio QPushButton#primaryAction:hover { background: #284daa; }
 QWidget#studio QPushButton:disabled, QWidget#studio QPushButton#primaryAction:disabled { background: #edf0f5; border-color: #e2e7ef; color: #8b96a8; }
 QWidget#studio QPushButton:focus, QWidget#studio QToolButton:focus, QWidget#studio QComboBox:focus { border: 2px solid #365ec2; }
 QWidget#studio QComboBox { background: white; color: #243148; border: 1px solid #cdd6e4; border-radius: 6px; padding: 8px; }
+QWidget#studio QCheckBox { color: #243148; background: transparent; }
+QWidget#studio QCheckBox:disabled { color: #8b96a8; }
 QWidget#studio QScrollArea, QWidget#studio QScrollArea > QWidget > QWidget { background: transparent; }
 QWidget#studio QSplitter::handle { background: #f3f5f8; }
 QWidget#studio QSplitter::handle:hover { background: #dce6f8; }

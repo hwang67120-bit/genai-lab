@@ -1,4 +1,4 @@
-"""Diagnostic-only person counting for generated images."""
+"""생성 결과의 사람 수를 진단용으로만 센다."""
 from __future__ import annotations
 
 from dataclasses import dataclass

@@ -902,7 +902,7 @@ def validate_catvton_local_settings(
 def resolve_clothing_category_from_tags(
     tags,
 ) -> ClothingCategory | None:
-    """Map approved garment semantics to the legacy worker input, if clear."""
+    """승인 의상의 의미가 명확할 때만 구형 실행기 입력으로 변환한다."""
     normalized = {
         str(value).strip().lower().replace("_", " ")
         for value in (tags or ())

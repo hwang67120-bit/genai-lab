@@ -1,4 +1,4 @@
-"""Local-only settings for the explicitly requested one-pass generator."""
+"""사용자가 명시적으로 요청한 1회 생성의 로컬 설정이다."""
 from dataclasses import dataclass, field
 import math
 from pathlib import Path
@@ -7,7 +7,7 @@ from genai_lab.onepass_prompt_settings import OnePassPromptSettings
 
 
 def scheduler_config():
-    """Frozen exposure-v2 A.scheduler_config; never read experiment outputs."""
+    """확정한 exposure-v2 A.scheduler_config를 사용하며 시험 결과 폴더를 읽지 않는다."""
     return {
         "num_train_timesteps": 1000, "beta_start": 0.00085, "beta_end": 0.012,
         "beta_schedule": "scaled_linear", "trained_betas": None,
@@ -22,7 +22,7 @@ def scheduler_config():
 
 @dataclass(frozen=True)
 class OnePassGenerationSettings:
-    # Share the already pinned tokenizer/model snapshot instead of a second root.
+    # 이미 고정한 토크나이저·모델 자료를 공유하며 별도 루트를 만들지 않는다.
     model_root: Path = field(default_factory=lambda: OnePassPromptSettings().tokenizer_root)
     adapter_root: Path = Path("D:/genai-cache/models/t2i-adapter-openpose-sdxl-1.0")
     ip_root: Path = Path(
@@ -58,7 +58,7 @@ class OnePassGenerationSettings:
 
     @property
     def adapter_factor(self):
-        # Installed Diffusers uses int(steps * factor). Stay just inside the bin.
+        # 설치된 Diffusers가 int(steps * factor)를 쓰므로 같은 정수 구간 안쪽 값을 사용한다.
         factor = (self.adapter_steps + 0.25) / self.steps
         if int(self.steps * factor) != self.adapter_steps:
             raise ValueError("어댑터 단계 수를 정확히 표현할 수 없습니다.")

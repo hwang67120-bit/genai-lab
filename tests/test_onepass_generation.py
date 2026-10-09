@@ -1,4 +1,4 @@
-"""CPU-only stage 4 contracts. No model loads, CUDA, or generated model images."""
+"""4단계 CPU 규칙 검사다. 모델 로드·CUDA·모델 생성 이미지는 없다."""
 import builtins
 from dataclasses import replace
 import hashlib
@@ -80,7 +80,7 @@ class FakeUNet(torch.nn.Module):
 
     def forward(self, *, down_intrablock_additional_residuals):
         if down_intrablock_additional_residuals is not None:
-            down_intrablock_additional_residuals.clear()  # Diffusers consumes the list.
+            down_intrablock_additional_residuals.clear()  # Diffusers가 목록을 소비한다.
         return 7
 
 
@@ -141,7 +141,7 @@ class FakeLegacyPipeline(FakePipeline):
 
 
 class FakeTorch:
-    # Allows the real backend orchestration to run without ever calling CUDA.
+    # CUDA를 호출하지 않고 실제 실행기 조립 흐름을 검사할 수 있게 한다.
     class cuda:
         @staticmethod
         def synchronize():
@@ -212,7 +212,7 @@ def test_real_backend_resets_each_seed_and_observes_actual_schedule(
         assert len(record["unet_calls"]) == 28
         assert record["raw_sha256"] == hashlib.sha256(candidate.path.read_bytes()).hexdigest()
         assert record["inputs"]["face_sha256"] == inputs.face_sha256
-    # RGB channels and pixel data arrive unchanged.
+    # RGB 채널과 픽셀 자료가 변경 없이 전달된다.
     assert value.pipe.images[0][0].getpixel((0, 0)) == (1, 2, 3)
 
 
@@ -640,7 +640,7 @@ def test_without_pose_builder_uses_existing_assembler_without_pose_tags(inputs,t
     with pytest.raises(ValueError):
         generation.prepare_onepass_inputs(choice='choose_other_image',**kwargs)
     with pytest.raises(TypeError):
-        generation.prepare_onepass_inputs(**kwargs)  # No default choice.
+        generation.prepare_onepass_inputs(**kwargs)  # 기본 선택값은 없다.
 
 
 def test_pose_mode_has_no_implicit_default(inputs):

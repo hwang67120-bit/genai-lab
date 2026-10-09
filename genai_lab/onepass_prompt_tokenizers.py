@@ -1,4 +1,4 @@
-"""Explicit local tokenizer I/O, separate from pure prompt assembly."""
+"""로컬 토크나이저 입출력을 명시적으로 처리하며 순수 프롬프트 조립과 분리한다."""
 from pathlib import Path
 from genai_lab.onepass_prompt_settings import OnePassPromptSettings
 

@@ -1,4 +1,4 @@
-"""Bind finishing to the face and IP model verified by the original generation."""
+"""마무리에 사용할 얼굴과 얼굴 참조 모델을 원래 생성에서 검증한 자료로 고정한다."""
 from dataclasses import dataclass
 import hashlib
 import io
@@ -29,7 +29,7 @@ class FinishingFaceReference:
 
 
 def checked_reference(batch, settings, *, face_file=None):
-    """An optional copied file is allowed only when its bytes match every raw record."""
+    """복사한 파일을 선택적으로 쓰려면 모든 원본 기록과 바이트가 같아야 한다."""
     require(bool(batch.candidates), "마무리 후보가 없습니다.")
     expected_models = settings.model_record()
     expected_face = None
@@ -54,7 +54,7 @@ def checked_reference(batch, settings, *, face_file=None):
 
 
 def observe_face_reference(module, args, kwargs, calls):
-    """Read actual attention scales and image conditioning before each UNet call."""
+    """UNet 호출 전에 실제 어텐션 강도와 이미지 조건을 읽는다."""
     scales = []
     for processor in module.attn_processors.values():
         if hasattr(processor, "scale"):

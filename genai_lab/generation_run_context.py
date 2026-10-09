@@ -1,4 +1,4 @@
-"""Per-request artifact isolation for product generation runs."""
+"""제품 생성 요청마다 결과 파일을 별도 폴더로 분리한다."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -11,7 +11,7 @@ from uuid import uuid4
 
 
 class GenerationRunContextError(ValueError):
-    """Run directories or artifact contracts are unsafe or inconsistent."""
+    """실행 폴더나 결과 파일 규칙이 안전하지 않거나 서로 맞지 않는 오류다."""
 
 
 def _project_path(value: object, project_root: Path) -> Path:
@@ -55,7 +55,7 @@ def sha256_file(path: Path) -> str:
 
 @dataclass
 class GenerationRunContext:
-    """Owns one request's paths and append-only diagnostic metadata."""
+    """한 요청의 경로와 추가만 가능한 진단 기록을 관리한다."""
 
     run_id: str
     refinement_mode: str | None

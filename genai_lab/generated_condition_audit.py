@@ -1,7 +1,5 @@
-"""Tri-state post audit against the approved condition contract.
-
-Only checks backed by an output analyzer may PASS or FAIL. Missing analyzers are
-UNRESOLVED rather than guessed from the generated image.
+"""승인 조건에 대해 통과·실패·미확정으로 사후 검사한다. 결과 분석기가 뒷받침하는 검사만 PASS·FAIL로 판정하며 분석기가 없으면 추측하지 않고
+UNRESOLVED로 둔다.
 """
 
 

@@ -1,4 +1,4 @@
-"""Owned SDXL img2img pipeline, optional verified face reference, no downloads or fallback."""
+"""SDXL 이미지 재처리 모델을 관리한다. 검증한 얼굴 참조는 선택적으로 쓰며 다운로드나 대체 실행은 없다."""
 import inspect
 from contextlib import nullcontext
 import time

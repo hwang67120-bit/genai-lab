@@ -1,8 +1,5 @@
-"""Visible 2D proportions and explicit review; no model loading or body inference.
-
-A reviewed head rectangle must exclude hair, ears and horns. The bottom marker
-is a visible foot sole, never an ankle substituted for a foot. These are image
-projection measurements, not reconstructed anatomy or physical height.
+"""보이는 2차원 비율을 측정하고 사용자 확인을 받는다. 모델 로드나 숨은 체형 추정은 없다. 머리 상자는 머리카락·귀·뿔을 제외하고, 바닥 표시는 보이는
+발바닥을 사용한다. 발목으로 대체하지 않는다. 수치는 이미지상의 비율이며 실제 키나 복원한 인체가 아니다.
 """
 from dataclasses import asdict, dataclass
 import hashlib
@@ -55,11 +52,8 @@ class BodyProportionMeasurement:
 
 def measure_visible_proportions(image_file, *, head_box, sole_y=None,
                                 shoulders=None, geometry_reviewed=False):
-    """Measure explicit markers on this file. Missing/occluded markers stay None.
-
-    geometry_reviewed affirms a consistent head definition, visible sole and
-    shoulder markers, and a sufficiently upright/front view for this comparison.
-    Callers must never set it from detector confidence alone.
+    """이 파일에서 지정한 표식만 측정한다. 없거나 가려진 표식은 None으로 둔다. geometry_reviewed는 머리 정의·발바닥·어깨 표시와 비교 가능한
+    정면 자세를 사람이 확인했다는 뜻이며, 검출 신뢰도만으로 설정하지 않는다.
     """
     from PIL import Image
     from io import BytesIO
@@ -103,10 +97,8 @@ def measure_visible_proportions(image_file, *, head_box, sole_y=None,
 
 
 def suggest_proportions_from_pose(joints, head_box, image_size, *, confidence=0.30):
-    """Inspection-only detector proxy. Never produces a confirmed reference.
-
-    Existing DWPose and head detections may be supplied without another model
-    load. The returned ankle ratio deliberately has a different name/unit scope.
+    """검출 결과를 확인용으로만 반환하며 승인된 참조를 만들지 않는다. 기존 DWPose와 머리 검출 자료를 재사용할 수 있다. 발목 기준 비율은 발바닥 기준과
+    혼동하지 않도록 이름과 범위를 구분한다.
     """
     threshold = _number(confidence, 'confidence')
     if not 0 <= threshold <= 1:
@@ -185,7 +177,7 @@ class BodyProportionReference:
 
 
 def compare_body_proportions(reference, observed, *, relative_tolerance=0.05):
-    """Comparison evidence only; tolerance is provisional, never product approval."""
+    """비교 근거만 제공한다. 허용 오차는 임시 기준이며 제품 승인이 아니다."""
     reference.require_confirmed()
     if not isinstance(observed, BodyProportionMeasurement):
         raise TypeError('생성 결과의 비율 측정값이 필요합니다.')

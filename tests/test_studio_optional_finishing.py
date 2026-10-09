@@ -1,4 +1,4 @@
-"""CPU integration: same selected raw, mandatory IP, reversible review and tail coordinates."""
+"""선택 원본 유지·필수 얼굴 참조·되돌릴 수 있는 검토·꼬리 좌표를 CPU 통합 검사한다."""
 from dataclasses import asdict, replace
 import json
 from pathlib import Path
@@ -87,8 +87,8 @@ def test_single_selected_raw_unchanged_prompt_and_face_reference(tmp_path, monke
     assert record["face_reference"] == "on" and record["ip_scale"] == .9
     assert record["contract"]["strength"] == .35 and record["contract"]["scale"] == 1.5
     assert record["contract"]["steps"] == 28 and record["contract"]["max_reserved_gib"] == 6.5
-    assert record["prompt"] == json.loads(result.candidate.record_path.read_text())["prompt"]
-    assert result.optional_finishing is None  # Completing an operation is not adoption.
+    assert record["prompt"] == json.loads(result.candidate.record_path.read_text(encoding="utf-8"))["prompt"]
+    assert result.optional_finishing is None  # 처리 완료는 결과 채택을 뜻하지 않는다.
     assert StudioRuntime().finishing is False and StudioRuntime().quality_tags is False
 
 
@@ -101,7 +101,7 @@ def test_selection_export_sha_and_audit(tmp_path, monkeypatch, adopt):
     target = result.export(tmp_path / "saved.png")
     expected = Path(info["product_file"]) if adopt else original
     assert target.read_bytes() == expected.read_bytes()
-    audit = json.loads(target.with_suffix(".review.json").read_text())
+    audit = json.loads(target.with_suffix(".review.json").read_text(encoding="utf-8"))
     assert audit["finishing_applied"] is adopt and audit["sha256"] == sha(expected)
     if adopt:
         assert audit["finishing"]["face_reference"] == "on"
@@ -124,7 +124,7 @@ def test_incomplete_optional_does_not_replace_original(tmp_path, monkeypatch, fa
     with pytest.raises((OnePassCancelled, RuntimeError, ValueError)):
         optional.finish_selected(result.candidate, result.basis_path, result.verify_basis(), tmp_path/"failed", runtime,
                                  cancelled=lambda: failure == "cancel")
-    state = json.loads((tmp_path/"failed/optional-finishing.json").read_text())
+    state = json.loads((tmp_path/"failed/optional-finishing.json").read_text(encoding="utf-8"))
     assert state["status"] == ("cancelled" if failure == "cancel" else "failed")
     with pytest.raises((KeyError, ValueError)):
         result.adopt_finishing(tmp_path/"failed")
@@ -138,7 +138,7 @@ def test_changed_artifact_rejected_before_adoption(tmp_path, monkeypatch, change
     elif changed == "source": result.raw_path.write_bytes(b"changed")
     else:
         path = Path(info["candidate_file"]).with_name("finishing.json")
-        data = json.loads(path.read_text()); data["ip_scale"] = 0
+        data = json.loads(path.read_text(encoding="utf-8")); data["ip_scale"] = 0
         write_json(path,data)
     with pytest.raises(ValueError): result.adopt_finishing(info["directory"])
     assert result.optional_finishing is None
@@ -191,7 +191,7 @@ def test_tail_edit_uses_finished_dimensions_and_disables_reverse(tmp_path, monke
     result.approve(checks())
     saved = result.export(tmp_path/"tail-saved.png")
     assert saved.read_bytes() == product.read_bytes()
-    assert json.loads(saved.with_suffix(".review.json").read_text())["finishing_applied"] is True
+    assert json.loads(saved.with_suffix(".review.json").read_text(encoding="utf-8"))["finishing_applied"] is True
 
 
 @pytest.mark.parametrize("outcome", ["original", "adopt", "cancel", "failure"])
@@ -265,7 +265,7 @@ def test_mismatched_generation_conditions_stop_before_model_load(tmp_path, monke
     batch, runtime = inputs(tmp_path,1)
     result = StudioResults(batch)
     c = result.candidate
-    data = json.loads(c.record_path.read_text())
+    data = json.loads(c.record_path.read_text(encoding="utf-8"))
     if changed == "model": data["models"]["base"]["revision"] = "different"
     elif changed == "settings": data["settings"]["guidance_scale"] = 6.0
     else: (tmp_path/"face.png").write_bytes(b"changed")
@@ -273,7 +273,7 @@ def test_mismatched_generation_conditions_stop_before_model_load(tmp_path, monke
     monkeypatch.setattr(optional,"finish_batch",lambda *a,**k:pytest.fail("model load forbidden"))
     with pytest.raises(ValueError):
         optional.finish_selected(c,result.basis_path,result.verify_basis(),tmp_path/"blocked",runtime)
-    assert json.loads((tmp_path/"blocked/optional-finishing.json").read_text())["status"] == "failed"
+    assert json.loads((tmp_path/"blocked/optional-finishing.json").read_text(encoding="utf-8"))["status"] == "failed"
 
 
 def test_cancellation_after_partial_output_keeps_original(tmp_path, monkeypatch):
@@ -292,5 +292,5 @@ def test_cancellation_after_partial_output_keeps_original(tmp_path, monkeypatch)
         optional.finish_selected(result.candidate,result.basis_path,result.verify_basis(),tmp_path/"interrupted",
                                  runtime,cancelled=lambda:cancelled[0])
     assert (tmp_path/"interrupted/seed-1/finished.png").is_file()
-    assert json.loads((tmp_path/"interrupted/optional-finishing.json").read_text())["status"] == "cancelled"
+    assert json.loads((tmp_path/"interrupted/optional-finishing.json").read_text(encoding="utf-8"))["status"] == "cancelled"
     assert result.current_path.read_bytes() == prior and result.optional_finishing is None

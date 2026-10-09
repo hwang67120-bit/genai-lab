@@ -21,8 +21,8 @@ from gui_main import (
     ClothingMaskExtractionWorker, GenAILabWindow, create_pil_image_pixmap,
 )
 
-# Keep one application alive across all GUI cases; destroying it between
-# worker tests invalidates Qt's queued-signal delivery.
+# 화면 검사 전체에서 앱 하나를 유지한다. 작업자 시험 사이에 앱을
+# 종료하면 Qt의 대기 신호 전달이 깨진다.
 APPLICATION = QApplication.instance() or QApplication([])
 
 
@@ -127,7 +127,7 @@ def test_sam_worker_finishes_and_selected_candidate_is_owned():
         dialog = TargetMaskReviewDialog(source, ClothingMaskExtractionSettings(),
             FakeRegionDialog, FakeMaskDialog, FakeWorker, create_pil_image_pixmap)
         dialog._select_region("clothing")
-        dialog._select_region("clothing")  # running worker must not duplicate
+        dialog._select_region("clothing")  # 실행 중인 작업자를 중복 생성하지 않는다.
         deadline = monotonic() + 5
         while dialog._thread is not None and monotonic() < deadline:
             app.processEvents()
@@ -266,7 +266,7 @@ def test_additions_accumulate_and_exclusion_is_last_edit():
                 assert dialog.excluded_mask.getpixel((10, 10)) == 0
                 dialog._no_special_protection()
                 dialog._reset_corrections()
-                assert dialog.approve_button.isEnabled()  # automatic mode needs no manual mask
+                assert dialog.approve_button.isEnabled()  # 자동 모드는 수동 마스크가 필요 없다.
                 dialog._approve()
                 assert dialog.approved_masks.use_automatic_base
                 assert dialog.approved_masks.layered_priority

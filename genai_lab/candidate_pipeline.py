@@ -1,4 +1,4 @@
-"""Adaptive candidate selection and one-winner refinement policy."""
+"""후보 선택과 한 장만 정밀화하는 정책을 관리한다."""
 
 from dataclasses import dataclass
 from enum import Enum
@@ -106,8 +106,8 @@ def resolve_candidate_pipeline(config, configured_candidate_count):
     final_components = components(
         "final_similarity_components", ("character", "garment", "vibe"))
     if output_coordinate_similarity and "hair" in base_components:
-        # A missing output hair mask must fail closed instead of falling back to
-        # the source-image coordinates.
+        # 결과 머리카락 마스크가 없으면 중단한다. 원본 이미지 좌표를
+        # 대체값으로 사용하지 않는다.
         require_all_scores = True
     if type(target) is not int or type(maximum) is not int:
         raise ValueError("유효 후보 수와 최대 시도 횟수는 정수여야 합니다.")
@@ -134,7 +134,7 @@ def resolve_candidate_pipeline(config, configured_candidate_count):
 
 def select_retry_phase(initial_gender_conflicts,
                        initial_quality_failures, settings):
-    """Choose one bounded retry phase from the complete initial pool."""
+    """초기 후보 전체를 기준으로 제한된 재시도 단계 하나를 고른다."""
     gender = tuple(bool(value) for value in initial_gender_conflicts)
     quality = tuple(bool(value) for value in initial_quality_failures)
     if len(gender) != settings.maximum_attempts or len(quality) != len(gender):
@@ -147,7 +147,7 @@ def select_retry_phase(initial_gender_conflicts,
 
 
 def summarize_candidate_failures(quarantined, settings, *, retry_phase=None):
-    """Aggregate gate evidence into one machine-readable terminal diagnosis."""
+    """검사 근거를 모아 프로그램이 읽을 수 있는 최종 진단을 만든다."""
     stage_counts = Counter()
     reason_counts = Counter()
     categories = Counter()
@@ -220,7 +220,7 @@ HARD_STRUCTURE_REASONS = {
 
 
 def similarity_percentages(scores, component_names):
-    """Return display diagnostics; values are indicators, not probabilities."""
+    """화면용 진단을 반환한다. 값은 지표이며 확률이 아니다."""
     result = {}
     for name in component_names:
         value = (scores or {}).get(name)

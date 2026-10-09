@@ -1,4 +1,4 @@
-"""CPU-only Windows sharing failures are injected; also runnable on Linux."""
+"""Windows 파일 공유 실패를 CPU에서 주입한다. Linux에서도 실행할 수 있다."""
 import json
 from pathlib import Path
 import threading

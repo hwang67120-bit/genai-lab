@@ -1,4 +1,4 @@
-"""Sequential GPU ownership and an explicit separate-process Qwen edit request."""
+"""GPU를 순서대로 점유하며 별도 프로세스로 Qwen 편집 요청을 실행한다."""
 from dataclasses import asdict
 import gc
 import hashlib
@@ -20,7 +20,7 @@ from genai_lab.qwen_record_io import write_json, latest_progress, finalize_stopp
 
 
 def assert_parent_gpu_released():
-    """Do not initialize CUDA for this check. Allocations indicate live prior tensors."""
+    """이 검사에서는 CUDA를 초기화하지 않는다. 할당된 메모리는 이전 텐서가 남았다는 신호다."""
     gc.collect()
     torch = sys.modules.get("torch")
     if torch is None or not torch.cuda.is_initialized():
@@ -35,11 +35,8 @@ def assert_parent_gpu_released():
 
 
 class PoseEditWorkflow:
-    """Generation close -> analysis close -> user confirmation -> Qwen.
-
-    Own all prior GPU resource close callbacks. Running upstream tasks must be
-    rejected by the host before constructing this controller. Release failures
-    are terminal; a boolean 'released' supplied by a caller is not accepted.
+    """생성 해제 → 분석 해제 → 사용자 확인 → Qwen 순서다. 이전 GPU 자원의 해제 함수를 관리한다. 상위 작업이 실행 중이면 이 제어기 생성 전에
+    차단해야 한다. 해제 실패는 중단 사유이며 호출부가 전달한 released 값만 믿지 않는다.
     """
     def __init__(self, generation_releases=(), *, gpu_probe=assert_parent_gpu_released):
         self.releases = list(generation_releases)
@@ -128,11 +125,8 @@ def make_request(spec, skeleton_path, skeleton_sha256, *, instructions=PoseEditI
 
 
 def product_preview(raw_path, destination, *, basis_size):
-    """Map raw pixels to the approved basis canvas; never alter raw.
-
-    Pillow resize uses pixel centers: x_out = (x_in + .5)*sx - .5
-    (and likewise for y). This restores the canvas mapping, not changes
-    made by the model. No letterboxing or inferred feature alignment.
+    """Qwen 원본 픽셀을 승인 기준 화면으로 옮기며 원본은 바꾸지 않는다. Pillow의 픽셀 중심 계산 x_out = (x_in + .5)*sx - .5를
+    사용하며 y도 같다. 화면 좌표만 복원하며 모델이 바꾼 특징을 되돌리지 않는다. 여백 추가나 특징 기반 정렬은 없다. 참고:
     https://pillow.readthedocs.io/en/stable/reference/Image.html#PIL.Image.Image.resize
     """
     if (not isinstance(basis_size, (tuple, list)) or len(basis_size) != 2
@@ -163,13 +157,13 @@ def run_pose_edit(request, directory, workflow, *, cancelled=lambda: False, pope
 
 def _run_image_edit(request, directory, workflow, spec, *, cancelled=lambda: False,
                     popen=subprocess.Popen, on_progress=lambda _: None):
-    """Shared process lifecycle; caller validates its own pose or tail contract."""
+    """프로세스 수명 관리 공통부다. 호출부가 자세·꼬리 입력 규칙을 검증한다."""
     settings = QwenPoseSettings(**request["settings"])
     if cancelled():
         raise RuntimeError("실행 전 취소")
     if not Path(settings.python_executable).is_file():
         raise FileNotFoundError("설정된 Qwen Python 실행 파일이 없습니다. 설치하지 않습니다.")
-    # Bind output coordinates to the approved bytes, before starting the worker.
+    # 작업자 시작 전에 결과 좌표를 승인한 이미지 바이트에 고정한다.
     basis_data = Path(spec.image_path).read_bytes()
     if hashlib.sha256(basis_data).hexdigest() != spec.image_sha256:
         raise ValueError("승인 기준 이미지 SHA 불일치")

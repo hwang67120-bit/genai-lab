@@ -1,10 +1,10 @@
-"""Desktop proportion preparation: immutable CPU inputs and explicit head approval."""
+"""데스크톱 비율 준비 단계다. CPU 입력은 고정하고 머리를 명시적으로 승인받는다."""
 from dataclasses import asdict, replace
 from pathlib import Path
 import json
 from genai_lab.onepass_pose import InputDecision
 from genai_lab.proportion_inputs import (HeadOutline, ProportionOptions, FOREGROUND_SHA,
-    json_value, sha, require, validate_head)
+    json_value, sha, require, validate_head, neck_gap_only)
 from genai_lab.qwen_record_io import write_json
 
 
@@ -57,7 +57,7 @@ def restore_head(record):
 
 
 def confirmed_options(pose, draft, runtime):
-    """Called only after the head review dialog accepts; it cannot confirm another pose."""
+    """머리 확인 창이 승인된 뒤에만 호출한다. 다른 자세를 대신 승인할 수 없다."""
     from types import SimpleNamespace
     from genai_lab.studio_background import MODEL_RELATIVE
     verify_pose(pose)
@@ -65,11 +65,14 @@ def confirmed_options(pose, draft, runtime):
     require(head.confirmed is False, "머리 초안의 확인 상태가 잘못됐습니다.")
     require(head.normalized_sha256 == pose["normalized_sha256"], "다른 정규화 이미지의 머리 윤곽입니다.")
     require(list(head.nose) == pose["nose"] and list(head.neck) == pose["neck"], "코·목 좌표가 변경됐습니다.")
-    head = replace(head, confirmed=True)
+    error = draft.get("geometry_error")
+    override = "user_confirmed" if error and neck_gap_only(error) else None
+    head = replace(head, confirmed=True, geometry_override=override)
     validate_head(head, SimpleNamespace(control_sha256=pose["control_sha256"]), (736,1232))
     options = ProportionOptions(True, head, runtime.proportion_sketch_root,
         runtime.model_cache / MODEL_RELATIVE, FOREGROUND_SHA)
     write_json(Path(head.contour_file).parent / "user-confirmation.json", json_value({
         "head": asdict(head), "pose": pose, "box": draft["box"], "face_point": draft["face_point"],
-        "reviewer": "user", "automatic_approval": False}))
+        "reviewer": "user", "automatic_approval": False,
+        "geometry_override": override, "geometry_error_confirmed_past": error if override else None}))
     return options

@@ -1,10 +1,10 @@
-"""Adapters for existing analysis outputs; all candidates remain unconfirmed."""
+"""기존 분석 결과를 연결한다. 모든 후보는 미확정 상태로 유지한다."""
 from dataclasses import replace
 from genai_lab.qwen_preservation import file_sha
 
 
 def report_candidates(source, image_sha256, report):
-    """Retain failure/absence uncertainty; never infer count, stripe placement or gender."""
+    """실패·미검출의 불확실성을 보존한다. 개수·무늬 위치·성별은 추정하지 않는다."""
     candidates = []
     def add(fact, english="", location="미확정", issues=()):
         candidates.append({"fact_ko": str(fact), "english": english, "check_at": location,
@@ -28,7 +28,7 @@ def report_candidates(source, image_sha256, report):
                 str(row.get("semantic_location", row.get("location", "미확정"))),
                 ("model_candidate_not_fact",))
     elif source in ("extra_parts_analysis", "accessory_analysis"):
-        # Preserve the whole report for inspection; detections cannot certify counts/shapes.
+        # 검출만으로 개수·모양을 확정할 수 없으므로 전체 보고서를 검토용으로 보존한다.
         add("귀·꼬리/장신구 검출 근거를 확인하고 보이는 형태를 입력하세요", "", "검출 영역",
             ("count_and_shape_need_user_input",))
     if not candidates:
@@ -38,10 +38,8 @@ def report_candidates(source, image_sha256, report):
 
 
 class FinishedImageAnalyzer:
-    """CPU WD analysis of the APPROVED finished image, with optional saved masks.
-
-    No new segmentation runs. Missing masks produce manual-entry candidates.
-    Existing image-bound reports can be passed to report_candidates separately.
+    """승인된 완성 이미지를 CPU WD로 분석하며 저장 마스크를 선택적으로 쓴다. 새 분할은 실행하지 않는다. 마스크가 없으면 수동 입력 후보를 만들며 이미지에
+    연결된 기존 보고서는 report_candidates로 별도 전달할 수 있다.
     """
     def __init__(self, settings, *, head_mask=None, hair_mask=None, face_mask=None):
         self.settings = replace(settings, execution_provider="CPUExecutionProvider", local_files_only=True)
@@ -53,7 +51,7 @@ class FinishedImageAnalyzer:
         from genai_lab.garment_detail_analysis import analyze_garment_details
         self.session = WdTagSession(self.settings)
         reports = []
-        # Reuse one owned session, including multiview garment observations.
+        # 여러 시점의 의상 관찰까지 하나의 세션을 재사용한다.
         class Borrow:
             def __enter__(inner): return self.session
             def __exit__(inner, *args): return False
@@ -66,7 +64,7 @@ class FinishedImageAnalyzer:
         else:
             eye_report = {"status": "unresolved", "reason": "missing_finished_image_head_mask"}
         reports.append(report_candidates("eye_color_analysis", image_sha256, eye_report))
-        # Whole-image appearance suggestions are not a substitute for localized hair analysis.
+        # 전체 이미지 외형 제안은 부분 머리 분석을 대신하지 못한다.
         hair_candidates = [{"fact_ko": x.tag_name, "english": f"Preserve the {x.tag_name} shown in Picture 1.",
                             "check_at": "머리", "issues": ["whole_image_candidate"]}
                            for x in result.tag_candidates if x.tag_name.replace("_", " ").endswith(" hair")]

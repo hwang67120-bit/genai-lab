@@ -262,7 +262,7 @@ def test_reference_mode_pipeline_stays_approved_without_legacy_stages(
         assert candidate.design_reference_record['latent_refinement']['status'] == (
             'completed' if refinement_enabled else 'disabled')
         assert candidate.pose_control_status == 'not_requested'
-        assert not list(tmp_path.iterdir())  # approval before image persistence
+        assert not list(tmp_path.iterdir())  # 이미지 저장 전에 승인을 받는다.
     finally:
         candidate.image.close()
         inputs.close()
@@ -385,7 +385,7 @@ def test_optional_detail_overflow_keeps_core_and_records_omission(request_data):
     tokenizer = Tokenizer()
     baseline, _ = prepare_design_reference_request(request_data, ('blue_jacket',),
         (tokenizer, tokenizer), character_gender='male')
-    # Use the same token counter as production; no assumed token lengths.
+    # 제품과 같은 토큰 계산기를 쓴다. 토큰 길이를 가정하지 않는다.
     from scripts.generation_inputs import _token_count
     from genai_lab.reference_prompt_budget import build_reference_prompt
     _, required = build_reference_prompt(

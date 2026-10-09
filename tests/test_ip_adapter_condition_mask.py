@@ -1,4 +1,4 @@
-"""IP conditioning changes must never replace edit authorization or latent masking."""
+"""얼굴 참조 조건 변경이 편집 승인이나 잠재값 마스크를 대체하면 안 된다."""
 from types import SimpleNamespace
 import numpy as np
 import pytest

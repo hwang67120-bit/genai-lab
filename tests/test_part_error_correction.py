@@ -597,8 +597,8 @@ def test_generation_adapter_scales_are_restored_in_approved_order():
 
 @pytest.fixture(autouse=True)
 def isolate_model_dependencies(monkeypatch):
-    # These tests exercise promotion decisions using synthetic proposals. The
-    # real control contract is exercised separately in test_output_coordinate_control.
+    # 합성 후보로 채택 결정을 검사한다. 실제 제어 입력 규칙은
+    # 별도의 test_output_coordinate_control에서 검사한다.
     monkeypatch.setattr('genai_lab.part_error_correction.run_isolated_inpaint',
                         lambda pipe, control_report, **kwargs: pipe(**kwargs))
     monkeypatch.setattr('genai_lab.part_error_correction.isolate_output_mask',

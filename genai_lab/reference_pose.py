@@ -1,4 +1,4 @@
-"""Explicit, request-owned pose option; no default or reference-condition changes."""
+"""요청이 소유하는 명시적 자세 선택이다. 기본값이나 참조 조건을 바꾸지 않는다."""
 from dataclasses import dataclass
 import hashlib
 import io
@@ -19,7 +19,7 @@ class ReferencePoseOptions:
 
 
 def observe_reference_pose(config, option, prepared, strength):
-    """Record the actual projected control image, without RNG or model calls."""
+    """난수나 모델 호출 없이 실제로 투영한 제어 이미지를 기록한다."""
     from genai_lab.provenance import recorder
     rec = recorder(config)
     if rec is None:

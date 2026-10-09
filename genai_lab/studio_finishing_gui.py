@@ -1,4 +1,4 @@
-"""Human comparison only: closing the dialog always keeps the original."""
+"""사용자 비교만 담당한다. 창을 닫으면 항상 원본을 유지한다."""
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QRadioButton, QPushButton

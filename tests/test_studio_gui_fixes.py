@@ -1,4 +1,4 @@
-"""CPU-only A/B/C contracts: raw preservation, product approval and advisory-only tags."""
+"""A/B/C의 CPU 규칙 검사다. 원본 보존·제품 승인·참고 태그를 확인한다."""
 import json
 from dataclasses import replace
 from pathlib import Path
@@ -46,7 +46,7 @@ def test_background_product_raw_record_unchanged_and_export_uses_product(tmp_pat
     assert result.current_path.name == "product.png"
     with Image.open(result.current_path) as image:
         assert image.getpixel((0, 0)) == (255, 255, 255)
-        assert image.getpixel((8, 0)) == (128, 137, 142)  # soft alpha, not binary mask
+        assert image.getpixel((8, 0)) == (128, 137, 142)  # 이진 마스크가 아닌 부드러운 알파 값이다.
     result.approve(checks())
     saved = result.export(tmp_path/"saved.png")
     assert saved.read_bytes() == result.current_path.read_bytes()
@@ -179,7 +179,7 @@ def test_input_dialog_live_warnings_and_user_only_removal(tmp_path, monkeypatch)
         assert "하의 종류" in warning.text() and "자세" in warning.text() and "부정 문구" in warning.text()
         check = next(c for c in dialog.findChildren(QCheckBox) if c.text().startswith("얼굴에 팔"))
         check.setChecked(True)
-        editor.setPlainText("pants")  # User edit only
+        editor.setPlainText("pants")  # 사용자 편집만 적용한다.
         assert not check.isChecked() and warning.text() == ""
         check.setChecked(True)
         return QDialog.DialogCode.Accepted

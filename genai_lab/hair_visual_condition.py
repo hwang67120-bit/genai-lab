@@ -1,4 +1,4 @@
-"""Build an isolated hair-only visual condition without mutating other parts."""
+"""다른 부위를 바꾸지 않고 분리된 머리카락 시각 조건을 만든다."""
 
 from dataclasses import dataclass
 import hashlib
@@ -89,7 +89,7 @@ def hair_identity_separation_available(identity_mask, hair_mask) -> bool:
 
 def prepare_hair_visual_condition(source, identity_mask, garment_mask,
                                   hair_mask, extra_regions, settings):
-    """Return disjoint face/hair conditions and an immutable audit record."""
+    """겹치지 않는 얼굴·머리 조건과 변경 불가 검토 기록을 반환한다."""
     size = source.size
     identity = read_binary_mask(identity_mask, size)
     garment = read_binary_mask(garment_mask, size)

@@ -1,4 +1,4 @@
-"""Pack the approved garment condition for the active reference pipeline."""
+"""활성 참조 생성 경로에 넣을 승인 의상 자료를 한 장으로 묶는다."""
 
 import math
 import cv2
@@ -14,7 +14,7 @@ def prepare_garment_board(image, size=512):
         raise ValueError('승인 의상 참조의 알파 영역이 비어 있습니다.')
     count, labels, stats, _ = cv2.connectedComponentsWithStats(support, connectivity=8)
     ids = sorted(range(1, count), key=lambda i: int(stats[i, 4]), reverse=True)
-    # Small detached details belong to the nearest major region; never drop pixels.
+    # 작게 떨어진 세부 요소는 가장 가까운 주요 영역에 붙이며 픽셀을 버리지 않는다.
     anchors = [i for i in ids if stats[i, 4] >= stats[ids[0], 4] * .02][:8]
     groups = {i: [i] for i in anchors}
     def distance(i, j):

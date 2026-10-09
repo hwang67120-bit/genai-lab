@@ -77,7 +77,7 @@ def bind_color_descriptions(character_tags, descriptions):
 
 
 def select_color_descriptions(all_descriptions, selected_parts):
-    """Return explicitly approved proposals only, preserving source order."""
+    """원래 순서를 유지하며 명시적으로 승인한 제안만 반환한다."""
     description_records(all_descriptions)
     if isinstance(selected_parts, str):
         raise TypeError("승인할 부위 이름 목록이 필요합니다.")

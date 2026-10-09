@@ -1,4 +1,4 @@
-"""Observe-only spatial diagnostics for detected character parts."""
+"""검출한 캐릭터 부위의 공간 관계를 관찰용으로만 진단한다."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ HEAD_PARTS = ("animal_ears", "hair_accessory")
 
 @dataclass(frozen=True)
 class PartSpatialDiagnosticPolicy:
-    """Thresholds for diagnostics that never change accepted masks."""
+    """채택 마스크를 바꾸지 않는 진단 기준값이다."""
 
     head_fallback_bottom_ratio: float = 0.55
     head_context_expansion_ratio: float = 0.15
@@ -158,7 +158,7 @@ def locate_head_roi(
     hair_context: np.ndarray | None,
     policy: PartSpatialDiagnosticPolicy | None = None,
 ) -> tuple[np.ndarray, str, tuple[int, int, int, int]]:
-    """Return the same padded head ROI used by observe-only diagnostics."""
+    """관찰용 진단과 같은 여백 포함 머리 영역을 반환한다."""
 
     return _head_roi(
         size,
@@ -276,7 +276,7 @@ def diagnose_part_spatial_consistency(
     context_masks: Mapping[str, np.ndarray] | None = None,
     policy: PartSpatialDiagnosticPolicy | None = None,
 ) -> tuple[dict[str, Any], dict[str, np.ndarray]]:
-    """Record geometry conflicts without changing predictions or masks."""
+    """예측이나 마스크를 바꾸지 않고 좌표 충돌만 기록한다."""
 
     active_policy = policy or PartSpatialDiagnosticPolicy()
     masks = {

@@ -1,4 +1,4 @@
-"""Visual garment conditioning, bounded candidates and advisory ROI similarity."""
+"""의상 시각 조건과 제한된 후보 생성을 관리하며 영역 유사도는 참고로만 쓴다."""
 from dataclasses import dataclass, field, fields, replace
 from time import perf_counter
 from pathlib import Path
@@ -17,7 +17,7 @@ from genai_lab.reference_order import adapter_references, adapter_reference_name
 
 def unresolved_cross_class_parts(
         report, approved_character_tags=(), overlap_threshold=.80):
-    """Keep overlapping semantic candidates as diagnostics, not conditions."""
+    """겹치는 의미 후보는 생성 조건이 아닌 진단 자료로 유지한다."""
     normalized_tags = {
         str(tag).strip().lower().replace("_", " ")
         for tag in approved_character_tags
@@ -63,8 +63,8 @@ def unresolved_cross_class_parts(
 
 def suppress_unapproved_optional_parts(
         report, approved_character_tags=()):
-    # Optional anatomy is observable evidence until the user-approved tags
-    # confirm that it belongs to the character.
+    # 선택적 신체 부위는 사용자 승인 태그가 캐릭터의 특징임을
+    # 확인하기 전까지 관찰 근거로만 남긴다.
     normalized_tags = {
         str(tag).strip().lower().replace("_", " ")
         for tag in approved_character_tags
@@ -151,7 +151,7 @@ class VisualInputs:
 
 
 def apply_reference_face_observation(image, regions, config, *, usage):
-    """Add bounded face evidence while preserving parser failure diagnostics."""
+    """파서 실패 진단을 보존하면서 제한된 얼굴 근거를 추가한다."""
     from genai_lab.reference_face_observation import (
         VERSION as FACE_OBSERVATION_VERSION,
         recover_reference_face_region,
@@ -197,7 +197,7 @@ def apply_reference_face_observation(image, regions, config, *, usage):
 
 
 def apply_reference_hair_observation(image, regions, observer, *, usage):
-    # Apply a measurement-only head/hair silhouette in current coordinates.
+    # 현재 좌표에 측정용 머리·머리카락 외곽만 적용한다.
     if observer is None:
         report = {
             "version": "reference_hair_observation_v1",
@@ -658,9 +658,9 @@ def prepare_visual_inputs(source, garment, config, root, run_log=None,
             ReferenceCondition, ReferenceConditions, DISJOINT_LAYOUT,
         )
         if hair_reference is not None:
-            # Hair separation was performed against the already materialized,
-            # mutually disjoint masks. Seal those exact effective conditions;
-            # re-running SOURCE_LAYOUT would subtract the same areas twice.
+            # 머리 분리는 이미 만든 서로 겹치지 않는 마스크를
+            # 기준으로 수행했다. 실제 적용 조건을 그대로 고정한다.
+            # SOURCE_LAYOUT을 다시 실행하면 같은 영역을 두 번 뺀다.
             condition_bundle = ReferenceConditions((
                 ReferenceCondition.capture(
                     "identity", identity, identity_mask),
@@ -880,7 +880,7 @@ def detect_output_similarity_regions(
         image, config, root, directory, candidate_number, *,
         cancelled=lambda: False, run_log=None, suffix='base',
         hair_observer=None):
-    """Redetect score masks in generated coordinates and persist the evidence."""
+    """생성 좌표에서 점수용 마스크를 다시 검출하고 근거를 저장한다."""
     from genai_lab.reference_regions import analyze_reference_regions
     scope_by_suffix = {
         "base": "base_output",
@@ -941,7 +941,7 @@ def detect_output_similarity_regions(
 def detect_source_validation_regions(
         image, config, root, directory, *, cancelled=lambda: False,
         run_log=None, hair_observer=None):
-    """Re-run source parsing after Base setup and persist fresh evidence."""
+    """기준 생성 준비 후 원본 분석을 다시 실행해 새 근거를 저장한다."""
     from genai_lab.reference_regions import analyze_reference_regions
 
     regions = analyze_reference_regions(
@@ -1008,7 +1008,7 @@ class CandidateBatch:
 
 
 def _persist_candidate_record(path, record, candidate):
-    """Persist the latest candidate decision without losing initial metadata."""
+    """초기 메타데이터를 잃지 않고 최신 후보 결정을 저장한다."""
     from genai_lab.result import write_json
 
     saved_path = path.with_suffix('.json')
@@ -1039,7 +1039,7 @@ def generate_visual_batch(
     require_reference_experiment_approval(inputs)
     from genai_lab.generator import generate_character_candidate
     from genai_lab.scene_generation import scene_arguments
-    # Validate pipeline and hint before any reference embedding or scoring work.
+    # 참조 임베딩이나 점수 계산 전에 파이프라인과 제어 입력을 검증한다.
     if config.get('scene_lineart', {}).get('enabled', False) or inputs.scene_condition is not None:
         scene_arguments(pipeline, config, inputs, (request.width, request.height))
     reference_config = config['clothing_reference_generation']
@@ -1138,7 +1138,7 @@ def generate_visual_batch(
     retry_phase = None
     retry_attempt_limit = attempt_limit
     try:
-        # Retain the approved references even if validation or encoding fails.
+        # 검증이나 인코딩에 실패해도 승인 참조를 보존한다.
         for field in fields(inputs):
             image = getattr(inputs, field.name)
             if isinstance(image, Image.Image):
@@ -1469,8 +1469,8 @@ def generate_visual_batch(
             if candidate is None:
                 if index < attempt_limit:
                     initial_gender_conflicts.append(False)
-                    # A quarantined or missing candidate can recover with a new
-                    # variation latent after the initial pool is exhausted.
+                    # 초기 후보가 모두 소진되면 격리되거나 누락된 후보도 새
+                    # 변형 잠재값으로 다시 생성할 수 있다.
                     initial_quality_failures.append(True)
                 continue
             semantic_report = {
@@ -1792,8 +1792,8 @@ def generate_visual_batch(
                 })
                 candidate.image.close()
                 if index < attempt_limit:
-                    # Keep the structural gate fail-closed, but allow a new
-                    # variation latent to replace the rejected composition.
+                    # 구조 검사 실패는 계속 차단하되, 새 변형 잠재값으로
+                    # 거부된 구도를 바꿀 수 있게 한다.
                     initial_quality_failures.append(True)
                 continue
             if semantic_blocking:

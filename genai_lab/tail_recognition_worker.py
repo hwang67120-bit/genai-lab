@@ -1,4 +1,4 @@
-"""Local offline recognition worker; imports models only in main's inference path."""
+"""로컬 오프라인 인식 작업이다. main의 추론 경로에서만 모델을 가져온다."""
 import json
 from pathlib import Path
 import sys
@@ -20,7 +20,7 @@ def parse_observation(text, role):
 
 
 def inspect_image(model, processor, torch, job, settings):
-    """One image at a time bounds peak image tokens; raw response is kept even if invalid."""
+    """한 번에 한 이미지만 처리해 이미지 토큰 최대량을 제한한다. 잘못된 원시 답도 보존한다."""
     from PIL import Image
     started=time.monotonic()
     if file_sha(job["path"])!=job["image_sha256"]: raise ValueError("인식 입력 SHA 불일치")
@@ -96,6 +96,6 @@ def main():
         raise
     finally:
         write_json(directory/"result.json",record)
-    # Parent waits for interpreter exit, so even library-owned GPU tensors are released.
+    # 부모가 인터프리터 종료를 기다리므로 라이브러리가 소유한 GPU 텐서까지 해제된다.
 
 if __name__=="__main__": main()

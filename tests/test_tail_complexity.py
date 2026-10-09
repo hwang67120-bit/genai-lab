@@ -1,4 +1,4 @@
-"""CPU-only advisory contracts: frozen metrics, request isolation, GUI and cancellation."""
+"""고정 측정값·요청 분리·화면·취소의 참고 분석 규칙을 CPU로 검사한다."""
 import json
 import sys
 import time
@@ -61,7 +61,7 @@ def test_color_families_keep_v3_thresholds():
     rgb[:, :30] = (255, 0, 0)
     assert len(complexity.color_families(rgb, mask)) == 2
     rgb[:] = (0, 0, 0)
-    assert complexity.color_families(rgb, mask) == []  # v3 excludes dark achromatic pixels.
+    assert complexity.color_families(rgb, mask) == []  # 3차 규칙은 어두운 무채색 픽셀을 제외한다.
 
 
 def test_mask_clips_box_and_preserves_five_percent_components():
@@ -229,7 +229,7 @@ sha=hashlib.sha256(json.dumps(r,sort_keys=True,ensure_ascii=False,separators=(',
 from genai_lab.qwen_preservation import json_sha
 (p.parent/'result.json').write_text(json.dumps({'status':'completed','request_sha256':json_sha(r),'advisory_only':True}))
 """, encoding='utf-8')
-    # A -c shim keeps the repository import path available, unlike running a temp script directly.
+    # 임시 스크립트 직접 실행과 달리 -c 중간 실행은 저장소 가져오기 경로를 유지한다.
     runner = TailComplexityRunner(program=sys.executable, arguments=['-c', 'exec(open('+repr(str(script))+', encoding="utf-8").read())'])
     results = []
     runner.completed.connect(results.append)
@@ -305,7 +305,7 @@ def test_controller_keeps_same_request_with_or_without_advisory(tmp_path, monkey
         def __init__(self, *a, **kw): pass
         def exec(self): return QDialog.DialogCode.Accepted
     monkeypatch.setattr(gui, 'TailInputDialog', Input)
-    # Same approved snapshot isolates advisory ON/OFF from intentionally unique run paths.
+    # 동일한 승인 자료를 사용해 고유 실행 경로 차이와 분석 켜기·끄기 차이를 분리한다.
     monkeypatch.setattr(edit, 'prepare_tail_spec', lambda *a, **k: stable_spec)
     requests = []
     monkeypatch.setattr(window.studio, 'launch_tail_edit', lambda spec, settings: requests.append(make_tail_request(spec, settings=settings)))

@@ -147,7 +147,7 @@ def test_dimensions_and_product_preview_preserve_raw(tmp_path, basis_size):
     assert file_sha(raw) == before
     with Image.open(product) as p:
         assert p.size == basis_size
-        assert p.getextrema() == ((255,255),(0,0),(0,0))  # No white bars.
+        assert p.getextrema() == ((255,255),(0,0),(0,0))  # 흰 띠가 생기지 않아야 한다.
 
 
 @pytest.mark.parametrize("basis_size", [(736, 1232), (936, 2048), (1024, 1024)])
@@ -160,7 +160,7 @@ def test_product_preview_marker_roundtrip_within_one_pixel(tmp_path, basis_size)
         draw = ImageDraw.Draw(basis)
         for x, y in points:
             draw.rectangle((x-4,y-4,x+4,y+4), fill="black")
-        # Known geometric resize substitutes for Qwen: no model or GPU.
+        # 기하학적 크기 변경으로 Qwen을 대신한다. 모델·GPU는 없다.
         with basis.resize(output_dimensions(*basis_size), Image.Resampling.LANCZOS) as raw:
             raw.save(tmp_path/'raw.png')
     product_preview(tmp_path/'raw.png', tmp_path/'product.png', basis_size=basis_size)
@@ -281,7 +281,7 @@ def test_subprocess_request_and_user_review(image, tmp_path, basis_size, legacy)
     req = make_request(approved(image), image, file_sha(image), settings=settings(tmp_path))
     assert req["basis_size"] == list(basis_size)
     if legacy:
-        req.pop("basis_size")  # Existing requests remain replayable.
+        req.pop("basis_size")  # 기존 요청도 계속 재현 가능하다.
     flow = ready_workflow(image)
     out = tmp_path / "edit"
     seen = []

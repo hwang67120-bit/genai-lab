@@ -1,4 +1,4 @@
-"""Offline CPU-only pose and SAM head drafts. Each job exits before generation."""
+"""오프라인 CPU에서 자세·SAM 머리 초안을 만든다. 생성 전 각 작업을 종료한다."""
 import os
 import sys
 from pathlib import Path
@@ -8,7 +8,7 @@ from dataclasses import asdict, replace
 from types import SimpleNamespace
 import numpy as np
 from PIL import Image
-from genai_lab.proportion_inputs import prepare_head_outline, validate_head, sha, require, json_value
+from genai_lab.proportion_inputs import prepare_head_outline, validate_head, neck_gap_only, sha, require, json_value
 from genai_lab.qwen_record_io import write_json
 
 
@@ -34,8 +34,9 @@ def save_pose(request, directory, estimate):
                     for name in ("nose", "neck")), "코·목 위치를 확인할 수 없습니다. 비율 참고를 끄거나 다른 이미지를 선택해 주세요.")
         result = {"source_file": request["source_file"], "source_sha256": request["source_sha256"],
             "decision": asdict(prepared.decision), "assessment": asdict(prepared.assessment),
+            "face_points": prepared.face_points, "face_scores": prepared.face_scores,
             "crop_box": prepared.crop_box, "joints": [asdict(j) for j in prepared.observation_joints],
-            "ip_early": .5,  # Keep the verified head-contour trial face protection, including frontal inputs.
+            "ip_early": .5,  # 정면 입력을 포함해 검증된 머리 윤곽 시험의 얼굴 보호 규칙을 유지한다.
             "initial_ip_policy": "head_contour_trial_0.5",
             "nose": [joints["nose"].x, joints["nose"].y], "neck": [joints["neck"].x, joints["neck"].y],
             "normalized_file": str(directory / "normalized.png"), "normalized_sha256": sha(directory / "normalized.png"),
@@ -61,7 +62,7 @@ def point_mask(segmenter, image, point):
 
 
 def merge_head_parts(hair, face, box):
-    """Trial draft rule: add face inside box (+15px below), then keep largest component."""
+    """시험 초안 규칙: 상자 내부 얼굴과 아래 15px를 추가한 뒤 가장 큰 성분만 유지한다."""
     import cv2
     x0,y0,x1,y1 = box
     face = np.asarray(face, dtype=np.uint8).copy()
@@ -91,11 +92,12 @@ def save_head(request, directory, segmenter, point_segment=point_mask):
         directory / "preview", nose=pose["nose"], neck=pose["neck"])
     error = None
     try:
-        # Geometry validation only. The saved draft remains unconfirmed.
+        # 좌표 유효성만 검사한다. 저장한 초안은 미확인 상태다.
         validate_head(replace(head, confirmed=True), SimpleNamespace(control_sha256=pose["control_sha256"]), (736,1232))
     except ValueError as failure:
         error = str(failure)
     result = {"head": asdict(head), "box": box, "face_point": point, "geometry_error": error,
+              "geometry_overridable": neck_gap_only(error),
               "preview_file": str(directory / "preview/preview.png"), "device": "cpu",
               "method": "sam_box_plus_face_point_largest_component", "sam_iou": score,
               "model_snapshot": str(getattr(segmenter,"snapshot","test")), "status": "needs_user_review"}

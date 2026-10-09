@@ -1,4 +1,4 @@
-"""Replay 7 original and 22 generated tails on CPU without altering locked trials."""
+"""잠긴 시험 자료를 바꾸지 않고 원본 7개·생성 꼬리 22개를 CPU로 재현한다."""
 import argparse
 import json
 import hashlib

@@ -340,9 +340,9 @@ def load_generation_replay_bundle(
     if fingerprint != metadata.get("approval_fingerprint"):
         raise GenerationReplayError("재생 번들의 승인 fingerprint가 서로 다릅니다.")
 
-    # Early v1 writers applied config-only key filtering recursively and could
-    # remove analysis fields such as part_color_descriptions. The complete
-    # source analysis is already sealed inside the approved condition snapshot.
+    # 초기 버전은 설정용 키 필터를 재귀 적용해 분석 항목인
+    # part_color_descriptions까지 지울 수 있었다. 전체 원본 분석은
+    # 승인 조건 기록에 이미 변경 불가 자료로 보존되어 있다.
     analysis_record = metadata.get("analysis_record")
     approved_analysis = (
         approval.record()

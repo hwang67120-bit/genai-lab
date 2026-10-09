@@ -1,8 +1,4 @@
-"""Lossless trace from source observations to the executed prompt.
-
-This is diagnostic evidence, not a claim that inferred tags or colors are true.
-Source observations are never replaced by approved or compiled values.
-"""
+"""원본 관찰부터 실제 실행 문구까지 손실 없이 추적한다. 추정 태그나 색이 사실임을 증명하는 기록은 아니다. 승인값이나 조립값으로 원본 관찰을 덮어쓰지 않는다."""
 from pathlib import Path
 import hashlib
 import json
@@ -39,7 +35,7 @@ def canonical_json(value):
 
 
 def build_reference_condition_snapshot(inputs, section, prompt_record=None):
-    """Keep observations, user constraints, approvals and compiler output apart."""
+    """관찰·사용자 조건·승인·조립 결과를 구분해 보존한다."""
     from genai_lab.part_color_descriptions import description_records
 
     descriptions = tuple(getattr(inputs, "part_color_descriptions", ()))

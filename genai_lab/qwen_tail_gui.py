@@ -1,4 +1,4 @@
-"""Human tail selection and comparison only; generation is owned by StudioController."""
+"""꼬리 선택과 비교만 담당한다. 생성은 StudioController가 관리한다."""
 import math
 import os
 from pathlib import Path
@@ -14,7 +14,7 @@ from genai_lab.qwen_pose_settings import QwenPoseSettings
 
 
 def screen_box_to_source(start, end, image_rect, source_size):
-    """Inverse of centered KeepAspectRatio display; outer crop edges use floor/ceil."""
+    """중앙 비율 유지 화면의 좌표를 되돌린다. 크롭 바깥 경계는 내림·올림한다."""
     x, y, w, h = image_rect
     if w <= 0 or h <= 0:
         raise ValueError("이미지가 표시되지 않았습니다.")
@@ -31,7 +31,7 @@ class TailCropCanvas(QWidget):
 
     def __init__(self, source, parent=None):
         super().__init__(parent)
-        # Decode with the same pixel orientation as crop_bytes (no EXIF auto-rotation).
+        # crop_bytes와 같은 픽셀 방향으로 읽는다. EXIF 자동 회전은 하지 않는다.
         import io
         with Image.open(source) as im, im.convert("RGBA") as rgba, Image.new("RGBA", im.size, "white") as white:
             with Image.alpha_composite(white, rgba) as rgb:
@@ -168,7 +168,7 @@ class TailInputDialog(QDialog):
         self.validate()
 
     def create_complexity_panel(self, complexity_runner):
-        """Keep advisory setup separate from the editable tail reference controls."""
+        """참고 분석 설정을 꼬리 편집 입력과 분리한다."""
         panel = QWidget()
         side = QVBoxLayout(panel)
         self.complexity_enabled = QCheckBox("꼬리 특징 안내 (CPU)")
@@ -200,7 +200,7 @@ class TailInputDialog(QDialog):
         return scroll
 
     def queue_complexity_analysis(self):
-        """Invalidate old advisory data immediately; leave edit inputs untouched."""
+        """이전 분석 자료는 즉시 무효화하되 편집 입력은 바꾸지 않는다."""
         self.complexity_timer.stop()
         self.complexity_runner.cancel()
         self.complexity_overlay.clear()
@@ -257,7 +257,7 @@ class TailInputDialog(QDialog):
         path, _ = QFileDialog.getOpenFileName(self, "이미지 인식 실행 환경", self.recognition_settings_path, "JSON (*.json)")
         if path:
             self.recognition_settings_path = path
-            # Choosing an environment does not opt into the experimental feature.
+            # 실행 환경을 고르는 것만으로 실험 기능이 켜지지 않는다.
             self.changed()
 
     def changed(self):
@@ -332,7 +332,7 @@ def review_tail_result(window, source, before, after):
 
 
 def review_tail_recognition(window, spec, report):
-    """No approval by inference: each visible observation can be excluded before confirmation."""
+    """추론으로 승인하지 않는다. 확인 전에 표시된 관찰을 각각 제외할 수 있다."""
     from PySide6.QtWidgets import QScrollArea, QPlainTextEdit
     from genai_lab.studio_controller import picture
     from genai_lab.tail_recognition import FIELDS, LABELS, REASON_LABELS, approve_observations

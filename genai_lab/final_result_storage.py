@@ -1,4 +1,4 @@
-"""Stage 9 storage choice audit records."""
+"""9단계 저장 선택의 검토 기록을 관리한다."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ DISCARDED = "discarded"
 
 
 class FinalResultStorageError(ValueError):
-    """Stage 9 storage choice is inconsistent with the Stage 8 decision."""
+    """9단계 저장 선택이 8단계 결정과 맞지 않는 오류다."""
 
 
 @dataclass(frozen=True)

@@ -1,4 +1,4 @@
-"""Load a GPU-approved Animagine Base for an exact visual fingerprint."""
+"""이미지 특징이 정확히 일치하는 GPU 승인 Animagine 기준 이미지를 불러온다."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ VERSION = "approved_base_replay_v1"
 
 
 class ApprovedBaseReplayError(RuntimeError):
-    """The configured approved Base cannot be trusted or reconstructed."""
+    """설정된 승인 기준 이미지를 신뢰하거나 재현할 수 없는 오류다."""
 
 
 def _sha256(path: Path) -> str:
@@ -112,7 +112,7 @@ def load_approved_base_batch(
     inputs: Any,
     approval: Any,
 ):
-    """Return one exact approved Base batch, or None for a nonmatching input."""
+    """정확히 일치하는 승인 기준 이미지 묶음을 반환하고, 입력이 다르면 None을 반환한다."""
     section = (config or {}).get("approved_base_replay", {})
     if section is None:
         section = {}

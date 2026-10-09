@@ -1,4 +1,4 @@
-"""CPU GUI proportion contracts; no model inference or GPU generation."""
+"""비율 화면의 CPU 규칙 검사다. 모델 추론이나 GPU 생성은 없다."""
 from dataclasses import asdict, replace
 from pathlib import Path
 from types import SimpleNamespace
@@ -313,7 +313,7 @@ def test_head_point_uses_display_to_source_coordinates(tmp_path):
 
 
 def test_pose_contract_can_load_without_gui_package():
-    """The isolated pose interpreter intentionally has no Qt installation."""
+    """분리된 자세 실행 환경에는 의도적으로 Qt를 설치하지 않는다."""
     import subprocess
     import sys
     code = """
@@ -330,3 +330,63 @@ assert callable(verify_pose)
     result = subprocess.run([sys.executable, '-B', '-c', code],
         cwd=Path(__file__).resolve().parents[1], capture_output=True, text=True, timeout=30)
     assert result.returncode == 0, result.stderr
+
+
+def low_neck(tmp_path):
+    """윤곽은 맞지만 검출 목이 너무 아래인 사례다. 2026-10-09 목 장식 사례를 재현한다."""
+    analysis,pose,draft=prepared(tmp_path)
+    from genai_lab.proportion_inputs import NECK_GAP_MESSAGE
+    pose["neck"]=[340.,300.]
+    draft["head"]["neck"]=[340.,300.]
+    draft["geometry_error"]=NECK_GAP_MESSAGE
+    return analysis,pose,draft
+
+
+def test_neck_gap_blocks_without_override_and_passes_only_with_user_confirmation(tmp_path):
+    from genai_lab.proportion_inputs import validate_head, NECK_GAP_MESSAGE
+    _,pose,draft=low_neck(tmp_path)
+    head=replace(prep.restore_head(draft),confirmed=True)
+    inputs=SimpleNamespace(control_sha256=pose["control_sha256"])
+    with pytest.raises(ValueError,match=NECK_GAP_MESSAGE):
+        validate_head(head,inputs,(736,1232))
+    validate_head(replace(head,geometry_override="user_confirmed"),inputs,(736,1232))
+    with pytest.raises(ValueError):
+        replace(head,geometry_override="auto")
+
+
+def test_override_never_bypasses_other_geometry_checks(tmp_path):
+    from genai_lab.proportion_inputs import validate_head
+    _,pose,draft=prepared(tmp_path)
+    head=replace(prep.restore_head(draft),confirmed=True,nose=(100.,600.),geometry_override="user_confirmed")
+    with pytest.raises(ValueError,match="코 좌표가 머리 밖"):
+        validate_head(head,SimpleNamespace(control_sha256=pose["control_sha256"]),(736,1232))
+
+
+def test_confirmed_options_records_neck_override(tmp_path):
+    _,pose,draft=low_neck(tmp_path)
+    options=prep.confirmed_options(pose,draft,service.StudioRuntime())
+    assert options.head.geometry_override=="user_confirmed"
+    record=json.loads((Path(options.head.contour_file).parent/"user-confirmation.json").read_text(encoding="utf-8"))
+    assert record["geometry_override"]=="user_confirmed" and record["automatic_approval"] is False
+    assert record["geometry_error_confirmed_past"]==draft["geometry_error"]
+
+
+def test_confirmed_options_without_neck_error_sets_no_override(tmp_path):
+    _,pose,draft=prepared(tmp_path)
+    options=prep.confirmed_options(pose,draft,service.StudioRuntime())
+    assert options.head.geometry_override is None
+
+
+def test_review_shows_neck_warning_and_allows_confirmation(tmp_path,monkeypatch):
+    app=QApplication.instance() or QApplication([])
+    _,pose,draft=low_neck(tmp_path)
+    from PySide6.QtWidgets import QLabel
+    def review(dialog):
+        assert dialog.findChild(QLabel,"head_geometry_override_notice") is not None
+        accept=next(b for b in dialog.findChildren(QPushButton) if b.text()=="확인한 비율로 4장 만들기")
+        assert not accept.isEnabled()
+        dialog.findChild(QCheckBox,"head_outline_confirmed").setChecked(True)
+        assert accept.isEnabled()
+        return QDialog.DialogCode.Accepted
+    monkeypatch.setattr(QDialog,"exec",review)
+    assert gui.review_head_outline(None,pose,draft)=="confirm"

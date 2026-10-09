@@ -1,4 +1,4 @@
-"""CPU-only geometry, prompt delivery, real generation recording and failure contracts."""
+"""좌표·프롬프트 전달·생성 기록·실패 규칙을 CPU로 검사한다."""
 from dataclasses import asdict, replace
 import json
 from types import SimpleNamespace
@@ -211,7 +211,7 @@ def test_invalid_tolerance_rejected_before_generation(case,tmp_path,tolerance):
 
 def test_other_target_cannot_silently_review_generation(case,tmp_path):
     result=run(case,tmp_path)
-    # A new review destination isolates the target-binding check from overwrite guard.
+    # 새 검토 폴더를 사용해 대상 연결 검사를 덮어쓰기 방지 검사와 분리한다.
     result.comparison_path.unlink()
     changed=replace(case[2],measurement=replace(case[2].measurement,heads_tall=5))
     reviewed=review_body_proportion_candidate(result.candidate,changed,measured)

@@ -1,7 +1,5 @@
-"""Advisory hair-part contracts derived from user-approved evidence.
-
-The contract separates independently observable hair properties. Missing
-evidence remains unknown, and diagnostics never reject or retry a candidate.
+"""사용자 승인 근거로 머리 부위의 참고 규칙을 만든다. 관찰 가능한 속성을 독립적으로 나누고 근거 부족은 알 수 없음으로 유지한다. 진단은 후보 거부나 재시도에
+쓰지 않는다.
 """
 
 from __future__ import annotations
@@ -50,7 +48,7 @@ def resolve_hair_structure(
     approved_character_tags: Iterable[object],
     analysis_report: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Build a partial contract without interpreting missing tags as absence."""
+    """누락 태그를 부위 없음으로 해석하지 않고 부분 규칙을 만든다."""
 
     approved = _approved_hair_tags(approved_character_tags)
     grouped = {
@@ -99,7 +97,7 @@ def resolve_hair_structure(
 
 
 def hair_structure_guidance(contract: Mapping[str, Any] | None) -> str:
-    """Describe confirmed parts positively; unknown parts stay with the Base."""
+    """확인한 부분은 긍정적으로 설명하고 알 수 없는 부분은 기준 이미지에 맡긴다."""
 
     if not isinstance(contract, Mapping):
         return ""
@@ -151,7 +149,7 @@ def evaluate_hair_structure_diagnostic(
     conflict_threshold: float = .45,
     minimum_margin: float = .10,
 ) -> dict[str, Any]:
-    """Compare WD evidence per hair part without enforcing an action."""
+    """동작을 강제하지 않고 머리 부위별 WD 근거를 비교한다."""
 
     if not isinstance(contract, Mapping) or not contract.get("confirmed_parts"):
         return {

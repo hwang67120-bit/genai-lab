@@ -1,4 +1,4 @@
-"""CPU-only cache equivalence, encoder release, SDPA scope and restoration tests."""
+"""CPU로 캐시 결과 일치·인코더 해제·SDPA 적용 범위와 복원을 검사한다."""
 from types import SimpleNamespace
 import pytest
 import torch
@@ -110,11 +110,11 @@ def test_sdpa_scope_only_covers_unet_and_restores_flags_even_after_error(fail):
             if fail:raise RuntimeError("forward error")
     module=UNet()
     with memory.unet_attention(module):
-        assert sdpa_flags()==original  # VAE before denoising retains its policy.
+        assert sdpa_flags()==original  # 노이즈 제거 전 VAE 정책을 유지한다.
         if fail:
             with pytest.raises(RuntimeError):module()
         else:module()
-        assert sdpa_flags()==original  # VAE after denoising retains its policy.
+        assert sdpa_flags()==original  # 노이즈 제거 후 VAE 정책을 유지한다.
     assert sdpa_flags()==original and not module._forward_hooks and not module._forward_pre_hooks
 
 

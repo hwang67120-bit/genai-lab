@@ -1,4 +1,4 @@
-"""Finish one immutable candidate in a separate folder; adoption is a later user decision."""
+"""변경 불가 후보 한 장을 별도 폴더에서 마무리한다. 채택은 나중에 사용자가 결정한다."""
 from dataclasses import asdict, replace
 from pathlib import Path
 import json
@@ -14,7 +14,7 @@ from genai_lab.studio_background import prepare_backgrounds, read_background
 
 
 def restore_prompt(data):
-    """Restore saved token IDs exactly; never re-analyze or add quality tags."""
+    """저장한 토큰 번호를 정확히 복원한다. 재분석이나 품질 태그 추가는 없다."""
     encoders = []
     for item in data["encoders"]:
         chunks = {kind: tuple(PromptChunk(c["kind"], c["text"], tuple(c["token_ids"]))
@@ -50,7 +50,7 @@ def copy_selected(candidate, destination, runtime):
 
 def finish_selected(candidate, before, before_sha, destination, runtime, *,
                     cancelled=lambda: False, progress=lambda _: None):
-    """Only this fresh folder can receive generated files, including failed partial outputs."""
+    """실패한 부분 결과를 포함해 새 폴더에만 생성 파일을 저장한다."""
     destination, before = Path(destination), Path(before)
     destination.mkdir(parents=True, exist_ok=False)
     state = {"status": "started", "before_file": str(before), "before_sha256": before_sha,
@@ -84,7 +84,7 @@ def finish_selected(candidate, before, before_sha, destination, runtime, *,
 
 
 def finishing_info(directory, raw_sha, before_sha):
-    """Re-read the whole output chain before comparison, adoption, tail edit and export."""
+    """비교·채택·꼬리 편집·내보내기 전에 전체 결과 연결을 다시 읽어 검증한다."""
     directory = Path(directory)
     state = json.loads((directory / "optional-finishing.json").read_text(encoding="utf-8"))
     require(state["status"] == "awaiting_user_review" and state["raw_sha256"] == raw_sha

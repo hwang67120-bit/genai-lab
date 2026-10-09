@@ -1,4 +1,4 @@
-"""Explicit human review; no automatic quality threshold or final selection."""
+"""사용자가 명시적으로 검토한다. 품질 임계값이나 자동 최종 선택은 없다."""
 from pathlib import Path
 from genai_lab.qwen_pose_edit import write_json
 from genai_lab.qwen_preservation import file_sha

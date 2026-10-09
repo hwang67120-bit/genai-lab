@@ -1,9 +1,10 @@
-"""Head selection and review only. No model work or generation on the GUI thread."""
+"""머리 선택·검토만 담당한다. 화면 스레드에서 모델 실행이나 생성은 하지 않는다."""
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPainter, QPen, QColor, QPixmap
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QCheckBox
 from genai_lab.qwen_tail_gui import TailCropCanvas
 from genai_lab.studio_proportion import restore_head
+from genai_lab.proportion_inputs import neck_gap_only
 
 
 class HeadCanvas(TailCropCanvas):
@@ -91,8 +92,25 @@ def review_head_outline(window, pose, draft):
         notice = QLabel("원본 자세 확인 필요: " + ", ".join(warnings) + " — 잘못 검출된 부위가 있으면 취소해 주세요.")
         notice.setWordWrap(True)
         layout.addWidget(notice)
+    correction = draft.get("shoulder_correction")
+    if correction:
+        preview = QLabel()
+        preview.setPixmap(QPixmap(correction["preview_file"]).scaled(680, 330, Qt.AspectRatioMode.KeepAspectRatio))
+        layout.addWidget(preview)
+        notice = QLabel(correction.get("warning", "왼쪽: 원래 골격 · 오른쪽: 어깨 보정. 어깨가 넓은 캐릭터에는 효과가 없거나 좁아질 수 있습니다."))
+        notice.setObjectName("shoulder_correction_notice")
+        notice.setWordWrap(True)
+        layout.addWidget(notice)
     error = draft.get("geometry_error")
-    if error:
+    overridable = bool(error) and neck_gap_only(error)
+    if overridable:
+        notice = QLabel("주의: 목 위치가 머리 윤곽에서 떨어져 검출됐습니다(초커·옷깃 등으로 목 관절이 낮게 찍혔을 수 있음). "
+                        "윤곽이 맞으면 확인 후 진행할 수 있으며, 확인했다는 사실이 기록됩니다.")
+        notice.setObjectName("head_geometry_override_notice")
+        notice.setWordWrap(True)
+        layout.addWidget(notice)
+        error = None  # 이 검사만 사용자가 확인한 뒤 넘어갈 수 있다.
+    elif error:
         notice = QLabel("이 윤곽으로는 생성할 수 없습니다: " + error)
         notice.setWordWrap(True)
         layout.addWidget(notice)

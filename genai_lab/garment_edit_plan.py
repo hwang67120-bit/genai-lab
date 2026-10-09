@@ -1,7 +1,5 @@
-"""Output-coordinate garment coverage and Hard/Soft edit planning.
-
-Reference-image pixels are never projected into a generated Base.  Reference
-tags provide semantics; all masks handled here already use Base coordinates.
+"""생성 결과 좌표에서 의상 범위를 찾고 필수·완충 편집 영역을 계획한다. 참조 이미지 픽셀을 생성 기준 이미지에 투영하지 않는다. 참조 태그는 의미만 전달하며
+여기의 모든 마스크는 결과 좌표를 사용한다.
 """
 
 from __future__ import annotations
@@ -106,7 +104,7 @@ def project_target_garment_coverage(
     *,
     growth_pixels: int = 12,
 ) -> TargetGarmentCoverage:
-    """Project approved garment semantics into generated Base coordinates."""
+    """승인한 의상 의미를 생성 기준 이미지 좌표로 대응시킨다."""
     if type(growth_pixels) is not int or not 0 <= growth_pixels <= 64:
         raise ValueError("garment growth pixels must be an integer from 0 to 64")
     size = source_garment_mask.size
@@ -222,7 +220,7 @@ def project_target_garment_coverage(
         band[row(0.84):bottom, :] = True
         target |= foreground & band
 
-    # Observe the target before the existing source union, without changing it.
+    # 기존 원본 합집합을 바꾸지 않고 먼저 대상 영역을 관찰한다.
     pre_union_mask = _mask(target)
     target |= source
     return TargetGarmentCoverage(
@@ -262,7 +260,7 @@ def build_garment_edit_plan(
     feather_radius: int = 10,
     soft_boundary_strength: float = 0.5,
 ) -> GarmentEditPlan:
-    """Build auditable Hard/Soft masks in generated Base coordinates."""
+    """생성 결과 좌표로 검토 가능한 필수·완충 마스크를 만든다."""
     if not 0.0 <= soft_boundary_strength <= 1.0:
         raise ValueError("soft boundary strength must be between 0 and 1")
     size = generated_base.size

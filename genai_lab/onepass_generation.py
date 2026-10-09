@@ -1,7 +1,5 @@
-"""Opt-in raw one-pass generation; no model imports until backend creation.
-
-Stage 4 produces unreviewed raw candidates, never final approved results.
-Modern and approved legacy step-end callbacks share one IP schedule.
+"""선택적 1회 생성의 원본 후보를 만든다. 실행기 생성 전에는 모델을 가져오지 않는다. 4단계 결과는 미검토 후보이며 최종 승인 결과가 아니다. 신·구 단계
+종료 콜백은 같은 얼굴 참조 강도표를 사용한다.
 """
 from dataclasses import asdict, dataclass, field
 import hashlib
@@ -39,7 +37,7 @@ class OnePassInputs:
     pose_mode: str = field(kw_only=True)
     input_decision: InputDecision | None = None
     user_choice: str | None = None
-    # Explicit low-level N0i reproduction only; never set by the user-choice builder.
+    # 하위 수준 N0i 재현에서만 명시적으로 사용한다. 사용자 선택 조립기는 설정하지 않는다.
     diagnostic_ip_override: bool = False
 
     def __post_init__(self):
@@ -79,11 +77,8 @@ def prepare_onepass_inputs(*, choice, decision, gender, groups, garment_tags, po
                            slim, tokenizers, face_file, face_sha256, control_file=None,
                            control_sha256=None, ip_early=0.0,
                            prompt_settings=OnePassPromptSettings(), appearance=AppearanceOverrides()):
-    """Build from an explicit UI choice; no default choice and no prompt rewriting.
-
-    Without pose uses the existing assembler with an empty pose tag tuple and
-    never inherits direction-derived early IP. Raw experiment strings may instead
-    be injected through OnePassInputs for a clearly recorded diagnostic run.
+    """명시적인 화면 선택으로 요청을 만든다. 기본 선택이나 문구 재작성은 없다. 자세 없음은 빈 자세 태그로 기존 조립기를 쓰며 방향에서 계산한 초기 얼굴 참조를
+    이어받지 않는다. 진단용 원문은 OnePassInputs에 넣고 별도로 기록할 수 있다.
     """
     if choice not in decision.choices or choice not in ('proceed_with_pose', 'proceed_without_pose'):
         raise ValueError('생성 가능한 명시적 사용자 선택이 필요합니다.')
@@ -160,7 +155,7 @@ def check_pipeline_support(pipeline_type):
 
 
 def validate_local_models(settings):
-    """Check required local artifacts before importing/loading model libraries."""
+    """모델 라이브러리를 가져오기 전에 필요한 로컬 자료를 확인한다."""
     base = Path(settings.model_root)
     adapter = Path(settings.adapter_root)
     ip = Path(settings.ip_root)
@@ -193,7 +188,7 @@ def validate_prompt(prompt):
 
 
 def read_inputs(inputs, settings):
-    """Hash the exact bytes decoded, preventing a hash/decode file race."""
+    """디코딩한 바이트 자체의 해시를 계산해 파일 변경으로 생기는 불일치를 막는다."""
     validate_prompt(inputs.prompt)
     images = []
     try:
@@ -201,9 +196,9 @@ def read_inputs(inputs, settings):
             (inputs.control_file, inputs.control_sha256), (inputs.face_file, inputs.face_sha256)
         ):
             if path is None:
-                # Diffusers 0.38 preprocesses image and computes adapter features even
-                # at factor=0. A black placeholder contains no reference pose; NONE
-                # of its features reach UNet. No file/pose hash is invented for it.
+                # Diffusers 0.38은 적용 비율이 0이어도 이미지 전처리와 어댑터 특징을 계산한다.
+                # 검은 대체 입력에는 참조 자세가 없으며 그 특징은
+                # UNet에 전달되지 않는다. 존재하지 않는 자세 파일 해시를 만들지 않는다.
                 images.append(Image.new("RGB", (settings.width, settings.height), (0, 0, 0)))
                 continue
             data = Path(path).read_bytes()
@@ -223,7 +218,7 @@ def read_inputs(inputs, settings):
 
 
 def encode_prompt_plan(prompt, encoders, device, dtype):
-    """run_int encode_pcs semantics, with TE2 pooled output from chunk zero."""
+    """run_int의 encode_pcs 방식으로 인코딩하며 두 번째 인코더의 요약 출력은 첫 조각을 쓴다."""
     import torch
 
     validate_prompt(prompt)
@@ -264,7 +259,7 @@ def step_end_callback(settings, cancelled):
 
 
 def pipeline_callback_kwargs(pipeline, settings, cancelled, callback_mode):
-    """Translate the same step-end behavior without changing legacy latents."""
+    """구형 잠재값을 바꾸지 않고 같은 단계 종료 동작으로 변환한다."""
     callback = step_end_callback(settings, cancelled)
     if callback_mode == "callback_on_step_end":
         return {"callback_on_step_end": callback}
@@ -276,7 +271,7 @@ def pipeline_callback_kwargs(pipeline, settings, cancelled, callback_mode):
 
 
 class UNetObservation:
-    """Read-only POST-forward hook. Never inject residuals or wrap scheduler.step."""
+    """순전파 뒤 읽기 전용 훅이다. 잔차를 주입하거나 scheduler.step을 감싸지 않는다."""
 
     def __init__(self, cancelled=lambda: False):
         self.calls = []
@@ -290,13 +285,13 @@ class UNetObservation:
             if hasattr(processor, "scale"):
                 value = processor.scale
                 scales.extend(float(v) for v in (value if isinstance(value, (list, tuple)) else [value]))
-        # SDXL mutates the residual list during forward; None vs list survives.
+        # SDXL은 순전파 중 잔차 목록을 바꾸지만 None과 목록의 구분은 남는다.
         residuals = kwargs.get("down_intrablock_additional_residuals")
         self.calls.append({
             "index": len(self.calls), "ip_scales": sorted(set(scales)),
             "adapter_applied": residuals is not None,
         })
-        # Returning None leaves the UNet output untouched.
+        # None을 반환하면 UNet 결과를 바꾸지 않는다.
 
 
 def schedule_errors(calls, settings, ip_early, pose_mode="with_pose"):
@@ -315,12 +310,12 @@ def schedule_errors(calls, settings, ip_early, pose_mode="with_pose"):
 
 
 class DiffusersOnePassBackend:
-    """One owned pipeline per request; select a supported step-end callback."""
+    """요청마다 파이프라인 하나를 관리하고 지원되는 단계 종료 콜백을 고른다."""
 
     def __init__(self, settings):
         validate_local_models(settings)
         from diffusers import StableDiffusionXLAdapterPipeline
-        # Select the supported callback before ANY model loads.
+        # 모델을 하나라도 로드하기 전에 지원 콜백을 선택한다.
         self.callback_mode = check_pipeline_support(StableDiffusionXLAdapterPipeline)
         import torch
         import diffusers
@@ -352,7 +347,7 @@ class DiffusersOnePassBackend:
                 local_files_only=True,
             )
             self.pipe.set_ip_adapter_scale(0.0)
-            # Instance override only: the next UNet call offloads adapter weights.
+            # 현재 인스턴스만 변경한다. 다음 UNet 호출에서 어댑터 가중치를 내린다.
             self.pipe.model_cpu_offload_seq = (
                 "text_encoder->text_encoder_2->image_encoder->adapter->unet->vae"
             )
@@ -363,7 +358,7 @@ class DiffusersOnePassBackend:
 
     def generate(self, inputs, images, seed, observation, cancelled):
         settings, torch, pipe = self.settings, self.torch, self.pipe
-        # New scheduler and start scale for EVERY image; adapter runs anew in __call__.
+        # 이미지마다 새 스케줄러와 시작 강도를 사용한다. 어댑터도 매 호출 새로 실행한다.
         pipe.scheduler = self.scheduler_type.from_config(scheduler_config())
         pipe.set_ip_adapter_scale(inputs.ip_early)
         handle = pipe.unet.register_forward_hook(observation, with_kwargs=True)
@@ -416,7 +411,7 @@ def generate_onepass_image(
     backend, inputs, seed, directory, *, settings=OnePassGenerationSettings(),
     cancelled=lambda: False, expected_sha256=None,
 ):
-    """One attempt only. Preserve raw output and observations even on a failed check."""
+    """한 번만 시도한다. 검사에 실패해도 원본과 관찰 기록은 보존한다."""
     validate_seed(seed)
     if cancelled():
         raise OnePassCancelled("이미지 실행 전에 취소됐습니다.")
@@ -432,6 +427,7 @@ def generate_onepass_image(
         "final_return_eligible": False, "settings": asdict(settings),
         "models": settings.model_record(), "scheduler_requested_config": scheduler_config(),
         "prompt": asdict(inputs.prompt),
+        **({"skin_tone": inputs.prompt.rules["skin_tone"]} if "skin_tone" in inputs.prompt.rules else {}),
         "inputs": {"control_file": str(inputs.control_file) if inputs.control_file is not None else None, "face_file": str(inputs.face_file),
                    "control_sha256": inputs.control_sha256, "face_sha256": inputs.face_sha256},
         "pose_mode": inputs.pose_mode, "user_choice": inputs.user_choice,
@@ -487,10 +483,8 @@ def generate_onepass_request(
     request, directory, *, on_image: Callable[[OnePassCandidate], None] = lambda _image: None,
     cancelled=lambda: False, backend_factory=DiffusersOnePassBackend, proportion=None,
 ):
-    """Four seeds, no retry. OFF returns OnePassBatch with the original raw candidates.
-
-    Explicit proportion.enabled returns ProportionBatch with separate raw/product
-    references. No GUI sets this option until its review integration is approved.
+    """재시도 없이 네 seed를 생성한다. 기능이 꺼지면 원본 후보의 OnePassBatch를 반환한다. proportion.enabled를 명시하면 원본·제품
+    참조를 구분한 ProportionBatch를 반환한다. 검토 연결을 승인하기 전에는 화면에서 이 설정을 사용하지 않는다.
     """
     if not isinstance(request, OnePassRequest):
         raise TypeError("명시적 OnePassRequest가 필요합니다.")

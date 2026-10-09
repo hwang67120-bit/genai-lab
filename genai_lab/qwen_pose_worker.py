@@ -1,7 +1,5 @@
-"""Separate Qwen runtime entry point. Package checks run before torch imports.
-
-Reference: diffusers v0.38.0 pipeline_qwenimage_edit_plus.py; approved B runner.
-This module is safe to import for CPU unit tests; main() alone performs inference.
+"""별도 Qwen 환경의 진입점이다. torch를 가져오기 전에 패키지를 검사한다. 근거: diffusers v0.38.0
+pipeline_qwenimage_edit_plus.py와 승인 B 실행기. CPU 단위 테스트에서 가져와도 안전하며 main()만 추론한다.
 """
 import gc
 import io
@@ -23,7 +21,7 @@ class WorkerCancelled(RuntimeError):
 
 
 class UntruncatedProcessor:
-    """Observe real processor inputs without rewriting text or token IDs."""
+    """텍스트나 토큰 번호를 바꾸지 않고 실제 처리기 입력을 관찰한다."""
     def __init__(self, processor, record):
         self.processor, self.record = processor, record
 
@@ -66,7 +64,7 @@ def validate_request(request):
 
 
 def generate(request, directory, record):
-    # This is deliberately before importing torch/diffusers/bitsandbytes.
+    # torch·diffusers·bitsandbytes를 가져오기 전에 검사하도록 의도한 순서다.
     record["versions"] = check_runtime_versions()
     import importlib.metadata
     record["runtime"] = {"python": sys.executable, "packages": {
@@ -113,7 +111,7 @@ def generate(request, directory, record):
                       total_vram_bytes=torch.cuda.get_device_properties(0).total_memory,
                       memory_note="PyTorch allocated/reserved only; dedicated/shared sampling unavailable",
                       dedicated_memory=None, shared_memory=None, stage_seconds={}, steps=[])
-        # TE and transformer stages match run_identity.py; no alternative memory policy.
+        # 텍스트 인코더·변환기 단계는 run_identity.py와 같으며 대체 메모리 정책은 없다.
         check()
         tick = time.perf_counter()
         torch.cuda.reset_peak_memory_stats()
@@ -137,7 +135,7 @@ def generate(request, directory, record):
         pe, pm, ne, nm = (v.to("cpu") if v is not None else None for v in (pe, pm, ne, nm))
         record["embedding_shapes"] = {"positive": list(pe.shape), "negative": list(ne.shape)}
         observed = record["processor_inputs"]
-        # The installed pipeline removes the fixed system prefix (64 IDs), not body text.
+        # 설치된 파이프라인은 본문이 아닌 고정 시스템 시작 문구 64개 토큰을 제거한다.
         start_index = p1.prompt_template_encode_start_idx
         if any(int(emb.shape[1]) != row["sequence_length"] - start_index
                for emb, row in zip((pe, ne), observed)) or len(observed) != 2:

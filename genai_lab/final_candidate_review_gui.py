@@ -1,4 +1,4 @@
-"""PySide6 Stage 8 comparison and approval dialog."""
+"""PySide6의 8단계 비교·승인 창이다."""
 
 from __future__ import annotations
 
@@ -71,7 +71,7 @@ def _preview(source: Any, empty_text: str) -> QLabel:
 
 
 class FinalCandidateReviewDialog(QDialog):
-    """Show reference, Base, result, diagnostics, and one explicit decision."""
+    """참조·기준·결과·진단을 보여주고 사용자 결정 하나를 받는다."""
 
     def __init__(
         self,

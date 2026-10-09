@@ -1,7 +1,5 @@
-"""CPU-only tail measurements; v3 thresholds are fixed, outputs are advisory only.
-
-Source: outputs/tail-complexity-measure-20261006/measure_v3.py.
-No prompt construction, model imports or settings changes happen here.
+"""CPU 꼬리 측정만 수행한다. 3차 기준은 고정하고 결과는 안내에만 사용한다. 근거:
+outputs/tail-complexity-measure-20261006/measure_v3.py. 문구 조립·모델 가져오기·설정 변경은 없다.
 """
 import json
 from pathlib import Path
@@ -100,7 +98,7 @@ def profile(rgb, mask, C, t):
 
 
 def measure_tail(rgb, segmentation, box):
-    """Clip the mask, measure v3 values, then apply the display-only deferral."""
+    """마스크를 제한하고 3차 수치를 측정한 뒤 표시용 판단 보류 규칙을 적용한다."""
     import numpy as np
     from genai_lab.qwen_tail_edit import validate_box
     validate_box(box, (rgb.shape[1], rgb.shape[0]))
@@ -138,7 +136,7 @@ def measure_tail(rgb, segmentation, box):
 
 
 def advisory_text(record):
-    """Present measured families and provisional geometry without inventing color names."""
+    """색 이름을 만들어 내지 않고 측정한 색 계열과 임시 형태 판단을 표시한다."""
     if record.get('status') != 'completed':
         return "복잡도 분석 불가 · 꼬리 고치기는 계속할 수 있습니다."
     lines = ["색: 여러 색" if record['color_complex'] else "색: 한 가지 색 계열"]
@@ -158,7 +156,7 @@ def advisory_text(record):
 
 
 def save_overlay(rgb, mask, box, directory):
-    """Save diagnostic pixels only; never replace the actual reference crop."""
+    """진단용 픽셀만 저장한다. 실제 참조 크롭을 대체하지 않는다."""
     import numpy as np
     from PIL import Image
     directory = Path(directory)
@@ -171,7 +169,7 @@ def save_overlay(rgb, mask, box, directory):
 
 
 def persist_advisory(directory, spec, report):
-    """Copy advisory artifacts outside TailEditSpec and the immutable Qwen request."""
+    """TailEditSpec과 변경 불가 Qwen 요청 밖에 참고 자료를 복사한다."""
     from genai_lab.qwen_record_io import write_json
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
@@ -193,11 +191,11 @@ def persist_advisory(directory, spec, report):
 
 
 def annotate_finished_run(directory, report):
-    """After the Qwen worker exits, add advisory metadata without touching its request."""
+    """Qwen 작업 종료 뒤 요청을 바꾸지 않고 참고 메타데이터를 추가한다."""
     from genai_lab.qwen_record_io import write_json
     path = Path(directory) / 'launcher.json'
     if not path.is_file():
-        return  # Pre-launch failures still retain complexity/run.json.
+        return  # 실행 전 실패해도 complexity/run.json은 보존한다.
     record = json.loads(path.read_text(encoding='utf-8'))
     record['tail_complexity'] = report
     write_json(path, record)

@@ -1,4 +1,4 @@
-"""No GPU/download: installed Diffusers block hooks and Accelerate lifecycle."""
+"""GPU·다운로드 없이 설치된 Diffusers 블록 훅과 Accelerate 수명을 검사한다."""
 from types import SimpleNamespace
 import json
 import pytest
@@ -102,7 +102,7 @@ def test_failed_setup_records_error_without_retry(small_pipe,monkeypatch):
 def test_ungrouped_ip_weight_is_rejected(small_pipe):
     owner=configure_offload(small_pipe,torch,{},device="cpu")
     small_pipe.unet.encoder_hid_proj.extra=torch.nn.Linear(2,2)
-    # Remove this projection from the owning group inventory, simulating an unsupported library layout.
+    # 지원하지 않는 라이브러리 구조를 재현하려고 해당 투영층을 소유 그룹 목록에서 제거한다.
     root=next(group for group,_,name in owner.groups if name=="unet")
     projection_ids={id(p) for p in small_pipe.unet.encoder_hid_proj.parameters()}
     root.modules=[m for m in root.modules if m is not small_pipe.unet.encoder_hid_proj]

@@ -1,4 +1,4 @@
-'''Selected-candidate garment-only inpaint stage.'''
+"""선택한 후보의 의상 영역만 인페인트한다."""
 
 from genai_lab.output_coordinate_control import (
     run_isolated_inpaint,
@@ -105,7 +105,7 @@ def build_garment_refinement_prompt(prompt, garment_topology):
 
 
 def _diagnostic_prompt(assembled_prompt, override):
-    """Explicit diagnostic text only; never alter the request or default assembly."""
+    """명시적 진단 문구만 사용한다. 요청이나 기본 조립은 바꾸지 않는다."""
     import hashlib
     if not isinstance(override, str) or not override.strip():
         raise ValueError("refinement_prompt_override must be a nonempty string")
@@ -130,7 +130,7 @@ def _load_or_redetect_regions(
     run_log,
     report,
 ):
-    """Reuse valid Base-coordinate masks; reject stale masks and redetect safely."""
+    """유효한 기준 좌표 마스크를 재사용한다. 오래된 마스크는 거부하고 안전하게 다시 검출한다."""
     from genai_lab.reference_regions import (
         analyze_reference_regions,
         load_reference_regions,
@@ -182,10 +182,8 @@ def _load_or_redetect_regions(
 
 def _diagnostic_inputs(base, soft_mask, condition_mask, *, exclusion_mask=None,
                        prefill_mask=None, prefill_rgb=None):
-    """Explicit diagnostic inputs only; never mutate Base or edit authorization.
-
-    Attention masking follows run_isolated_inpaint's independent mask channel:
-    https://huggingface.co/docs/diffusers/using-diffusers/ip_adapter#masking
+    """명시적 진단 입력만 사용한다. 기준 이미지와 편집 승인은 변경하지 않는다. 어텐션 마스크는 run_isolated_inpaint의 독립 채널 규칙을 따른다.
+    참고: https://huggingface.co/docs/diffusers/using-diffusers/ip_adapter#masking
     """
     import hashlib
 
@@ -403,7 +401,7 @@ def correct_selected_garment(
         if ip_adapter_mask_mode == "target_pre_union":
             if target_coverage.pre_union_mask is None:
                 raise GarmentCorrectionContractError("target_pre_union_unavailable")
-            # Binary restriction preserves the existing soft weights exactly.
+            # 이진 제한을 적용해도 기존 완충 가중치는 정확히 유지한다.
             condition_mask = Image.fromarray(
                 np.where(np.asarray(target_coverage.pre_union_mask) == 255,
                          np.asarray(correction_mask), 0).astype(np.uint8), mode="L")

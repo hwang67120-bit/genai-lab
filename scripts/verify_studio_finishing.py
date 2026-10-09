@@ -1,4 +1,4 @@
-"""Replay locked F0 images through product finishing. CPU preflight unless --run."""
+"""고정된 F0 이미지를 제품 마무리로 재현한다. --run이 없으면 CPU 사전 검사만 한다."""
 import argparse
 from dataclasses import asdict, replace
 import json
@@ -35,7 +35,7 @@ def parser():
 
 
 def preflight(root, cases, runtime):
-    """Validate frozen text and image bytes before loading an inference pipeline."""
+    """추론 파이프라인을 로드하기 전에 고정 문구와 이미지 바이트를 검증한다."""
     require(len(set(cases)) == len(cases), "중복 사례 번호입니다.")
     require(sha(root/PLAN) == PLAN_SHA and sha(root/LOG) == LOG_SHA, "잠금된 시험 기록 SHA 불일치")
     items = json.loads((root/PLAN).read_text(encoding="utf-8"))
@@ -58,7 +58,7 @@ def preflight(root, cases, runtime):
 
 
 def copy_source_case(entry, directory, runtime, tokenizers):
-    """Copy an existing F0; record its origin instead of claiming new generation."""
+    """기존 F0를 복사하고 출처를 기록한다. 새로 생성했다고 표시하지 않는다."""
     directory.mkdir(parents=True, exist_ok=False)
     item = entry["item"]
     text = item["b"]
@@ -77,7 +77,7 @@ def copy_source_case(entry, directory, runtime, tokenizers):
 
 
 def run_replay(report, destination, runtime):
-    """Stop at the first mismatch; preserve all files for Claude's comparison."""
+    """첫 불일치에서 멈추고 Claude 비교용으로 모든 파일을 보존한다."""
     destination.mkdir(parents=True, exist_ok=False)
     write_json(destination/"preflight.json",json_value(report))
     state = {"status":"started","comparisons":[],"quality_default_decision":"pending"}

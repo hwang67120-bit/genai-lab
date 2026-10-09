@@ -1,8 +1,5 @@
-"""Disjoint, face-anchored hair regions for output-coordinate correction.
-
-These masks are geometric edit scopes, not semantic proof. Every hair pixel is
-assigned to exactly one region, and unconfirmed regions are never added to a
-local correction target.
+"""결과 좌표에서 얼굴을 기준으로 머리 편집 영역을 겹치지 않게 나눈다. 이는 기하학적 편집 범위이지 의미상 증거가 아니다. 모든 머리 픽셀은 한 영역에만
+배정하고 미확정 영역은 부분 보정 대상으로 넣지 않는다.
 """
 
 from __future__ import annotations
@@ -29,7 +26,7 @@ def partition_hair_regions(
     *,
     minimum_region_pixels: int = 128,
 ) -> tuple[dict[str, np.ndarray], dict]:
-    """Partition hair into non-overlapping face-relative edit regions."""
+    """머리카락을 얼굴 기준의 겹치지 않는 편집 영역으로 나눈다."""
 
     if type(minimum_region_pixels) is not int or minimum_region_pixels < 1:
         raise ValueError("헤어 부분 최소 픽셀 수는 1 이상의 정수여야 합니다.")
@@ -129,7 +126,7 @@ def select_hair_correction_scope(
     *,
     legacy_whole_if_missing: bool = False,
 ) -> tuple[Image.Image | None, dict]:
-    """Select only approved local regions; unknown parts remain untouched."""
+    """승인된 부분만 선택하며 알 수 없는 부분은 변경하지 않는다."""
 
     if not isinstance(contract, Mapping) or not contract.get("confirmed_parts"):
         if legacy_whole_if_missing and "whole" in regions:

@@ -53,7 +53,7 @@ def analyze_clothing_design(
 
 
 class WdTagSession:
-    """Reusable WD session; keep unfiltered general scores, no softmax."""
+    """WD 실행 세션을 재사용한다. 일반 태그 원점수를 유지하며 소프트맥스는 적용하지 않는다."""
 
     def __init__(self, settings: ClothingDesignAnalysisSettings):
         _validate_analysis_settings(settings)
@@ -120,7 +120,7 @@ class WdTagSession:
 
 
 def analyze_image_tags(image: Image.Image, settings: ClothingDesignAnalysisSettings) -> ClothingDesignAnalysisResult:
-    """Compatibility entry point; one image, one session, original candidate filter."""
+    """호환용 진입점이다. 이미지 하나와 세션 하나를 사용하고 기존 후보 필터를 유지한다."""
     from dataclasses import replace
     started = perf_counter()
     with WdTagSession(settings) as session:

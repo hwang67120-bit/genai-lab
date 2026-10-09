@@ -1,4 +1,4 @@
-"""Verified pose+sketch backend. Base generation remains the original single adapter."""
+"""검증한 자세·스케치 실행기다. 기준 생성은 기존 단일 어댑터로 유지한다."""
 import time
 from PIL import Image
 from genai_lab.onepass_generation import (
@@ -25,7 +25,7 @@ class StepGuard:
 
 
 class GuardedBase:
-    """Read-only step checks around the unmodified first-pass backend."""
+    """변경하지 않은 1단계 실행기의 단계 정보를 읽기 전용으로 검사한다."""
     def __init__(self, backend, settings):
         self.backend, self.settings = backend, settings
         self.pipe, self.callback_mode = backend.pipe, backend.callback_mode
@@ -110,7 +110,7 @@ class ProportionBackend(DiffusersOnePassBackend):
                           **pipeline_callback_kwargs(pipe, settings, cancelled, self.callback_mode))
             torch.cuda.synchronize()
             require(len(result.images) == 1, "출력은 한 장이어야 합니다.")
-            # Return raw even if the counts are wrong; the caller records and rejects it after saving.
+            # 횟수가 틀려도 원본을 반환한다. 호출부가 저장한 뒤 기록하고 거부한다.
             return result.images[0], {
                 "generation_seconds": time.perf_counter() - started,
                 "timing_scope": "prompt_encoding_and_pipeline", "adapter_forward_counts": list(self.forward_counts),

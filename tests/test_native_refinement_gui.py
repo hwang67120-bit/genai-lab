@@ -86,8 +86,8 @@ def test_gui_routes_selected_base_to_native_refinement(
     window.worker = SimpleNamespace(orchestrator=orchestrator)
     routed: list[tuple] = []
     def accept_after_worker_thread_finishes(value):
-        # QDialog.exec() runs a nested event loop. The worker thread may finish
-        # and clear window.worker before the dialog returns.
+        # QDialog.exec()는 중첩 이벤트 처리를 실행한다. 창이 반환되기 전에 작업
+        # 스레드가 끝나 window.worker를 지울 수 있다.
         window.clear_worker()
         return int(QDialog.DialogCode.Accepted)
 

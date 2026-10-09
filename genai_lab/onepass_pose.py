@@ -1,8 +1,5 @@
-"""Deterministic one-pass pose preprocessing; no generation or model loading.
-
-An estimator supplies the *actual* person count as well as the existing DWPose
-coordinates. A legacy selected-person result cannot prove K1 and is not silently
-assumed to contain one person. Backend installation/GUI approval are separate.
+"""1회 생성의 자세 입력을 재현 가능하게 전처리한다. 생성·모델 로드는 없다. 추정기는 DWPose 좌표와 실제 인원수를 제공해야 한다. 구형 선택 인물
+결과만으로 K1을 증명하거나 자동으로 1명이라 가정하지 않는다. 실행 환경 설치와 화면 승인은 별도다.
 """
 from dataclasses import dataclass
 from itertools import combinations
@@ -46,10 +43,7 @@ class FindingDisplay:
 
 
 def findings_for_display(assessment):
-    """One UI row per code, preserving every original/normalized observation.
-
-    This does not mutate findings or change policy/measurement decisions.
-    """
+    """코드마다 화면 행 하나를 만들고 원본·정규화 관찰을 모두 보존한다. 발견 항목·정책·측정 판단을 바꾸지 않는다."""
     grouped = {}
     for finding in assessment.findings:
         grouped.setdefault(finding.code, []).append(dict(finding.values))
@@ -108,11 +102,8 @@ def normalize_scores(scores):
 
 
 def assess_pose(joints, person_count, tag_scores, settings=PoseCheckSettings()) -> PoseAssessment:
-    """K1..K7, guessed joints and direction facts only; no policy decisions.
-
-    K geometry uses the shoulder midpoint to hip midpoint (e2e check), while
-    character slimness separately uses neck to hip midpoint (e2e ratios).
-    GUESS is [0.30, 0.50), matching the recorded executable, not rounded scores.
+    """K1~K7·추정 관절·방향 사실만 반환하며 정책을 결정하지 않는다. 자세 검사는 양 어깨 중점부터 골반 중점까지, 캐릭터의 마름은 목부터 골반 중점까지
+    계산한다. GUESS 범위는 기록된 실행과 같은 [0.30, 0.50)이며 반올림 점수가 아니다.
     """
     validate_joints(joints)
     if type(person_count) is not int or person_count < 0:
@@ -188,7 +179,7 @@ def assess_pose(joints, person_count, tag_scores, settings=PoseCheckSettings()) 
 
 
 def normalize_pose_image(source, joints, settings=OnePassInputSettings()):
-    """Return padded body-bbox image and exact rounded box; never mutate source."""
+    """몸 상자에 여백을 둔 이미지와 반올림 좌표를 반환한다. 원본은 바꾸지 않는다."""
     validate_joints(joints)
     points = [(j.x, j.y) for j in joints if j.detected and j.confidence_score >= settings.checks.confidence]
     if len(points) < 2:
@@ -219,7 +210,7 @@ def normalize_pose_image(source, joints, settings=OnePassInputSettings()):
 
 
 def prepare_qwen_control(control_map, joints, settings=OnePassInputSettings()):
-    """Owned RGB map before the T2I channel reversal; same resize/padding rules."""
+    """채널 반전 전 RGB 지도를 새로 소유해 반환한다. 크기·여백 규칙은 유지한다."""
     validate_joints(joints)
     if len(joints) != 18:
         raise ValueError('제어 지도에는 몸 관절 기록 18개가 필요합니다.')
@@ -235,7 +226,7 @@ def prepare_qwen_control(control_map, joints, settings=OnePassInputSettings()):
 
 
 def prepare_onepass_control(control_map, joints, settings=OnePassInputSettings()):
-    """Keep the existing T2I output pixel-identical; Qwen uses prepare_qwen_control."""
+    """기존 T2I 결과 픽셀을 그대로 유지한다. Qwen은 prepare_qwen_control을 사용한다."""
     with prepare_qwen_control(control_map, joints, settings) as rgb:
         channels = rgb.split()
         try:
@@ -255,7 +246,7 @@ class HandScoreSummary:
 
 
 def summarize_hands(left_scores, right_scores):
-    """Selected-person hand evidence only. Missing arrays remain unmeasured."""
+    """선택한 사람의 손 근거만 반환한다. 배열이 없으면 미측정으로 둔다."""
     if not left_scores and not right_scores:
         return ()
     result = []
@@ -277,7 +268,7 @@ class MissingJointHint:
 
 
 def missing_joint_hints(assessment, original_joints, original_size, settings=OnePassInputSettings()):
-    """Explain K2 using ORIGINAL coordinates; never alter findings or policies."""
+    """원본 좌표로 K2를 설명한다. 발견 항목이나 정책을 바꾸지 않는다."""
     if not any(f.code == 'K2' for f in assessment.findings):
         return ()
     missing = {name for f in assessment.findings if f.code == 'K2' for name in f.values['missing']}
@@ -303,7 +294,7 @@ class PoseObservation:
     person_count: int
     overlay: Image.Image
     control_map: Image.Image
-    # Selected person, pixel coordinates; empty means face landmarks unavailable.
+    # 선택한 사람의 픽셀 좌표다. 비어 있으면 얼굴 관절을 얻지 못한 것이다.
     face_points: tuple[tuple[float, float], ...] = ()
     face_scores: tuple[float, ...] = ()
     hands: tuple[HandScoreSummary, ...] = ()
@@ -314,7 +305,7 @@ class PoseObservation:
 
 
 class PoseInputError(ValueError):
-    """Recoverable input failure with owned UI evidence; caller must close it."""
+    """복구 가능한 입력 실패와 화면 근거를 담는다. 호출부에서 이미지를 닫아야 한다."""
     def __init__(self, message, assessment, policies, *, original_overlay=None,
                  overlay=None, original_hands=(), hands=(), k2_hints=()):
         super().__init__(message)
@@ -346,8 +337,11 @@ class PreparedPose:
     hands: tuple[HandScoreSummary, ...] = ()
     k2_hints: tuple[MissingJointHint, ...] = ()
 
+    face_points: tuple[tuple[float, float], ...] = ()
+    face_scores: tuple[float, ...] = ()
+
     def copy_qwen_control(self):
-        """Return an owned pre-reversal RGB copy; caller closes it, including after self.close()."""
+        """채널 반전 전 RGB 사본을 반환한다. 현재 객체를 닫은 뒤에도 사본은 호출부가 닫는다."""
         channels = self.control_image.split()
         try:
             return Image.merge('RGB', tuple(reversed(channels)))
@@ -364,10 +358,8 @@ class PreparedPose:
 
 def prepare_onepass_pose(source, *, estimate: Callable[[Image.Image], PoseObservation],
                          tag: Callable[[Image.Image], dict], settings=OnePassInputSettings()):
-    """Two detections; evidence is display-only and never authorizes generation.
-
-    The caller owns PreparedPose or PoseInputError images and must close them.
-    Backend/execution errors propagate unchanged, without a silent fallback.
+    """두 차례 검출한다. 근거는 표시용이며 생성을 승인하지 않는다. 호출부가 PreparedPose·PoseInputError 이미지를 관리하고 닫는다. 실행
+    오류는 대체 처리 없이 그대로 전달한다.
     """
     first = estimate(source)
     second = None
@@ -389,8 +381,8 @@ def prepare_onepass_pose(source, *, estimate: Callable[[Image.Image], PoseObserv
             assessment = replace(assessment, findings=(Finding('K1', {
                 'person_count': first.person_count, 'stage': 'original'}),) + assessment.findings)
         hints = missing_joint_hints(assessment, first.joints, source.size, settings)
-        # This is the precise no-detected-joints precondition of control preparation.
-        # Do not catch PoseReferenceEstimationError: other operational errors must escape.
+        # 제어 입력 준비에서 사용하는 관절 미검출 조건을 정확히 검사한다.
+        # 다른 실행 오류가 숨겨지지 않도록 PoseReferenceEstimationError는 잡지 않는다.
         if not any(j.detected for j in second.joints):
             raise PoseInputError('정규화 후 탐지 관절 0개', assessment, settings.policies,
                 original_overlay=first.overlay.copy(), overlay=second.overlay.copy(),
@@ -398,7 +390,7 @@ def prepare_onepass_pose(source, *, estimate: Callable[[Image.Image], PoseObserv
         control = prepare_onepass_control(second.control_map, second.joints, settings)
         return PreparedPose(normalized, second.overlay.copy(), control, box, second.joints,
                             assessment, apply_input_policy(assessment, settings.policies),
-                            first.overlay.copy(), first.hands, second.hands, hints)
+                            first.overlay.copy(), first.hands, second.hands, hints, second.face_points, second.face_scores)
     except Exception:
         if normalized is not None:
             normalized.close()

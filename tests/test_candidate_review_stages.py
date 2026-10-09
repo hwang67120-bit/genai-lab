@@ -1,4 +1,4 @@
-"""Intermediate candidate selection must never look like final approval."""
+"""중간 후보 선택을 최종 승인처럼 표시하지 않는다."""
 import os
 from types import SimpleNamespace
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")

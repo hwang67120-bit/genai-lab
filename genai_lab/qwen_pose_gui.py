@@ -1,4 +1,4 @@
-"""Explicit Qwen B editor UI. Optional entry; existing generation remains unchanged."""
+"""명시적인 Qwen B조건 편집 화면이다. 선택 기능이며 기존 생성은 유지한다."""
 from dataclasses import replace
 from pathlib import Path
 from threading import Event

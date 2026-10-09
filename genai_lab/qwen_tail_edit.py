@@ -1,7 +1,5 @@
-"""Optional tail correction: human crop/choices -> fixed prompt -> existing Qwen runner.
-
-Optional confirmed recognition; no automatic approval, retry, or new generation settings. Source images and
-initial generated candidates remain immutable. Crop coordinates are original pixels.
+"""선택적 꼬리 보정: 사용자 크롭·선택 → 고정 문구 → 기존 Qwen 실행기 순서다. 확인된 인식은 선택적으로 사용하며 자동 승인·재시도·새 생성 설정은
+없다. 원본과 최초 후보는 변경하지 않는다. 크롭 좌표는 원본 픽셀 기준이다.
 """
 from dataclasses import asdict, dataclass
 import hashlib
@@ -26,7 +24,7 @@ SUFFIX = ("Keep everything else in Picture 1 unchanged: the same face, hair, ear
 SPIRAL_EXAMPLE = "The tip of the tail curls into a tight spiral, as in Picture 2."
 LIMITATIONS = ("시험에서는 한 장에 약 30분이 걸렸습니다. 큰 여분 꼬리나 굵기 차이가 남을 수 있습니다. "
                "캐릭터 3명의 시험 결과이며, 얼굴·옷 등 다른 부분도 반드시 비교해 주세요.")
-# Finite lexical checks, not a natural-language semantic classifier.
+# 제한된 단어 검사다. 자연어 의미 분류기가 아니다.
 SPECIES = frozenset("raccoon fox wolf cat dog rabbit chameleon crocodile alligator snake lizard "
                     "feline canine dragon tiger lion leopard cheetah panther squirrel mouse rat "
                     "monkey horse pony cow deer bird fish shark mermaid kitsune tanuki nekomata".split())
@@ -105,7 +103,7 @@ class TailEditSpec:
     def record(self):
         value = asdict(self)
         if self.recognition is None:
-            value.pop("recognition")  # Preserve the original request contract when analysis is off.
+            value.pop("recognition")  # 분석이 꺼지면 원래 요청 규칙을 그대로 유지한다.
         return value
 
     @property
@@ -133,7 +131,7 @@ class TailEditSpec:
 
 def prepare_tail_spec(image_path, source_path, box, *, pattern, tip="", confirmed=False,
                       directory, source_sha256, image_sha256):
-    """Snapshot both inputs. A caller cannot substitute a full image for Picture 2."""
+    """두 입력을 고정한다. 두 번째 그림을 원본 전체로 대체할 수 없다."""
     assemble_tail_prompt(pattern, tip)
     if confirmed is not True:
         raise ValueError("꼬리 영역과 편집 조건을 확인해 주세요.")
@@ -187,7 +185,7 @@ def validate_tail_request(request):
 
 
 class TailEditWorkflow:
-    """Bind confirmed crop/optional recognition, then check actual GPU ownership."""
+    """확인한 크롭과 선택적 인식을 연결한 뒤 실제 GPU 점유를 검사한다."""
     def __init__(self, spec, *, gpu_probe=None):
         from genai_lab.qwen_pose_edit import assert_parent_gpu_released
         spec.verify_image()
@@ -211,7 +209,7 @@ def run_tail_edit(request, directory, workflow, **kwargs):
 
 
 def tail_product_info(directory, basis_sha256):
-    """Verify completed raw, derived preview and its exact request before adoption/export."""
+    """채택·저장 전에 완성 원본·미리보기·정확한 요청을 검증한다."""
     import json
     directory = Path(directory)
     request = json.loads((directory / "request.json").read_text(encoding="utf-8"))

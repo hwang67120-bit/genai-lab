@@ -1,7 +1,5 @@
-"""Desktop one-pass lifecycle. Raw generation records remain unapproved.
-
-Only explicit input confirmation can build a request. Only an explicitly reviewed,
-unchanged candidate can be exported. No legacy Base/refinement fallback is used.
+"""데스크톱 1회 생성의 수명을 관리한다. 원본 생성 기록은 미승인 상태다. 명시적 입력 확인만 요청을 만들 수 있고, 검토받고 변경되지 않은 후보만 내보낼 수
+있다. 구형 기준 생성·정밀화로의 대체는 없다.
 """
 from dataclasses import dataclass, field, replace
 from pathlib import Path
@@ -23,6 +21,7 @@ from genai_lab.onepass_pose import InputDecision
 from genai_lab.onepass_gender import prepare_onepass_gender
 from genai_lab.studio_garment_warnings import GarmentWarningSettings, garment_review
 from genai_lab.studio_background import read_background
+from genai_lab.skin_tone import SkinRecommendationSettings
 
 
 def digest(path):
@@ -35,21 +34,22 @@ def record(path, value):
 
 @dataclass(frozen=True)
 class StudioRuntime:
-    # Deployment paths are centralized. No package installation or model download.
+    # 배포 경로는 한곳에서 관리한다. 패키지 설치나 모델 다운로드는 하지 않는다.
     pose_python: Path = Path("D:/genai-cache/catvton-venv/Scripts/python.exe")
     pose_models: Path = Path("D:/genai-cache/huggingface/easy-dwpose/checkpoints")
     model_cache: Path = Path("D:/genai-cache/huggingface")
-    # Existing provisioned head detector cache; deployment can override without copying models.
+    # 기존 머리 검출 캐시를 사용한다. 배포에서 모델 복사 없이 경로를 바꿀 수 있다.
     head_cache: Path = field(default_factory=lambda: Path(__file__).resolve().parents[1] /
         "outputs/pose-identity-20260927/identity-v2/model-cache/hub")
     analysis_python: Path = field(default_factory=lambda: Path(sys.executable))
     generation: OnePassGenerationSettings = field(default_factory=OnePassGenerationSettings)
     prompt: OnePassPromptSettings = field(default_factory=OnePassPromptSettings)
-    quality_tags: bool = False  # Final default decision is pending; preserve existing prompts.
+    quality_tags: bool = False  # 최종 기본값 결정 전까지 기존 프롬프트를 유지한다.
     finishing: bool = False
     finishing_face_reference: bool = False
     analysis_timeout: float = 600.0
     proportion_sketch_root: Path = Path("G:/genai-cache/models/t2i-adapter-sketch-sdxl-1.0")
+    skin_recommendation: SkinRecommendationSettings = field(default_factory=SkinRecommendationSettings)
     garment_warnings: GarmentWarningSettings = field(default_factory=GarmentWarningSettings.load)
 
     def __post_init__(self):
@@ -62,12 +62,13 @@ class StudioRuntime:
         if not config:
             return cls()
         values = json.loads(Path(config).read_text(encoding="utf-8"))
-        allowed = {"pose_python", "pose_models", "model_cache", "analysis_python", "head_cache", "garment_warning_rules", "proportion_sketch_root", "quality_tags", "finishing", "finishing_face_reference"}
+        allowed = {"pose_python", "pose_models", "model_cache", "analysis_python", "head_cache", "garment_warning_rules", "proportion_sketch_root", "quality_tags", "finishing", "finishing_face_reference", "skin_recommendation"}
         if set(values) - allowed:
             raise ValueError("작업실 실행 설정에 알 수 없는 항목이 있습니다.")
+        skin = SkinRecommendationSettings(**values.pop("skin_recommendation", {}))
         warnings = GarmentWarningSettings.load(values.pop("garment_warning_rules")) if "garment_warning_rules" in values else GarmentWarningSettings.load()
         return cls(**{key: value if key in ("quality_tags", "finishing", "finishing_face_reference") else Path(value)
-                      for key, value in values.items()}, garment_warnings=warnings)
+                      for key, value in values.items()}, garment_warnings=warnings, skin_recommendation=skin)
 
 
 def cpu_process(command, log, cancelled, timeout):
@@ -101,7 +102,7 @@ def cpu_process(command, log, cancelled, timeout):
 
 
 def save_analysis_reference(image, destination):
-    """Flatten actual transparency on white; retain the opaque conversion path."""
+    """실제 투명 영역만 흰 배경에 합성한다. 불투명 입력의 변환 경로는 유지한다."""
     from PIL import Image
     transparent = False
     if "A" in image.getbands() or "transparency" in image.info:
@@ -122,7 +123,7 @@ def save_analysis_reference(image, destination):
 
 
 def analyze_inputs(character, garment, directory, runtime, *, cancelled=lambda: False):
-    """Snapshot references; isolate CPU models from generation and UI preferences."""
+    """참조를 고정하고 CPU 모델을 생성과 화면 선택 저장소에서 분리한다."""
     from PIL import Image
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=False)
@@ -131,7 +132,7 @@ def analyze_inputs(character, garment, directory, runtime, *, cancelled=lambda: 
         source = Path(source)
         data = source.read_bytes()
         references[name] = {"source": str(source), "sha256": hashlib.sha256(data).hexdigest()}
-        # Decode the same bytes we hashed; never re-open a changed reference for analysis.
+        # 해시를 계산한 같은 바이트를 읽는다. 변경된 참조 파일을 다시 열어 분석하지 않는다.
         import io
         with Image.open(io.BytesIO(data)) as im:
             references[name]["preprocessing"] = save_analysis_reference(
@@ -151,7 +152,7 @@ def analyze_inputs(character, garment, directory, runtime, *, cancelled=lambda: 
 
 def build_request(analysis, garment_tags, gender, *, confirmed, runtime, preferences=None,
                   tokenizers=None, seeds=None, appearance=AppearanceOverrides(), proportion_pose=None):
-    """Preferences are written only by a confirmed explicit user choice."""
+    """사용자가 명시적으로 확인한 선택만 저장한다."""
     if not confirmed:
         raise ValueError("입력 이미지 확인이 필요합니다.")
     if not garment_tags:
@@ -165,7 +166,7 @@ def build_request(analysis, garment_tags, gender, *, confirmed, runtime, prefere
     groups = CharacterTagGroups(**{k: tuple(analysis["groups"][k]) for k in ("appearance", "body", "fixed")})
     terms = (*groups.appearance, *groups.body, *groups.fixed)
     conditions = prepare_onepass_gender(source, terms, runtime.prompt.negative_template, settings=preferences)
-    # Classifications must partition the gender-resolved terms, using its normalization.
+    # 성별이 정리된 태그를 같은 정규화 규칙으로 빠짐없이 분류해야 한다.
     groups = CharacterTagGroups(**{k: tuple(t.replace("_", " ") for t in getattr(groups, k))
                                    for k in ("appearance", "body", "fixed")})
     directory = Path(analysis["directory"])
@@ -188,6 +189,10 @@ def build_request(analysis, garment_tags, gender, *, confirmed, runtime, prefere
         gender=conditions, groups=groups, garment_tags=tuple(garment_tags), pose_tags=(),
         slim=analysis["slim"], tokenizers=tokens,
         face_file=face, face_sha256=analysis["face_sha256"], prompt_settings=runtime.prompt, appearance=appearance)
+    if appearance.skin_tone.value is not None:
+        # 유효한 문구에 선택값을 적용한 뒤 저장한다. 다음에는 이 파일의 선택값을 불러온다.
+        from genai_lab.character_preferences import save_character_skin_tone
+        save_character_skin_tone(source, appearance.skin_tone.value, settings=preferences)
     if runtime.quality_tags and proportion_pose is None:
         from genai_lab.finishing_prompt import apply_quality_format
         inputs = replace(inputs, prompt=apply_quality_format(inputs.prompt, tokens))
@@ -199,6 +204,7 @@ def build_request(analysis, garment_tags, gender, *, confirmed, runtime, prefere
         "references": analysis["references"], "pose_mode": inputs.pose_mode,
         "proportion_mode": "two_pass" if proportion_pose is not None else "off",
         "prompt": inputs.prompt.positive, "negative": inputs.prompt.negative,
+        **({"skin_tone": inputs.prompt.rules["skin_tone"]} if "skin_tone" in inputs.prompt.rules else {}),
         "appendage_appearance": inputs.prompt.rules["appendage_appearance"],
         "appendage_review_required": inputs.prompt.rules["appendage_review_required"],
         **({"quality_format":"diagnostic_2b", "quality_default_decision":"pending"}
@@ -207,7 +213,7 @@ def build_request(analysis, garment_tags, gender, *, confirmed, runtime, prefere
 
 
 class StudioResults:
-    """Separate human-review/export ledger; never falsify raw gate evidence."""
+    """사용자 검토·내보내기 기록을 분리한다. 원본 검사 근거를 바꾸지 않는다."""
     def __init__(self, batch, *, appendage_review_required=False):
         if not batch.candidates:
             raise ValueError("완료된 후보가 없습니다.")
@@ -222,6 +228,7 @@ class StudioResults:
         self.appendage_review_required = appendage_review_required or any(
             c.record.get("prompt", {}).get("rules", {}).get("appendage_review_required", False)
             for c in batch.candidates)
+        self.identity_reports = {}
         self.selected = 0
         self.tail_edit = None
         self.optional_finishing = None
@@ -234,13 +241,26 @@ class StudioResults:
         record(self.batch.directory / "user-review.json", {
             "status": self.status, "selected": self.selected,
             "approved_sha256": self.approved_sha, "automatic_gates_executed": False,
-            "reviewer": "user", "checks": self.checks, "appendage_review_required": self.appendage_review_required,
+            "reviewer": "user", "identity_report": self.identity_report_record, "checks": self.checks, "appendage_review_required": self.appendage_review_required,
             "background": self.active_background,
             "finishing_applied": bool(self.active_finishing),
             **({"finishing": self.active_finishing} if self.active_finishing else {}),
             **({"optional_finishing": self.optional_finishing} if self.optional_finishing else {}),
             "proportion_mode": "two_pass" if self.two_pass else "off",
             **({"tail_edit": self.tail_edit} if self.tail_edit else {}), **extra})
+
+    @property
+    def identity_report_record(self):
+        """측정값이 없거나 바뀌어도 사용자 승인과 이미지 저장은 막지 않는다."""
+        try:
+            info = self.identity_reports.get(digest(self.current_path))
+            if info is None:
+                return {"status": "pending_or_unavailable", "informational_only": True}
+            if digest(info["path"]) != info["sha256"]:
+                return {"status": "changed", "informational_only": True}
+            return {"status": "completed", "informational_only": True, **info}
+        except OSError:
+            return {"status": "unavailable", "informational_only": True}
 
     def select(self, index):
         if not 0 <= index < len(self.batch.candidates):
@@ -418,6 +438,7 @@ class StudioResults:
         metadata = {"source_run": str(self.candidate.record_path), "sha256": self.approved_sha,
                     "approval_record": str(self.batch.directory / "user-review.json"),
                     "reviewer": "user", "automatic_gates_executed": False}
+        metadata["identity_report"] = self.identity_report_record
         metadata["raw_sha256"] = self.verify_original()
         metadata["proportion_mode"] = "two_pass" if self.two_pass else "off"
         metadata["background"] = self.active_background
@@ -438,7 +459,7 @@ class StudioResults:
                 f.write(data)
         except Exception:
             for path in created:
-                path.unlink()  # Only files exclusively created by this export.
+                path.unlink()  # 이번 내보내기에서 독점적으로 만든 파일만 처리한다.
             raise
         self.status = "saved"
         self.persist(destination=str(destination))

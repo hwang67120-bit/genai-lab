@@ -1,4 +1,4 @@
-"""Selected-candidate hair repair with non-hair IP-Adapter isolation."""
+"""선택한 후보의 머리카락을 보정하며 다른 부위의 얼굴 참조 조건을 분리한다."""
 
 from genai_lab.output_coordinate_control import (
     isolate_output_mask, run_isolated_inpaint, exact_pixel_composite,
@@ -38,7 +38,7 @@ class HairCorrectionContractError(ValueError):
 
 
 def _canonical_contract(value):
-    """Compare contracts with the same JSON representation used by approval."""
+    """승인 때 사용한 JSON 표현으로 규칙을 비교한다."""
     return json.dumps(
         value,
         sort_keys=True,
@@ -49,7 +49,7 @@ def _canonical_contract(value):
 
 
 def build_hair_refinement_prompt(prompt, contract):
-    """Append only user-approved, part-scoped hair guidance."""
+    """사용자가 승인한 해당 부위의 머리 지시만 추가한다."""
     guidance = hair_structure_guidance(contract).strip()
     if not guidance:
         return str(prompt)
@@ -193,11 +193,11 @@ def _isolated_hair_masks(
         with _expanded(raw_hair, settings.mask_padding_pixels) as expanded:
             expanded_hair = read_binary_mask(expanded, size)
     protected = np.zeros((size[1], size[0]), dtype=bool)
-    # The face mask already protects human-shaped ears. Keep the independent
-    # human-ear detection diagnostic-only: broad false positives otherwise
-    # remove the entire hair edit region. Animal ears remain separately
-    # protected. A hair-accessory candidate that covers most of verified hair
-    # is also diagnostic-only because it is not a localized decoration mask.
+    # 얼굴 마스크는 이미 사람 형태의 귀를 보호한다. 별도 사람 귀
+    # 검출은 진단으로만 사용한다. 넓은 오검출로
+    # 머리 편집 영역 전체가 제거되는 것을 막는다. 동물 귀는
+    # 별도로 보호한다. 검증한 머리 대부분을 덮는 장식 후보도
+    # 국소 장식 마스크가 아니므로 진단에만 사용한다.
     if diagnostics is not None and "output_human_ears" in by_name:
         diagnostics["human_ears"] = {"status": "diagnostic_only"}
     for name in (
@@ -239,7 +239,7 @@ def _isolated_hair_masks(
 def _isolated_hair_mask(
         detected, size, settings, require_ears,
         *, require_human_ears=False):
-    """Compatibility wrapper retained for mask-only callers and tests."""
+    """마스크만 사용하는 호출부와 테스트를 위해 호환 함수를 유지한다."""
     repair, protected, reason = _isolated_hair_masks(
         detected, size, settings, require_ears,
         require_human_ears=require_human_ears)
@@ -253,7 +253,7 @@ def correct_selected_hair(
         *, approved_run_record, check_running=None, analyzer=None,
         inpaint_pipeline=None, view_analyzer=None,
         output_regions_directory=None):
-    """Repair hair only when its isolated CLIP similarity is below contract."""
+    """분리된 머리카락의 CLIP 유사도가 기준보다 낮을 때만 보정한다."""
     import torch
     from genai_lab.part_error_correction import (
         _inpaint_pipeline_from,

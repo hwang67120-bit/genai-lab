@@ -1,7 +1,6 @@
-"""Character tags and the adopted C5 segmentation + C6 near-head arm guard.
-
-Source: outputs/face-crop-c5-20260928/{methods_c5,methods_c6,decision}.md.
-Accepted crops require user preview. Missing detections never trigger a fallback.
+"""캐릭터 태그와 채택된 C5 분할·C6 머리 주변 팔 보호 규칙을 적용한다. 근거:
+outputs/face-crop-c5-20260928/{methods_c5,methods_c6,decision}.md. 채택 크롭은 사용자 미리보기가 필요하며
+미검출 시 대체 경로를 사용하지 않는다.
 """
 from dataclasses import dataclass, field
 import math
@@ -40,7 +39,7 @@ class CharacterTags:
 
 
 def select_character_tags(scores, settings=OnePassInputSettings()):
-    """Detector gender is a candidate record only; selection is stage 1's job."""
+    """검출 성별은 후보 기록일 뿐이며 선택은 1단계에서 한다."""
     normalized = normalize_scores(scores)
     selected, genders, excluded = [], [], []
     for tag, score in sorted(normalized.items(), key=lambda item: -item[1]):
@@ -56,7 +55,7 @@ def select_character_tags(scores, settings=OnePassInputSettings()):
 
 
 def select_pose_tags(scores, approved_garment_tags, settings=OnePassInputSettings()):
-    """Keep allowlisted pose tags; pocket instructions require approved pocket garments."""
+    """허용한 자세 태그만 유지한다. 주머니 동작은 승인된 주머니 의상이 있어야 한다."""
     scores = normalize_scores(scores)
     selected = tuple(t for t in POSE_ALLOW if scores.get(t, 0) >= settings.checks.tag_threshold)
     retained, _ = filter_pocket_tags(selected, approved_garment_tags)
@@ -65,10 +64,7 @@ def select_pose_tags(scores, approved_garment_tags, settings=OnePassInputSetting
 
 
 def measure_slimness(joints, settings=OnePassInputSettings()):
-    """Return observed shoulder/neck-hip ratio, or None when unmeasurable.
-
-    ps/ns/off does not change the observation; stage 3 decides whether to use it.
-    """
+    """관찰한 어깨와 목·골반의 비율을 반환한다. 측정 불가면 None이다. ps/ns/off는 관찰을 바꾸지 않으며 3단계에서 사용 여부를 정한다."""
     validate_joints(joints)
     index = {j.joint_name: j for j in joints if j.confidence_score >= settings.checks.confidence}
     required = ('neck', 'left_hip', 'right_hip', 'left_shoulder', 'right_shoulder')
@@ -112,11 +108,8 @@ class FaceCropReview:
 
 def prepare_c6_crop(source, heads, joints, settings=OnePassInputSettings(), *,
                     foreground_mask=None, face_points=(), face_scores=()):
-    """C6 from recorded or live detections in *source* pixel coordinates.
-
-    foreground_mask must be the isnet-anime result, not a head-box proxy.
-    Invalid data raises; unavailable/low-confidence detections return rejection.
-    No image resizing, inferred landmarks, model loading, or silent manual fallback.
+    """원본 픽셀 좌표에서 저장된 또는 새 검출 결과로 C6를 검사한다. foreground_mask는 머리 상자가 아닌 isnet-anime 결과여야 한다. 잘못된
+    자료는 오류로, 검출 불가·낮은 신뢰도는 거부로 반환한다. 크기 변경·좌표 추정·모델 로드·자동 수동 대체는 없다.
     """
     import cv2
     import numpy as np
@@ -157,7 +150,7 @@ def prepare_c6_crop(source, heads, joints, settings=OnePassInputSettings(), *,
     arms = tuple(n for n in arm_names if n in index and index[n].confidence_score >= threshold
                  and zone[0] <= index[n].x <= zone[2] and zone[1] <= index[n].y <= zone[3])
     details['zone'] = zone
-    # Reject before producing a crop; absence of arm keypoints is not proof of cleanliness.
+    # 크롭 전에 거부한다. 팔 관절이 없다고 깨끗한 크롭이 증명된 것은 아니다.
     if arms:
         return reject('팔이 머리 근처 — 팔이 머리를 가리지 않는 캐릭터 이미지를 넣어 주세요', head.box, arms)
     fp, fs = np.asarray(face_points, dtype=float), np.asarray(face_scores, dtype=float)
@@ -226,7 +219,7 @@ def prepare_c6_crop(source, heads, joints, settings=OnePassInputSettings(), *,
 
 
 def prepare_manual_face_crop(cropped_image):
-    """Explicit user-provided clean crop; never a silent replacement for C6 failure."""
+    """사용자가 명시적으로 제공한 깨끗한 크롭이다. C6 실패의 자동 대체는 아니다."""
     if min(cropped_image.size) < 1:
         raise ValueError('수동 크롭 이미지가 비어 있습니다.')
     return FaceCropReview(cropped_image.convert('RGB'), None, None, (), 'review', None, 'manual')

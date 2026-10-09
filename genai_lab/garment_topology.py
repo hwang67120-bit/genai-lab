@@ -1,8 +1,5 @@
-"""Conservative garment component and connection contracts.
-
-Topology is derived only from user-approved garment tags. Missing tags never
-prove that a component is absent, and unresolved topology is never promoted to
-a generation constraint.
+"""의상 구성과 연결 관계를 보수적으로 관리한다. 사용자 승인 태그만 사용하며, 태그 누락을 부위 없음으로 해석하지 않는다. 미확정 구조는 생성 제약으로 사용하지
+않는다.
 """
 
 from __future__ import annotations
@@ -91,7 +88,7 @@ def resolve_garment_topology(
     approved_detail_tags: Iterable[object] = (),
     reviewed_contract: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Resolve structure without treating missing evidence as absence."""
+    """근거가 없다는 이유로 부위가 없다고 보지 않고 구조를 해석한다."""
 
     if reviewed_contract is not None:
         if not isinstance(reviewed_contract, Mapping):
@@ -152,7 +149,7 @@ def resolve_garment_topology(
 
 
 def topology_guidance(contract: Mapping[str, Any] | None) -> str:
-    """Return positive structural guidance only for confirmed topology."""
+    """확인된 의상 구조에만 긍정적인 구조 지시를 반환한다."""
 
     if not isinstance(contract, Mapping) or contract.get("status") != "CONFIRMED":
         return ""
@@ -179,7 +176,7 @@ def evaluate_topology_diagnostic(
     contract: Mapping[str, Any] | None,
     raw_scores: Mapping[str, float],
 ) -> dict[str, Any]:
-    """Advisory WD-tag evidence; it never rejects or retries a candidate."""
+    """WD 태그 근거는 참고용이며 후보를 거부하거나 재시도하지 않는다."""
 
     topology = contract.get("topology") if isinstance(contract, Mapping) else None
     if not isinstance(contract, Mapping) or contract.get("status") != "CONFIRMED":

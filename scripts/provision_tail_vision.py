@@ -1,4 +1,4 @@
-"""Explicitly provision the local recognition model; application runtime never downloads."""
+"""로컬 인식 모델을 명시적으로 준비한다. 앱 실행 중에는 다운로드하지 않는다."""
 import argparse
 import hashlib
 import json
@@ -31,7 +31,7 @@ def download_file(root, entry):
         raise ValueError("Existing model hash mismatch: " + name)
     partial = target.with_suffix(target.suffix + ".partial")
     url = f"https://huggingface.co/{MODEL}/resolve/{REVISION}/{name}"
-    # Standard Windows trust store; TLS verification is never disabled.
+    # Windows 기본 인증서 저장소를 사용한다. TLS 검증을 끄지 않는다.
     with urllib.request.urlopen(url, timeout=120) as response, partial.open("wb") as stream:
         total, milestone = 0, 0
         while True:

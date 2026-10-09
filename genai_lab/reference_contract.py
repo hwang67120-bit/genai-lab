@@ -1,4 +1,4 @@
-"""Hard input contracts for reference-only generation; no image-quality threshold."""
+"""참조 생성의 필수 입력 규칙을 검사한다. 이미지 품질 임계값은 없다."""
 import numpy as np
 
 
@@ -48,8 +48,8 @@ def validate_visual_inputs(inputs):
         raise ValueError('얼굴·헤어와 의상 영향 영역이 겹칩니다. 승인 마스크를 다시 확인하세요.')
     hair_reference = getattr(inputs, 'hair_reference', None)
     hair_mask = getattr(inputs, 'hair_mask', None)
-    # A refined hair mask may exist solely for diagnostics or local repair.
-    # It becomes a generation condition only when hair_reference is present.
+    # 정밀 머리 마스크는 진단이나 부분 보정에만 존재할 수 있다.
+    # hair_reference가 있을 때만 생성 조건으로 사용한다.
     if hair_reference is not None and hair_mask is None:
         raise ValueError('헤어 시각 참조 이미지에는 헤어 마스크가 필요합니다.')
     if hair_reference is not None:

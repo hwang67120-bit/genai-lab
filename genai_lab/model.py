@@ -60,7 +60,7 @@ def prepare_pipeline(
     print(f"모델 준비 중: {model['id']}")
     try:
         if scene_config is not None:
-            # Load on CPU; do not allocate the entire SDXL+ControlNet on CUDA first.
+            # CPU에 먼저 로드한다. SDXL과 ControlNet 전체를 CUDA에 먼저 올리지 않는다.
             controlnet = ControlNetModel.from_pretrained(
                 scene_config['model_id'], variant='fp16', torch_dtype=torch.float16,
                 cache_dir=str(cache_dir), local_files_only=True)

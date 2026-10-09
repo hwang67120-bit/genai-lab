@@ -1,7 +1,5 @@
-"""Advisory eye-color analysis: raw WD scores + two square head crops.
-
-No softmax, no forced gold/yellow mapping, no automatic heterochromia diagnosis.
-Two agreeing views of the same image are correlated evidence, not independent proof.
+"""눈색 분석은 참고용이다. WD 원점수와 정사각형 머리 크롭 두 개를 사용한다. 소프트맥스·금색과 노란색의 강제 통합·오드아이 자동 판정은 하지 않는다. 같은
+그림을 두 번 본 결과는 독립적인 증거가 아니다.
 """
 from dataclasses import replace
 from pathlib import Path
@@ -55,7 +53,7 @@ def crop_square_head(source, mask, *, pad_ratio, min_short_side=32):
     if min(right - left, bottom - top) < min_short_side:
         return None, {"reason": "head_roi_too_small", "mask_bbox": box}
     side = math.ceil(max(right - left, bottom - top) * (1 + 2 * pad_ratio))
-    # Ceil side and floor origin preserve odd-width/height ROI endpoints.
+    # 변 길이는 올림하고 시작점은 내림해 홀수 크기 영역의 끝점을 보존한다.
     x = math.floor((left + right - side) / 2)
     y = math.floor((top + bottom - side) / 2)
     clipped = (max(0, x), max(0, y),
@@ -157,7 +155,7 @@ def analyze_with_eye_review(session, source, mask, *, debug_dir=None,
                 crop.save(directory / f"head_input_{index}.png")
                 results.append(session.analyze(crop))
                 report["inference_count"] += 1
-                # Keep evidence even if a later inference is cancelled or fails.
+                # 이후 추론이 취소되거나 실패해도 관찰 근거를 보존한다.
                 report["views"].append({
                     "view": index, "eye_scores": eye_scores(results[-1]),
                     "multicolor_scores": multicolor_scores(results[-1])})
@@ -185,7 +183,7 @@ def analyze_with_eye_review(session, source, mask, *, debug_dir=None,
 
 
 def review_eye_candidates(report):
-    """Separate eye choices from global top-N. Low scores are visible, not auto selected."""
+    """눈색 후보를 전체 상위 태그와 분리한다. 낮은 점수도 표시하며 자동 선택하지 않는다."""
     scores = {}
     for tag, score in report.get("full_eye_scores", []):
         scores[tag] = max(scores.get(tag, 0.), score)

@@ -1,4 +1,4 @@
-"""Explicit diagnostics must not mutate Base, W, or the independent channel."""
+"""명시적 진단으로 기준 이미지·W·독립 조건 채널을 바꾸면 안 된다."""
 import numpy as np
 import pytest
 from PIL import Image

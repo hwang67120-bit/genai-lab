@@ -61,7 +61,7 @@ class TransformersPartsBackend:
         return result["boxes"].detach().cpu().numpy(), result["scores"].detach().cpu().numpy()
 
     def detect_labeled(self, image, query_groups, threshold):
-        """Detect all accessory phrases in one GroundingDINO forward pass."""
+        """GroundingDINO를 한 번 실행해 모든 장신구 문구를 검출한다."""
         import torch
         self._load()
         phrases = []
@@ -180,7 +180,7 @@ def _box_overlap(first, second):
 def deduplicate_ear_candidate_indices(boxes, selected_indices, scores,
                                       *, duplicate_iou=.70,
                                       enclosure_coverage=.90):
-    """Keep anatomical ear boxes, not detector duplicates or a two-ear envelope."""
+    """귀 상자만 유지하며 중복 검출이나 두 귀를 한꺼번에 감싼 상자는 제외한다."""
     selected = [int(index) for index in selected_indices]
     if len(selected) < 2:
         return np.asarray(selected, dtype=int), []
@@ -221,7 +221,7 @@ def deduplicate_ear_candidate_indices(boxes, selected_indices, scores,
 
 def filter_tail_garment_overlaps(selected_indices, decisions,
                                   maximum_garment_overlap):
-    """Fail closed for tail candidates that are mostly approved garment."""
+    """대부분이 승인 의상 영역인 꼬리 후보는 사용하지 않는다."""
     if (not np.isfinite(maximum_garment_overlap)
             or not 0 < maximum_garment_overlap <= 1):
         raise ValueError("꼬리 후보 의상 중첩 한도는 0 초과 1 이하여야 합니다.")

@@ -1,4 +1,4 @@
-"""Request-scoped body morphology values independent from gender labels."""
+"""성별 표시와 독립적인 요청별 체형 값을 관리한다."""
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ COMPONENT_NAMES = (
 
 @dataclass(frozen=True)
 class BodyMorphologyVector:
-    """Immutable visual body controls sampled once for one generation request."""
+    """한 생성 요청에서 한 번 추출한 시각적 체형 조건을 변경 없이 유지한다."""
 
     source_seed: int
     shoulder_width: float
@@ -85,7 +85,7 @@ def _component_value(seed: int, name: str) -> float:
 
 
 def freeze_body_morphology(seed: int) -> BodyMorphologyVector:
-    """Create a stable vector without touching Python's global random state."""
+    """Python 전역 난수 상태를 바꾸지 않고 재현 가능한 벡터를 만든다."""
     if type(seed) is not int or not 0 <= seed < 2**32:
         raise ValueError("체형 벡터 기준 시드는 0 이상 2**32 미만 정수여야 합니다.")
     return BodyMorphologyVector(
@@ -95,7 +95,7 @@ def freeze_body_morphology(seed: int) -> BodyMorphologyVector:
 
 
 def request_body_morphology(request: Any) -> BodyMorphologyVector:
-    """Return the request's sealed vector, deriving it only for legacy objects."""
+    """요청에 확정된 벡터를 반환한다. 구형 객체에만 새로 계산한다."""
     vector = getattr(request, "body_morphology", None)
     if vector is None:
         return freeze_body_morphology(int(request.seed))

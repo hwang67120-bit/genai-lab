@@ -1,9 +1,6 @@
-"""One-pass garment nouns and coverage/pocket roles, in one table.
-
-Sources: integration-20260929/make_plan.py, e2e-20261001/plan.py,
-garment-fidelity-20261001/make_plan_rules.py. Conservative torso rule:
-shirt and tank top block *automatic* midriff too. Approved tags are never removed.
-This is a tag heuristic, not a claim about actual garment pixels.
+"""1회 생성의 의상 명사와 덮는 범위·주머니 역할을 한 표에서 관리한다. 근거: integration-20260929/make_plan.py,
+e2e-20261001/plan.py, garment-fidelity-20261001/make_plan_rules.py. 셔츠와 민소매 상의는 자동 배 노출도
+막되 승인 태그는 제거하지 않는다. 태그 기반 규칙이며 실제 의상 픽셀의 판정은 아니다.
 """
 from dataclasses import dataclass
 import re
@@ -41,10 +38,8 @@ _LOOKUP = tuple(sorted(GARMENT_VOCABULARY, key=lambda n: -len(n.name)))
 
 
 def garment_nouns(tags):
-    """Longest suffix wins; trailing parenthetical qualifiers affect matching only.
-
-    'white shrug (clothing)' matches shrug, but the approved text is retained.
-    Unknown nouns are not guessed, and mannequin misclassifications stay approved.
+    """가장 긴 접미사가 우선한다. 뒤 괄호 설명은 매칭에만 쓴다. white shrug (clothing)은 shrug로 매칭하되 승인 문장은 유지한다. 알 수
+    없는 명사는 추측하지 않으며 마네킹 오분류도 승인 자료에 남긴다.
     """
     found = {}
     for tag in tags:

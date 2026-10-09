@@ -1,4 +1,4 @@
-"""Recognition contracts and GUI sequencing; synthetic images, no model inference."""
+"""합성 이미지로 인식 규칙과 화면 순서를 검사한다. 모델 추론은 없다."""
 from dataclasses import replace
 import json
 from pathlib import Path

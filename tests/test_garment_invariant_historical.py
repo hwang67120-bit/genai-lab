@@ -1,4 +1,4 @@
-"""Replay saved measurements against the actual guard AST; no pipeline/model calls."""
+"""실제 검사 구문에 저장 측정값을 넣어 재현한다. 파이프라인·모델 호출은 없다."""
 import ast
 import json
 from pathlib import Path
@@ -13,7 +13,7 @@ SOURCE = ROOT / 'genai_lab/selected_garment_correction.py'
 
 
 def execute_guard(error_name, **values):
-    # Execute the unchanged production If node, rather than reimplementing >=.
+    # >= 조건을 다시 구현하지 않고 변경되지 않은 제품 조건문을 실행한다.
     tree = ast.parse(SOURCE.read_text(encoding='utf-8-sig'))
     function = next(n for n in tree.body if isinstance(n, ast.FunctionDef)
                     and n.name == 'correct_selected_garment')
@@ -28,9 +28,9 @@ def execute_guard(error_name, **values):
          {'GarmentCorrectionContractError': GarmentCorrectionContractError, **values})
 
 
-# Measured sources: outputs/sdxl-local-garment-strength-v2-20260923/cases/<case>/run.json
-# or outputs/color-channel-probe-v2-20260923/cases/<case>/run.json.
-# JSON pointer for each: /local_refinement/garment_edit_plan/metrics.
+# 측정 출처: outputs/sdxl-local-garment-strength-v2-20260923/cases/<case>/run.json
+# 또는 outputs/color-channel-probe-v2-20260923/cases/<case>/run.json을 사용한다.
+# 각 JSON의 측정 경로는 /local_refinement/garment_edit_plan/metrics다.
 @pytest.mark.parametrize('folder,case,protection,requested,blocked', [
     ('sdxl-local-garment-strength-v2-20260923', 'muscular-male', 514975, 490735, True),
     ('sdxl-local-garment-strength-v2-20260923', 'ordinary-female', 23845, 160496, False),
@@ -57,7 +57,7 @@ def test_saved_protection_guard(folder, case, protection, requested, blocked):
 
 
 def test_synthetic_equal_protection_is_blocked():
-    # Synthetic boundary, NOT a measured pair. Reuse one observed requested area.
+    # 실측 쌍이 아닌 합성 경계값이다. 관찰한 요청 면적 하나를 재사용한다.
     metrics = {'hard_protection_pixels': 160496, 'requested_pixels': 160496}
     with pytest.raises(GarmentCorrectionContractError,
                        match='protection_exceeds_requested_region'):
@@ -79,8 +79,8 @@ def test_current_coverage_status_vocabulary():
     ('UNRESOLVED', True), ('REVIEW', False), ('OK', False), ('PASS', False),
 ])
 def test_synthetic_coverage_status_guard(status, blocked):
-    # All records here are synthetic. Only UNRESOLVED/REVIEW are currently emitted;
-    # OK/PASS are additional synthetic normal-state examples, not observed states.
+    # 여기 기록은 모두 합성 자료다. 현재 실제 상태는 UNRESOLVED/REVIEW만 나오며,
+    # OK/PASS는 추가한 합성 정상 예시이지 관찰된 상태가 아니다.
     values = {'target_coverage': SimpleNamespace(record={'status': status}),
               'approved_tags': ('jacket',)}
     if blocked:

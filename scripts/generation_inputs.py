@@ -1,4 +1,4 @@
-"""Lightweight resolution and CLIP prompt helpers shared by generation entrypoints."""
+"""생성 진입점에서 공용으로 쓰는 가벼운 해상도·CLIP 문구 도우미다."""
 
 def resolve_inference_size(source_size, width=None):
     """원본은 유지하고 연산 캔버스만 8배수로 정한다. 비율 오차는 반올림 범위다."""

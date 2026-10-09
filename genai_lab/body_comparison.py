@@ -931,9 +931,9 @@ def execute_character_body_comparison(
         raw_mask.close()
         protection_mask.close()
 
-    # The repaired hard mask is the model input, while the original approved
-    # SAM mask remains the audit source.  This preserves evidence for pixels
-    # that automatic protection removed instead of silently rewriting history.
+    # 보정한 이진 마스크는 모델 입력으로 쓰고, 원래 승인한
+    # SAM 마스크는 검토 근거로 보존한다. 자동 보호로 제거한 픽셀도
+    # 기록을 덮어쓰지 않고 근거로 남긴다.
     verification_raw_mask = (
         mask_layers.images["requested_mask"] if mask_layers is not None else
         automatic_mask_repair.original_mask if automatic_mask_repair is not None else

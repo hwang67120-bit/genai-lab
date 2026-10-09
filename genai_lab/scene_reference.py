@@ -1,7 +1,5 @@
-"""Validated scene references; no RGB initialization, inpainting or hidden-part reconstruction.
-
-The analyzer is a project integration boundary, not an implemented semantic model.
-All masks and target landmarks use the final output canvas coordinates.
+"""검증된 장면 참조를 사용한다. RGB 초기화·인페인트·가려진 부위 복원은 없다. 분석기는 프로젝트 연결 경계이며 구현된 의미 모델이 아니다. 모든 마스크와
+대상 관절은 최종 출력 화면 좌표를 쓴다.
 """
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -14,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class AnalysisRejected(ValueError):
-    """Bounded reanalysis may resolve this; do not silently invent coordinates."""
+    """제한된 재분석으로 해결할 수 있는 오류다. 좌표를 임의로 만들지 않는다."""
 
 
 @dataclass
@@ -42,7 +40,7 @@ class SceneAnalysis:
     parts: list[PartReference]
     unresolved: tuple[str, ...] = ()
     point_labels: tuple[str, ...] = ()
-    # Producer must record source/target coordinate conversion and evidence.
+    # 자료를 만드는 곳에서 원본·대상 좌표 변환과 근거를 기록해야 한다.
     evidence: dict = field(default_factory=dict)
 
     def close(self):
@@ -56,14 +54,13 @@ class SceneAnalysis:
 class AutomaticSceneAnalyzer(Protocol):
     def analyze(self, source: Image.Image, garment: Image.Image, *,
                 attempt: int) -> SceneAnalysis:
-        """Return OWNED copies. Distinguish garment-only from worn images.
-        Keep per-part evidence; no-detection is not proof of absence.
-        Depth alone must not establish occlusion; report unresolved cases.
+        """호출부가 소유할 사본을 반환한다. 단독 의상과 착용 이미지를 구분한다. 부위별 근거를 보존하며 미검출로 없음을 증명하지 않는다. 깊이만으로 가림을 확정하지
+        않고 미확정 사례를 기록한다.
         """
         ...
 
     def close(self) -> None:
-        """Release models/tensors owned by this analyzer before diffusion."""
+        """확산 생성 전에 분석기가 소유한 모델과 텐서를 해제한다."""
         ...
 
 
@@ -183,7 +180,7 @@ def warp_garment(garment, src_points, dst_points, canvas_size, *,
     dst = validate_points(dst_points, canvas_size, "target")
     if src.shape != dst.shape:
         raise AnalysisRejected("landmark counts differ")
-    # Normalization improves conditioning without mixing the two coordinate frames.
+    # 두 좌표계를 섞지 않고 정규화로 조건 전달을 개선한다.
     target_scale = np.array([width, height], dtype=np.float64)
     try:
         inverse = RBFInterpolator(dst / target_scale, src,
@@ -254,7 +251,7 @@ def as_mask(values):
 
 @dataclass
 class SceneCondition:
-    # Only black-line-on-white structural hints; never original RGB initialization.
+    # 흰 배경의 검은 선 구조만 사용한다. 원본 RGB로 생성 초기화하지 않는다.
     hint: Image.Image
     references: list[PartReference]
     debug_dir: Path
@@ -289,7 +286,7 @@ def compose_scene(scene, warped, extractor, debug_dir, garment_scale=.45):
     for lines in (character_lines, garment_lines):
         if lines.shape != keep.shape or lines.dtype != np.uint8:
             raise AnalysisRejected("extractor must return output-sized uint8 white lines")
-    # Do not silently accept a blank garment hint while character lines remain valid.
+    # 캐릭터 선이 정상이어도 의상 선이 비어 있으면 자동으로 허용하지 않는다.
     if not np.any(garment_lines[visible] > 16):
         raise AnalysisRejected("garment lineart is empty")
     merged = np.where(keep & ~old, character_lines, 0).astype(np.uint8)

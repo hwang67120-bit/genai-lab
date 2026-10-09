@@ -1,4 +1,4 @@
-"""CPU contract and GUI lifecycle tests; synthetic images, never models or GPU."""
+"""합성 이미지로 CPU 규칙과 화면 수명을 검사한다. 모델·GPU는 사용하지 않는다."""
 from dataclasses import replace
 import hashlib
 import json

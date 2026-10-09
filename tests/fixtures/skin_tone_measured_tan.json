@@ -1,0 +1,29 @@
+{
+ "source": "outputs/skin-tone-recommend-20261009/gpu (2026-10-09, #9 734da0ec, female, garment 12ec7c9b)",
+ "groups": {
+  "appearance": [
+   "brown_hair",
+   "brown_eyes",
+   "short_hair"
+  ],
+  "body": [],
+  "fixed": []
+ },
+ "slim": false,
+ "garment_tags": [
+  "black footwear",
+  "black shorts",
+  "jacket",
+  "shorts",
+  "black jacket",
+  "long sleeves",
+  "socks",
+  "shoes",
+  "zipper"
+ ],
+ "gender": "female",
+ "expected": {
+  "N0": "1girl, female focus, feminine silhouette, black footwear, black shorts, jacket, shorts, black jacket, long sleeves, socks, shoes, zipper, bare legs, brown hair, brown eyes, short hair, solo, full body, white background, simple background, coherent anatomy, best quality",
+  "N1": "1girl, female focus, feminine silhouette, black footwear, black shorts, jacket, shorts, black jacket, long sleeves, socks, shoes, zipper, bare legs, brown hair, brown eyes, short hair, tan, solo, full body, white background, simple background, coherent anatomy, best quality"
+ }
+}

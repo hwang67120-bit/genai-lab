@@ -1,8 +1,5 @@
-"""Opt-in proportion trial: confirmed geometry -> prompt -> generation -> comparison.
-
-No GUI defaults, model installation, extra inference, or generation retries.
-The existing backend owns GPU lifecycle; output measurement is injected so CPU
-analysis can run after GPU teardown if the caller chooses a separate review.
+"""선택적 비율 시험: 확인한 좌표 → 프롬프트 → 생성 → 비교. 화면 기본값·모델 설치·추가 추론·재시도는 바꾸지 않는다. 기존 실행기가 GPU 수명을
+관리하며, 결과 측정은 외부에서 주입해 GPU 해제 후 CPU로 실행할 수 있다.
 """
 from dataclasses import asdict, dataclass, replace
 from pathlib import Path
@@ -18,10 +15,8 @@ from genai_lab.onepass_generation_settings import OnePassGenerationSettings
 
 
 def prepare_body_proportion_inputs(inputs, reference=None, *, tokenizers=None):
-    """None returns the identical request. Confirmed ratios append numeric text.
-
-    Text guidance is experimental, not a spatial constraint or a guarantee of
-    correct anatomy. Gender, clothing, pose, face image and negative text stay.
+    """입력이 None이면 같은 요청을 반환하고, 확인한 비율만 숫자 문장으로 추가한다. 문장 유도는 실험 조건이며 공간 제약이나 인체 정확성을 보장하지 않는다.
+    성별·의상·자세·얼굴 이미지·부정 문구는 유지한다.
     """
     if reference is None:
         return inputs
@@ -56,7 +51,7 @@ class BodyProportionTrialResult:
 
 
 def review_body_proportion_candidate(candidate, reference, measure_output, *, relative_tolerance=0.05):
-    """Keep raw/run.json untouched even when measurement fails or is cancelled."""
+    """측정 실패나 취소에도 원본 결과와 run.json은 변경하지 않는다."""
     path = candidate.path.parent / 'body-proportion-review.json'
     if path.exists():
         raise FileExistsError('기존 비율 검토 기록을 덮어쓰지 않습니다.')
@@ -95,10 +90,8 @@ def generate_body_proportion_trial(backend, inputs, reference, *, source_image,
                                    tokenizers, seed, directory, measure_output,
                                    settings=OnePassGenerationSettings(),
                                    relative_tolerance=0.05, cancelled=lambda: False):
-    """One real generation call with confirmed ratio text and explicit review.
-
-    A comparison failure returns measurement_failed while preserving raw output.
-    Generation failures/cancellation propagate with the existing run.json record.
+    """확인한 비율 문구로 한 번 생성하고 사용자 검토를 받는다. 비교 실패는 measurement_failed로 반환하며 원본을 보존한다. 생성 실패·취소는 기존
+    run.json 기록과 함께 호출부로 전달한다.
     """
     if not isinstance(reference, BodyProportionReference):
         raise TypeError('비율 시험에는 명시적인 참조가 필요합니다.')

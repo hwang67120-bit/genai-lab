@@ -1,4 +1,4 @@
-"""Original-outline trial. Default: offline CPU preflight; --run explicitly enables GPU."""
+"""원본 윤곽 시험이다. 기본은 오프라인 CPU 사전 검사이며 --run을 명시해야 GPU를 사용한다."""
 import argparse
 from dataclasses import asdict, replace
 import json
@@ -75,7 +75,7 @@ def check_studio_approval(directory, inputs, options, manifest):
 
 
 def check_studio_outputs(generation, seeds, inputs, manifest):
-    """A must have all four completed pairs; never compare against a partial batch."""
+    """대조군 A는 네 쌍이 모두 완성돼야 한다. 부분 묶음과 비교하지 않는다."""
     for seed in seeds:
         for stage in ("BASE", "CONTOUR"):
             folder = generation / f"{stage}_{seed}"
@@ -128,7 +128,7 @@ def verify_manifest(manifest):
 
 def prepare_trial(inputs, settings, options, seeds, directory, sources, expected,
                   foreground_factory=AnimeForeground):
-    """CPU map generation and a serializable lock, always before the GPU branch."""
+    """GPU 분기 전에 CPU 지도를 만들고 JSON으로 저장 가능한 잠금을 만든다."""
     mask, contour, models = validate_proportion_request(inputs, settings, options)
     directory.mkdir(parents=True, exist_ok=False)
     state = {"status": "preflight_started", "gpu_generation": False}

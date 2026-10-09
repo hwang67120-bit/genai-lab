@@ -44,7 +44,7 @@ def test_layer_priority_and_diagnostic_positions(automatic):
         assert result.images['face_hair_reference'].getpixel((6, 6)) == 0
         assert result.images['face_hair_reference'].getpixel((2, 5)) == 0
         assert final.getpixel((2, 4)) == (255 if automatic else 0)
-        assert final.getpixel((6, 5)) == 255  # explicit add overrides auto only
+        assert final.getpixel((6, 5)) == 255  # 명시적 추가 선택은 자동 영역에만 우선한다.
         for p in ((6, 2), (6, 6), (0, 0), (2, 5), (14, 14)):
             assert final.getpixel(p) == 0
         assert result.metrics["manual_conflict_pixels"] == 2
@@ -206,8 +206,8 @@ def test_layered_preprocessing_retains_priority_through_neutralization(tmp_path,
         tmp_path, tmp_path, tmp_path, tmp_path / "temp", tmp_path, 256, 256, 60)
     with Image.new("RGB", (64, 64), "red") as source, Image.new("L", source.size, 0) as add, \
             Image.new("L", source.size, 0) as keep, Image.new("L", source.size, 0) as exclude:
-        add.paste(255, (32, 12, 38, 30))  # face conflict and non-face auto protection overlap
-        exclude.paste(255, (10, 20, 15, 30))  # exposed hand selected incorrectly by auto
+        add.paste(255, (32, 12, 38, 30))  # 얼굴 충돌 영역과 얼굴 외 자동 보호 영역이 겹친다.
+        exclude.paste(255, (10, 20, 15, 30))  # 자동 선택이 노출된 손을 잘못 골랐다.
         keep.paste(255, (16, 20, 20, 30))
         approved = approve_target_masks(source, add, keep, use_automatic_base=True,
                                         excluded_mask=exclude)

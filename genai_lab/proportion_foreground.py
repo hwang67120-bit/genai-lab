@@ -1,4 +1,4 @@
-"""Local CPU isnet-anime, matching the measured trial pixel preprocessing."""
+"""로컬 CPU isnet-anime을 사용하며 시험에서 측정한 픽셀 전처리와 맞춘다."""
 import gc
 import numpy as np
 from PIL import Image

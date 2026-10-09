@@ -1,7 +1,5 @@
-"""Bounded face ROI recovery for reference analysis.
-
-The fallback is used only when the SCHP face mask is too small to measure.
-It records a detector bounding-box ROI, not a semantic face segmentation.
+"""참조 분석의 얼굴 관찰 영역을 제한적으로 복구한다. SCHP 얼굴 마스크가 측정하기에 너무 작을 때만 사용한다. 검출 상자를 기록하며 의미상 얼굴 분할이라고
+부르지 않는다.
 """
 from __future__ import annotations
 
@@ -112,10 +110,8 @@ def recover_reference_face_region(
     *,
     exclude_from_garment: bool = False,
 ) -> dict[str, Any]:
-    """Recover an observable face ROI and union it into identity.
-
-    The supplied mapping must be mutable in practice. No mask is changed when
-    the parser face is already measurable or the detector evidence is invalid.
+    """관찰 가능한 얼굴 영역을 복구해 동일성 영역에 합친다. 전달 사전은 실제로 변경 가능해야 한다. 파서 얼굴이 이미 측정 가능하거나 검출 근거가 잘못되면
+    마스크를 변경하지 않는다.
     """
     settings = _settings(config)
     face = masks.get("face")

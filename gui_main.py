@@ -2718,7 +2718,7 @@ class GenerationWorker(QObject):
                 raise ValueError('기존 CatVTON 의상 합성 기능은 제거되었습니다. 의상 디자인 참조 생성을 사용하세요.')
             if visual_config.get('visual_enabled'):
                 from genai_lab.style import prepare_original_image_canvas
-                # Release the cached generation pipeline before the mask subprocess.
+                # 마스크 하위 프로세스 전에 캐시된 생성 파이프라인을 해제한다.
                 self.pipeline = None
                 gc.collect()
                 torch.cuda.empty_cache()
@@ -3014,7 +3014,7 @@ class GenAILabWindow(QMainWindow):
         if hasattr(self, "studio") and self.studio.occupied:
             QMessageBox.information(self, "작업 확인", "현재 작업을 마치거나 결과를 저장하지 않음으로 정리한 뒤 계속해 주세요.")
             return
-        # Do not compete with any current generation/analysis worker.
+        # 실행 중인 생성·분석 작업자와 자원을 경쟁하지 않는다.
         if ((self.workflow_context is not None and self.workflow_context.active)
                 or any(value is not None and hasattr(value, 'isRunning') and value.isRunning()
                        for name, value in vars(self).items() if name.endswith('thread'))):
@@ -3231,7 +3231,7 @@ class GenAILabWindow(QMainWindow):
         if self.style_path is not None and not ready and (
             active_generation_state or not missing_required_outfit
         ):
-            return  # Preserve the active work/review status and button label.
+            return  # 진행 중 작업·검토 상태와 버튼 문구를 유지한다.
         self.generate_button.setText("이미지 생성 시작")
         self.status_label.setText(
             "상태: 입력 등록 "
@@ -4459,7 +4459,7 @@ class GenAILabWindow(QMainWindow):
     def resolve_body_comparison_clothing_category(
         self,
     ) -> ClothingCategory:
-        """Resolve the removed UI category from current approved garment tags."""
+        """없어진 화면 분류값을 현재 승인 의상 태그로 계산한다."""
         category = self.body_comparison_clothing_category
         if isinstance(category, ClothingCategory):
             return category
@@ -5705,7 +5705,7 @@ class GenAILabWindow(QMainWindow):
                         'garment_prompt_policy', {}),
                     'garment_image': self.pending_clothing_extraction.extracted_image.copy(),
                 }
-                # The automatic mask runner must not compete with the cached SDXL model.
+                # 자동 마스크 실행기가 캐시된 SDXL 모델과 자원을 경쟁하지 않게 한다.
                 self.pipeline = None
                 gc.collect()
                 torch.cuda.empty_cache()
@@ -6463,7 +6463,7 @@ class GenAILabWindow(QMainWindow):
         base = self.pending_native_base_candidate
         self.pending_native_base_candidate = None
         if base is not None:
-            # Keep raw execution artifacts on disk, but do not promote Base to a final result.
+            # 원시 실행 자료는 디스크에 보존하되 기준 이미지를 최종 결과로 승격하지 않는다.
             self.pending_character_candidate = None
             self.pending_final_review_evidence = None
         self.pause_generation_workflow(GenerationWorkflowStage.CLOTHING_COMPOSITING, message)
@@ -6539,7 +6539,7 @@ class GenAILabWindow(QMainWindow):
         original_size_dialog.exec()
 
     def _review_final_candidate(self, initial_decision: str) -> None:
-        """Show Stage 8 evidence and persist one explicit human decision."""
+        """8단계 근거를 보여주고 명시적인 사용자 결정 하나를 저장한다."""
         candidate = self.pending_character_candidate
         evidence = self.pending_final_review_evidence
         if candidate is None:

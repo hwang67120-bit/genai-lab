@@ -1,4 +1,4 @@
-"""CPU contracts for the isolated head-contour trial; no GPU/model loading."""
+"""분리된 머리 윤곽 시험의 CPU 규칙 검사다. GPU·모델 로드는 없다."""
 from dataclasses import asdict, replace
 import hashlib
 import io
@@ -37,7 +37,7 @@ def trial_request(tmp_path):
 def test_base_rehydration_preserves_every_input_byte(trial_request):
     inputs, settings = trial_request
     plan = {"inputs": {"BASE": asdict(inputs)}, "settings": asdict(settings)}
-    # Model the actual JSON serialization, not a dataclass equality shortcut.
+    # 데이터 클래스의 같음 비교로 대체하지 않고 실제 JSON 저장을 재현한다.
     import json
     plan = json.loads(contracts.canonical(plan))
     restored, restored_settings = contracts.restore_request(plan)

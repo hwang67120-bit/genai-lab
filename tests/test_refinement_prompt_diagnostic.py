@@ -1,4 +1,4 @@
-"""Diagnostic text preserves exact punctuation and identifies actual vs sealed text."""
+"""진단 문구의 정확한 구두점을 유지하고 실제 문구와 확정 문구를 구분한다."""
 import hashlib
 import pytest
 from genai_lab.selected_garment_correction import _diagnostic_prompt

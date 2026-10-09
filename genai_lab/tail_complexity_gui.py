@@ -1,4 +1,4 @@
-"""GUI-owned cancellable CPU process. No model loading on the GUI thread."""
+"""화면이 관리하는 취소 가능한 CPU 프로세스다. 화면 스레드에서 모델을 로드하지 않는다."""
 import json
 import os
 from pathlib import Path
@@ -66,7 +66,7 @@ class TailComplexityRunner(QObject):
 
     def finished(self, process, code):
         if process is not self.process:
-            return  # Superseded crop results cannot replace current selection.
+            return  # 이전 크롭 분석 결과가 현재 선택을 덮어쓰지 못하게 한다.
         self.timer.stop()
         try:
             if code != 0:

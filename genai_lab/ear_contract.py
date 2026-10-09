@@ -1,7 +1,5 @@
-"""Independent human-ear and animal-ear observation contracts.
-
-Detector absence is deliberately UNKNOWN. Only an explicit approved absence
-may become ABSENT; this module never invents absence from a missed detection.
+"""사람 귀와 동물 귀를 독립적으로 관찰한다. 미검출은 UNKNOWN으로 유지한다. 사용자가 없음을 명시적으로 승인한 경우에만 ABSENT가 되며, 검출 실패로
+없음을 만들어 내지 않는다.
 """
 
 from __future__ import annotations
@@ -48,11 +46,8 @@ def _normalized_boxes(entry, image_size):
 
 
 def _ear_location_verified(name, evidence):
-    """Reject detector masks that cannot be a local face-side ear region.
-
-    This is deliberately only a coarse safety check. It never proves that the
-    object is an ear; it prevents a nearly full character/body mask from being
-    promoted into automatic conditioning and hair-mask subtraction.
+    """얼굴 옆 귀 영역으로 볼 수 없는 검출 마스크를 거부한다. 대략적인 보호 검사이며 귀임을 증명하지 않는다. 전신에 가까운 마스크가 자동 생성 조건이나 머리카락
+    제거 영역으로 쓰이는 것을 막는다.
     """
     if not evidence:
         return False
@@ -121,7 +116,7 @@ def _observation(name, parts, image_size, explicit_state=None):
 def build_source_ear_contract(detection_report, image_size, *,
                               approved_character_tags=(), explicit_states=None,
                               ambiguous_overlap_ratio=.80):
-    """Build the source contract while keeping both ear classes independent."""
+    """두 귀 종류를 독립적으로 유지하면서 원본 관찰 규칙을 만든다."""
     report = detection_report if isinstance(detection_report, dict) else {}
     parts = report.get("parts", {}) if isinstance(report.get("parts", {}), dict) else {}
     states = explicit_states or {}
@@ -143,10 +138,10 @@ def build_source_ear_contract(detection_report, image_size, *,
         overlap.get("smaller_part_ratio")
         if isinstance(overlap, dict) else None
     )
-    # Grounding DINO may return the same crown objects for both natural-language
-    # queries. That is not evidence that both anatomical ear types are present.
-    # Keep the raw observation, but do not promote it to generation unless an
-    # explicit state resolved the ambiguity.
+    # Grounding DINO는 두 자연어 질문에 같은 머리 위 물체를
+    # 반환할 수 있다. 두 종류의 귀가 모두 있다는 증거는 아니다.
+    # 원시 관찰은 보존하되, 명시적으로 모호함을 해소하기 전에는
+    # 생성 조건으로 사용하지 않는다.
     if (states.get(HUMAN_EARS) is None
             and observations[HUMAN_EARS]["state"] == "present"
             and observations[ANIMAL_EARS]["state"] == "present"
@@ -189,7 +184,7 @@ def _mean_center(observation):
 def evaluate_output_ear_contract(source_contract, detection_report, image_size,
                                  *, maximum_center_delta=.20,
                                  maximum_overlap_ratio=.15):
-    """Compare output observations with the approved source ear contract."""
+    """승인된 원본 귀 조건과 생성 결과의 귀 관찰을 비교한다."""
     if not isinstance(source_contract, dict):
         return {
             "version": "generated_ear_contract_audit_v1",

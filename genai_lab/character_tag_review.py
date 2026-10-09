@@ -1,4 +1,4 @@
-"""Explicit approval of source-character tags; no inferred identity is enforced."""
+"""원본 캐릭터 태그를 명시적으로 승인받는다. 추정한 동일성을 강제하지 않는다."""
 from dataclasses import fields
 from pathlib import Path
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QLabel, QCheckBox, QScrollArea,
@@ -213,7 +213,7 @@ class CharacterTagReview(QDialog):
                 check.setEnabled(False)
                 check.setText(check.text() + ' — 기준 이미지의 의상은 제외')
             if report is not None and normalize_tag(tag.tag_name) in MULTICOLOR:
-                check.setChecked(False)  # Conflicting colors do not diagnose heterochromia.
+                check.setChecked(False)  # 색 태그가 충돌한다고 오드아이로 판정하지 않는다.
             if character_gender != 'unspecified' and gender_tag_kind(tag.tag_name) is not None:
                 check.setChecked(False)
                 check.setEnabled(False)

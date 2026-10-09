@@ -1,11 +1,11 @@
-"""Reset mutable diffusion state at product-request boundaries."""
+"""제품 요청 경계에서 변경 가능한 확산 상태를 초기화한다."""
 from __future__ import annotations
 
 from typing import Any
 
 
 def reset_request_runtime(pipeline: Any, *, boundary: str) -> dict[str, Any]:
-    """Clear request-owned state without unloading shared model weights."""
+    """공유 모델 가중치를 내리지 않고 요청 전용 상태를 지운다."""
     if boundary not in {"request_start", "request_end", "request_failed"}:
         raise ValueError(f"지원하지 않는 요청 경계입니다: {boundary}")
     report: dict[str, Any] = {
@@ -23,7 +23,7 @@ def reset_request_runtime(pipeline: Any, *, boundary: str) -> dict[str, Any]:
         try:
             pipeline.maybe_free_model_hooks()
             report["actions"].append("model_hooks_released")
-        except Exception as error:  # cleanup remains diagnostic
+        except Exception as error:  # 해제 결과는 진단용으로만 남긴다.
             report["errors"].append(
                 f"model_hooks:{type(error).__name__}:{error}"
             )

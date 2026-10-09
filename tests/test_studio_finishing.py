@@ -1,4 +1,4 @@
-"""CPU-only finishing wiring, frozen prompt strings, geometry, and artifact ownership."""
+"""마무리 연결·고정 문구·좌표·파일 소유권을 CPU로 검사한다."""
 from dataclasses import asdict, replace
 from pathlib import Path
 from types import SimpleNamespace
@@ -115,7 +115,7 @@ def test_raw_hires_face_background_and_export_are_distinct(tmp_path,heads,expect
     saved=results.export(tmp_path/"saved.png")
     assert saved.read_bytes()==results.current_path.read_bytes()
     assert candidate.path.read_bytes()==original and candidate.record_path.read_bytes()==raw_record
-    assert json.loads(saved.with_suffix(".review.json").read_text())["finishing"]["status"]=="completed"
+    assert json.loads(saved.with_suffix(".review.json").read_text(encoding="utf-8"))["finishing"]["status"]=="completed"
 
 
 def test_background_failure_keeps_finished_size_and_says_so(tmp_path):
@@ -137,7 +137,7 @@ def test_changed_stage_prevents_approval(tmp_path,name):
     results=service.StudioResults(batch)
     path=candidate.path.parent/name
     if name.endswith("json"):
-        record=json.loads(path.read_text());record["seed"]=999;write_json(path,record)
+        record=json.loads(path.read_text(encoding="utf-8"));record["seed"]=999;write_json(path,record)
     else:path.write_bytes(b"changed")
     with pytest.raises(ValueError):results.approve(dict(character=True,garment=True,exposure=True))
 
@@ -166,14 +166,14 @@ def test_cancel_before_finishing_loads_no_pipeline(tmp_path):
     batch=batch_at(tmp_path/"run")
     with pytest.raises(OnePassCancelled):
         finish.finish_batch(batch,prompt(),service.StudioRuntime(),cancelled=lambda:True,backend_factory=lambda _:pytest.fail("GPU"))
-    assert json.loads((batch.directory/"finishing-status.json").read_text())["status"]=="cancelled"
+    assert json.loads((batch.directory/"finishing-status.json").read_text(encoding="utf-8"))["status"]=="cancelled"
 
 
 def test_new_size_keeps_tail_coordinates_and_preview(tmp_path):
     from genai_lab.qwen_tail_gui import screen_box_to_source
     from genai_lab.qwen_pose_edit import product_preview
     from genai_lab.qwen_pose_settings import output_dimensions
-    # A non-full-image rectangle maps exactly to source pixels at 50% display scale.
+    # 전체가 아닌 사각형도 화면 배율 50%에서 원본 픽셀로 정확히 대응해야 한다.
     assert screen_box_to_source((60,70),(210,320),(10,20,552,924),(1104,1848))==(100,100,400,600)
     assert output_dimensions(1104,1848)==output_dimensions(736,1232)
     raw=tmp_path/"qwen-raw.png";Image.new("RGB",output_dimensions(1104,1848),"blue").save(raw)

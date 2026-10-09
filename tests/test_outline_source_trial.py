@@ -1,4 +1,4 @@
-"""CPU-only original-outline branch and replay contracts."""
+"""원본 윤곽 분기와 재현의 CPU 규칙 검사다."""
 from dataclasses import asdict, replace
 from pathlib import Path
 import json
@@ -142,7 +142,7 @@ def test_cpu_cli_default_never_generates_and_checks_output_reuse(case,tmp_path,m
     monkeypatch.setattr(trial,"generate_proportion_batch",lambda *a,**k:pytest.fail("GPU action"))
     original=trial.prepare_trial
     def prepare(*a,**kwargs):
-        # The unit fixture has synthetic pixels; real R6 SHA comparison is a separate CPU run.
+        # 단위 시험은 합성 픽셀을 쓴다. 실제 R6 해시 비교는 별도 CPU 실행으로 확인한다.
         args=list(a);args[-1]={}
         return original(*args,foreground_factory=lambda o:Foreground(o,[]),**kwargs)
     monkeypatch.setattr(trial,"prepare_trial",prepare)

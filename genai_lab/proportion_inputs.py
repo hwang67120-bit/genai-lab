@@ -1,4 +1,4 @@
-"""Reviewed head pixels and frozen sketch rules; no hidden coordinate transform."""
+"""검토한 머리 픽셀과 고정 스케치 규칙을 사용한다. 숨은 좌표 변환은 없다."""
 from dataclasses import dataclass, asdict
 import hashlib
 import io
@@ -41,7 +41,7 @@ def json_value(value):
 
 @dataclass(frozen=True)
 class HeadOutline:
-    # Already on the pose canvas. Hair silhouette is included; this is not an anatomical head ratio.
+    # 이미 자세 화면 좌표다. 머리카락 외곽을 포함하며 인체 머리 비율이 아니다.
     normalized_file: Path
     normalized_sha256: str
     control_sha256: str
@@ -52,6 +52,12 @@ class HeadOutline:
     nose: tuple[float, float]
     neck: tuple[float, float]
     confirmed: bool = False
+    # 2026-10-09 결정: 윤곽은 맞지만 검출 목이 너무 아래인 경우에만
+    # 사용자 명시 확인 후 통과할 수 있다. 다른 좌표 검사는 우회하지 않는다.
+    geometry_override: str | None = None
+
+    def __post_init__(self):
+        require(self.geometry_override in (None, "user_confirmed"), "머리 기하 확인 값 오류")
 
 
 @dataclass(frozen=True)
@@ -63,12 +69,20 @@ class ProportionOptions:
     foreground_sha256: str | None = None
     sketch_revision: str = SKETCH_REVISION
     outline_source: str = "base"
+    body_widths: str = "off"
+    shoulder_pull: str = "off"
+    shoulder_record_file: Path | None = None
+    shoulder_record_sha256: str | None = None
     head_lines: str = "none"
     head_lines_file: Path | None = None
     head_lines_sha256: str | None = None
     head_lines_confirmed: bool = False
 
     def __post_init__(self):
+        require(self.shoulder_pull in ("off", "0.85"), "어깨 보정 옵션 오류")
+        require(self.shoulder_pull == "off" or (self.enabled and self.outline_source == "base" and self.body_widths == "off"), "어깨 보정은 2단계 base 윤곽에서만 사용하며 폭 맞추기와 함께 쓰지 않습니다.")
+        require(self.body_widths in ("off", "match_original"), "체형 폭 옵션 오류")
+        require(self.body_widths == "off" or (self.enabled and self.outline_source == "base" and self.head_lines == "none"), "폭 맞추기는 2단계 base 윤곽·머리 안쪽 선 없음에서만 사용합니다.")
         require(self.head_lines in ("none","hair","all"), "머리 선은 none, hair, all 중 하나여야 합니다.")
         require(type(self.head_lines_confirmed) is bool,"머리 선 확인 여부는 bool입니다.")
         require(type(self.enabled) is bool, "비율 생성 사용 여부는 bool입니다.")
@@ -105,13 +119,21 @@ def validate_head(head, inputs, size):
     require(mask[round(head.nose[1]), round(head.nose[0])] > 0, "코 좌표가 머리 밖입니다.")
     ys, xs = np.where(mask > 0)
     gap = head.neck[1] - int(ys.max())
-    require(xs.min() <= head.neck[0] <= xs.max() and 0 <= gap <= .25 * (ys.max() - ys.min() + 1),
-            "목 좌표가 확인한 머리 바로 아래에 있지 않습니다.")
+    if not (xs.min() <= head.neck[0] <= xs.max() and 0 <= gap <= .25 * (ys.max() - ys.min() + 1)):
+        require(head.geometry_override == "user_confirmed", NECK_GAP_MESSAGE)
     return mask, contour
 
 
+NECK_GAP_MESSAGE = "목 좌표가 확인한 머리 바로 아래에 있지 않습니다."
+
+
+def neck_gap_only(error):
+    """사용자가 확인해 진행할 수 있는 유일한 좌표 오류인 목 위치 검사에만 참이다."""
+    return error == NECK_GAP_MESSAGE
+
+
 def prepare_head_outline(normalized_file, control_file, mask_file, directory, *, nose, neck):
-    """Preview a supplied head mask on the existing pose canvas. Never auto-confirm it."""
+    """기존 자세 화면에서 제공된 머리 마스크를 미리 본다. 자동 승인하지 않는다."""
     normalized_file, control_file, mask_file = map(Path, (normalized_file, control_file, mask_file))
     with Image.open(normalized_file) as image:
         rgb = np.asarray(image.convert("RGB")).copy()
@@ -173,7 +195,7 @@ def validate_proportion_request(inputs, settings, options):
 
 
 def make_sketch(alpha, head_mask, head_contour):
-    """Frozen gpu-05 rule: largest component, 4px outline, 6px head erasure."""
+    """고정된 gpu-05 규칙: 가장 큰 성분·4px 윤곽·6px 머리 지우기를 사용한다."""
     require(alpha.shape == head_mask.shape and alpha.dtype == np.uint8, "알파 크기·자료형 불일치")
     mask = (alpha.astype(np.float32) / 255 > .5).astype(np.uint8)
     count, labels, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)

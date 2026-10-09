@@ -1,4 +1,4 @@
-"""CPU product preparation after generation releases its backend; raw is immutable."""
+"""생성 실행기를 해제한 뒤 CPU에서 제품 이미지를 준비한다. 원본은 변경하지 않는다."""
 from dataclasses import dataclass
 from pathlib import Path
 import json
@@ -21,7 +21,7 @@ class BackgroundOptions:
 
 
 def prepare_candidate(candidate, foreground, options, load_error=None, *, source_file=None):
-    """Persist either a verified product or an explicit raw fallback, with separate hashes."""
+    """검증된 제품 또는 명시적인 원본 대체 결과를 별도 해시와 함께 저장한다."""
     destination = candidate.path.parent
     record_path = destination / "background.json"
     product = destination / "product.png"
@@ -66,14 +66,14 @@ def prepare_candidate(candidate, foreground, options, load_error=None, *, source
 
 def prepare_backgrounds(batch, model_cache, *, cancelled=lambda: False, progress=lambda _: None,
                         foreground_factory=AnimeForeground, finishing=False):
-    """Load the pinned local CPU model once for a batch; never download on fallback."""
+    """고정된 로컬 CPU 모델을 묶음마다 한 번 로드한다. 실패 대체 시 다운로드하지 않는다."""
     options = BackgroundOptions(Path(model_cache) / MODEL_RELATIVE)
     foreground, load_error = None, None
     try:
         if cancelled():
             raise OnePassCancelled("배경 정리를 취소했습니다. 생성 원본은 보관됩니다.")
         try:
-            # Verify before invoking any provider, including injected test implementations.
+            # 주입한 시험 구현도 포함해 어떤 제공자를 호출하기 전에 검증한다.
             if sha(options.foreground_model) != options.foreground_sha256:
                 raise ValueError("isnet-anime SHA가 일치하지 않습니다.")
             foreground = foreground_factory(options)

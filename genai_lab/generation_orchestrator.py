@@ -158,7 +158,7 @@ class GenerationOrchestrator:
             )
 
     def close(self) -> None:
-        """Close the request-owned log after all GUI review stages finish."""
+        """모든 화면 검토 단계가 끝난 뒤 요청의 로그를 닫는다."""
         if self.run_log is None:
             return
         close_log = getattr(self.run_log, "close", None)
@@ -249,7 +249,7 @@ class GenerationOrchestrator:
     def generate_base_candidates(self, pipeline: Any, inputs: Any, *,
                                  reference_pose=None, onepass=None,
                                  onepass_on_image=None) -> Any:
-        # OFF never imports the new generator or its settings.
+        # 기능이 꺼져 있으면 새 생성기나 설정을 가져오지 않는다.
         if onepass is not None:
             if pipeline is not None or reference_pose is not None:
                 raise GenerationOrchestrationError(
@@ -359,8 +359,8 @@ class GenerationOrchestrator:
             self._record("generate_onepass_candidates", self.phase.value,
                          error_type=type(error).__name__)
             raise
-        # Do not pass raw candidates into legacy FLUX/refinement or final storage.
-        # Review/exposure gates and GUI handoff belong to stages 5 and 6.
+        # 미승인 후보를 구형 FLUX·정밀화·최종 저장 경로로 넘기지 않는다.
+        # 검토·노출 검사와 화면 전달은 5·6단계가 담당한다.
         self.phase = GenerationPhase.ONEPASS_RAW_COMPLETED
         self.run_context.record_artifact("onepass_request", directory / "request.json")
         self.run_context.finish(
@@ -377,7 +377,7 @@ class GenerationOrchestrator:
         reason: str,
         pipeline: Any | None = None,
     ) -> dict[str, Any]:
-        """Close an unfinished request and clear request-owned model state."""
+        """끝나지 않은 요청을 닫고 요청 전용 모델 상태를 해제한다."""
         from genai_lab.request_runtime import reset_request_runtime
 
         if self.phase in (GenerationPhase.COMPLETED, GenerationPhase.ONEPASS_RAW_COMPLETED):
@@ -561,7 +561,7 @@ class GenerationOrchestrator:
         garment_initial_prefill_rgb: tuple[int, int, int] | None = None,
         garment_refinement_prompt_override: str | None = None,
     ) -> Any:
-        """Finalize one approved Base with exactly one sealed refinement mode."""
+        """승인한 기준 이미지 한 장을 확정한 정밀화 방식 하나로 마무리한다."""
         self._require_phase(GenerationPhase.CANDIDATE_SELECTED)
         if selection is not self._selected_base:
             raise GenerationOrchestrationError(
@@ -728,7 +728,7 @@ class GenerationOrchestrator:
         return self._final_review_evidence
 
     def record_final_review_decision(self, decision: Any) -> Path:
-        """Persist one explicit Stage 8 decision after technical completion."""
+        """기술적 처리가 끝난 뒤 명시적인 8단계 결정을 저장한다."""
         if self.phase is not GenerationPhase.COMPLETED:
             raise GenerationOrchestrationError(
                 "최종 생성 완료 후에만 사용자 결정을 기록할 수 있습니다."
@@ -788,7 +788,7 @@ class GenerationOrchestrator:
         storage_record: Any,
         storage_record_path: Path | str,
     ) -> None:
-        """Attach the explicit Stage 9 save choice to the shared run."""
+        """명시적인 9단계 저장 선택을 공통 실행 기록에 추가한다."""
         if self.phase is not GenerationPhase.COMPLETED:
             raise GenerationOrchestrationError(
                 "최종 생성 완료 후에만 저장 결정을 기록할 수 있습니다."

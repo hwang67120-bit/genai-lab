@@ -1,4 +1,4 @@
-"""Isolated CPU SAM2 worker. Offline, cancellable by process termination, no generation."""
+"""분리된 오프라인 CPU SAM2 작업이다. 프로세스 종료로 취소하며 이미지 생성은 없다."""
 import os
 import sys
 import json
@@ -14,7 +14,7 @@ def cpu_environment():
 
 
 class PeakRAM:
-    """Sample this process RSS; Windows also exposes lifetime peak working set."""
+    """현재 프로세스의 상주 메모리를 측정한다. Windows에서는 최대 작업 메모리도 읽는다."""
     def __enter__(self):
         import psutil
         self.process = psutil.Process()
@@ -63,7 +63,7 @@ class CpuTailSegmenter:
 
 
 def analyze_image(segmenter, source, expected_sha, box, directory):
-    """Validate the original snapshot, segment once, then save advisory measurements."""
+    """원본 자료를 검증하고 한 번 분할한 뒤 참고 측정값을 저장한다."""
     import io
     import hashlib
     import numpy as np
@@ -75,7 +75,7 @@ def analyze_image(segmenter, source, expected_sha, box, directory):
     if hashlib.sha256(data).hexdigest() != expected_sha:
         raise ValueError("원본 이미지가 변경됐습니다.")
     with Image.open(io.BytesIO(data)) as original:
-        # Match the approved measurement and existing crop coordinate orientation.
+        # 승인된 측정과 기존 크롭의 좌표 방향을 일치시킨다.
         image = original.convert('RGB')
     try:
         validate_box(box, image.size)

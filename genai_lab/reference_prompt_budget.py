@@ -1,4 +1,4 @@
-"""Reserve all approved core conditions before optional finishing tags."""
+"""선택적 품질 태그보다 승인된 핵심 조건의 토큰 공간을 먼저 확보한다."""
 from scripts.generation_inputs import _token_count, _tokenizer_limit
 from genai_lab.reference_tag_policy import normalize_tag
 
@@ -100,7 +100,7 @@ def build_reference_prompt(tokenizers, *, core_character, core_outfit, framing=(
 
 
 def load_reference_tokenizers(config):
-    """Load tokenizer assets only; never load SDXL weights or allocate CUDA."""
+    """토크나이저 자료만 불러온다. SDXL 가중치 로드나 CUDA 할당은 없다."""
     from transformers import CLIPTokenizer
     model = config['model']
     options = {'cache_dir': str(model['cache_dir'])}

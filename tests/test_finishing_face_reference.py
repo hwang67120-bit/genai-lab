@@ -1,4 +1,4 @@
-"""CPU mocks verify model identity, immutable inputs, and actual per-call IP delivery."""
+"""CPU 대체 구현으로 모델 일치·입력 보존·호출별 얼굴 참조 전달을 검증한다."""
 from dataclasses import asdict, replace
 import json
 from pathlib import Path
@@ -52,7 +52,7 @@ def test_invalid_reference_is_rejected_before_backend_load(tmp_path,target):
     write_json(candidate.record_path,record)
     with pytest.raises(ValueError):
         finishing.finish_batch(batch,prompt(),runtime,backend_factory=lambda *a,**k:pytest.fail("load forbidden"),detector=lambda *_:[])
-    assert json.loads((batch.directory/"finishing-status.json").read_text())["status"]=="failed"
+    assert json.loads((batch.directory/"finishing-status.json").read_text(encoding="utf-8"))["status"]=="failed"
 
 
 def test_enabled_batch_records_both_stages_and_preserves_raw(tmp_path):

@@ -1,4 +1,4 @@
-"""CPU contracts for locked Canny, face exclusion and preview-before-generation."""
+"""고정 Canny·얼굴 제외·생성 전 미리보기의 CPU 규칙 검사다."""
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
@@ -36,7 +36,7 @@ def prepared(case,tmp_path,monkeypatch):
     cv2.line(pixels,(280,70),(340,180),(0,0,0),3)
     Image.fromarray(pixels).save(options.head.normalized_file)
     options=replace(options,head=replace(options.head,normalized_sha256=contract.sha(options.head.normalized_file)))
-    record=lines.prepare_head_lines(options.head,joint(options.head),tmp_path/'lines',face_stub(monkeypatch,options))
+    record=lines.prepare_head_lines(options.head,joint(options.head),tmp_path/'lines',face_stub(monkeypatch,options),face_method='sam2')
     path=tmp_path/'lines/head-lines.json'
     return inputs,settings,replace(options,head_lines_file=path,head_lines_sha256=contract.sha(path)),record
 
@@ -76,7 +76,7 @@ def test_rejected_masks_keep_reason_and_never_guess(case,tmp_path,monkeypatch,fa
     options=case[2];nose=joint(options.head)
     if failure=='nose':nose['confidence_score']=.29
     with pytest.raises(ValueError):
-        lines.prepare_head_lines(options.head,nose,tmp_path/'bad',face_stub(monkeypatch,options,ratio=failure))
+        lines.prepare_head_lines(options.head,nose,tmp_path/'bad',face_stub(monkeypatch,options,ratio=failure),face_method='sam2')
     record=trial.read(tmp_path/'bad/head-lines.json')
     assert record['status']=='failed' and record['gpu_generation'] is False
     assert {'nose':'nose_unavailable','empty':'face_empty','large':'face_too_large'}[failure] in record['error']
@@ -126,7 +126,7 @@ def test_trial_reuses_first_two_c0_seeds_and_generates_only_contour(case,tmp_pat
     source=studio_case(case,tmp_path)
     monkeypatch.setattr(trial,'run_prepared',trial.run_prepared)
     folder=tmp_path/'prepared'
-    lock,digest=trial.prepare_case(source,folder,face_stub(monkeypatch,source[2]),lambda opt:Foreground(opt,[]))
+    lock,digest=trial.prepare_case(source,folder,face_stub(monkeypatch,source[2]),lambda opt:Foreground(opt,[]),face_method='sam2')
     assert lock['seeds']==[1,2] and lock['new_generation_count']==4 and set(lock['modes'])=={'hair','all'}
     assert trial.read(folder/'status.json')['status']=='needs_user_review'
     with pytest.raises(ValueError,match='미리보기'):trial.run_prepared(folder,None,tmp_path/'unapproved')
@@ -139,7 +139,7 @@ def test_trial_reuses_first_two_c0_seeds_and_generates_only_contour(case,tmp_pat
 
 def test_trial_rejects_modified_preview_before_any_gpu(case,tmp_path,monkeypatch):
     source=studio_case(case,tmp_path);folder=tmp_path/'prepare'
-    lock,digest=trial.prepare_case(source,folder,face_stub(monkeypatch,source[2]),lambda opt:Foreground(opt,[]))
+    lock,digest=trial.prepare_case(source,folder,face_stub(monkeypatch,source[2]),lambda opt:Foreground(opt,[]),face_method='sam2')
     Path(lock['modes']['hair']['maps']['1']['preview_file']).write_bytes(b'changed')
     with pytest.raises(ValueError,match='변경'):
         trial.run_prepared(folder,digest,tmp_path/'gpu',contour_factory=lambda *a:pytest.fail('GPU'))
@@ -153,7 +153,7 @@ def test_cli_cannot_prepare_and_generate_without_preview_confirmation(tmp_path):
 
 def test_trial_generation_failure_records_status_and_stops_other_condition(case,tmp_path,monkeypatch):
     source=studio_case(case,tmp_path);folder=tmp_path/'prepare'
-    _,digest=trial.prepare_case(source,folder,face_stub(monkeypatch,source[2]),lambda opt:Foreground(opt,[]))
+    _,digest=trial.prepare_case(source,folder,face_stub(monkeypatch,source[2]),lambda opt:Foreground(opt,[]),face_method='sam2')
     calls=[]
     def fail(*args):calls.append(args);raise RuntimeError('load failed')
     with pytest.raises(RuntimeError,match='load failed'):
@@ -161,3 +161,80 @@ def test_trial_generation_failure_records_status_and_stops_other_condition(case,
     assert len(calls)==1 and not (tmp_path/'gpu/all').exists()
     assert trial.read(tmp_path/'gpu/hair/status.json')['status']=='failed'
     assert trial.read(tmp_path/'gpu/status.json')['status']=='failed'
+
+
+
+def skin_head(case, *, change=None):
+    options=case[2]
+    rgb=np.full((1232,736,3),(30,80,110),dtype=np.uint8)
+    rgb[140:205,295:390]=(218,159,120)
+    rgb[151:159,308:318]=(0,0,0)  # 닫힌 눈 구멍이다.
+    rgb[80:90,310:330]=(218,159,120)  # 떨어진 이마 성분이다.
+    if change=='large':rgb[:]=(218,159,120)
+    if change=='nose':rgb[170,340]=(0,0,0)
+    Image.fromarray(rgb).save(options.head.normalized_file)
+    return replace(options.head,normalized_sha256=contract.sha(options.head.normalized_file))
+
+
+def test_skin_color_default_is_deterministic_and_does_not_load_sam(case,tmp_path):
+    head=skin_head(case)
+    def forbidden():pytest.fail('skin color must not load a model')
+    first=lines.prepare_head_lines(head,joint(head),tmp_path/'skin-a',forbidden,face_method='skin_color_v1')
+    second=lines.prepare_head_lines(head,joint(head),tmp_path/'skin-b',forbidden,face_method='skin_color_v1')
+    assert first['face_method']=='skin_color_v1' and 'sam_model' not in first
+    assert first['face_segmentation']['threshold']==12
+    assert first['face_segmentation']['nose_pixel']==[340,170]
+    for name in ('face','hair-mask','hair','all'):
+        assert first['files'][name]['sha256']==second['files'][name]['sha256']
+    face=np.asarray(Image.open(first['files']['face']['path']))
+    assert face[155,313]==255  # 구멍이 채워졌는지 확인한다.
+    assert face[85,320]==0  # 떨어진 성분을 추측으로 연결하지 않는다.
+    assert 0<first['face_area_ratio']<.7
+    path=tmp_path/'skin-a/head-lines.json'
+    options=replace(case[2],head=head,head_lines='hair',head_lines_file=path,
+                    head_lines_sha256=contract.sha(path),head_lines_confirmed=True)
+    _,details=lines.checked_lines(options,(736,1232))
+    assert details['face_method']=='skin_color_v1' and 'sam_model' not in details
+
+
+@pytest.mark.parametrize('change,error',[('nose','nose_not_candidate'),('large','face_too_large'),('empty','비었습니다')])
+def test_skin_failures_record_evidence_and_never_fallback(case,tmp_path,change,error):
+    head=skin_head(case,change=change)
+    if change=='empty':
+        Image.new('L',(736,1232)).save(head.mask_file)
+        head=replace(head,mask_sha256=contract.sha(head.mask_file))
+    with pytest.raises(ValueError,match=error):
+        lines.prepare_head_lines(head,joint(head),tmp_path/'bad-skin',lambda:pytest.fail('no fallback'),face_method='skin_color_v1')
+    record=trial.read(tmp_path/'bad-skin/head-lines.json')
+    assert record['status']=='failed' and record['face_method']=='skin_color_v1'
+    if change=='nose':assert record['face_segmentation']['nose_is_candidate'] is False
+    if change=='large':assert record['face_area_ratio']==1
+
+
+def test_skin_keeps_all_lines_identical_to_legacy_method(case,tmp_path,monkeypatch):
+    head=skin_head(case)
+    skin=lines.prepare_head_lines(head,joint(head),tmp_path/'skin',face_method='skin_color_v1')
+    legacy=lines.prepare_head_lines(head,joint(head),tmp_path/'sam',face_stub(monkeypatch,case[2]),face_method='sam2')
+    assert skin['files']['all']['sha256']==legacy['files']['all']['sha256']
+    assert skin['files']['face']['sha256']!=legacy['files']['face']['sha256']
+
+
+def test_skin_threshold_cannot_change_in_a_relocked_record(case,tmp_path):
+    head=skin_head(case)
+    data=lines.prepare_head_lines(head,joint(head),tmp_path/'skin',face_method='skin_color_v1')
+    data['face_segmentation']['threshold']=16
+    path=tmp_path/'skin/head-lines.json';write_json(path,contract.json_value(data))
+    options=replace(case[2],head=head,head_lines='hair',head_lines_file=path,
+                    head_lines_sha256=contract.sha(path),head_lines_confirmed=True)
+    with pytest.raises(ValueError,match='규칙'):lines.checked_lines(options,(736,1232))
+
+
+def test_skin_uses_centered_lab_and_exact_seven_pixel_sample():
+    rgb=np.full((20,20,3),(200,140,100),np.uint8)
+    mask=np.full((20,20),255,np.uint8)
+    _,details=lines.skin_candidates(rgb,mask,(10.4,9.6))
+    expected=cv2.cvtColor(rgb,cv2.COLOR_RGB2LAB)[10,10].astype(np.float32)
+    expected[0]*=100/255;expected[1:]-=128
+    assert details['sample_lab']==expected.tolist()
+    assert details['nose_pixel']==[10,10] and details['sample_size']==[7,7]
+    with pytest.raises(ValueError,match='skin_sample_outside'):lines.skin_candidates(rgb,mask,(1,1))

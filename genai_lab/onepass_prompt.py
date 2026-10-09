@@ -1,10 +1,8 @@
-"""Pure one-pass strings and CLIP chunk plans; no encoders or preferences I/O.
-
-One-pass intentionally puts gender support immediately after 1boy/1girl,
-before clothing/appearance (gender-contract U_*). Legacy product order differs.
-Unspecified gender does not restore discarded detector gender candidates.
+"""1회 생성 문구와 CLIP 조각 계획을 만든다. 인코더나 선택 저장소 입출력은 없다. 성별 보조는 1boy/1girl 바로 뒤, 의상·외형 앞에 둔다. 구형
+제품 순서와 다르다. 성별 미지정으로 제거된 검출 후보를 복원하지 않는다.
 """
 from dataclasses import dataclass, field
+from genai_lab.skin_tone import SkinToneChoice, replace_skin_tags
 from genai_lab.gender_prompt import BASE_GENDER_CONDITION_TAGS, prepare_gender_negative_terms
 from genai_lab.reference_tag_policy import CHARACTER_GENDERS, normalize_tag, excluded_appendage_tag
 from genai_lab.onepass_gender import OnePassGenderConditions, validate_onepass_negative_template
@@ -19,7 +17,7 @@ class CharacterTagGroups:
 
 @dataclass(frozen=True)
 class PartAppearance:
-    """User text is a draft until explicitly confirmed; edits need re-confirmation."""
+    """사용자 문구는 명시적 확인 전까지 초안이다. 수정하면 다시 확인해야 한다."""
     text: str = ""
     confirmed: bool = False
 
@@ -27,7 +25,7 @@ class PartAppearance:
         if not isinstance(self.text, str) or type(self.confirmed) is not bool:
             raise TypeError("외형 문구와 확인 상태가 올바르지 않습니다.")
         if self.confirmed:
-            self.tags()  # Reject invalid confirmed data even outside the GUI.
+            self.tags()  # 화면 밖 호출에서도 잘못된 확인 자료를 거부한다.
 
     def tags(self):
         values = tuple(t.strip() for t in self.text.split(","))
@@ -47,14 +45,17 @@ class PartAppearance:
 class AppearanceOverrides:
     tail: PartAppearance = field(default_factory=PartAppearance)
     ears: PartAppearance = field(default_factory=PartAppearance)
+    skin_tone: SkinToneChoice = field(default_factory=SkinToneChoice)
 
     def __post_init__(self):
+        if not isinstance(self.skin_tone, SkinToneChoice):
+            raise TypeError("피부 톤 확인 데이터가 필요합니다.")
         if not isinstance(self.tail, PartAppearance) or not isinstance(self.ears, PartAppearance):
             raise TypeError("꼬리·귀 외형 확인 데이터가 필요합니다.")
 
 
 def appendage_tags(fixed):
-    """Match whole tag boundaries, never hairstyle words such as twintails."""
+    """태그 전체 경계로만 매칭한다. twintails 같은 머리 모양 단어는 제외한다."""
     groups = {"tail": [], "ears": []}
     for tag in fixed:
         value = normalize_tag(tag)
@@ -66,7 +67,7 @@ def appendage_tags(fixed):
 
 
 def replace_appendage_appearance(fixed, appearance, *, enable_ear_override):
-    """Apply approved descriptions after validating the original gender contract."""
+    """원래 성별 규칙을 검증한 뒤 승인한 설명을 적용한다."""
     found = appendage_tags(fixed)
     result = list(fixed)
     records = {}
@@ -96,7 +97,7 @@ def replace_appendage_appearance(fixed, appearance, *, enable_ear_override):
 class PromptChunk:
     kind: str
     text: str | None
-    token_ids: tuple[int, ...]  # BOS + <=75 content + EOS + pad, always 77.
+    token_ids: tuple[int, ...]  # 시작 토큰 + 내용 최대 75개 + 종료 토큰 + 채움으로 항상 77개를 만든다.
 
 @dataclass(frozen=True)
 class EncoderChunkPlan:
@@ -123,12 +124,8 @@ def _tags(values):
 
 
 def plan_prompt_chunks(positive, negative, tokenizers):
-    """Match run_int.py pieces/ids_for without invoking text encoders.
-
-    Historical long chunks use tokenizer 1 content IDs for both encoders.
-    Reject divergent long-prompt tokenizations instead of silently misencoding.
-    Short prompts remain text chunks. Longer negative expands both sides to
-    prevent truncation/length mismatch; blank chunks are explicitly recorded.
+    """텍스트 인코더를 호출하지 않고 run_int.py의 pieces/ids_for와 맞춘다. 기존 긴 문구는 첫 토크나이저의 내용 번호를 두 인코더에 쓰므로 서로
+    다른 분할은 거부한다. 짧은 문구는 문자열 조각으로 유지한다. 긴 부정 문구는 양쪽 길이를 늘리고 빈 조각도 기록해 잘림과 길이 불일치를 막는다.
     """
     if len(tokenizers) != 2:
         raise ValueError('SDXL 토크나이저 두 개가 필요합니다.')
@@ -176,11 +173,8 @@ def plan_prompt_chunks(positive, negative, tokenizers):
 def assemble_onepass_prompt(gender: OnePassGenderConditions, groups: CharacterTagGroups,
                             garment_tags, pose_tags, *, slim, tokenizers,
                             settings=OnePassPromptSettings(), appearance=AppearanceOverrides()):
-    """Ordered assembly from approved inputs. Never infer/correct user gender.
-
-    Character classification must partition the stage 1 appearance tags. No tag
-    invented here may bypass that contract. Garment approval is not reinterpreted
-    from images; source detection mistakes remain visible to user review.
+    """승인 입력을 정해진 순서로 조립한다. 사용자 성별을 추정·보정하지 않는다. 캐릭터 분류는 1단계 외형 태그를 빠짐없이 나눠야 하며 새 태그로 규칙을 우회하지
+    않는다. 의상 승인을 이미지로 재해석하지 않고 검출 오류는 사용자 검토에 남긴다.
     """
     if slim is not None and type(slim) is not bool:
         raise ValueError('slim은 True/False/미측정(None)이어야 합니다.')
@@ -202,6 +196,7 @@ def assemble_onepass_prompt(gender: OnePassGenderConditions, groups: CharacterTa
     if (len(classified) != len(set(classified))
             or set(classified) != set(gender.appearance_tags)):
         raise ValueError('캐릭터 분류는 단계 1 외형 태그와 정확히 대응해야 합니다.')
+    app, skin_record = replace_skin_tags(app, appearance.skin_tone)
     garments, poses = _tags(garment_tags), _tags(pose_tags)
     uncovered = uncovered_parts(garments)
     poses, removed = filter_pocket_tags(poses, garments)
@@ -226,6 +221,7 @@ def assemble_onepass_prompt(gender: OnePassGenderConditions, groups: CharacterTa
             *prefix, *garments, *uncovered, *app, *body, *fixed_before, *poses, *settings.tail))
         before_encoders = plan_prompt_chunks(original, negative, tokenizers)
     return OnePassPrompt(positive, negative, encoders, {
+        **({'skin_tone': skin_record} if skin_record is not None else {}),
         'appendage_review_required': any(appendage_tags(fixed_before).values()),
         'appendage_appearance': appearance_record,
         'appearance_token_counts_before': tuple(e.positive_tokens for e in before_encoders),

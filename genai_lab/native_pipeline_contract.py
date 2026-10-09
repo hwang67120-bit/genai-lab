@@ -1,9 +1,5 @@
-"""Clean contracts between the Animagine Base and native refinement stages.
-
-The character Base is generated from character evidence only. Garment design
-evidence remains available for final validation, but it is not injected into
-the Base prompt or Base IP-Adapter condition. FLUX receives an isolated garment board and a native natural-language
-instruction instead of the Animagine tag prompt.
+"""Animagine 기준 생성과 후속 정밀화의 전달 규칙을 분리한다. 기준 이미지는 캐릭터 근거만으로 생성한다. 의상 디자인은 최종 검증용으로 보존하되 기준
+프롬프트나 얼굴 참조 조건에는 넣지 않는다. FLUX에는 분리된 의상 보드와 자연어 지시를 전달한다.
 """
 
 from __future__ import annotations
@@ -102,7 +98,7 @@ def native_primary_route(config: Mapping[str, Any] | None) -> str:
 
 
 def resolve_refinement_mode(config: Mapping[str, Any] | None) -> str | None:
-    """Return the one sealed final-refinement mode for this request."""
+    """이 요청에 확정된 최종 정밀화 방식 하나를 반환한다."""
     if not native_pipeline_enabled(config):
         return None
     section = (config or {}).get("refinement_execution", {})
@@ -132,7 +128,7 @@ def final_refinement_enabled(config: Mapping[str, Any] | None) -> bool:
 
 
 def validate_native_pipeline_config(config: Mapping[str, Any]) -> None:
-    """Validate one explicit finalizer without activating both engines."""
+    """두 실행기를 동시에 켜지 않고 선택한 최종 처리기를 검증한다."""
     native_active = native_pipeline_enabled(config)
     execution = config.get("refinement_execution", {})
     if execution is None:
@@ -168,7 +164,7 @@ def validate_native_pipeline_config(config: Mapping[str, Any]) -> None:
 def _unique_tags(values: Iterable[str]) -> tuple[str, ...]:
     result: list[str] = []
     for value in values:
-        # Unspecified gender is absence of a condition, not the prompt "none".
+        # 성별 미지정은 조건이 없다는 뜻이지 none이라는 프롬프트가 아니다.
         if value is None:
             continue
         for part in str(value).split(","):
@@ -261,7 +257,7 @@ def prepare_character_only_base_request(
     character_tags: Iterable[str],
     character_gender: str,
 ) -> tuple[CharacterGenerationRequest, dict[str, Any]]:
-    """Build an Animagine request without garment tags or garment conditioning."""
+    """의상 태그나 의상 참조 조건 없이 Animagine 요청을 만든다."""
 
     resolved_tags, removed_gender_tags = resolve_character_gender(
         character_tags, character_gender

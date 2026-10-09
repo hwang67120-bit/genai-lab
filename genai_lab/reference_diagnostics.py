@@ -1,4 +1,4 @@
-"""Advisory placeholder diagnostics and host-side elapsed timings, no quality gate."""
+"""대체 입력 진단과 실행 시간은 참고용이다. 품질 검사는 하지 않는다."""
 from contextlib import contextmanager
 from time import perf_counter
 from pathlib import Path
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 def verify_and_save_ip_adapter_input(garment_image, output_dir, run_log=None,
                                      part_name="garment"):
-    """Record one exact PIL adapter input, not encoder tensors or a verdict."""
+    """어댑터에 실제 전달한 PIL 이미지 하나를 기록한다. 인코더 텐서나 판정은 아니다."""
     if not isinstance(part_name, str) or not part_name.replace("_", "").isalnum():
         raise ValueError("IP-Adapter 진단 부위 이름 오류")
     directory = Path(output_dir)
@@ -31,7 +31,7 @@ def verify_and_save_ip_adapter_input(garment_image, output_dir, run_log=None,
             run_log.write_stage(stage, message)
 
     emit(f'임베딩 계산 전 입력 보존 위치={image_path}')
-    # Save before checking, so even a rejected black input can be inspected.
+    # 거부된 검은 입력도 확인할 수 있도록 검사 전에 저장한다.
     garment_image.save(image_path, format='PNG')
     with garment_image.convert('RGB') as rgb:
         pixels = np.asarray(rgb)

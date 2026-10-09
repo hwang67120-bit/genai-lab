@@ -53,8 +53,8 @@ def test_onepass_matches_product_gender_without_accepting_detector_gender(
         "feminine silhouette", "masculine silhouette", "gender swap")
     assert candidates == original
     assert load_character_gender(source, store) == gender
-    # Compare approved appearance through the existing product entry point.
-    # Legacy unspecified callers may still keep explicitly approved gender tags.
+    # 기존 제품 진입점에서 승인 외형을 비교한다.
+    # 구형 미지정 호출부는 명시적으로 승인한 성별 태그를 유지할 수 있다.
     prepared, _ = prepare_design_reference_request(
         Request(), ("skirt", "high heels"), (Tokenizer(), Tokenizer()),
         character_tags=condition.appearance_tags, character_gender=gender)

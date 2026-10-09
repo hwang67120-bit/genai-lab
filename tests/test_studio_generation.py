@@ -1,4 +1,4 @@
-"""Actual GUI signals -> prompt/request -> raw batch -> explicit review -> export, CPU only."""
+"""실제 화면 신호 → 요청·문구 → 원본 묶음 → 명시적 검토 → 내보내기를 CPU로 검사한다."""
 import json
 import time
 from dataclasses import replace
@@ -120,7 +120,7 @@ def test_create_button_to_review_and_export_without_legacy_fallback(tmp_path, mo
         w.approve_candidate_button.click()
         assert w.save_candidate_button.isEnabled()
         w.studio_candidate_combo.setCurrentIndex(1)
-        assert not w.save_candidate_button.isEnabled()  # Choice change invalidates approval.
+        assert not w.save_candidate_button.isEnabled()  # 선택값을 바꾸면 승인을 무효화한다.
         w.studio_candidate_combo.setCurrentIndex(2)
         w.approve_candidate_button.click()
         w.save_candidate_button.click()

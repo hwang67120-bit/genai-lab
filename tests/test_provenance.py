@@ -1,4 +1,4 @@
-"""Provenance contracts, not image-quality tests."""
+"""실행 출처 규칙 검사다. 이미지 품질 시험이 아니다."""
 import copy
 import json
 import random
@@ -163,7 +163,7 @@ def test_actual_projection_hook_preserves_output_and_reads_tokens(tmp_path):
     c = tracked(tmp_path, {})
     rec = recorder(c)
     rec.pipeline(pipe, "test")
-    assert rec.loaded["ip_adapter_tokens"] is None  # no dummy forward
+    assert rec.loaded["ip_adapter_tokens"] is None  # 가짜 순전파는 실행하지 않는다.
     value = torch.zeros(2, 4, 8)
     assert projection(value) is value
     assert rec.loaded["ip_adapter_tokens"] == 4

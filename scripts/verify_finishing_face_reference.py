@@ -1,4 +1,4 @@
-"""Copy the 16 existing product raws and replay only finishing with face reference."""
+"""기존 제품 원본 16장을 복사해 얼굴 참조를 켠 마무리만 재실행한다."""
 import argparse
 from dataclasses import asdict, replace
 import json
@@ -22,7 +22,7 @@ SOURCE = ROOT/"outputs/finishing-test-20261008/product_path"
 
 
 def restore_prompt(record):
-    """Use the recorded token IDs, without changing tags or re-tokenizing."""
+    """태그 변경이나 재분할 없이 기록된 토큰 번호를 사용한다."""
     encoders = []
     for encoder in record["encoders"]:
         chunks = {pol:tuple(PromptChunk(c["kind"],c["text"],tuple(c["token_ids"]))

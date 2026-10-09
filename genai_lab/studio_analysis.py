@@ -1,7 +1,5 @@
-"""Offline CPU preparation executable; no model provisioning or global chdir.
-
-DWPose uses its already installed Wholebody with explicit local ONNX paths;
-C6, WD feature routing and isnet use the same production functions as tests.
+"""오프라인 CPU 준비 실행기다. 모델 설치나 전역 작업 폴더 변경은 없다. DWPose는 설치된 Wholebody와 로컬 ONNX 경로를 쓰며 C6·WD
+분류·isnet은 시험과 같은 제품 함수를 사용한다.
 """
 import sys
 from pathlib import Path
@@ -50,7 +48,7 @@ def classify_character(tags):
 
 
 def features(directory, cache):
-    # Import onnxruntime first: imgutils must not attempt its optional auto-install.
+    # onnxruntime을 먼저 가져와 imgutils가 선택적 자동 설치를 시도하지 않게 한다.
     import onnxruntime
     from imgutils.detect import detect_heads
     from genai_lab.onepass_input_backends import HeadInputBackend, ForegroundInputBackend

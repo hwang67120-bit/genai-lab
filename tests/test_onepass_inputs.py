@@ -48,7 +48,7 @@ def test_recorded_e2e_geometry_and_policy(key):
     assessment = assess_pose(joints_from_records(row['joints']), row['person_count'], row['face_direction'])
     decision = apply_input_policy(assessment)
     assert decision.status == row['decision']
-    # HIGH_ANGLE is an explicit additional product warning, not a new rejection.
+    # HIGH_ANGLE은 추가 제품 경고이며 새 거부 조건이 아니다.
     assert set(decision.rejects) == {f[0] for f in row['rejects']}
     assert set(decision.warnings) - {'HIGH_ANGLE'} == {f[0] for f in row['warnings']}
     char = row['character']
@@ -59,7 +59,7 @@ def test_recorded_e2e_geometry_and_policy(key):
 def test_demo_stored_findings_policy_only(key):
     row = FIXTURE['demo'][key]
     assessment = assess_pose(standard_joints(), 1, {'looking_at_viewer': 1})
-    # Explicit policy replay: these demo files do not contain normalized joints.
+    # 정책을 명시적으로 재현한다. 이 예시 파일에는 정규화된 관절이 없다.
     facts = tuple(Finding(f[0], {'recorded': f[1:]}) for f in row['rejects'] + row['warnings'])
     decision = apply_input_policy(replace(assessment, findings=facts))
     assert decision.status == row['decision']
@@ -223,7 +223,7 @@ def test_c6_nose_selection_beats_largest_and_higher_score_outside_nose():
         assert result.head_box == (40, 0, 70, 45)
         assert result.details['expanded_box'] == (37, 0, 73, 45)
         assert result.image.width == result.image.height
-        assert result.mask.getpixel((50, 38)) == 0  # Below chin + .03H.
+        assert result.mask.getpixel((50, 38)) == 0  # 턱보다 이미지 높이의 3% 아래다.
         assert result.status == 'review' and result.requires_user_review
         assert result.image.getpixel((0, 0)) == (255, 255, 255)
     finally:
@@ -257,20 +257,20 @@ def test_c6_foreground_and_chin_masks_are_not_box_crop():
     assert result.mask.getpixel((30,20)) == 0
     assert result.mask.getpixel((50,20)) == 255
     assert result.mask.getpixel((50,37)) == 0
-    assert result.image.size == (36,36)  # Retained y=5..36 plus 2px border; no upscaling.
+    assert result.image.size == (36,36)  # y=5~36과 테두리 2px를 유지한다. 확대하지 않는다.
     result.close()
 
 
 def test_c6_arm_band_preserves_face_hull():
-    # Endpoints outside guard, arm segment crosses head. Guard must not mask band behavior.
+    # 끝점은 보호 영역 밖이지만 팔 선분이 머리를 가로지른다. 보호 검사가 띠 동작을 가리지 않게 한다.
     js = (Joint('right_shoulder',0,20,.9,True), Joint('left_shoulder',0,70,.9,True),
           Joint('right_elbow',99,20,.9,True))
     with Image.new('RGB', (100,100)) as source:
         result = crop_with_data(source, (HeadDetection((30,0,70,45), .9),), js)
     assert result.status == 'review'
     assert result.details['arm_thickness'] == 18
-    assert result.mask.getpixel((50,22)) == 255  # Inside face hull.
-    assert result.mask.getpixel((30,22)) == 0   # Arm outside face hull.
+    assert result.mask.getpixel((50,22)) == 255  # 얼굴 윤곽 내부다.
+    assert result.mask.getpixel((30,22)) == 0   # 팔이 얼굴 윤곽 밖에 있다.
     result.close()
 
 
@@ -370,7 +370,7 @@ def test_c6_missing_chin_keeps_lower_hair_and_records_reason():
         result=prepare_c6_crop(source,(HeadDetection((30,0,70,60),.9),),(),
                                foreground_mask=fg,face_points=points,face_scores=scores)
     assert result.status=='review' and result.mask.getpixel((50,59))==255
-    assert len(result.details['notes'])==2  # Both shoulder data and chin unavailable.
+    assert len(result.details['notes'])==2  # 양 어깨 자료와 턱을 모두 얻지 못했다.
     result.close()
 
 

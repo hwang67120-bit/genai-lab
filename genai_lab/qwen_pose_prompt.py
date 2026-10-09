@@ -1,4 +1,4 @@
-"""B-condition natural-language assembly; no model or SDXL tokenizer imports."""
+"""B조건의 자연어 지시를 조립한다. 모델이나 SDXL 토크나이저는 가져오지 않는다."""
 from dataclasses import dataclass
 import hashlib
 

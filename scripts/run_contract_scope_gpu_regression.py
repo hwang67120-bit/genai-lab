@@ -1,4 +1,4 @@
-"""Rebuild current reference analysis and run an Animagine Base GPU regression."""
+"""현재 참조 분석을 다시 만들고 Animagine 기준 생성의 GPU 회귀 시험을 실행한다."""
 
 from __future__ import annotations
 
@@ -115,7 +115,7 @@ CURRENT_ANALYSIS_POLICY_KEYS = (
 
 
 def refresh_current_analysis_policy(config: dict) -> dict:
-    # Refresh only analysis gates changed after the replay was approved.
+    # 재현 승인 뒤 변경된 분석 검사만 갱신한다.
     current_path = PROJECT_ROOT / "configs" / "animagine.yaml"
     current = yaml.safe_load(current_path.read_text(encoding="utf-8"))
     refreshed = {}
@@ -170,11 +170,8 @@ def reset_input_bound_approval_state(
     garment_tags: tuple[str, ...] = (),
     garment_detail_tags: tuple[str, ...] = (),
 ) -> dict:
-    """Replace replay-bound evidence with approval for the current inputs.
-
-    Garment tags remain available to the post-Base refinement contract. The
-    character-only Base profile still excludes them from both its prompt and
-    image-adapter inputs.
+    """재현 자료에 고정된 근거를 현재 입력의 승인으로 교체한다. 의상 태그는 기준 생성 후 정밀화 규칙에서 계속 사용할 수 있다. 캐릭터 전용 기준 생성은
+    프롬프트와 이미지 어댑터 모두에서 의상을 제외한다.
     """
     for key in INPUT_BOUND_APPROVAL_KEYS:
         section[key] = (
@@ -241,9 +238,9 @@ def main() -> int:
             args.garment_image,
             args.garment_root,
         )
-        # This bundle supplies only immutable model/config/request defaults.
-        # The current character and garment are re-analysed and receive a new
-        # approval below, so an older semantic approval must not be inherited.
+        # 이 묶음은 변경 불가 모델·설정·요청 기본값만 제공한다.
+        # 현재 캐릭터와 의상을 다시 분석하고 아래에서 새로
+        # 승인하므로 예전 의미상 승인을 이어받지 않는다.
         old_inputs, config, old_request, _ = load_generation_replay_bundle(
             args.source_bundle.resolve(), verify_approved_run=False
         )

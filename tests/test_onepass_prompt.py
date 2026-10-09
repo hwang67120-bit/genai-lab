@@ -27,7 +27,7 @@ TOKS=(Tokenizer(),Tokenizer())
 
 @pytest.fixture
 def store(tmp_path):
-    # Always pass this explicit INI store; never access actual user preferences.
+    # 지정한 INI 저장소만 전달한다. 실제 사용자 설정에는 접근하지 않는다.
     return QSettings(str(tmp_path/'gender.ini'),QSettings.Format.IniFormat)
 
 
@@ -105,7 +105,7 @@ def test_approved_tags_kept_and_uncovered_not_duplicated(tmp_path,store):
     assert out.positive.startswith('white crop top, midriff, bare legs, white shrug (clothing), white thighhighs, ')
     assert out.positive.split(', ').count('midriff')==1
     assert out.rules['uncovered_added']==()
-    # Even if thighhighs was a mannequin misclassification, approved tag remains.
+    # 마네킹 오분류로 thighhighs가 붙었어도 승인 태그는 유지한다.
     assert 'white thighhighs' in out.positive
 
 @pytest.mark.parametrize('term',['1boy','1girl','male_focus','feminine silhouette','gender_swap'])
@@ -171,7 +171,7 @@ def test_k1_display_dedup_preserves_both_observations_and_policy():
     assert assessment.findings[0].values['count']==2
 
 
-# Confirmed appendage descriptions must not alter the original gender/tag contract.
+# 확인한 부속 부위 설명으로 기존 성별·태그 규칙을 바꾸면 안 된다.
 from genai_lab.onepass_prompt import (
     AppearanceOverrides, PartAppearance, appendage_tags,
 )

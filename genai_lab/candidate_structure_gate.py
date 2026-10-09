@@ -1,4 +1,4 @@
-"""Conservative spatial checks before scoring and after local correction."""
+"""점수 계산 전과 부분 보정 후에 보수적으로 공간 구조를 검사한다."""
 from __future__ import annotations
 
 from dataclasses import dataclass, fields
@@ -121,8 +121,8 @@ def evaluate_candidate_structure(
             "checks": {}, "foreground_ratio": 0.0,
         }
 
-    # Prefer a tall, centrally placed component. This avoids treating a wide
-    # detached prop above the head as the character itself.
+    # 세로로 길고 중앙에 있는 성분을 우선한다. 머리 위에 떨어진
+    # 넓은 소품을 캐릭터 자체로 잘못 고르는 것을 막는다.
     center_x = width / 2.0
     primary = max(components, key=lambda item: (
         item["height"] / height,
@@ -182,8 +182,8 @@ def evaluate_candidate_structure(
         violations.append("large_detached_object_above_character")
 
     primary_mask = np.zeros_like(mask)
-    # connectedComponents labels are deliberately recomputed so the report
-    # remains independent of label-array lifetime and component filtering.
+    # 연결 성분 번호는 의도적으로 다시 계산한다. 기록이 번호 배열의
+    # 수명이나 성분 필터링에 영향을 받지 않게 한다.
     _, labels, _, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
     primary_mask[labels == primary["label"]] = 255
     contours, _ = cv2.findContours(
@@ -230,10 +230,10 @@ def evaluate_candidate_structure(
         "status": "NOT_EVALUATED", "reason": "body_keypoint_parser_required"}
     checks["garment_body_overlap"] = {
         "status": "NOT_EVALUATED", "reason": "garment_parser_required"}
-    # Border-color segmentation cannot establish character occupancy when its
-    # chosen component bridges the entire canvas. A large prop/background can
-    # otherwise masquerade as one large, valid character. Fail closed without
-    # claiming that this connected component is a detected person.
+    # 선택한 성분이 화면 전체를 가로지르면 테두리 색만으로
+    # 캐릭터 영역을 확인할 수 없다. 큰 소품이나 배경을
+    # 정상 캐릭터로 오인하지 않도록 중단한다.
+    # 이 연결 성분을 검출된 사람이라고 단정하지 않는다.
     ambiguous_foreground = primary['x'] == 0 and primary['width'] == width
     unresolved = []
     if pose_ambiguous_overhead:

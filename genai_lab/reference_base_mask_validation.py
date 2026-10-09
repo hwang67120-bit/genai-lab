@@ -1,7 +1,5 @@
-"""Cross-check between source-reference and independently parsed Base masks.
-
-Source-coordinate masks are resized only for measurement. The report can block
-automatic progression to native refinement, but never becomes a generation mask.
+"""원본 참조와 독립 분석한 기준 마스크를 교차 검사한다. 원본 마스크는 측정에만 크기를 바꾼다. 보고서가 자동 정밀화 진행을 막을 수는 있으나 생성 마스크로
+쓰이지는 않는다.
 """
 from __future__ import annotations
 
@@ -184,7 +182,7 @@ def validate_reference_base_masks(
     *,
     settings: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Measure independent masks and decide whether A7 may run automatically."""
+    """독립 마스크를 측정하고 A7 자동 실행 가능 여부를 정한다."""
     raw_settings = settings if isinstance(settings, Mapping) else {}
     block_on_review = raw_settings.get("block_on_review", True)
     if type(block_on_review) is not bool:

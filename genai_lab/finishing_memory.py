@@ -1,4 +1,4 @@
-"""One verified CFG face embedding cache and scoped, IP-preserving SDPA policy."""
+"""얼굴 임베딩을 한 번 검증·저장하고, 얼굴 참조를 유지하는 범위에만 SDPA 정책을 적용한다."""
 from dataclasses import dataclass
 from contextlib import contextmanager
 import hashlib
@@ -7,7 +7,7 @@ from genai_lab.proportion_inputs import require
 
 
 def embedding_record(tensors):
-    """Hash contiguous tensor bytes without changing dtype or CFG ordering."""
+    """자료형과 CFG 순서를 바꾸지 않고 연속된 텐서 바이트의 해시를 계산한다."""
     digest = hashlib.sha256()
     records = []
     for tensor in tensors:
@@ -20,13 +20,13 @@ def embedding_record(tensors):
 
 def efficient_attention():
     from torch.nn.attention import sdpa_kernel, SDPBackend
-    # Keep the existing processors/IP weights; disallow the full-matrix math fallback.
+    # 기존 처리기와 얼굴 참조 가중치를 유지하며 전체 행렬 계산으로의 대체를 금지한다.
     return sdpa_kernel(SDPBackend.EFFICIENT_ATTENTION)
 
 
 @contextmanager
 def unet_attention(unet):
-    """Apply the efficient kernel only to UNet; preserve VAE and encoder behavior."""
+    """효율적인 계산 커널은 UNet에만 적용하고 VAE와 인코더 동작은 유지한다."""
     active = [None]
     def enter(*_):
         require(active[0] is None, "중첩된 UNet attention 실행입니다.")
@@ -78,7 +78,7 @@ class FaceEmbeddingCache:
 
 
 def prepare_face_cache(pipe, reference, torch, guard, record, *, device="cuda"):
-    """Compute positive and CFG-negative once; offload encoder before any img2img."""
+    """양성·CFG 음성 얼굴 정보를 한 번 계산하고 이미지 재처리 전에 인코더를 내린다."""
     started = time.perf_counter()
     encoder = pipe.image_encoder
     calls = []
@@ -92,7 +92,7 @@ def prepare_face_cache(pipe, reference, torch, guard, record, *, device="cuda"):
         guard()
         with reference.open_image() as image, torch.inference_mode():
             embeddings = pipe.prepare_ip_adapter_image_embeds(image, None, device, 1, True)
-            # Plus-face uses penultimate hidden states and a separately encoded zero image.
+            # Plus-face는 끝에서 두 번째 은닉 상태와 별도로 인코딩한 영 이미지를 사용한다.
             require(len(embeddings) == 1 and embeddings[0].ndim == 4 and
                     embeddings[0].shape[:2] == (2,1) and str(embeddings[0].dtype) == "torch.float16",
                     "CFG 얼굴 임베딩의 개수·shape·dtype이 다릅니다.")

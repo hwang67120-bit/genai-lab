@@ -62,8 +62,8 @@ def test_fully_protected_target_is_not_removed_even_if_mask_overlaps():
 def test_explicit_boundary_does_not_expand_into_tail_or_background():
     with Image.new("L", (64, 64), 0) as clothes, Image.new("L", (64, 64), 0) as special, Image.new("L", (64, 64), 255) as foreground:
         clothes.paste(255, (15, 20, 25, 45))
-        clothes.putpixel((30, 60), 255)  # selected shoe
-        special.paste(255, (26, 30, 40, 50))  # tail
+        clothes.putpixel((30, 60), 255)  # 선택한 신발이다.
+        special.paste(255, (26, 30, 40, 50))  # 꼬리 영역이다.
         result = refine_character_clothing_change_mask(
             clothes, special, foreground, 0, closing_radius_pixels=0,
             preserve_approved_boundary=True,
@@ -89,8 +89,8 @@ def test_execution_uses_selected_mask_and_keeps_auto_mask_diagnostic(tmp_path, m
             command[command.index("--output-foreground-mask") + 1]
         )
         with Image.new("L", (64, 64), 255) as foreground:
-            # Approved SAM contains this pixel, but the exact AI foreground
-            # rejects it. The later 15px diagnostic dilation includes it.
+            # 승인 SAM에는 이 픽셀이 있지만 실제 AI 외곽은
+            # 제외한다. 이후 15px 진단 확장에는 포함된다.
             foreground.putpixel((20, 60), 0)
             foreground.save(foreground_path)
         save("--output-densepose", "RGB", "black")

@@ -1,9 +1,6 @@
-"""Single-writer JSON publication and immutable Qwen progress (no model imports).
-
-Windows readers without FILE_SHARE_DELETE can block rename/replace. Never
-poll the mutable final record while its writer is alive. Same-directory temp
-publication keeps readers from observing partial JSON. Retry waits are bounded;
-permanent filesystem failures stay errors and preserve the complete temp file.
+"""단일 작성자가 JSON을 공개하고 Qwen 진행 자료는 변경 없이 유지한다. 모델은 가져오지 않는다. Windows에서 FILE_SHARE_DELETE 없는
+읽기 작업은 파일 교체를 막을 수 있다. 작성 중인 최종 기록을 반복해서 열지 않는다. 같은 폴더의 임시 파일로 완전한 JSON만 공개한다. 재시도는 제한하며
+영구 실패는 오류로 남기고 임시 파일을 보존한다.
 """
 import json
 import os
@@ -25,7 +22,7 @@ class JSONReplaceError(PermissionError):
 def write_json(path, value):
     path = Path(path)
     payload = json.dumps(value, ensure_ascii=False, indent=2) + "\n"
-    # Close this handle before rename (also essential on Windows).
+    # 이름을 바꾸기 전에 파일 핸들을 닫는다. Windows에서도 필수다.
     with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent,
             prefix=path.name + ".", suffix=".tmp", delete=False) as stream:
         pending = Path(stream.name)
@@ -42,11 +39,11 @@ def write_json(path, value):
             if attempt == len(REPLACE_DELAYS) or remaining <= 0:
                 raise JSONReplaceError(path, pending) from error
             time.sleep(min(REPLACE_DELAYS[attempt], remaining))
-    # Other I/O errors propagate immediately; pending data is intentionally retained.
+    # 다른 입출력 오류는 즉시 전달하고 저장 대기 자료는 의도적으로 보존한다.
 
 
 def publish_progress(directory, record):
-    """One worker only. Each published name is new, then immutable."""
+    """작업자는 하나만 사용한다. 공개 파일명은 매번 새로 만들고 이후 변경하지 않는다."""
     folder = Path(directory) / "progress"
     folder.mkdir(exist_ok=True)
     existing = sorted(folder.glob("[0-9]????????.json"))
@@ -59,7 +56,7 @@ def publish_progress(directory, record):
 
 
 def latest_progress(directory):
-    """Return latest complete snapshot; tolerate unreadable/partial external files."""
+    """가장 최근의 완전한 기록을 반환한다. 외부 파일이 읽히지 않거나 불완전하면 건너뛴다."""
     folder = Path(directory) / "progress"
     try:
         paths = sorted(folder.glob("[0-9]????????.json"), reverse=True)
@@ -76,11 +73,8 @@ def latest_progress(directory):
 
 
 def write_terminal(directory, record):
-    """Complete backup first; run.json remains the canonical final file.
-
-    No polling reader opens either while the worker runs. If run.json is held
-    by an external reader beyond the retry budget, run.final.json survives and
-    the error is NOT silently converted to successful generation.
+    """전체 백업을 먼저 저장하며 run.json은 최종 기준 파일이다. 작업 중에는 읽기 프로세스가 두 파일을 열지 않는다. 외부 작업이 run.json을 재시도
+    한도보다 오래 잡으면 run.final.json을 보존하고 오류를 생성 성공으로 바꾸지 않는다.
     """
     if record.get("status") not in TERMINAL_STATES:
         raise ValueError("A terminal state is required")
@@ -93,11 +87,8 @@ def write_terminal(directory, record):
 
 
 def finalize_stopped_run(directory, request_sha256, *, cancelled, error, returncode):
-    """Parent recovery ONLY after process wait: never race the worker's writes.
-
-    Forced termination cannot execute the child's finally. Preserve the latest
-    full observed snapshot and identify incomplete metrics explicitly. Do not
-    infer generation success from raw.png alone.
+    """프로세스 종료를 기다린 뒤 부모가 복구한다. 작업자 저장과 경쟁하지 않는다. 강제 종료는 자식의 finally를 실행하지 못하므로 최근의 완전한 관찰 기록을
+    보존하고 미완성 지표를 구분한다. raw.png만으로 생성 성공을 판단하지 않는다.
     """
     directory = Path(directory)
     canonical = directory / "run.json"

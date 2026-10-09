@@ -1,7 +1,5 @@
-"""Explicit CPU-only lock creator for an already provisioned local Qwen environment.
-
-No installation, downloads, model imports or inference. Never overwrites files.
-Run once on the execution host and review the emitted paths/hashes before use.
+"""이미 준비된 로컬 Qwen 환경에서 CPU로 잠금을 만든다. 설치·다운로드·모델 가져오기·추론은 없다. 파일을 덮어쓰지 않는다. 실행 컴퓨터에서 한 번
+수행하고 사용 전 경로·해시를 검토한다.
 """
 import argparse
 import json
@@ -22,7 +20,7 @@ def main(argv=None):
     parser.add_argument("--analysis-cache", default="")
     parser.add_argument("--output", required=True, help="New directory for runtime.json + model-files.json")
     args = parser.parse_args(argv)
-    # Only inspect distribution metadata; importing torch is unnecessary here.
+    # 설치 패키지 정보만 확인하며 여기서 torch를 가져올 필요는 없다.
     code = "import importlib.metadata as m,json; print(json.dumps({n:m.version(n) for n in " + repr(list(EXPECTED_VERSIONS)) + "}))"
     result = subprocess.run([args.python_executable, "-c", code], capture_output=True, text=True, check=True)
     if json.loads(result.stdout) != EXPECTED_VERSIONS:

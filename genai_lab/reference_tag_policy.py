@@ -1,4 +1,4 @@
-"""Keep garment descriptions separate from user-approved character descriptions."""
+"""의상 설명을 사용자 승인 캐릭터 설명과 분리한다."""
 import re
 
 
@@ -38,7 +38,7 @@ def garment_body_tag(tag):
 
 def suggested_character_tag(tag):
     tag = normalize_tag(tag)
-    # Suggestions only: users approve/clear every checkbox, including gender tags.
+    # 제안만 표시한다. 성별을 포함한 모든 선택란은 사용자가 승인하거나 해제한다.
     return tag.endswith(' hair') or tag.endswith(' eyes') or tag in {'bangs', 'ponytail', 'twintails', 'braid', 'bob cut'}
 
 
@@ -53,7 +53,7 @@ def validate_character_gender(value):
 
 
 def gender_tag_kind(tag):
-    """Only explicit gender/count tags; do not infer gender from clothing or build."""
+    """명시적인 성별·개수 태그만 사용하며 의상이나 체격으로 성별을 추정하지 않는다."""
     tag = normalize_tag(tag)
     if re.fullmatch(r'\d+\+?boys?', tag) or tag in {
             'boy', 'boys', 'man', 'men', 'male', 'male focus', 'multiple boys'}:
@@ -74,14 +74,14 @@ def resolve_character_gender(tags, gender='unspecified'):
     if gender == 'unspecified':
         return normalized, ()
     removed = tuple(tag for tag in normalized if gender_tag_kind(tag) is not None)
-    # The explicit user choice replaces detector gender labels, not appearance.
+    # 사용자의 명시적 선택은 검출 성별만 교체하고 외형은 바꾸지 않는다.
     retained = tuple(tag for tag in normalized if gender_tag_kind(tag) is None)
     return (CHARACTER_GENDERS[gender], *retained), removed
 
 
-# Input-field scope only: exposure-v2/rule_v2.md A/B/C + recorded exposure terms,
-# plus the existing negative template's nsfw/buruma. This is NOT an output gate:
-# even legitimate garment exposure belongs in garment approval, not a tail/ear field.
+# 입력 칸에만 적용하는 규칙이다. exposure-v2/rule_v2.md A/B/C와 기록된 노출 단어,
+# 기존 부정 문구의 nsfw/buruma를 포함한다. 결과 이미지 검사는 아니다.
+# 정상적인 의상 노출 설명도 의상 승인에서 다루며 꼬리·귀 칸에는 넣지 않는다.
 APPENDAGE_EXPOSURE_TAGS = frozenset({
     "nsfw", "panties", "underwear", "bra", "lingerie", "nude", "completely nude",
     "topless", "bottomless", "nipples", "leotard", "swimsuit", "one-piece swimsuit",
@@ -91,10 +91,8 @@ APPENDAGE_EXPOSURE_TAGS = frozenset({
 
 
 def excluded_appendage_tag(tag):
-    """Tail/ear descriptions cannot inject known character/body/exposure tags.
-
-    Reuse the garment field's exclusion contract without broadening garment
-    policy. This is a finite tag check, not a natural-language safety classifier.
+    """꼬리·귀 설명에 알려진 캐릭터·체형·노출 태그를 넣지 못하게 한다. 의상 칸의 제외 규칙을 재사용하되 의상 정책을 넓히지 않는다. 유한한 태그 검사이며 자연어
+    안전 분류기는 아니다.
     """
     normalized = normalize_tag(tag)
     return excluded_garment_tag(normalized) or normalized in APPENDAGE_EXPOSURE_TAGS

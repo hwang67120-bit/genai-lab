@@ -1,9 +1,7 @@
-"""Read-only run provenance. No tensor computations, RNG calls, or model loads.
-
-References:
-https://docs.python.org/3/library/stdtypes.html#mapping-types-dict
-https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html
-A config read is evidence of access, not evidence of a downstream effect.
+"""읽기 전용 실행 출처 기록이다. 텐서 계산·난수 호출·모델 로드는 없다. 참고:
+https://docs.python.org/3/library/stdtypes.html#mapping-types-dict 및
+https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html. 설정을 읽었다는 기록은 이후 결과에
+영향을 줬다는 증거가 아니다.
 """
 from __future__ import annotations
 
@@ -25,7 +23,7 @@ _UNTRACKED = {}
 
 
 def plain(value):
-    """Snapshot metadata only; never stringify/copy tensor or image contents."""
+    """메타데이터만 저장한다. 텐서나 이미지 내용을 문자열로 만들거나 복사하지 않는다."""
     if isinstance(value, dict):
         return {str(k): plain(v) for k, v in dict.items(value)}
     if isinstance(value, (list, tuple)):
@@ -52,7 +50,7 @@ def flatten(value, prefix=""):
 
 
 def _serialization_access():
-    # Config copying and audit serialization must not consume every leaf.
+    # 설정 복사와 기록 직렬화가 모든 말단 값을 읽어 버리지 않게 한다.
     frame = sys._getframe(1)
     while frame is not None:
         module = frame.f_globals.get("__name__", "")
@@ -78,7 +76,7 @@ class _Values(ValuesView):
 
 
 class TrackedConfig(dict):
-    """A dict-compatible tree; values, order, exceptions, and defaults retained."""
+    """값·순서·예외·기본값을 유지하는 사전 호환 트리다."""
 
     def __init__(self, value=(), *, recorder=None, path=""):
         self.recorder = recorder
@@ -98,7 +96,7 @@ class TrackedConfig(dict):
                     return v
                 return TrackedConfig(v, recorder=self.recorder, path=p)
             if isinstance(v, list):
-                # Keep list identity: only mapping elements need a path.
+                # 목록 객체는 유지한다. 사전 요소에만 경로가 필요하다.
                 for i, item in enumerate(v):
                     if isinstance(item, dict):
                         v[i] = wrap(item, f"{p}.{i}")
@@ -119,7 +117,7 @@ class TrackedConfig(dict):
         return default
 
     def __iter__(self):
-        # This also prevents CPython dict(config)/ **config bypassing getitem.
+        # CPython의 dict(config)와 **config가 항목 조회를 우회하는 것도 막는다.
         return dict.__iter__(self)
 
     def items(self):
@@ -232,7 +230,7 @@ class RunProvenance:
         self.path = Path(context.run_directory) / "run_provenance.json"
         self.bound = True
         self.flush()
-        # Keep an early-load failure record, redirecting after run allocation.
+        # 초기 로드 실패 기록을 남기고 실행 폴더가 정해지면 기록 위치를 옮긴다.
         if old_path != self.path:
             old_path.write_text(json.dumps({
                 "schema_version": 1, "relocated_to": str(self.path),
@@ -260,7 +258,7 @@ class RunProvenance:
     def flush(self):
         if self.path is None:
             return
-        # A diagnostic I/O error must never replace a generation exception.
+        # 진단 입출력 오류가 생성 예외를 덮어쓰면 안 된다.
         try:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             temporary = self.path.with_suffix(".json.tmp")
@@ -274,7 +272,7 @@ class RunProvenance:
         self.events.append({"stage": stage, "status": status, **plain(details)})
         if status in {"failed", "cancelled"}:
             self.completed = False
-            # Aborted reflects the run-level observed failure, not verdict text.
+            # 중단 여부는 판정 문구가 아닌 실제로 관찰한 실행 실패를 뜻한다.
             for gate in self.gates:
                 gate["aborted"] = True
         if stage == "finalize_selected_candidate" and status == "completed":
@@ -309,7 +307,7 @@ class RunProvenance:
         self.attempts.append({"candidate": candidate,
                               "integrity_attempt": integrity_attempt,
                               "retry_phase": retry_phase})
-        # Count actual calls, never the configured budget or RETRY verdict.
+        # 설정된 횟수나 RETRY 판정이 아닌 실제 호출 횟수를 센다.
         if integrity_attempt > 1:
             for gate in self.gates:
                 if gate["scope"] == f"base:{candidate}" and gate["name"] == "integrity":
@@ -317,8 +315,8 @@ class RunProvenance:
                     gate["action"] = "retry"
                     gate["observed_actions"].append("retry")
         elif retry_phase is not None:
-            # Batch retries cannot be uniquely attributed to one gate.
-            # Only gates that actually quarantined a previous candidate qualify.
+            # 묶음 재시도를 특정 검사 하나의 책임으로 단정할 수 없다.
+            # 이전 후보를 실제로 격리한 검사만 대상이 된다.
             for gate in self.gates:
                 if (gate["scope"].startswith("base:")
                         and "quarantined" in gate["observed_actions"]):
@@ -389,7 +387,7 @@ class RunProvenance:
                     if observation not in current["image_projection_outputs"]:
                         current["image_projection_outputs"].append(observation)
                         current["ip_adapter_tokens"] = shape[-2] if shape and len(shape) >= 3 else None
-                # None: do not replace, detach, clone, or retain output.
+                # None을 반환한다. 결과 교체·분리·복제·보관을 하지 않는다.
                 return None
             self.handles.append(projection.register_forward_hook(observed))
         self.flush()
@@ -451,8 +449,8 @@ def observe_attempt(config, candidate, integrity_attempt, retry_phase):
 
 
 def adapter_loaded(pipeline, **receipt):
-    # Diffusers does not retain a weight filename in module state. This receipt
-    # is attached only AFTER the real loader succeeds; no filename inference.
+    # Diffusers 모듈 상태에는 가중치 파일명이 남지 않는다. 이 확인 기록은
+    # 실제 로더가 성공한 뒤에만 붙이며 파일명을 추정하지 않는다.
     pipeline._provenance_adapter_receipt = receipt
     unet = getattr(pipeline, "unet", None)
     if unet is not None:
@@ -466,10 +464,8 @@ def observe_choice(pipeline, name, choice):
 
 
 def ensure_recorder(config, root=None):
-    """Preserve caller-owned aliases. Config loaders provide tracked dictionaries.
-
-    Raw programmatic dictionaries have explicitly unavailable access coverage.
-    Never report their unread list as proven unused configuration.
+    """호출부가 소유한 별칭을 유지한다. 설정 로더는 추적 사전을 제공한다. 일반 사전의 읽기 추적 범위는 명시적으로 확인 불가다. 읽지 않은 목록을 사용하지 않은
+    설정으로 단정하지 않는다.
     """
     rec = recorder(config)
     if rec is None:

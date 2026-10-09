@@ -1,4 +1,4 @@
-"""Validate local recognition assets or inspect an existing tail selection; never edit an image."""
+"""로컬 인식 파일 검증 또는 기존 꼬리 선택 확인만 한다. 이미지는 편집하지 않는다."""
 import argparse
 from dataclasses import replace
 import json

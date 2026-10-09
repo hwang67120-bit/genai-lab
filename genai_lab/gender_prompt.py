@@ -1,4 +1,4 @@
-"""Shared explicit-user gender conditions; no appearance-based inference."""
+"""사용자가 명시한 성별 조건을 공유한다. 외형으로 성별을 추정하지 않는다."""
 from genai_lab.reference_tag_policy import (
     CHARACTER_GENDERS, gender_tag_kind, normalize_tag, resolve_character_gender,
     validate_character_gender,
@@ -12,17 +12,15 @@ BASE_GENDER_CONDITION_TAGS = {
 
 
 def prepare_gender_character_tags(tags, character_gender):
-    """Keep legacy approved-tag behavior, including unspecified gender."""
+    """성별 미지정을 포함해 기존 승인 태그 동작을 유지한다."""
     resolved, removed = resolve_character_gender(tags, character_gender)
     support = BASE_GENDER_CONDITION_TAGS.get(character_gender, ())
     return resolved, removed, support
 
 
 def prepare_gender_negative_terms(terms, character_gender):
-    """Remove same-gender negatives and put the opposite guard first.
-
-    Preserve spelling, order and duplicates of unrelated terms. Callers own
-    outfit filtering and token budgeting, which differ between generation paths.
+    """같은 성별의 부정 태그를 제거하고 반대 성별 제한을 앞에 둔다. 관련 없는 태그의 표기·순서·중복은 유지한다. 의상 필터와 토큰 예산은 생성 경로별 호출부가
+    관리한다.
     """
     validate_character_gender(character_gender)
     terms = list(terms)

@@ -1,4 +1,4 @@
-"""Pre-ranking semantic conflicts against the user-approved condition."""
+"""순위를 매기기 전에 사용자 승인 조건과 의미상 충돌하는지 검사한다."""
 
 from dataclasses import dataclass, fields
 from pathlib import Path
@@ -20,7 +20,7 @@ LOWER_BODY_EQUIVALENTS = {
 
 
 def _approved_lower_body_labels(tags):
-    """Map approved descriptive tags to detector labels without broadening scope."""
+    """승인한 설명 태그를 검출기 분류로 바꾸되 범위를 넓히지 않는다."""
 
     approved = set()
     for value in tags:
@@ -88,7 +88,7 @@ def _specific_species(tags, suffix):
 
 
 def compare_lower_body_transition(base_report, final_report):
-    """Separate inherited Base contamination from FLUX-introduced garments."""
+    """기준 이미지에서 이어진 오염과 FLUX가 새로 만든 의상을 구분한다."""
 
     def conflicts(report):
         check = (
@@ -135,7 +135,7 @@ def compare_lower_body_transition(base_report, final_report):
 
 
 def evaluate_candidate_semantics(approved_run, raw_scores, settings, *, stage='final'):
-    """Reject only high-confidence contradictions; absence is not proof."""
+    """신뢰도가 높은 모순만 거부한다. 검출되지 않았다고 없음을 확정하지 않는다."""
     scores = _normalized_scores(raw_scores)
     violations = []
     unresolved = []
@@ -291,7 +291,7 @@ class CandidateSemanticAnalyzer:
 
 def reset_candidate_runtime(pipeline, visual_inputs, identity_scale,
                             garment_scale, *, staged=False):
-    """Reset mutable per-call state without rebuilding model weights."""
+    """모델 가중치를 다시 만들지 않고 호출별 변경 상태를 초기화한다."""
     import torch
     from genai_lab.reference_order import (
         adapter_references,

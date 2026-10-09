@@ -1,4 +1,4 @@
-"""CPU UI checks for reachable controls and preserved approval workflow."""
+"""접근 가능한 화면 조작과 승인 흐름 보존을 CPU로 검사한다."""
 import os
 from pathlib import Path
 
@@ -108,6 +108,9 @@ def test_studio_generation_and_optional_actions_keep_existing_routes(monkeypatch
         window.selected_outfit_path = Path("outfit.png")
         window.update_input_ready_status()
         window.generate_button.click()
+        assert window.qwen_pose_button.isHidden()
+        assert not window.qwen_pose_button.isVisible()
+        # 화면 진입 버튼이 없어도 보존된 호출 경로를 시험할 수 있다.
         window.qwen_pose_button.click()
         window.external_candidate_button.click()
         assert calls == ["start_generation", "open_qwen_pose_editor", "import_external_candidate"]
@@ -115,3 +118,27 @@ def test_studio_generation_and_optional_actions_keep_existing_routes(monkeypatch
         assert not window.pose_button.isEnabled()
     finally:
         window.close()
+
+
+def test_generation_checkbox_labels_stay_readable_under_dark_system_palette():
+    # 2026-10-09 화면에서 Windows 어두운 테마의 선택란 글자가 흰색을 이어받아 흰 카드 위에서 사라졌다.
+    from PySide6.QtGui import QPalette, QColor
+    app = QApplication.instance() or QApplication([])
+    previous = app.palette()
+    dark = QPalette(previous)
+    for role in (QPalette.ColorRole.WindowText, QPalette.ColorRole.Text, QPalette.ColorRole.ButtonText):
+        dark.setColor(role, QColor("white"))
+    app.setPalette(dark)
+    try:
+        _, window = create_window()
+        from PySide6.QtWidgets import QCheckBox
+        for name in ("studio_proportion_checkbox", "studio_shoulder_checkbox"):
+            box = window.findChild(QCheckBox, name)
+            assert box.text()
+            image = box.grab().toImage()
+            dark_pixels = sum(1 for x in range(image.width()) for y in range(image.height())
+                              if QColor(image.pixel(x, y)).lightness() < 140)
+            assert dark_pixels > 20, name  # 글자를 흰색이 아닌 어두운 색으로 그리는지 확인한다.
+        window.close()
+    finally:
+        app.setPalette(previous)

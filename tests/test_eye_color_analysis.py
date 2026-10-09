@@ -1,4 +1,4 @@
-"""Deterministic input/decision/wiring regressions; not model-accuracy tests."""
+"""재현 가능한 입력·판정·연결 회귀 검사다. 모델 정확도 시험은 아니다."""
 from dataclasses import replace
 from types import SimpleNamespace
 import json
@@ -98,7 +98,7 @@ def test_full_and_two_crops_saved_without_topn_loss(tmp_path):
     assert reviewed.eye_color_report['suggested_tag'] == 'yellow_eyes'
     assert report['inference_count'] == 3 and not report['thresholds_calibrated']
     assert report['full_eye_scores'][0] == ['purple_eyes', .2]
-    assert reviewed.tag_candidates == ()  # Crops cannot inject clothing/gender tags.
+    assert reviewed.tag_candidates == ()  # 크롭 분석으로 의상·성별 태그를 주입할 수 없다.
     for i in range(2):
         with Image.open(tmp_path/f'head_input_{i}.png') as saved:
             assert saved.tobytes() == seen[i+1].tobytes()
@@ -200,7 +200,7 @@ def test_ui_eye_selection_separate_from_general_tags(status, suggestion):
         assert dialog.approved_tags == ('blue_hair', 'purple_eyes')
         dialog.clear_eye_selection_button.click()
         assert dialog.approved_tags == ('blue_hair',)
-        assert not dialog.result()  # Clearing selections must not accept the dialog.
+        assert not dialog.result()  # 선택 해제가 확인 창 승인으로 처리되면 안 된다.
         dialog.close()
 
 

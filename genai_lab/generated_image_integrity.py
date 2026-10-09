@@ -1,4 +1,4 @@
-"""Mechanical generated-output checks; never a semantic quality judge."""
+"""결과 이미지의 기계적 손상을 검사한다. 의미상 품질을 판단하지 않는다."""
 from __future__ import annotations
 
 from dataclasses import dataclass

@@ -1,4 +1,4 @@
-"""Refined-hair multi-view analysis with isolated texture crops."""
+"""머리카락 세부를 여러 화면과 분리된 질감 크롭으로 분석한다."""
 
 from dataclasses import dataclass, replace
 from math import isfinite
@@ -114,7 +114,7 @@ def resolve_hair_detail_settings(config):
 
 
 def hair_detail_group(tag):
-    """Bounded routing only; this does not prove that a hairstyle exists."""
+    """제한된 분기 선택만 제공한다. 머리 모양의 존재를 증명하지 않는다."""
     name = normalize_tag(tag)
     if name in HAIR_LENGTH_TAGS:
         return "length"
@@ -137,7 +137,7 @@ def hair_detail_group(tag):
 
 
 def hair_length_geometry(hair_mask, face_mask, settings):
-    """Measure continuous hair extent relative to the detected face height."""
+    """검출한 얼굴 높이를 기준으로 이어진 머리카락 길이를 측정한다."""
     hair = read_binary_mask(hair_mask, hair_mask.size)
     face = read_binary_mask(face_mask, hair_mask.size)
     hair_rows, _ = np.nonzero(hair)
@@ -176,7 +176,7 @@ def hair_length_geometry(hair_mask, face_mask, settings):
 
 
 def evidence_views(group, available_views):
-    """Keep local observations from deciding unrelated global attributes."""
+    """부분 관찰로 관련 없는 전체 속성을 결정하지 않는다."""
     available = set(available_views)
     if group == "front":
         return ("front",) if "front" in available else ()
@@ -189,11 +189,7 @@ def evidence_views(group, available_views):
 
 
 def hair_prompt_delivery_report(approved_tags, prompt, analysis_report=None):
-    """Record which approved hair tags reached the exact generation prompt.
-
-    Analysis candidates and delivered prompt terms are kept separate so a
-    diagnostic suggestion cannot be mistaken for a generation condition.
-    """
+    """승인한 머리 태그 중 실제 생성 프롬프트에 도달한 항목을 기록한다. 분석 후보와 전달 문구를 분리해 진단 제안이 생성 조건으로 오인되지 않게 한다."""
     approved = tuple(dict.fromkeys(
         normalize_tag(tag) for tag in approved_tags
         if hair_detail_group(tag) != "unresolved"
@@ -229,7 +225,7 @@ def hair_prompt_delivery_report(approved_tags, prompt, analysis_report=None):
 
 
 def hair_analysis_log_detail(report):
-    """Format the complete hair-analysis decision without implying delivery."""
+    """머리 분석의 전체 판단을 표시하되 생성에 전달됐다고 암시하지 않는다."""
     if not isinstance(report, dict):
         return "분석 보고서 없음"
     geometry = report.get("length_geometry", {})
@@ -256,7 +252,7 @@ def hair_analysis_log_detail(report):
 
 
 def hair_observation_masks(hair_mask, face_mask, settings):
-    """Build face-anchored observation regions, not semantic segmentations."""
+    """얼굴을 기준으로 관찰 영역을 만든다. 의미 기반 분할은 아니다."""
     size = hair_mask.size
     hair = read_binary_mask(hair_mask, size)
     face = read_binary_mask(face_mask, size)
@@ -284,8 +280,8 @@ def hair_observation_masks(hair_mask, face_mask, settings):
         (xx >= right - width * settings.side_inner_ratio)
         & (yy >= top) & (yy < side_bottom)
     )
-    # A frontal image cannot prove semantic rear hair. This lower outer
-    # silhouette is retained only as a zoomed observation candidate.
+    # 정면 그림으로 의미상 뒷머리를 확정할 수 없다. 아래쪽 바깥
+    # 외곽은 확대 관찰 후보로만 남긴다.
     rear_window = yy >= top + height * settings.rear_start_ratio
     masks = {"whole": hair}
     for name, selected in (
@@ -313,7 +309,7 @@ def masked_texture(source, selected):
 
 def analyze_hair_details(session, image, hair_mask, face_mask, base_result,
                          settings, *, cancelled=lambda: False):
-    """Reuse one WD session and add only bounded hair-detail candidates."""
+    """WD 세션 하나를 재사용하고 제한된 머리 세부 후보만 추가한다."""
     started = perf_counter()
     def check():
         if cancelled():
@@ -397,15 +393,15 @@ def analyze_hair_details(session, image, hair_mask, face_mask, base_result,
             "max_score": 1.0,
             "status": "mask_geometry_candidate",
             "semantic_location": "length",
-            # Mask geometry narrows the range but cannot prove the semantic
-            # length label by itself. A WD observation must agree before the
-            # tag can become a user-approval candidate.
+            # 마스크 모양은 범위를 좁힐 뿐 머리 길이 분류를
+            # 증명하지 않는다. WD 관찰도 일치해야
+            # 사용자 승인 후보 태그로 제시한다.
             "eligible_for_prompt": False,
             "score_is_probability": False,
         })
     evidence.sort(key=lambda item: (-item["max_score"], item["tag"]))
-    # Full-image length tags are replaced by mask-verified length evidence.
-    # Other full-image character attributes remain available for review.
+    # 전체 이미지의 길이 태그는 마스크로 검증한 길이 근거로 대체한다.
+    # 나머지 전체 캐릭터 속성은 검토할 수 있게 유지한다.
     base_candidates = tuple(
         tag for tag in base_result.tag_candidates
         if hair_detail_group(tag.tag_name) != "length"

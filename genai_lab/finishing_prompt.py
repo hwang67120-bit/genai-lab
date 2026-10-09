@@ -1,4 +1,4 @@
-"""Explicit diagnostic-B quality wording; never changes the default negative template."""
+"""진단 B의 품질 문구를 명시적으로 적용한다. 기본 부정 문구는 변경하지 않는다."""
 from dataclasses import replace
 from genai_lab.onepass_prompt import plan_prompt_chunks
 

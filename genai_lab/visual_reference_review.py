@@ -1,4 +1,4 @@
-"""Explicit input approval and advisory-score candidate selection."""
+"""명시적 입력 승인과 참고 점수 기반 후보 선택을 담당한다."""
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QWidget, QComboBox, QToolButton
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtCore import Qt

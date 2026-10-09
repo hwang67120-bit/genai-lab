@@ -1,13 +1,6 @@
-"""Run one isolated low-VRAM Qwen-Image-Edit-2509 consistency test.
-
-The runner follows the Qwen-Image paper's editing path: the approved Base is
-encoded as the image to preserve and the isolated garment board is supplied as
-a second visual condition. It produces a whole image and never composites
-pixels.
-
-Research and official implementations:
-https://arxiv.org/abs/2508.02324
-https://huggingface.co/Qwen/Qwen-Image-Edit-2509
+"""분리된 저메모리 Qwen-Image-Edit-2509 동일성 시험을 한 번 실행한다. 논문의 편집 경로처럼 승인 기준을 보존 이미지로 인코딩하고 분리된 의상
+보드를 두 번째 시각 조건으로 넣는다. 전신 결과를 만들며 픽셀 합성은 하지 않는다. 근거: https://arxiv.org/abs/2508.02324,
+https://huggingface.co/Qwen/Qwen-Image-Edit-2509,
 https://github.com/modelscope/DiffSynth-Studio/blob/main/examples/qwen_image/model_inference_low_vram/Qwen-Image-Edit-2509.py
 """
 

@@ -1,6 +1,5 @@
-"""Prepare approved B replay for Claude; --execute explicitly enables the GPU worker.
-
-Default is CPU preparation only. No downloads, retrials or reference C support.
+"""Claude용 승인 B 재현 자료를 준비한다. --execute를 명시해야 GPU 작업을 실행한다. 기본은 CPU 준비이며 다운로드·재시험·참조 C 지원은
+없다.
 """
 import argparse
 from pathlib import Path, PureWindowsPath
@@ -15,7 +14,7 @@ HANDS = "Both arms hang down at the sides of the body, and each hand rests light
 
 
 def repository_path(value, root):
-    # Trial files contain host drive letters. Resolve only their outputs-relative part.
+    # 시험 자료의 컴퓨터별 드라이브 경로 중 outputs 아래 상대 경로만 해석한다.
     parts = PureWindowsPath(value).parts
     if "outputs" not in parts: raise ValueError("시험 입력 경로가 outputs 아래가 아닙니다.")
     relative = parts[parts.index("outputs"):]
@@ -58,7 +57,7 @@ def main(argv=None):
         write_json(out / "prepared-request.json", request)
         print("CPU 준비 완료; 생성하지 않음:", out)
         return
-    # This CLI owns no generation/analysis models. Approved trial analysis is replayed.
+    # 이 명령은 생성·분석 모델을 관리하지 않는다. 승인된 시험 분석을 재현한다.
     class ApprovedAnalysis:
         def analyze(self, *args): return []
         def close(self): pass

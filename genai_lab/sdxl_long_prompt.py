@@ -1,4 +1,4 @@
-"""Approval-gated, phrase-preserving SDXL dual text-encoder chunks."""
+"""승인 문구를 유지하며 SDXL 두 텍스트 인코더의 조각을 만든다."""
 from __future__ import annotations
 
 import hashlib
@@ -25,7 +25,7 @@ def resolve_long_prompt_settings(raw):
 
 
 def plan_phrase_chunks(text, tokenizers, settings):
-    """Split only at comma phrase boundaries and verify both SDXL tokenizers."""
+    """쉼표로 나뉜 문구 경계에서만 자르고 SDXL 토크나이저 두 개를 검증한다."""
     settings = resolve_long_prompt_settings(settings)
     tokenizers = tuple(tokenizers)
     if not tokenizers or any(tokenizer is None for tokenizer in tokenizers):
@@ -100,7 +100,7 @@ def _encode_chunks(pipeline, plan):
 
 
 def build_long_prompt_embeddings(pipeline, positive_plan, negative_text):
-    """Encode approved chunks; pad the negative side with explicit empty chunks."""
+    """승인 조각을 인코딩하고 부정 문구 쪽에는 빈 조각을 명시적으로 채운다."""
     import torch
 
     settings = {

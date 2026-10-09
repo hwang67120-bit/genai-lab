@@ -1,8 +1,5 @@
-"""Evidence/intent/target-plan separation for hairstyle preservation.
-
-The reference analyzer is allowed to be uncertain. Its observations never
-become generation conditions until user-approved character tags turn them into
-intent. Target coordinates are created only from output-space masks.
+"""머리 보존의 관찰·의도·대상 계획을 나눈다. 분석 관찰은 불확실할 수 있고, 사용자 승인 머리 태그가 생기기 전에는 생성 조건으로 쓰지 않는다. 대상 좌표는
+결과 이미지 마스크에서만 만든다.
 """
 
 from __future__ import annotations
@@ -45,7 +42,7 @@ def _observation_state(item: Mapping[str, Any]) -> str:
 def build_hair_observed_evidence(
     analysis_report: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
-    """Preserve detector evidence without promoting it to generation intent."""
+    """검출 근거를 보존하되 생성 의도로 바꾸지 않는다."""
 
     report = analysis_report if isinstance(analysis_report, Mapping) else {}
     observations: dict[str, list[dict[str, Any]]] = {
@@ -111,7 +108,7 @@ def build_hair_observed_evidence(
 def build_hair_intent(
     approved_character_tags: Iterable[object],
 ) -> dict[str, Any]:
-    """Build generation intent only from explicit user-approved hair tags."""
+    """명시적으로 승인한 머리 태그만 생성 의도로 만든다."""
 
     approved = _approved_tags(approved_character_tags)
     grouped = {
@@ -160,7 +157,7 @@ def build_hair_transfer_contract(
     approved_character_tags: Iterable[object],
     analysis_report: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Separate observations, approved intent, and stage responsibilities."""
+    """관찰·승인 의도·단계별 책임을 구분한다."""
 
     evidence = build_hair_observed_evidence(analysis_report)
     intent = build_hair_intent(approved_character_tags)
@@ -204,7 +201,7 @@ def build_target_hair_plan(
     scope_report: Mapping[str, Any] | None,
     partition_report: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
-    """Record a target-space action after output masks have been detected."""
+    """결과 마스크를 검출한 뒤 해당 좌표의 처리 계획을 기록한다."""
 
     scope = scope_report if isinstance(scope_report, Mapping) else {}
     partition = (

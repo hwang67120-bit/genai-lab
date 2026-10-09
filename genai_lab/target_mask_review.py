@@ -268,8 +268,8 @@ class TargetMaskReviewDialog(QDialog):
 
     @Slot()
     def _on_thread_finished(self):
-        # finished may precede native thread-local cleanup. Join before opening
-        # another modal GUI, then defer it to a fresh GUI event-loop turn.
+        # 종료 신호가 스레드 내부 해제보다 먼저 올 수 있다. 다른 확인 창을
+        # 열기 전에 종료를 기다리고 새 화면 이벤트 차례에 창을 연다.
         if self._thread is None:
             return
         if not self._thread.wait(1000):

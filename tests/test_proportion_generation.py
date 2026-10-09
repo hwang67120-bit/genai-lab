@@ -1,4 +1,4 @@
-"""CPU-only product flow: real orchestration, fake pipelines and synthetic pixels."""
+"""CPU 제품 흐름 검사다. 실제 작업 조립과 대체 파이프라인·합성 픽셀을 사용한다."""
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace

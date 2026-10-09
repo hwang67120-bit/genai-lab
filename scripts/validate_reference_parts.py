@@ -1,4 +1,4 @@
-"""Validate animal-ear, hair-accessory, and tail observations offline."""
+"""동물 귀·머리 장식·꼬리 관찰을 오프라인에서 검증한다."""
 
 from __future__ import annotations
 

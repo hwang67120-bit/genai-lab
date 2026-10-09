@@ -1,4 +1,4 @@
-"""User-confirmed preservation facts. Analysis proposes; it never approves."""
+"""사용자가 확인한 보존 사실만 사용한다. 분석기는 제안하며 승인하지 않는다."""
 from dataclasses import asdict, dataclass, replace
 import hashlib
 import json
@@ -58,7 +58,7 @@ class PreservationItem:
 
 
 def instruction_issues(item):
-    """Known lexical violations only, not a semantic correctness classifier."""
+    """알려진 단어 규칙 위반만 검사한다. 의미상 정확성 분류기는 아니다."""
     text = item.english.lower().replace("_", " ")
     issues = []
     if re.search(r"\b(raccoon|fox|wolf|cat|dog|rabbit)\b", text):
@@ -144,10 +144,8 @@ def confirm_item(spec, item_id, *, confirmation, resolution="", exclude=False):
 
 
 def draft_from_reports(image_path, approval, reports=(), generation_tags=()):
-    """Consume image-bound saved reports; unsupported observations stay unresolved.
-
-    reports: source, image_sha256, kind, candidates[{fact_ko,english,check_at,issues}].
-    A report is evidence, never a user approval or a reliable absence claim.
+    """이미지에 연결된 저장 보고서를 읽는다. 근거가 없는 관찰은 미확정으로 둔다. reports 항목은 source, image_sha256, kind,
+    candidates[{fact_ko,english,check_at,issues}]다. 보고서는 근거일 뿐 사용자 승인이나 부위 없음의 확증이 아니다.
     """
     sha = file_sha(image_path)
     items = []

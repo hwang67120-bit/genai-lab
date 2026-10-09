@@ -155,8 +155,8 @@ def test_selected_hair_inpaint_receives_only_hair_reference(monkeypatch):
     approval = {
         "prompt": request.prompt,
         "negative_prompt": request.negative_prompt,
-        # ApprovedReferenceRun.record() returns a JSON round trip: tuples become
-        # lists even though the semantic contract is unchanged.
+        # ApprovedReferenceRun.record()는 JSON 변환을 거쳐 튜플을
+        # 목록으로 바꾼다. 의미상 규칙은 그대로다.
         "hair_error_correction": json.loads(json.dumps(settings.record())),
     }
     result, report = correct_selected_hair(
@@ -274,8 +274,8 @@ def test_hair_correction_rejects_unapproved_parameter_change():
 
 @pytest.fixture(autouse=True)
 def isolate_model_dependencies(monkeypatch):
-    # These tests exercise promotion decisions using synthetic proposals. The
-    # real control contract is exercised separately in test_output_coordinate_control.
+    # 합성 후보로 채택 결정을 검사한다. 실제 제어 입력 규칙은
+    # 별도의 test_output_coordinate_control에서 검사한다.
     monkeypatch.setattr('genai_lab.hair_error_correction.run_isolated_inpaint',
                         lambda pipe, control_report, **kwargs: pipe(**kwargs))
 

@@ -1,4 +1,4 @@
-"""Optional scene-lineart integration into the existing reference-only candidate flow."""
+"""기존 참조 생성 후보 흐름에 장면 선화를 선택적으로 연결한다."""
 from pathlib import Path
 from time import perf_counter
 import gc
@@ -116,7 +116,7 @@ def prepare_scene_inputs(source, garment, config, run_log=None,
         inputs = VisualInputs(source.copy(), identity.rgb.copy(), garment_ref.rgb.copy(),
                               identity.region.copy(), garment_ref.region.copy(),
                               scene_condition=condition)
-        condition = None  # Ownership transferred to VisualInputs.
+        condition = None  # 소유권을 VisualInputs로 넘긴다.
         outcome = "prepared"
         return inputs
     except Exception as exc:

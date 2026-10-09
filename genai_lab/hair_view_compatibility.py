@@ -1,4 +1,4 @@
-"""Gate hair inpainting when one reference view lacks the required geometry."""
+"""참조 시점 하나에 필요한 모양 정보가 없으면 머리 인페인트를 막는다."""
 
 from dataclasses import dataclass, fields
 from pathlib import Path
@@ -30,7 +30,7 @@ class HairViewGateSettings:
 
 
 def classify_hair_view(raw_scores, settings):
-    """Classify only explicit WD14 camera/head-view evidence."""
+    """명시적인 WD14 카메라·머리 시점 근거만 분류한다."""
     scores = dict(raw_scores or ())
 
     def maximum(names):
@@ -110,7 +110,7 @@ def resolve_hair_view_gate(config):
 
 
 class WdHairViewAnalyzer:
-    """Reuse the configured WD14 model and retain relevant raw scores."""
+    """설정된 WD14 모델을 재사용하고 관련 원점수를 보존한다."""
 
     def __init__(self, config):
         from genai_lab.clothing_analysis import (

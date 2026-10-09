@@ -1,4 +1,4 @@
-"""CPU previews first; separate --run with reviewed lock generates CONTOUR only."""
+"""CPU 미리보기를 먼저 만든다. 검토 잠금과 별도 --run으로 CONTOUR만 생성한다."""
 import argparse
 from dataclasses import asdict, replace
 from pathlib import Path
@@ -27,8 +27,31 @@ CODE_FILES=(Path(__file__),*[ROOT/'genai_lab'/name for name in (
     ROOT/'scripts/head_contour_trial_inputs.py',ROOT/'scripts/verify_proportion_product.py',ROOT/'scripts/body_outline_source_trial.py')
 
 
-def nose_from(joints):
-    return next((j for j in joints if j['joint_name']=='nose'),None)
+def nose_from(joints, observation=None):
+    nose = next((dict(j) for j in joints if j['joint_name']=='nose'), None)
+    if nose is not None and observation:
+        nose.update(face_points=observation.get('face_points', []), face_scores=observation.get('face_scores', []))
+    return nose
+
+
+def ensure_cheek_observation(nose, head, directory):
+    if nose and nose.get('face_points'):
+        return nose
+    # 옛 잠금에는 정규화 얼굴 관절이 없다. 같은 화면을 CPU로 다시 검출한다.
+    from genai_lab.studio_generation import StudioRuntime, cpu_process
+    import shutil
+    runtime = StudioRuntime.from_environment()
+    folder = directory / 'face-pose'
+    folder.mkdir()
+    shutil.copyfile(head.normalized_file, folder / 'character.png')
+    worker = ROOT / 'genai_lab/studio_analysis.py'
+    cpu_process([str(runtime.pose_python), str(worker), 'pose', str(folder), str(runtime.pose_models),
+        str(runtime.model_cache), str(runtime.head_cache)], folder / 'cpu.log', lambda: False, runtime.analysis_timeout)
+    observed = read(folder / 'pose.json')
+    require(observed['person_count'] == 1, '볼 표본에 사용할 얼굴 한 명이 필요합니다.')
+    result = dict(nose or {})
+    result.update(face_points=observed['face_points'], face_scores=observed['face_scores'])
+    return result
 
 
 def load_case(studio,foreground_model):
@@ -38,7 +61,7 @@ def load_case(studio,foreground_model):
         require(options.head_lines=='none','C0는 머리 안쪽 선이 없는 실행이어야 합니다.')
         seeds=all_seeds[:2]
         confirmation=read(options.head.contour_file.parent/'user-confirmation.json')
-        nose=nose_from(confirmation['pose'].get('joints',[]))
+        nose=nose_from(confirmation['pose'].get('joints',[]), confirmation['pose'])
         generation=Path(studio)/'generation'
         bases={seed:generation/f'BASE_{seed}' for seed in seeds}
         old_maps=read(generation/'maps.json')
@@ -77,13 +100,15 @@ def load_case(studio,foreground_model):
     return inputs,settings,options,seeds,candidates,expected,manifest,nose,name,comparisons
 
 
-def prepare_case(case,directory,segmenter_factory,foreground_factory=AnimeForeground):
+def prepare_case(case,directory,segmenter_factory=None,foreground_factory=AnimeForeground,*,face_method="skin_color_v2"):
     inputs,settings,options,seeds,bases,expected,sources,nose,name,comparisons=case
     directory=Path(directory).resolve();directory.mkdir(parents=True,exist_ok=False)
     state={'status':'started','gpu_generation':False,'case':name}
     try:
         mask,contour,models=validate_proportion_request(inputs,settings,options)
-        prepare_head_lines(options.head,nose,directory/'head-lines',segmenter_factory)
+        if face_method == "skin_color_v2":
+            nose = ensure_cheek_observation(nose, options.head, directory)
+        prepare_head_lines(options.head,nose,directory/'head-lines',segmenter_factory,face_method=face_method)
         record_file=directory/'head-lines/head-lines.json'
         baseline=directory/'baseline-maps';baseline.mkdir()
         base_maps=build_maps(bases,mask,contour,baseline,foreground_factory,options,lambda:False,expected)
@@ -175,6 +200,7 @@ def main(argv=None):
     parser.add_argument('--foreground-model',type=Path)
     parser.add_argument('--model-cache',type=Path,default=Path('D:/genai-cache/huggingface'))
     parser.add_argument('--output',type=Path,required=True)
+    parser.add_argument('--face-method',choices=('skin_color_v1','skin_color_v2','sam2'),default='skin_color_v2')
     parser.add_argument('--run',action='store_true');parser.add_argument('--review-sha')
     args=parser.parse_args(argv)
     require(not args.output.exists(),'새 출력 폴더만 사용할 수 있습니다.')
@@ -185,9 +211,12 @@ def main(argv=None):
         return
     require(args.prepared is None and args.review_sha is None,'CPU 준비는 --r6 또는 --studio-run을 사용합니다.')
     os.environ['CUDA_VISIBLE_DEVICES']=''
-    from genai_lab.tail_complexity_worker import CpuTailSegmenter
+    factory=None
+    if args.face_method=='sam2':
+        from genai_lab.tail_complexity_worker import CpuTailSegmenter
+        factory=lambda:CpuTailSegmenter(args.model_cache)
     case=load_case(args.studio_run,args.foreground_model)
-    _,digest=prepare_case(case,args.output,lambda:CpuTailSegmenter(args.model_cache))
+    _,digest=prepare_case(case,args.output,factory,face_method=args.face_method)
     print(json.dumps({'status':'needs_user_review','gpu_generation':0,'review_sha256':digest,'output':str(args.output)},ensure_ascii=False))
 
 

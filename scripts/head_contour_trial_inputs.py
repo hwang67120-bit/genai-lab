@@ -1,4 +1,4 @@
-"""Locked inputs for the R6 pose + head-sketch experiment. CPU only."""
+"""R6 자세·머리 스케치 시험의 고정 입력이다. CPU만 사용한다."""
 from dataclasses import asdict
 import hashlib
 import importlib.metadata
@@ -51,7 +51,7 @@ def require(condition, message):
 
 
 def restore_request(plan):
-    """Rehydrate the saved BASE, preserving every prompt token and input field."""
+    """모든 프롬프트 토큰과 입력 항목을 유지하며 저장된 BASE 요청을 복원한다."""
     data = dict(plan["inputs"]["BASE"])
     prompt = dict(data.pop("prompt"))
     encoders = []
@@ -90,7 +90,7 @@ def verify_locks(folder):
 
 
 def verify_download(record_path):
-    """Reject stale revision, mismatched content or incomplete download before loading."""
+    """로드 전에 오래된 리비전·내용 불일치·불완전 다운로드를 거부한다."""
     record = read(record_path)
     require(record["repo"] == SKETCH_ID and record["revision"] == REVISION, "Sketch revision mismatch")
     files = record["files"]
@@ -111,7 +111,7 @@ def verify_download(record_path):
 
 
 def check_geometry(contour_path, mask_path, joints, size=(736, 1232)):
-    """Check already-normalized pixels; never resize, redraw or infer another mask."""
+    """이미 정규화된 픽셀을 검사한다. 크기 변경·재작성·다른 마스크 추정은 없다."""
     import cv2
     import numpy as np
     from PIL import Image
@@ -147,7 +147,7 @@ def check_geometry(contour_path, mask_path, joints, size=(736, 1232)):
     ys, xs = np.where(mask > 0)
     bottom, height = int(ys.max()), int(ys.max() - ys.min() + 1)
     gap = neck["y"] - bottom
-    # Diagnostic alignment bound, not a newly inferred anatomical measurement.
+    # 정렬 진단의 허용 범위다. 새로 추정한 인체 측정값이 아니다.
     require(xs.min() <= neck["x"] <= xs.max() and 0 <= gap <= .25 * height,
             "Neck is not just below confirmed head (0..25% head-box height)")
     return {"white_pixels": int(white.sum()), "boundary_max_distance_px": float(distance[white].max()),
@@ -168,7 +168,7 @@ def model_manifest(settings, sketch_record):
 
 
 def preflight():
-    """Validate immutable evidence and local artifacts without model inference."""
+    """모델 추론 없이 변경 불가 근거와 로컬 파일을 검증한다."""
     locks = verify_locks(DESIGN)
     require(sha(BASE_DIR / "plan.json") == (BASE_DIR / "plan.sha256").read_text().strip(), "BASE plan changed")
     plan = read(BASE_DIR / "plan.json")

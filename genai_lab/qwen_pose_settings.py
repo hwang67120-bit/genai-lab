@@ -1,4 +1,4 @@
-"""Explicit local runtime settings. No drive, environment name, install or model load."""
+"""로컬 실행 설정을 명시한다. 드라이브·환경 이름 고정이나 설치·모델 로드는 없다."""
 from dataclasses import asdict, dataclass
 import importlib.metadata
 import json
@@ -63,7 +63,7 @@ class QwenPoseSettings:
 
 
 def output_dimensions(width, height):
-    """Diffusers 0.38 calculate_dimensions(1024**2, ratio), without importing it."""
+    """Diffusers를 가져오지 않고 0.38의 calculate_dimensions(1024**2, ratio) 규칙을 계산한다."""
     if min(width, height) <= 0:
         raise ValueError("잘못된 이미지 크기")
     ratio = width / height
@@ -73,7 +73,7 @@ def output_dimensions(width, height):
 
 
 def validate_model_files(settings):
-    """Hash every provisioned model artifact before imports/loads; no network."""
+    """가져오기·로드 전에 준비된 모델 파일 전체의 해시를 확인한다. 네트워크는 쓰지 않는다."""
     manifest = Path(settings.artifact_manifest)
     if file_sha(manifest) != settings.artifact_manifest_sha256:
         raise ValueError("모델 파일 명세 SHA 불일치")
@@ -90,7 +90,7 @@ def validate_model_files(settings):
     for group in ("tokenizer/", "processor/"):
         if not any(x.startswith(group) for x in entries):
             raise ValueError("모델 전처리 파일 해시 누락: " + group)
-    # Detect additions/edits not covered by the lock, including shard indexes.
+    # 분할 파일 목록을 포함해 잠금에 없는 추가 파일·수정을 검출한다.
     for p in root.rglob("*"):
         if p.is_file() and ".cache" not in p.relative_to(root).parts:
             if p.relative_to(root).as_posix() not in entries:

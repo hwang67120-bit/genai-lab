@@ -1,7 +1,5 @@
-"""Injected detector/session adapters. This module installs/loads no model.
-
-Clients must be provided explicitly by a configured worker; availability is
-checked at deployment time, not inferred from historical environment notes. No hardcoded cache directories or process-wide chdir/env mutation.
+"""외부에서 주입한 검출기·세션 연결부다. 이 모듈에서 모델 설치나 로드는 없다. 설정된 작업자가 클라이언트를 제공하며 배포 시 실제 가용성을 확인한다. 과거
+기록으로 추정하지 않는다. 캐시 경로 고정이나 전역 작업 폴더·환경 변경은 없다.
 """
 from genai_lab.onepass_pose import PoseObservation, joints_from_records, summarize_hands
 from genai_lab.onepass_character import HeadDetection
@@ -14,10 +12,8 @@ class InputBackendUnavailable(RuntimeError):
 
 
 class DwPoseInputBackend:
-    """Reuse the existing preview/coordinate function with actual count capture.
-
-    The caller owns the detector's lifetime and supplies a locally configured
-    detector. Missing or zero-person observations must not be converted to count 1.
+    """실제 인원수를 함께 수집하며 기존 미리보기·좌표 함수를 재사용한다. 호출부가 검출기 수명과 로컬 설정을 관리한다. 결과 없음이나 0명을 1명으로 바꾸지
+    않는다.
     """
     def __init__(self, detector, settings=OnePassInputSettings(), *,
                  preview_builder=create_pose_preview_and_coordinates):
@@ -43,7 +39,7 @@ class DwPoseInputBackend:
                     if (points.ndim != 3 or scores.ndim != 2 or points.shape[:2] != scores.shape
                             or points.shape[2] != 2 or scores.shape[1] < 18):
                         raise ValueError('DWPose 좌표/신뢰도 형식 오류')
-                    # Same selection as create_pose_preview_and_coordinates, before rendering normalization.
+                    # 그림 정규화 전에 기존 미리보기·좌표 함수와 같은 사람을 선택한다.
                     selected = int(np.argmax(np.mean(scores[:, :18], axis=1)))
                     if points.shape[1] >= 92:
                         self.face_points = tuple(tuple(map(float, xy)) for xy in points[selected, 24:92])
@@ -58,7 +54,7 @@ class DwPoseInputBackend:
         except RuntimeError:
             if counted.count != 0:
                 raise
-            # The legacy builder rejects zero persons. Retain that fact for K1/K2.
+            # 구형 조립기는 0명을 거부한다. K1·K2를 위해 이 사실을 보존한다.
             from PIL import Image
             return PoseObservation((), 0, image.convert('RGB'), Image.new('RGB', image.size))
         try:
@@ -73,7 +69,7 @@ class DwPoseInputBackend:
 
 
 class WdInputTagger:
-    """Reuse an existing WdTagSession; raw general scores are not top-N truncated."""
+    """기존 WdTagSession을 재사용하며 일반 원점수를 상위 항목만으로 자르지 않는다."""
     def __init__(self, session):
         if session is None:
             raise InputBackendUnavailable('WD 태그 세션이 필요합니다.')
@@ -85,7 +81,7 @@ class WdInputTagger:
 
 
 class HeadInputBackend:
-    """Interface for imgutils.detect.detect_heads; caller supplies a configured client."""
+    """설정한 클라이언트를 받아 imgutils.detect.detect_heads를 호출하는 연결부다."""
     def __init__(self, detect_heads, settings=OnePassInputSettings()):
         if detect_heads is None:
             raise InputBackendUnavailable('머리 검출 클라이언트가 필요합니다. 패키지를 자동 설치하지 않습니다.')
@@ -99,11 +95,9 @@ class HeadInputBackend:
 
 
 class ForegroundInputBackend:
-    """Reuse extract_anime_character_foreground_mask via explicit injection.
-
-    Pass scripts.body_comparison_runner.extract_anime_character_foreground_mask
-    with a provisioned cache. The caller owns model provisioning/offline policy,
-    just as for HeadInputBackend; constructing this adapter performs no inference.
+    """명시적으로 주입한 기존 캐릭터 외곽 마스크 함수를 재사용한다. 준비된 캐시와
+    scripts.body_comparison_runner.extract_anime_character_foreground_mask를 전달한다. 모델 준비·오프라인
+    정책은 호출부가 관리하며 연결부 생성만으로 추론하지 않는다.
     """
     def __init__(self, extractor, model_cache_dir):
         if extractor is None or model_cache_dir is None:

@@ -1,9 +1,5 @@
-"""Output-coordinate isolation for the supported SDXL four-channel inpaint path.
-
-Diffusers 0.38 StableDiffusionXLInpaintPipeline restores the complement of its
-mask after EVERY scheduler step with image_latents + the original noise at the
-next timestep, and clean image_latents on the final step. Do not replace this
-with a clean latent at intermediate timesteps or apply it to a nine-channel UNet.
+"""지원되는 SDXL 4채널 인페인트의 결과 좌표를 분리한다. Diffusers 0.38은 매 스케줄러 단계 후 마스크 밖을 다음 시점의 원본 노이즈와 이미지
+잠재값으로 복원하고 마지막에는 깨끗한 이미지 잠재값을 쓴다. 중간 시점에 깨끗한 값만 쓰거나 9채널 UNet에 적용하면 안 된다.
 """
 from dataclasses import dataclass
 from time import perf_counter
@@ -13,7 +9,7 @@ from PIL import Image, ImageFilter
 
 
 def create_dual_masks(detected_mask, feather_radius=10):
-    """Create a binary authorization mask and an inward-only soft mask."""
+    """이진 승인 마스크와 안쪽으로만 흐려지는 마스크를 만든다."""
     if type(feather_radius) is not int or not 0 <= feather_radius <= 32:
         raise ValueError("mask feather radius must be an integer from 0 to 32")
     if isinstance(detected_mask, Image.Image):
@@ -30,10 +26,10 @@ def create_dual_masks(detected_mask, feather_radius=10):
     if feather_radius == 0:
         soft = hard.copy()
     else:
-        # Thin output detections (especially individual animal ears) can be
-        # narrower than the configured feather radius. Keep the requested
-        # radius as an upper bound and reduce it until erosion leaves a safe
-        # interior. This never expands beyond the binary authorization mask.
+        # 가는 검출 영역, 특히 동물 귀는 설정된
+        # 흐림 반경보다 좁을 수 있다. 요청 반경을
+        # 상한으로 두고 안전한 내부가 남을 때까지 줄인다.
+        # 이진 승인 영역 밖으로 넓히지 않는다.
         eroded = None
         for radius in range(feather_radius, 0, -1):
             size = radius * 2 + 1
@@ -77,7 +73,7 @@ class OutputProtectionAnalysis:
 
 
 def analyze_output_protection_masks(image, config, *, target, check):
-    """Re-detect protected parts in generated-candidate coordinates."""
+    """생성 후보 좌표에서 보호 부위를 다시 검출한다."""
     from genai_lab.hair_error_correction import create_output_hair_analyzer
 
     analyzer = create_output_hair_analyzer(config)
@@ -116,9 +112,9 @@ def analyze_output_protection_masks(image, config, *, target, check):
                 with gray.filter(ImageFilter.MaxFilter(5)) as expanded:
                     hard |= np.asarray(expanded) >= 128
 
-        # A tail is identity-bearing but may be occluded by some garments.
-        # Keep it conditional and preserve it by default; a later reviewed
-        # occlusion policy may provide an explicit release mask.
+        # 꼬리는 동일성 특징이지만 일부 의상에 가려질 수 있다.
+        # 기본으로 보호하며, 나중에 검토한 가림 정책에서
+        # 명시적인 보호 해제 마스크를 제공할 수 있다.
         if target == "garment" and "output_tail" in masks:
             with masks["output_tail"].convert("L") as gray:
                 with gray.filter(ImageFilter.MaxFilter(5)) as expanded:
@@ -237,8 +233,8 @@ def run_isolated_inpaint(
             "latent_restore_steps": 0,
         }
         raise ValueError("output correction mask is empty at latent resolution")
-    # The latent/edit mask above always stays W. Only image attention may differ.
-    # https://huggingface.co/docs/diffusers/using-diffusers/ip_adapter#masking
+    # 위 잠재값·편집 마스크는 항상 W다. 이미지 어텐션만 다를 수 있다.
+    # 공식 마스크 설명: https://huggingface.co/docs/diffusers/using-diffusers/ip_adapter#masking
     attention_masks = masks
     if ip_adapter_mask is not None:
         if (not isinstance(ip_adapter_mask, Image.Image)
@@ -264,7 +260,7 @@ def run_isolated_inpaint(
     control_report["output_coordinate_control"] = report
 
     def after_step(pipe, step, timestep, tensors):
-        # Native blending has already run before this callback.
+        # 이 콜백 전에 기본 합성이 이미 실행됐다.
         report["latent_restore_steps"] += 1
         if previous is not None:
             tensors = previous(pipe, step, timestep, tensors)
@@ -291,7 +287,7 @@ def run_isolated_inpaint(
 
 def enforce_hard_paste(
         original, proposed, hard_authorized_mask, report=None):
-    """Restore every RGB pixel outside the hard output-coordinate boundary."""
+    """결과 좌표의 필수 경계 밖 모든 RGB 픽셀을 복원한다."""
     if (proposed.size != original.size
             or hard_authorized_mask.size != original.size):
         raise ValueError(
@@ -313,7 +309,7 @@ def enforce_hard_paste(
 
 
 def measure_outside_rgb_change(original, proposed, hard_authorized_mask):
-    """Measure decoder spill outside the Hard domain without compositing."""
+    """합성하지 않고 필수 영역 밖으로 번진 디코더 결과를 측정한다."""
     if (proposed.size != original.size
             or hard_authorized_mask.size != original.size):
         raise ValueError(
@@ -341,6 +337,6 @@ def measure_outside_rgb_change(original, proposed, hard_authorized_mask):
     }
 
 def exact_pixel_composite(original, proposed, mask, report):
-    """Backward-compatible name for the hard pixel restoration gate."""
+    """필수 픽셀 복원 검사에 대한 구형 호환 이름이다."""
     return enforce_hard_paste(original, proposed, mask, report)
 

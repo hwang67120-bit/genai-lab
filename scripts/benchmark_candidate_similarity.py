@@ -1,4 +1,4 @@
-"""Benchmark cumulative Base similarity for one approved GUI replay bundle."""
+"""승인된 화면 재현 자료 묶음 하나의 기준 이미지 누적 유사도를 측정한다."""
 
 from __future__ import annotations
 

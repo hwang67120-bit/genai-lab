@@ -1,10 +1,10 @@
-"""ON-only block offload, with explicit ownership of non-UNet model hooks."""
+"""기능을 켠 경우에만 블록별 오프로드를 사용하고 UNet 외 모델의 훅도 명시적으로 관리한다."""
 import time
 from genai_lab.proportion_inputs import require
 
 
 def group_inventory(unet):
-    """Read installed Diffusers hooks and prove every IP weight belongs to a group."""
+    """설치된 Diffusers 훅을 검사하고 모든 얼굴 참조 가중치가 그룹에 속하는지 확인한다."""
     groups = {}
     for name, module in unet.named_modules():
         registry = getattr(module, "_diffusers_hook", None)
@@ -49,7 +49,7 @@ class FinishingOffload:
             hook.offload()
 
     def release(self):
-        """Also release partially executed groups after failure; never reconfigure them."""
+        """실패하면 부분 실행된 그룹도 해제한다. 같은 실행에서 재설정하지 않는다."""
         self.release_models()
         for group, _, _ in self.groups:
             group.offload_()
@@ -89,7 +89,7 @@ class FinishingOffload:
 
 
 def configure_offload(pipe, torch, record, *, device="cuda:0"):
-    """Keep Accelerate on encoders/VAE and use Diffusers groups exclusively on UNet."""
+    """인코더·VAE는 Accelerate로 관리하고 UNet만 Diffusers 그룹을 사용한다."""
     from accelerate import cpu_offload_with_hook
     started = time.perf_counter()
     owner = FinishingOffload(pipe, record)
@@ -110,8 +110,8 @@ def configure_offload(pipe, torch, record, *, device="cuda:0"):
         for name in ("text_encoder","text_encoder_2","image_encoder","vae"):
             _, previous = cpu_offload_with_hook(getattr(pipe,name),torch.device(device),prev_module_hook=previous)
             owner.model_hooks.append(previous)
-        # The pipeline otherwise reinstalls whole-model hooks after every call, conflicting with groups.
-        # Own these handles here instead; refine() releases models after success AND failure.
+        # 기본 파이프라인은 매 호출 뒤 전체 모델 훅을 다시 설치해 그룹과 충돌한다.
+        # 이곳에서 훅을 관리하고, refine()에서 성공·실패 모두 모델을 해제한다.
         pipe._all_hooks = []
         owner.observer_hooks.append(pipe.unet.register_forward_pre_hook(lambda *_:owner.release_models()))
         for name,module in pipe.unet.named_modules():

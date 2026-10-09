@@ -14,7 +14,7 @@ def test_palette_indices_survive_even_when_palette_colors_are_white(caplog):
     lip.putpalette([255] * 768)
     atr = Image.new('L', lip.size)
     auto = Image.new('L', lip.size)
-    assert np.all(np.asarray(lip.convert('L')) == 255)  # Old path loses IDs.
+    assert np.all(np.asarray(lip.convert('L')) == 255)  # 구형 경로는 분류 번호를 잃는다.
     with caplog.at_level(logging.INFO):
         identity, clothes = create_layered_semantic_masks(auto, lip, atr,
             {'Face': 13, 'Hair': 2, 'Upper-clothes': 5}, {'Face': 11, 'Hair': 2})

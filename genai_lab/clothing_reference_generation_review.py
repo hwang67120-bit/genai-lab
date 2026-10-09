@@ -1,4 +1,4 @@
-"""Minimal reference-regeneration settings; no body mask approval."""
+"""참조 재생성에 필요한 최소 설정만 제공하며 체형 마스크 승인은 포함하지 않는다."""
 
 from PySide6.QtWidgets import QLabel, QDoubleSpinBox, QSpinBox, QComboBox, QDialogButtonBox
 from genai_lab.generation_resolution_review import GenerationResolutionDialog
@@ -8,7 +8,7 @@ class ClothingReferenceGenerationDialog(GenerationResolutionDialog):
     def __init__(self, source_size, tags, previous_width=None, parent=None, *, previous_gender=None):
         super().__init__(source_size, previous_width, parent)
         self.setWindowTitle('의상 디자인 참조 생성 설정')
-        # Replace the restoration-specific explanation.
+        # 복원 기능에만 해당하던 설명을 교체한다.
         self.layout().itemAt(0).widget().setText(
             '얼굴, 헤어, 의상 이미지를 분리된 영역별 참조로 전달합니다. 얼굴 픽셀을 고정하거나 덮어씌우지 않습니다.\n'
             '헤어 전용 참조는 승인 화면에서 별도로 확인합니다. 초기 이미지·신체 복원·자세 ControlNet은 실행하지 않습니다.\n'

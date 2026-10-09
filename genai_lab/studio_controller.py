@@ -42,6 +42,7 @@ class StudioController(QObject):
         self.results = None
         self.runtime = None
         self.proportion_enabled = False
+        self.shoulder_enabled = False
         self.proportion_pending = None
         self.prepared_proportion_pose = None
         self.run_directory = None
@@ -59,6 +60,8 @@ class StudioController(QObject):
         window.tail_edit_button.clicked.connect(self.edit_tail)
         window.studio_finish_button.clicked.connect(self.finish_selected_image)
         window.studio_raw_button.clicked.connect(lambda: self.original(raw=True))
+        from genai_lab.studio_identity_report import IdentityReportController
+        self.identity_report_controller = IdentityReportController(self)
 
     @property
     def occupied(self):
@@ -71,11 +74,12 @@ class StudioController(QObject):
         if self.occupied or not w.can_start_registered_generation():
             return
         try:
-            # A failed new preflight must not overwrite a previous run's status.
+            # 새 사전 검사 실패로 이전 실행 상태를 덮어쓰지 않는다.
             self.run_directory = self.output_root / uuid.uuid4().hex
             self.run_directory.mkdir(parents=True)
             self.runtime = StudioRuntime.from_environment()
             self.proportion_enabled = w.studio_proportion_checkbox.isChecked()
+            self.shoulder_enabled = self.proportion_enabled and w.studio_shoulder_checkbox.isChecked()
             self.proportion_pending = None
             self.prepared_proportion_pose = None
             validate_local_models(self.runtime.generation)
@@ -132,6 +136,11 @@ class StudioController(QObject):
 
     def proportion_head_ready(self, draft):
         pose = self.prepared_proportion_pose
+        if self.shoulder_enabled:
+            from genai_lab.shoulder_control import prepare_shoulder_control
+            from genai_lab.studio_proportion import restore_head
+            draft["shoulder_correction"] = prepare_shoulder_control(pose["control_file"], pose["control_sha256"],
+                pose["joints"], restore_head(draft), Path(draft["head"]["contour_file"]).parent / "shoulder")
         self.confirming = True
         self.controls()
         try:
@@ -143,6 +152,10 @@ class StudioController(QObject):
             self.proportion_pose_ready(pose)
         elif choice == "confirm":
             options = confirmed_options(pose, draft, self.runtime)
+            if self.shoulder_enabled:
+                from genai_lab.proportion_inputs import sha
+                path = Path(draft["head"]["contour_file"]).parent / "shoulder/shoulder.json"
+                options = replace(options, shoulder_pull="0.85", shoulder_record_file=path, shoulder_record_sha256=sha(path))
             self.begin_generation(self.proportion_pending, pose=pose, options=options)
         else:
             self.cancel_proportion_setup()
@@ -158,7 +171,7 @@ class StudioController(QObject):
     def begin_generation(self, decision, *, pose=None, options=None):
         gender, tags, appearance = decision
         kwargs = {"proportion_pose": pose} if pose is not None else {}
-        # Preferences access stays on GUI thread. Tokenizers only read local files.
+        # 선택 저장소는 화면 스레드에서 접근한다. 토크나이저는 로컬 파일만 읽는다.
         request = build_request(self.analysis, tags, gender, confirmed=True, runtime=self.runtime,
                                 appearance=appearance, **kwargs)
         self.window.status_label.setText("상태: 2단계 비율 생성 중 · 먼저 1단계 4장을 만듭니다." if options
@@ -174,12 +187,12 @@ class StudioController(QObject):
             batch = generate_onepass_request(request, self.run_directory / "generation",
                                              cancelled=cancel, on_image=on_image, **generation_options)
             if options is not None:
-                return batch  # ProportionBatch already contains its final white-background products.
+                return batch  # ProportionBatch에는 최종 흰 배경 제품이 이미 포함돼 있다.
             if self.runtime.finishing:
                 from genai_lab.studio_finishing import finish_batch
                 finish_batch(batch, request.inputs.prompt, replace(self.runtime, finishing_face_reference=True), cancelled=cancel, progress=progress)
                 return prepare_backgrounds(batch, self.runtime.model_cache, cancelled=cancel, progress=progress, finishing=True)
-            # The generation backend is closed before loading the CPU foreground model.
+            # CPU 외곽 모델을 로드하기 전에 생성 실행기를 닫는다.
             return prepare_backgrounds(batch, self.runtime.model_cache, cancelled=cancel, progress=progress)
         self.launch(generate, self.generated)
 
@@ -309,7 +322,7 @@ class StudioController(QObject):
         self.confirming = True
         self.controls()
         try:
-            # Validate on the GUI thread before showing any derived output.
+            # 파생 결과를 보여주기 전에 화면 스레드에서 검증한다.
             from genai_lab.studio_optional_finishing import finishing_info
             verified = finishing_info(context["directory"], self.results.verify_original(), context["before_sha256"])
             if verified != info:
@@ -394,7 +407,7 @@ class StudioController(QObject):
             self.controls()
 
     def release_tail_predecessor(self):
-        """Drop the prior generation model before either recognition or editing starts."""
+        """인식이나 편집 시작 전에 이전 생성 모델을 해제한다."""
         pipeline = getattr(self.window, "pipeline", None)
         self.window.pipeline = None
         if pipeline is not None:
@@ -479,7 +492,7 @@ class StudioController(QObject):
 
     def tail_failed(self, error, details=""):
         self.pending_tail_recognition = None
-        # Never route an optional edit failure through fail(), which clears the batch.
+        # 선택적 편집 실패는 후보 묶음을 지우는 fail()로 전달하지 않는다.
         context = self.tail_context
         if context is not None:
             from genai_lab.qwen_record_io import write_json
@@ -504,6 +517,7 @@ class StudioController(QObject):
                         w.qwen_pose_button, w.external_candidate_button):
             control.setEnabled(not self.occupied)
         w.studio_proportion_checkbox.setEnabled(not self.occupied)
+        w.studio_shoulder_checkbox.setEnabled(not self.occupied and w.studio_proportion_checkbox.isChecked())
         w.generate_button.setEnabled(not self.occupied and bool(w.style_path and w.selected_outfit_path))
         w.studio_cancel_button.setVisible(self.task is not None)
         w.studio_candidate_combo.setVisible(self.results is not None)
@@ -528,13 +542,14 @@ class StudioController(QObject):
         w.studio_finish_button.setToolTip(reason or FINISHING_NOTICE)
         w.studio_finish_notice.setText(reason or FINISHING_NOTICE)
         w.studio_finish_notice.setVisible(self.results is not None)
+        self.identity_report_controller.refresh()
 
     def launch(self, action, complete, *, on_error=None):
         if self.task is not None:
             raise RuntimeError("이미 실행 중입니다.")
         task = StudioTask(action, self.window)
         self.task = task
-        # Existing application close/GPU-exclusion guards also see this task.
+        # 기존 앱 종료·GPU 동시 사용 방지 검사에도 이 작업을 포함한다.
         self.window.worker_thread = task
         task.progress.connect(self.window.status_label.setText)
         self.pending_action = complete
@@ -566,7 +581,7 @@ class StudioController(QObject):
 
     def fail(self, error, details=""):
         cancelled = isinstance(error, OnePassCancelled)
-        self.results = None  # Partial raw output stays on disk, never offered as a completed batch.
+        self.results = None  # 부분 생성 원본은 디스크에 보존하지만 완성 묶음으로 제시하지 않는다.
         self.window.candidate_preview.clear()
         self.window.candidate_preview.setText("취소되었습니다." if cancelled else "완성된 결과가 없습니다.")
         self.window.status_label.setText("상태: 취소됨" if cancelled else "상태: 생성하지 못했습니다. 입력과 실행 정보를 확인해 주세요.")
@@ -627,7 +642,7 @@ NAMES = {"shirt": "셔츠", "camisole": "캐미솔", "tank top": "민소매 상�
     "cardigan": "카디건", "suspenders": "멜빵", "vest": "조끼", "shrug": "짧은 걸침옷"}
 
 def appearance_field(layout, part, detected, enabled):
-    """One optional user description; changing text invalidates its confirmation."""
+    """선택적인 사용자 설명 하나를 받는다. 문구를 바꾸면 확인은 무효가 된다."""
     title = "꼬리" if part == "tail" else "귀"
     label = QLabel(f"{title} · 자동으로 읽은 내용: {', '.join(detected)}")
     label.setWordWrap(True)
@@ -675,7 +690,7 @@ def confirm_inputs(window, analysis, enable_ear_override=False, runtime=None):
     mode = bool(window and window.studio_proportion_checkbox.isChecked())
     note = QLabel("이 캐릭터에 선택한 옷을 입힌 이미지 4장을 만듭니다. " +
                   ("이후 원본 자세와 머리 윤곽을 확인해 2단계 생성합니다." if mode
-                   else "자세는 저장 후 따로 바꿀 수 있습니다."))
+                   else "이번 생성에서는 자세를 지정하지 않습니다."))
     note.setWordWrap(True)
     layout.addWidget(note)
     pictures = QHBoxLayout()
@@ -715,6 +730,8 @@ def confirm_inputs(window, analysis, enable_ear_override=False, runtime=None):
         warning_label.setVisible(bool(warnings))
     tags.textChanged.connect(show_warnings)
     show_warnings()
+    from genai_lab.studio_skin_tone import skin_tone_field
+    skin_choice = skin_tone_field(layout, analysis, runtime.skin_recommendation)
     fields = {}
     for part, detected in appendage_tags(analysis["groups"]["fixed"]).items():
         if detected:
@@ -742,7 +759,7 @@ def confirm_inputs(window, analysis, enable_ear_override=False, runtime=None):
     outer.addLayout(buttons)
     if dialog.exec() != QDialog.DialogCode.Accepted:
         return None
-    appearance = AppearanceOverrides(**{
+    appearance = AppearanceOverrides(skin_tone=skin_choice(), **{
         part: PartAppearance(text.text(), confirmed.isChecked())
         for part, (text, confirmed) in fields.items()
     })

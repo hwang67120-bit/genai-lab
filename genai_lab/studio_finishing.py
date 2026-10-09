@@ -1,4 +1,4 @@
-"""Raw -> hires -> face detail, preserving raw records and explicit failure states."""
+"""원본 → 고해상도 재처리 → 얼굴 세부 순서다. 원본 기록과 명시적 실패 상태를 유지한다."""
 from dataclasses import asdict
 from pathlib import Path
 import io

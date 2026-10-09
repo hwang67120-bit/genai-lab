@@ -15,7 +15,7 @@ class AdapterReference:
 
 
 class ReferenceStage(str, Enum):
-    '''Visual-reference stage boundary.'''
+    """시각 참조의 단계 경계를 관리한다."""
 
     BASE = 'base'
     GARMENT = 'garment'
@@ -40,8 +40,8 @@ def adapter_references(inputs, identity_scale=.7, garment_scale=.45):
     )
     hair_image = getattr(inputs, "hair_reference", None)
     hair_mask = getattr(inputs, "hair_mask", None)
-    # hair_mask is also retained for diagnostics/correction when the dedicated
-    # visual adapter is disabled. Only a reference image requires the mask.
+    # 전용 시각 어댑터가 꺼져 있어도 머리 마스크는 진단과 보정을 위해
+    # 유지한다. 참조 이미지가 있을 때만 마스크를 필수로 요구한다.
     if hair_image is not None and hair_mask is None:
         raise ValueError("헤어 참조 이미지에는 헤어 마스크가 필요합니다.")
     hair_scale = float(getattr(inputs, "hair_reference_scale", .60))
@@ -61,7 +61,7 @@ def adapter_reference_names(inputs):
 
 def adapter_references_for_stage(
         inputs, stage, identity_scale=.7, garment_scale=.45):
-    '''Return only references approved for one isolated render stage.'''
+    """분리된 생성 단계 하나에 승인된 참조만 반환한다."""
     try:
         resolved = stage if isinstance(stage, ReferenceStage) else ReferenceStage(stage)
     except (TypeError, ValueError) as error:
@@ -69,9 +69,9 @@ def adapter_references_for_stage(
     entries = adapter_references(inputs, identity_scale, garment_scale)
     if resolved is ReferenceStage.BASE:
         # Base Img2Img의 편집 결과 좌표는 아직 없다. 얼굴/헤어 크롭을
-        # global image prompts can reproduce detached fragments on the canvas.
-        # Use one approved full-character image prompt and keep local crops for
-        # the later output-coordinate stages.
+        # 전체 이미지 조건은 화면에 떨어진 조각을 재현할 수 있다.
+        # 승인한 전신 이미지 조건 하나만 사용하고 부분 크롭은
+        # 후속 결과 좌표 처리 단계에 남긴다.
         base_image = (
             getattr(inputs, "vibe_reference", None)
             or getattr(inputs, "source", None)
@@ -107,12 +107,8 @@ def adapter_references_for_stage(
 
 
 def unmasked_adapter_scale(scales):
-    """Collapse per-crop strengths for one unmasked Diffusers IP-Adapter.
-
-    Diffusers accepts a per-image scale list only together with spatial masks.
-    Without masks the attention processor requires one scalar for the adapter.
-    The arithmetic mean preserves the approved set's overall strength without
-    silently promoting every crop to the strongest reference.
+    """마스크 없는 Diffusers 얼굴 참조용으로 크롭별 강도를 하나로 합친다. 이미지별 강도 목록은 공간 마스크와 함께만 지원된다. 마스크가 없으면 단일 강도가
+    필요하다. 산술 평균으로 승인된 전체 강도를 유지하며 모든 크롭을 가장 강한 값으로 올리지 않는다.
     """
     values = tuple(float(value) for value in scales)
     if (not values or any(not math.isfinite(value) or not 0 <= value <= 1

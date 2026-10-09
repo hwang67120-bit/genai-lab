@@ -1,4 +1,4 @@
-"""Diagnostic-only comparison between a sealed body vector and output silhouette."""
+"""확정한 체형 벡터와 결과 외곽선을 진단 목적으로 비교한다."""
 
 from __future__ import annotations
 
@@ -151,7 +151,7 @@ def evaluate_body_morphology_similarity(
     framing_type: str = "full_body",
     structure_report: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Record a partial silhouette indicator without making a quality decision."""
+    """품질 판정 없이 관찰 가능한 외곽선 지표만 기록한다."""
     if not settings.enabled:
         return {
             **settings.record(),

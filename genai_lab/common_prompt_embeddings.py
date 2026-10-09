@@ -1,4 +1,4 @@
-"""Encode an approved SDXL prompt once and reuse immutable tensor inputs."""
+"""승인한 SDXL 프롬프트를 한 번 인코딩하고 변경하지 않는 텐서 입력을 재사용한다."""
 
 import hashlib
 

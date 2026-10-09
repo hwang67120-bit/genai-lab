@@ -1,4 +1,4 @@
-"""Bounded tag routing, not a semantic model. Unknown tags require manual review."""
+"""태그를 제한된 범위로 분류한다. 의미 모델이 아니며 미지 태그는 수동 검토가 필요하다."""
 from genai_lab.reference_tag_policy import normalize_tag, gender_tag_kind, excluded_garment_tag
 
 CHARACTER_NOUNS = frozenset((
@@ -48,7 +48,7 @@ def tag_scope(tag):
     if tag in SCENE_TERMS or tag.endswith(' background'):
         return 'scene'
     words = tag.split()
-    # Hair accessories are not native hair/eye/body features.
+    # 머리 장식은 머리카락·눈·체형 자체의 특징이 아니다.
     if words[-1] in GARMENT_NOUNS or tag in GARMENT_TERMS:
         return 'garment'
     if words[-1] in CHARACTER_NOUNS or tag in CHARACTER_TERMS:
@@ -72,7 +72,7 @@ def automatic_feature_selection(candidates, scope):
             unresolved.append(candidate.tag_name)
         else:
             excluded.append(candidate.tag_name)
-    # Do not turn close alternatives into a confident species/length decision.
+    # 비슷한 후보만으로 동물 종이나 머리 길이를 확정하지 않는다.
     if scope == 'character':
         groups = [
             {'short hair', 'long hair', 'very long hair'},

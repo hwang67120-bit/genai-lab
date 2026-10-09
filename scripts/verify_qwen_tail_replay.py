@@ -1,7 +1,5 @@
-"""Prepare R1-R5 with production tail functions; GPU only with --execute --case Rn.
-
-Existing experiment outputs are read-only. Every invocation uses a new output
-folder. This script never retries, installs packages, or downloads models.
+"""제품 꼬리 함수로 R1~R5를 준비한다. --execute --case Rn을 명시해야 GPU를 쓴다. 기존 시험 결과는 읽기 전용이며 매 실행 새 폴더를
+사용한다. 재시도·패키지 설치·모델 다운로드는 없다.
 """
 import argparse
 import json
@@ -27,7 +25,7 @@ CASES = {
 
 
 def recorded_path(value):
-    """Recorded checkout paths map to this checkout; no arbitrary external inputs."""
+    """기록된 작업 경로는 현재 저장소로만 대응한다. 임의 외부 입력은 허용하지 않는다."""
     text = str(value).replace("\\", "/")
     marker = "/genai-lab/"
     if marker not in text:

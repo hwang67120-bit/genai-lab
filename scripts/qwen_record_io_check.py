@@ -1,4 +1,4 @@
-"""Windows CPU-only sharing check. New --output directory required; no GPU imports."""
+"""Windows의 CPU 파일 공유 검사다. 새 --output 폴더가 필요하며 GPU는 가져오지 않는다."""
 import argparse
 import ctypes
 import json
@@ -20,7 +20,7 @@ def hold_without_delete_share(path, ready, seconds):
                      wintypes.DWORD,wintypes.DWORD,wintypes.HANDLE]
     create.restype=wintypes.HANDLE
     close=kernel.CloseHandle; close.argtypes=[wintypes.HANDLE]; close.restype=wintypes.BOOL
-    # GENERIC_READ; FILE_SHARE_READ|WRITE, deliberately NO FILE_SHARE_DELETE.
+    # 읽기 권한과 읽기·쓰기 공유를 사용하되 삭제 공유는 의도적으로 허용하지 않는다.
     handle=create(str(path),0x80000000,3,None,3,0,None)
     if handle==ctypes.c_void_p(-1).value:
         raise ctypes.WinError(ctypes.get_last_error())
@@ -81,7 +81,7 @@ def check(directory):
         assert json.loads(target.read_text(encoding='utf-8'))=={'new':True}
         report['bounded_retry_succeeded']=True
     finally: stop_holder(child)
-    # Terminal file blocked longer than the entire budget. Backup and raw survive.
+    # 최종 기록을 전체 대기 한도보다 오래 잠가도 백업과 원본은 보존돼야 한다.
     terminal=directory/'terminal'; terminal.mkdir()
     write_json(terminal/'run.json',{'status':'starting'})
     raw=terminal/'raw.png'; raw.write_bytes(b'CPU preservation sentinel; not a generated image')
@@ -100,7 +100,7 @@ def check(directory):
     finalize_stopped_run(terminal,'a'*64,cancelled=False,error='lock released',returncode=1)
     assert json.loads((terminal/'run.json').read_text(encoding='utf-8'))==final
     report['terminal_recovered_raw_unchanged']=raw.read_bytes()==before
-    # Real concurrent writer/reader processes: reader deliberately holds snapshots.
+    # 실제 읽기·쓰기 프로세스를 동시에 실행한다. 읽는 쪽이 기록을 일부러 잡고 있는다.
     live=directory/'concurrent'; live.mkdir()
     child=subprocess.Popen([sys.executable,'-m','scripts.qwen_record_io_check','--snapshots',str(live)],
         cwd=str(Path(__file__).resolve().parents[1]),creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))

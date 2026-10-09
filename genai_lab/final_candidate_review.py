@@ -1,4 +1,4 @@
-"""Stage 8 comparison evidence and explicit user decision policy."""
+"""8단계 비교 근거와 명시적인 사용자 결정 규칙을 관리한다."""
 
 from __future__ import annotations
 
@@ -37,7 +37,7 @@ REJECTION_POLICIES = {
 
 
 class FinalCandidateReviewError(ValueError):
-    """Stage 8 evidence or decision is incomplete."""
+    """8단계의 비교 근거나 결정이 불완전한 오류다."""
 
 
 @dataclass(frozen=True)
@@ -218,7 +218,7 @@ def build_external_review_evidence(
     garment_reference: Path | str | None,
     output_directory: Path | str,
 ) -> FinalReviewEvidence:
-    """Create honest Stage 8 evidence for an imported, unverified image."""
+    """외부에서 가져온 미검증 이미지에 대해 검증 여부를 구분한 8단계 근거를 만든다."""
     source = getattr(candidate, "design_reference_record", None)
     source = source if isinstance(source, Mapping) else {}
     source_name = str(source.get("source_file_name", "external-candidate"))

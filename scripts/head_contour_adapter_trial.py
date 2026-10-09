@@ -1,7 +1,5 @@
-"""R6-only head contour A/B runner. Default action is CPU preflight, never GPU.
-
-Read main -> run_trial -> run_case. Production modules remain unchanged.
-The locked BASE branch delegates to the existing single-adapter backend.
+"""R6 머리 윤곽 비교 실행기다. 기본은 CPU 사전 검사이며 GPU를 사용하지 않는다. main → run_trial → run_case 순서로 읽는다. 운영
+모듈은 변경하지 않고 잠긴 BASE 조건은 기존 단일 어댑터 실행기에 맡긴다.
 """
 import argparse
 from dataclasses import asdict
@@ -30,20 +28,20 @@ MAP_SEEDS = (209212003, 209212001, *NEW_SEEDS)
 
 
 def encode_record_path(value):
-    """Only paths gain a JSON representation; unknown objects remain errors."""
+    """경로만 JSON 문자열로 바꾼다. 알 수 없는 객체는 여전히 오류다."""
     if isinstance(value, PurePath):
         return str(value)
     raise TypeError(f"Unsupported trial record value: {type(value).__name__}")
 
 
 def write_trial_record(path, record):
-    """Serialize nested paths before opening a file, preserving it on encoding failure."""
+    """파일을 열기 전에 중첩 경로를 직렬화해 인코딩 실패 시 기존 파일을 보존한다."""
     text = json.dumps(record, ensure_ascii=False, indent=2, default=encode_record_path)
     Path(path).write_text(text + chr(10), encoding="utf-8")
 
 
 def load_adapter_pair(adapter_type, multi_type, settings, sketch_root, dtype):
-    """Load exactly the two validated local models, with explicit fp16 variant."""
+    """검증한 로컬 모델 두 개만 fp16 종류를 명시해 로드한다."""
     pose = adapter_type.from_pretrained(str(settings.adapter_root), torch_dtype=dtype,
                                         use_safetensors=True, local_files_only=True)
     sketch = adapter_type.from_pretrained(str(sketch_root), torch_dtype=dtype, variant="fp16",
@@ -52,7 +50,7 @@ def load_adapter_pair(adapter_type, multi_type, settings, sketch_root, dtype):
 
 
 def call_with_contour(pipe, embeds, images, contour, settings, seed_generator, callbacks, sketch_strength=.9):
-    """Keep face input separate; ordering is always pose then head sketch."""
+    """얼굴 입력은 따로 두고 제어 입력 순서는 항상 자세 다음 머리 스케치다."""
     return pipe(**embeds, image=[images[0], contour], ip_adapter_image=images[1],
                 width=settings.width, height=settings.height,
                 num_inference_steps=settings.steps, guidance_scale=settings.guidance_scale,
@@ -62,7 +60,7 @@ def call_with_contour(pipe, embeds, images, contour, settings, seed_generator, c
 
 
 class HeadContourBackend(DiffusersOnePassBackend):
-    """Only the trial branch loads a second adapter; reuse production cleanup."""
+    """시험 분기만 두 번째 어댑터를 로드한다. 해제는 제품 코드를 재사용한다."""
 
     def __init__(self, settings, sketch_root, sketch_strength=.9, sketch_maps=None):
         self.sketch_maps = sketch_maps
@@ -125,7 +123,7 @@ class HeadContourBackend(DiffusersOnePassBackend):
 
 
 class StepGuard:
-    """Observe production calls first; stop at the first bad schedule or memory sample."""
+    """제품 호출을 먼저 관찰하며 강도 일정이나 메모리 표본이 처음 어긋날 때 멈춘다."""
 
     def __init__(self, observation, settings, ip_early, cuda):
         self.observation, self.settings = observation, settings
@@ -155,7 +153,7 @@ def check_memory(cuda, settings):
 
 
 class MonitoredBackend:
-    """Attach read-only checks around either backend, without changing its inputs."""
+    """두 실행기의 입력을 바꾸지 않고 읽기 전용 검사를 붙인다."""
 
     def __init__(self, backend, settings, contour):
         self.backend, self.settings, self.contour = backend, settings, contour
@@ -175,8 +173,8 @@ class MonitoredBackend:
         try:
             guard = StepGuard(observation, self.settings, inputs.ip_early, cuda)
             result, timing = self.backend.generate(inputs, images, seed, guard, cancelled)
-            # Production saves a completed raw before final memory validation.
-            # Do not discard that image by raising here after VAE has finished.
+            # 제품은 최종 메모리 검사 전에 완성 원본을 저장한다.
+            # VAE 완료 후 여기서 예외를 던져 완성 이미지를 잃지 않게 한다.
             return result, timing
         finally:
             self.metrics = memory_record(cuda)
@@ -195,7 +193,7 @@ def verify_runtime_models(report, contour):
 
 
 def create_backend(settings, contour, report):
-    """Verify sketch bytes again immediately before the only model-loading branch."""
+    """모델을 로드하는 유일한 분기 직전에 스케치 바이트를 다시 검증한다."""
     verify_runtime_models(report, contour)
     import torch
     torch.cuda.reset_peak_memory_stats()
@@ -217,7 +215,7 @@ def create_backend(settings, contour, report):
 
 
 def enrich_record(path, report, contour, backend=None, error=None, seed=None):
-    """Preserve raw output and production validation; make the real model pair explicit."""
+    """원본과 제품 검증을 유지하면서 실제 사용 모델 두 개를 명시한다."""
     record = read(path) if path.exists() else {"completed": False, "valid": False}
     selected = report["models"] if contour else report["models"][:1]
     record.setdefault("models", {})["adapter"] = selected if contour else selected[0]
@@ -249,7 +247,7 @@ def enrich_record(path, report, contour, backend=None, error=None, seed=None):
 
 
 def run_case(case, destination, inputs, settings, report, backend_factory=create_backend):
-    """One attempt; keep failure record even if model loading fails before generation."""
+    """한 번만 시도한다. 생성 전 모델 로드에 실패해도 실패 기록을 남긴다."""
     folder = destination / case["id"]
     require(not folder.exists(), "Refusing to overwrite case " + case["id"])
     backend = None
@@ -284,7 +282,7 @@ def run_case(case, destination, inputs, settings, report, backend_factory=create
 
 
 def validate_new_seeds(seeds, contour_only):
-    """Explicit seed selection is limited to this trial; never silently deduplicate."""
+    """명시적 seed 선택은 이 시험에만 적용하며 중복을 자동 제거하지 않는다."""
     if seeds is None:
         return
     require(bool(seeds) and all(type(seed) is int and seed in NEW_SEEDS for seed in seeds),
@@ -308,7 +306,7 @@ def cases(contour_only=False, seeds=None, seed_maps=False):
 
 
 def run_trial(destination, inputs, settings, report, backend_factory=create_backend):
-    """Run selected cases sequentially; never resume, retry, or overwrite."""
+    """선택 사례를 순서대로 실행한다. 이어 실행·재시도·덮어쓰기는 없다."""
     options = options_for(report)
     strengths = trial_strengths(options["sketch_strength"])
     planned = cases(options["contour_only"], options["seeds"], bool(options["sketch_map_dir"]))
@@ -357,7 +355,7 @@ def options_for(report):
 
 
 def configure_trial(report, sketch_strength, contour_only, output, seeds=None, sketch_map_dir=None):
-    """Bind selected options and verified control images to the CPU lock."""
+    """선택 옵션과 검증한 제어 이미지를 CPU 잠금에 연결한다."""
     if sketch_map_dir is not None:
         seeds = list(MAP_SEEDS) if seeds is None else list(seeds)
         validate_map_options(seeds, contour_only, sketch_strength)
@@ -377,13 +375,13 @@ def configure_trial(report, sketch_strength, contour_only, output, seeds=None, s
 
 
 def verify_reused_baselines(report):
-    """Reuse only gpu-02 BASE images with identical locked inputs and valid raw hashes."""
+    """잠긴 입력이 같고 원본 해시가 유효한 gpu-02 BASE 이미지만 재사용한다."""
     source = DESIGN / "gpu-02"
     previous = read(source / "preflight.json")
     for key, value in report.items():
         if key not in ("protected", "strengths", "options", "reused_baselines", "sketch_maps"):
             require(canonical(previous.get(key)) == canonical(value), "Reused BASE input changed: " + key)
-    # The trial runner itself changes for this option; every other protected source stays fixed.
+    # 이 옵션으로 시험 실행기 자체는 바뀌지만 나머지 보호 대상 코드는 고정한다.
     runner_path = str(Path(__file__))
     old_code = {k: v for k, v in previous["protected"].items() if k != runner_path}
     new_code = {k: v for k, v in report["protected"].items() if k != runner_path}
@@ -419,7 +417,7 @@ def validate_map_options(seeds, contour_only, strength):
 
 
 def load_sketch_image(seed, sketch_maps=None):
-    """Verify the selected bytes before use; never resize, redraw, or fall back."""
+    """사용 전에 선택한 바이트를 검증한다. 크기 변경·재작성·대체 입력은 없다."""
     from PIL import Image
     if sketch_maps is None:
         path = DESIGN / "head_draft/contour_4px.png"
@@ -441,7 +439,7 @@ def load_sketch_image(seed, sketch_maps=None):
 
 
 def verify_map_base(report, seed, entry):
-    """Check the existing BASE which supplied the body outline, without regenerating it."""
+    """몸 외곽을 제공한 기존 BASE를 검사한다. 재생성하지 않는다."""
     source = DESIGN / ("gpu-02" if seed in BASE_SHAS else "gpu-04")
     folder = source / f"BASE_{seed}"
     raw = folder / "raw.png"
@@ -490,7 +488,7 @@ def verify_seed_maps(report):
 
 
 def preflight_record_path(report):
-    """Keep each output's CPU lock beside its folder, without creating the GPU folder."""
+    """GPU 폴더를 만들지 않고 각 출력 폴더 옆에 CPU 잠금을 저장한다."""
     output = options_for(report)["output"]
     if output is None:
         return DESIGN / "runner_preflight.json"

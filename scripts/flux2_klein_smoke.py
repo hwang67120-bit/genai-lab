@@ -1,8 +1,5 @@
-"""Run one isolated FLUX.2 Klein 4B multi-reference smoke test.
-
-This runner does not import or modify the existing Stable Diffusion pipeline.
-Official APIs:
-https://huggingface.co/black-forest-labs/FLUX.2-klein-4B
+"""분리된 FLUX.2 Klein 4B 다중 참조 시험을 한 번 실행한다. 기존 Stable Diffusion 파이프라인을 가져오거나 변경하지 않는다. 공식
+자료: https://huggingface.co/black-forest-labs/FLUX.2-klein-4B 및
 https://huggingface.co/docs/diffusers/quantization/bitsandbytes
 """
 

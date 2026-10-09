@@ -1,4 +1,4 @@
-"""R6 replay through product functions. Default validates only; --run alone enables GPU."""
+"""제품 함수로 R6를 재현한다. 기본은 검증만 하며 --run을 명시해야 GPU를 사용한다."""
 import argparse
 from dataclasses import asdict
 import json
@@ -57,7 +57,7 @@ def replay_expectations():
 
 
 def check_cpu_pixels(directory, settings, options, head_mask, head_contour, expected):
-    """CPU inference on existing outputs only, no generation; preserve all locked files."""
+    """기존 결과만 CPU로 추론한다. 생성은 없으며 모든 잠금 자료를 보존한다."""
     import numpy as np
     from PIL import Image
     directory.mkdir(parents=True, exist_ok=False)

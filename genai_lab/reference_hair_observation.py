@@ -1,8 +1,5 @@
-"""Measurement-only head/hair silhouette observation.
-
-GroundingDINO and SAM2 recover a comparable silhouette in source and generated
-coordinates. The result is excluded from generation conditions because it can
-include forehead or face pixels and is not a semantic hair mask.
+"""측정용 머리·머리카락 외곽 관찰이다. GroundingDINO와 SAM2로 원본과 생성 결과 좌표의 비교 가능한 외곽을 얻는다. 이마·얼굴 픽셀이 섞일 수
+있고 의미상 머리 마스크가 아니므로 생성 조건에서 제외한다.
 """
 from __future__ import annotations
 
@@ -70,7 +67,7 @@ def _as_masks(raw_masks: Any, image_size: tuple[int, int]) -> np.ndarray:
 
 
 class ReferenceHairObserver:
-    """Own one cached-model backend for a generation batch."""
+    """생성 묶음 동안 캐시 모델 실행기 하나를 관리한다."""
 
     def __init__(self, config: Mapping[str, Any], backend=None):
         self.settings = _settings(config)

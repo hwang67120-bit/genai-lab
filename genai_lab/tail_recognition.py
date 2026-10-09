@@ -1,7 +1,4 @@
-"""Read two image roles once, cache observations, and pass only confirmed facts to editing.
-
-Model loading belongs to the isolated worker. This module is also CPU-testable.
-"""
+"""두 이미지 역할을 각각 한 번 읽고 관찰을 캐시하며 확인한 사실만 편집에 전달한다. 모델 로드는 별도 작업자가 담당하며 이 모듈은 CPU 테스트가 가능하다."""
 from dataclasses import asdict, dataclass
 import importlib.metadata
 import json
@@ -119,7 +116,7 @@ def validate_fields(role, fields):
 
 
 def filter_unobserved_fields(role, fields):
-    """A repeated question is not visual evidence. Keep its omission reason in the record."""
+    """질문을 되풀이한 답은 시각 근거가 아니다. 제외 사유를 기록한다."""
     validate_fields(role,fields)
     cleaned=dict(fields)
     notes={}
@@ -152,7 +149,7 @@ LEGACY_REASON_CODES = {
 
 
 def recover_filtered_raw(role, item, cleaned):
-    """Recover legacy diagnostics only when the raw JSON explains the same filtered fields."""
+    """원시 JSON이 같은 제외 항목을 설명할 때만 구형 진단을 복구한다."""
     raw = item.get("raw_text", "").strip()
     if raw.startswith("```json") and raw.endswith("```"):
         raw = raw[7:-3].strip()
@@ -169,7 +166,7 @@ def recover_filtered_raw(role, item, cleaned):
 
 
 def filter_observation(role, item):
-    """Keep filter diagnostics through worker, parent and cache; never restore excluded fields."""
+    """작업자·부모·캐시에서 필터 진단을 유지한다. 제외한 항목은 복원하지 않는다."""
     cleaned, notes = filter_unobserved_fields(role, item["fields"])
     recovered, recovered_codes = recover_filtered_raw(role, item, cleaned)
     previous_notes = item.get("unmeasured", {})
@@ -191,7 +188,7 @@ def filter_observation(role, item):
                 removed[key] = previous_raw[key]
             elif key in recovered:
                 removed[key] = recovered[key]
-            # Old parent code overwrote filter reasons with model_null. Raw JSON is evidence, not a guess.
+            # 구형 부모는 필터 사유를 model_null로 덮어썼다. 원시 JSON은 추측이 아닌 근거다.
             if code == "model_null" and key in recovered_codes:
                 code = recovered_codes[key]
                 note = REASON_LABELS[code]
@@ -226,7 +223,7 @@ def stop_process(process):
 
 
 def run_worker(request, directory, settings, cancelled, popen):
-    """Wait for process exit before reading result; model cannot survive into Qwen editing."""
+    """프로세스 종료 뒤 결과를 읽는다. 인식 모델이 Qwen 편집까지 남지 않게 한다."""
     from genai_lab.onepass_generation import OnePassCancelled
     request_file=directory/"request.json"
     write_json(request_file,request)
@@ -256,7 +253,7 @@ def run_worker(request, directory, settings, cancelled, popen):
 
 def recognize_tail(spec, settings, directory, *, cancelled=lambda:False, progress=lambda _:None,
                    popen=subprocess.Popen, gpu_probe=None):
-    """Only selected basis + tail crop are inspected; independent role caches survive candidate changes."""
+    """선택 기준 이미지와 꼬리 크롭만 검사한다. 후보 변경에도 역할별 캐시는 유지한다."""
     from genai_lab.onepass_generation import OnePassCancelled
     from genai_lab.qwen_pose_edit import assert_parent_gpu_released
     spec.verify_image()
@@ -312,7 +309,7 @@ def recognize_tail(spec, settings, directory, *, cancelled=lambda:False, progres
 
 
 def approve_observations(report, selected):
-    """Selection only: do not turn model prose into executable editing instructions."""
+    """선택만 담당한다. 모델 설명을 실행 가능한 편집 지시로 바꾸지 않는다."""
     for role in FIELDS:
         values=report["observations"][role]["fields"]
         validate_fields(role,values)
@@ -345,7 +342,7 @@ def recognition_sentences(approval, pattern, tip):
         facts=[]
         for field in FIELDS[role]:
             if field not in approval["selected"][role]: continue
-            # Explicit human choices take precedence over an uncertain model observation.
+            # 불확실한 모델 관찰보다 사용자의 명시적 선택을 우선한다.
             if role=="tail" and ((field=="pattern" and not pattern) or (field=="tip" and tip)): continue
             value=report["observations"][role]["fields"][field]
             facts.append(field+": "+value)

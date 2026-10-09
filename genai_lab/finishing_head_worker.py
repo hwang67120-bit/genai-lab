@@ -1,4 +1,4 @@
-"""Offline CPU-only head detector, isolated from the GPU finishing pipeline."""
+"""GPU 마무리 모델과 분리된 오프라인 CPU 머리 검출기다."""
 import os
 import sys
 from pathlib import Path

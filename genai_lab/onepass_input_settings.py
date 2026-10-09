@@ -1,9 +1,7 @@
-"""One-pass input defaults, separate from the active product configuration.
-
-Threshold source: outputs/pose-identity-20260927/skeleton-check/rule-values.json.
-Normalization source: outputs/e2e-20261001/analyze.py.
-C6 source: outputs/face-crop-c5-20260928/methods_c5.md and methods_c6.md.
-No model paths, imports, downloads, or global environment changes on import.
+"""활성 제품 설정과 분리된 1회 생성 입력 기본값이다. 임계값:
+outputs/pose-identity-20260927/skeleton-check/rule-values.json. 정규화:
+outputs/e2e-20261001/analyze.py. C6: outputs/face-crop-c5-20260928/methods_c5.md 및
+methods_c6.md. 가져오기만으로 모델 로드·다운로드·전역 환경 변경을 하지 않는다.
 """
 from dataclasses import dataclass, field
 import math
@@ -17,7 +15,7 @@ class PoseNormalizationSettings:
     bottom_margin: float = 0.10
     side_margin: float = 0.15
     background: int = 128
-    # Same resource ceiling as PoseReferenceSettings; bounds the padded canvas.
+    # PoseReferenceSettings와 같은 자원 상한으로 여백 포함 화면 크기를 제한한다.
     maximum_canvas_pixels: int = 40_000_000
 
     def __post_init__(self):
@@ -57,13 +55,13 @@ class PoseCheckSettings:
 
 @dataclass(frozen=True)
 class InputPolicies:
-    # Measurements do not decide handling; changing these never changes a mask.
+    # 측정값은 처리 방식을 결정하지 않는다. 기준 변경으로 마스크가 바뀌지 않는다.
     rules: tuple[tuple[str, str], ...] = (
         ('K1', 'reject'), ('K2', 'reject'), ('K3', 'warn'), ('K4', 'warn'),
         ('K5', 'warn'), ('K6', 'warn'), ('K7', 'warn'),
         ('GUESS', 'warn'), ('FACE_DIR', 'warn'),
     )
-    high_angle: str = 'warn'  # Decision pending: warn / out_of_scope.
+    high_angle: str = 'warn'  # 경고 또는 범위 밖 처리 중 정책 결정 대기 상태다.
 
     def __post_init__(self):
         names = [name for name, _ in self.rules]
@@ -79,7 +77,7 @@ class InputPolicies:
 @dataclass(frozen=True)
 class CharacterInputSettings:
     slim_ratio: float = 0.48
-    slim_policy: str = 'ps'  # Decision pending; consumed by stage 3, not here.
+    slim_policy: str = 'ps'  # 결정 대기 상태다. 이곳이 아닌 3단계에서 사용한다.
     head_model: str = 'head_detect_v2.0_s'
     head_confidence: float = 0.4
     head_iou: float = 0.7

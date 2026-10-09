@@ -1,4 +1,4 @@
-"""Advisory garment checks. Never rewrite approved tags or generation prompts."""
+"""의상 검사는 참고용이다. 승인 태그나 생성 문구를 자동 수정하지 않는다."""
 from dataclasses import dataclass
 from pathlib import Path
 import json

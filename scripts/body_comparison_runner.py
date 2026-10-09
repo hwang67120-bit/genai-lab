@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def read_class_labels(mask, name):
-    """P-mode palette indices are class IDs, not grayscale intensities."""
+    """P모드 팔레트 번호는 회색 밝기가 아니라 분류 번호다."""
     import numpy as np
     labels = np.asarray(mask)
     logger.info('[분류 마스크] 이름=%s mode=%s size=%s shape=%s',
@@ -181,7 +181,7 @@ def create_layered_semantic_masks(auto_mask, lip_mask, atr_mask, lip_mapping,
 
 
 def create_face_reference_mask(lip_mask, atr_mask, lip_mapping, atr_mapping):
-    """Reuse parser labels; exclude any pixels classified as hair by either parser."""
+    """파서 분류를 재사용하며 어느 파서든 머리로 분류한 픽셀은 제외한다."""
     import numpy as np
     if lip_mask.size != atr_mask.size:
         raise ValueError('얼굴 참조 분류 좌표 크기가 다릅니다.')

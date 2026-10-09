@@ -1,4 +1,4 @@
-"""Observe-only multi-scale diagnostics for small head accessories."""
+"""작은 머리 장식의 크기별 관찰 결과를 진단용으로만 수집한다."""
 from __future__ import annotations
 from dataclasses import asdict, dataclass
 from math import ceil
@@ -222,7 +222,7 @@ def _cluster(candidates, policy):
 
 
 def _detect_view(backend, crop, policy, box_threshold, check):
-    """Return labeled boxes, using one model pass when the backend supports it."""
+    """분류 이름이 붙은 상자를 반환한다. 지원되는 경우 모델을 한 번만 실행한다."""
     query_lookup = dict(policy.query_groups)
     detect_labeled = getattr(backend, "detect_labeled", None)
     if callable(detect_labeled):
@@ -271,7 +271,7 @@ def analyze_accessory_observations(
     backend, source: Image.Image, *, head_box, box_threshold, policy,
     check, debug_directory: Path | str | None = None,
 ):
-    """Collect boxes only; never call SAM2 or alter the analyzer result."""
+    """상자만 수집하며 SAM2를 호출하거나 분석 결과를 변경하지 않는다."""
     if not np.isfinite(box_threshold) or not 0 <= box_threshold <= 1:
         raise ValueError("장신구 관측 검출 임계값이 올바르지 않습니다.")
     views = build_accessory_views(source.size, head_box, policy)

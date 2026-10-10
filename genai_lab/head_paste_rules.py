@@ -201,8 +201,8 @@ def paste_canvas(orig, hm, parts, H, gen, pg):
     require(np.array_equal(canvas[~M], gen[~M]), '붙이기 영역 밖 픽셀 변경')
     return (canvas, M, feat_g, dict(skin_dE=round(dE, 2), forehead_blend=dE <= DE_LIMIT, erase_fill='gen_inpaint' if dE > DE_LIMIT else 'orig_skin', beard_px=int(prepared['beard'].sum()), erase_px=int((erase & M).sum())))
 
-def blend_result(raw, redrawn, mask, features, box):
-    """최종 4px 확장에서도 눈·코·입을 제외하고 영역 밖 픽셀을 보존한다."""
+def protected_support(mask, features, box):
+    """최종 4px 확장 영역에서 눈·코·입을 빼고 합성 허용 범위를 반환한다."""
     size = (box[2] - box[0], box[3] - box[1])
     local = np.asarray(Image.fromarray(mask).resize(size, Image.Resampling.NEAREST)) > 127
     face = np.asarray(Image.fromarray(features).resize(size, Image.Resampling.NEAREST)) > 127
@@ -210,6 +210,12 @@ def blend_result(raw, redrawn, mask, features, box):
     require(not np.any(local & face), '원래 편집 마스크가 얼굴 특징을 덮습니다')
     expanded_overlap = int((support & face).sum())
     support &= ~face
+    return support, face, expanded_overlap
+
+def blend_result(raw, redrawn, mask, features, box):
+    """최종 4px 확장에서도 눈·코·입을 제외하고 영역 밖 픽셀을 보존한다."""
+    size = (box[2] - box[0], box[3] - box[1])
+    support, face, expanded_overlap = protected_support(mask, features, box)
     soft = np.asarray(Image.fromarray(support.astype(np.uint8) * 255).filter(ImageFilter.GaussianBlur(2))).astype(float) / 255
     soft[~support] = 0
     patch = np.asarray(redrawn.resize(size, Image.Resampling.LANCZOS), dtype=float)
@@ -221,3 +227,24 @@ def blend_result(raw, redrawn, mask, features, box):
     require(np.array_equal(raw[~allowed], result[~allowed]), '편집 영역 밖 픽셀 변경')
     require(np.array_equal(old[face], result[box[1]:box[3], box[0]:box[2]][face]), '얼굴 특징 픽셀 변경')
     return (result, {'outside_equal': True, 'face_equal': True, 'expanded_face_overlap_removed': expanded_overlap})
+
+
+def blend_white_product(before, raw_redraw, alpha, mask, features, box):
+    """다시 그린 전경을 흰색에 합성하고, 허용 영역만 검토용 결과에 옮긴다."""
+    from genai_lab.proportion_inputs import white_background
+    require(before.shape == raw_redraw.shape, '흰 배경 머리 합성 크기가 다릅니다.')
+    support, face, overlap = protected_support(mask, features, box)
+    white = white_background(raw_redraw, alpha)
+    allowed = np.zeros(before.shape[:2], bool)
+    allowed[box[1]:box[3], box[0]:box[2]] = support
+    result = before.copy()
+    result[allowed] = white[allowed]
+    old = before[box[1]:box[3], box[0]:box[2]]
+    updated = result[box[1]:box[3], box[0]:box[2]]
+    background = allowed & np.all(before >= 250, axis=2) & (alpha == 0)
+    require(np.array_equal(before[~allowed], result[~allowed]), '편집 영역 밖 픽셀 변경')
+    require(np.array_equal(old[face], updated[face]), '얼굴 특징 픽셀 변경')
+    require(np.all(result[background] == 255), '머리 주변 흰 배경에 회색이 남았습니다.')
+    return result, dict(outside_equal=True, face_equal=True,
+        expanded_face_overlap_removed=overlap, white_background_equal=True,
+        white_background_checked_pixels=int(background.sum()))

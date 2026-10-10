@@ -14,11 +14,12 @@ from genai_lab.qwen_record_io import write_json
 from genai_lab.studio_head_paste import read, verify_manifest
 from genai_lab.studio_proportion import restore_head
 from genai_lab.studio_optional_finishing import restore_prompt
-from genai_lab.head_paste_rules import head_crop, padding_mask, hair_mask, crop_head, paste_canvas, blend_result
+from genai_lab.head_paste_rules import head_crop, padding_mask, hair_mask, crop_head, paste_canvas, blend_result, blend_white_product
 from genai_lab.head_paste_semantics import HeadSegmenter, save_parts, load_parts, CHECKPOINT_SHA
 from genai_lab.head_paste_redraw import redraw_prepared, head_prompt
 from genai_lab.onepass_generation_settings import OnePassGenerationSettings
 from genai_lab.head_lines import extract_lines
+from genai_lab.proportion_foreground import AnimeForeground
 
 
 def save_image(directory, name, array):
@@ -116,6 +117,28 @@ def restore_models(request):
     return settings, options, models
 
 
+def prepare_white_product(before, raw_redraw_file, mask, features, box, options, directory,
+                          foreground_factory=AnimeForeground):
+    """기존 CPU 배경 분리 모델로 알파를 재계산하고, 합성 결과와 모델 기록을 반환한다."""
+    require(sha(options.foreground_model) == options.foreground_sha256, 'isnet-anime가 변경됐습니다.')
+    started = time.perf_counter()
+    foreground = foreground_factory(options)
+    try:
+        with Image.open(raw_redraw_file) as image:
+            rgb = image.convert('RGB')
+            alpha = foreground.alpha(rgb)
+            product, checks = blend_white_product(before, np.asarray(rgb), alpha, mask, features, box)
+    finally:
+        foreground.close()
+    alpha_file, alpha_sha = save_image(directory, 'product-alpha', alpha)
+    background = dict(model=dict(id='skytnt/anime-seg', file=str(options.foreground_model),
+                                sha256=options.foreground_sha256, provider='CPUExecutionProvider'),
+        source_file=str(raw_redraw_file), source_sha256=sha(raw_redraw_file),
+        alpha_file=alpha_file, alpha_sha256=alpha_sha, seconds=time.perf_counter()-started,
+        scope='expanded_support_without_face_features')
+    return product, checks, background
+
+
 def complete_apply(request, directory):
     """단계별 기록을 남기고, 보호 검사까지 통과한 파일만 검토 후보로 반환한다."""
     verify_manifest(request["manifest"])
@@ -127,6 +150,7 @@ def complete_apply(request, directory):
                 model_files[str(path)] = sha(path)
     ip_weight = settings.ip_root / settings.ip_subfolder / settings.ip_weight_name
     model_files[str(ip_weight)] = sha(ip_weight)
+    model_files[str(options.foreground_model)] = options.foreground_sha256
     manifest = {**request["manifest"], **model_files}
     rec = prepare_paste(request, directory)
     entry = rec["per_seed"][str(request["seed"])]
@@ -152,15 +176,16 @@ def complete_apply(request, directory):
     before = checked_image(request["before_file"], request["before_sha256"], (736, 1232), "RGB")
     M = checked_image(entry["mask"], entry["mask_sha256"], (1024, 1024), "L")
     features = checked_image(entry["features"], entry["features_sha256"], (1024, 1024), "L")
-    with Image.open(generated / "head_1024.png") as image:
-        product, checks = blend_result(before, image.convert("RGB"), M, features, rec["box"])
+    product, checks, background = prepare_white_product(before, generated / "raw_redraw.png",
+        M, features, rec["box"], options, directory)
+    manifest[background["alpha_file"]] = background["alpha_sha256"]
     product_file, product_sha = save_image(directory, "product", product)
     for path in (generated / "head_1024.png", generated / "raw_redraw.png", generated / "run.json", directory / "paste-inputs.json"):
         manifest[str(path)] = sha(path)
     verify_manifest(manifest)
     info = dict(status="awaiting_user_review", directory=str(directory), raw_sha256=request["raw_sha256"],
                 product_file=product_file, product_sha256=product_sha, before_file=request["before_file"],
-                before_sha256=request["before_sha256"], checks=checks, redraw_record=str(generated / "run.json"),
+                before_sha256=request["before_sha256"], checks=checks, product_background=background, redraw_record=str(generated / "run.json"),
                 H_sha256=request["preview"]["H_sha256"], semantic=rec["semantic"], manifest=manifest, seed=request["seed"], rule="G3+H2",
                 known_limits="모자·후드·옆모습 미검증; 원본 외곽선·얼룩·귀 조각이 남을 수 있음")
     write_json(directory / "result.json", info)

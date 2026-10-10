@@ -96,7 +96,7 @@ def check_studio_outputs(generation, seeds, inputs, manifest):
         manifest[entry["path"]] = entry["sha256"]
 
 
-def load_studio(directory):
+def load_studio(directory, outline_source="original"):
     directory = Path(directory).resolve()
     generation = directory / "generation"
     manifest = {}
@@ -112,13 +112,17 @@ def load_studio(directory):
     require(len(seeds) == 4 and len(set(seeds)) == 4, "GUI 비교는 4개 seed가 필요합니다.")
     require(run["status"] == "review_pending" and run["phase"] == "done"
             and all(run[key] == list(seeds) for key in ("BASE", "CONTOUR", "products")), "GUI A 실행이 완료되지 않았습니다.")
-    inputs, settings = restore_request({"inputs": {"BASE": lock["inputs"]}, "settings": lock["settings"]})
+    # 어깨 보정 실행은 보정 전 입력(parent_inputs)을 잠금에 따로 둔다. 제품처럼 보정 전 입력으로 검사하고,
+    # 생성 직전에 resolve_shoulder_inputs로 보정 골격을 다시 만들어 검증한다.
+    source = lock.get("parent_inputs", lock["inputs"])
+    inputs, settings = restore_request({"inputs": {"BASE": source}, "settings": lock["settings"]})
     options = restore_options(lock["options"])
     check_studio_approval(directory, inputs, options, manifest)
     check_studio_outputs(generation, seeds, inputs, manifest)
     _, _, models = validate_proportion_request(inputs, settings, options)
     require(models == lock["models"], "A 실행 때와 모델 파일이 다릅니다.")
-    return inputs, settings, replace(options, outline_source="original"), seeds, manifest
+    # 원본 윤곽 비교는 "original", 머리 안쪽 선 시험(어깨 보정 실행 포함)은 기존과 같은 "base"를 쓴다.
+    return inputs, settings, replace(options, outline_source=outline_source), seeds, manifest
 
 
 def verify_manifest(manifest):

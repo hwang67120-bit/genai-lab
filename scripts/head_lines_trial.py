@@ -56,8 +56,7 @@ def ensure_cheek_observation(nose, head, directory):
 
 def load_case(studio,foreground_model):
     if studio is not None:
-        inputs,settings,options,all_seeds,manifest=load_studio(studio)
-        options=replace(options,outline_source='base')
+        inputs,settings,options,all_seeds,manifest=load_studio(studio,outline_source='base')
         require(options.head_lines=='none','C0는 머리 안쪽 선이 없는 실행이어야 합니다.')
         seeds=all_seeds[:2]
         confirmation=read(options.head.contour_file.parent/'user-confirmation.json')
@@ -100,7 +99,8 @@ def load_case(studio,foreground_model):
     return inputs,settings,options,seeds,candidates,expected,manifest,nose,name,comparisons
 
 
-def prepare_case(case,directory,segmenter_factory=None,foreground_factory=AnimeForeground,*,face_method="skin_color_v2"):
+def prepare_case(case,directory,segmenter_factory=None,foreground_factory=AnimeForeground,*,face_method="skin_color_v2",
+                 hair_confirmation=None):
     inputs,settings,options,seeds,bases,expected,sources,nose,name,comparisons=case
     directory=Path(directory).resolve();directory.mkdir(parents=True,exist_ok=False)
     state={'status':'started','gpu_generation':False,'case':name}
@@ -108,7 +108,8 @@ def prepare_case(case,directory,segmenter_factory=None,foreground_factory=AnimeF
         mask,contour,models=validate_proportion_request(inputs,settings,options)
         if face_method == "skin_color_v2":
             nose = ensure_cheek_observation(nose, options.head, directory)
-        prepare_head_lines(options.head,nose,directory/'head-lines',segmenter_factory,face_method=face_method)
+        prepare_head_lines(options.head,nose,directory/'head-lines',segmenter_factory,face_method=face_method,
+                           hair_confirmation=hair_confirmation)
         record_file=directory/'head-lines/head-lines.json'
         baseline=directory/'baseline-maps';baseline.mkdir()
         base_maps=build_maps(bases,mask,contour,baseline,foreground_factory,options,lambda:False,expected)
@@ -175,7 +176,9 @@ def run_prepared(prepared,review_sha,output,*,contour_factory=ProportionBackend,
             state['conditions'][mode]=local
             try:
                 verify_manifest({**lock['source_files'],**lock['prepared_files'],**lock['code_sha256']})
-                raw=generate_stage(inputs,lock['seeds'],folder,settings,
+                from genai_lab.shoulder_control import resolve_shoulder_inputs
+                stage_inputs,_=resolve_shoulder_inputs(inputs,options[mode])  # 제품과 같은 어깨 보정 골격
+                raw=generate_stage(stage_inputs,lock['seeds'],folder,settings,
                     lambda:contour_factory(settings,options[mode],maps),lambda:False,local,'CONTOUR',{})
                 local['phase']='white_background'
                 finish_candidates(raw,folder,foreground_factory,options[mode],lambda:False,local,lambda _:None)
@@ -200,7 +203,8 @@ def main(argv=None):
     parser.add_argument('--foreground-model',type=Path)
     parser.add_argument('--model-cache',type=Path,default=Path('D:/genai-cache/huggingface'))
     parser.add_argument('--output',type=Path,required=True)
-    parser.add_argument('--face-method',choices=('skin_color_v1','skin_color_v2','sam2'),default='skin_color_v2')
+    parser.add_argument('--face-method',choices=('skin_color_v1','skin_color_v2','sam2','confirmed_hair'),default='skin_color_v2')
+    parser.add_argument('--hair-confirmation',type=Path,help='confirmed_hair용: 머리 붙이기에서 사용자가 확인한 머리카락 영역 폴더')
     parser.add_argument('--run',action='store_true');parser.add_argument('--review-sha')
     args=parser.parse_args(argv)
     require(not args.output.exists(),'새 출력 폴더만 사용할 수 있습니다.')
@@ -216,7 +220,17 @@ def main(argv=None):
         from genai_lab.tail_complexity_worker import CpuTailSegmenter
         factory=lambda:CpuTailSegmenter(args.model_cache)
     case=load_case(args.studio_run,args.foreground_model)
-    _,digest=prepare_case(case,args.output,factory,face_method=args.face_method)
+    hair=None
+    if args.face_method=='confirmed_hair':
+        require(args.hair_confirmation is not None,'confirmed_hair에는 --hair-confirmation이 필요합니다.')
+        folder=args.hair_confirmation.resolve();info=read(folder/'result.json')
+        hair={'directory':str(folder)}
+        # 실행 전 재검사 대상에 확인 기록과 H 파일을 넣는다.
+        case[6].update({str(folder/'confirmation.json'):sha(folder/'confirmation.json'),
+                        str(folder/'result.json'):sha(folder/'result.json'),str(info['H_file']):info['H_sha256']})
+    else:
+        require(args.hair_confirmation is None,'--hair-confirmation은 confirmed_hair에서만 씁니다.')
+    _,digest=prepare_case(case,args.output,factory,face_method=args.face_method,hair_confirmation=hair)
     print(json.dumps({'status':'needs_user_review','gpu_generation':0,'review_sha256':digest,'output':str(args.output)},ensure_ascii=False))
 
 

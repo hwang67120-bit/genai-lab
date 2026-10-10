@@ -25,6 +25,28 @@ CHEEK_RULES = {**SKIN_RULES, "method": "skin_color_v2", "sample_location": "bila
                "component_seed": "both_cheeks", "missing_landmarks": "stop"}
 
 
+CONFIRMED_HAIR_RULES = {"method": "confirmed_hair_v1", "source": "user_confirmed_H2_head_paste",
+                        "mapping": "H_1024_crop_resized_nearest_to_box", "face": "head_mask_minus_hair"}
+
+
+def confirmed_hair_face(head_mask, hair_confirmation):
+    """머리 붙이기에서 사용자가 확인한 머리카락 영역(H, 1024 자른 그림)을 원래 좌표로 되돌려 얼굴을 정한다.
+    피부색 표본이 머리 가닥·볼 홍조에 걸리는 캐릭터용이다. 확인 기록이 없으면 쓰지 않는다."""
+    folder = Path(hair_confirmation["directory"])
+    choice = json.loads((folder / "confirmation.json").read_text(encoding="utf-8"))
+    require(choice.get("confirmed") is True and choice.get("reviewer") == "user"
+            and choice.get("preview_sha256") == sha(folder / "result.json"), "사용자가 확인한 머리카락 영역이 아닙니다.")
+    info = json.loads((folder / "result.json").read_text(encoding="utf-8"))
+    hair = checked_image(info["H_file"], info["H_sha256"], (1024, 1024), "L") > 127
+    x0, y0, x1, y1 = (int(v) for v in info["box"])
+    local = np.asarray(Image.fromarray(hair.astype(np.uint8) * 255).resize((x1 - x0, y1 - y0), Image.Resampling.NEAREST)) > 127
+    full = np.zeros(head_mask.shape, bool)
+    full[y0:y1, x0:x1] = local
+    face = (head_mask > 0) & ~full
+    return face, {**CONFIRMED_HAIR_RULES, "confirmation_sha256": sha(folder / "confirmation.json"),
+                  "H_sha256": info["H_sha256"], "box": [x0, y0, x1, y1], "hair_pixels": int(full.sum())}
+
+
 def cheek_skin_candidates(rgb, head_mask, face_points, face_scores):
     from genai_lab.skin_tone import measure_cheeks
     measurement = measure_cheeks(rgb, face_points, face_scores)
@@ -136,13 +158,14 @@ def save_overlay(rgb, hair, face, lines, path):
     Image.fromarray(overlay).save(path)
 
 
-def prepare_head_lines(head, nose_joint, directory, segmenter_factory=None, *, face_method="skin_color_v2"):
+def prepare_head_lines(head, nose_joint, directory, segmenter_factory=None, *, face_method="skin_color_v2",
+                       hair_confirmation=None):
     """두 마스크와 선 종류를 모두 검토용으로 저장한다. 여기서 승인하지 않는다."""
     directory=Path(directory);directory.mkdir(parents=True,exist_ok=False)
     record={"status":"started","rules":RULES,"head":asdict(head),"gpu_generation":False,"files":{},"face_method":face_method}
     started=time.perf_counter()
     try:
-        require(face_method in ("skin_color_v1","skin_color_v2","sam2"),"알 수 없는 얼굴 분리 방식입니다.")
+        require(face_method in ("skin_color_v1","skin_color_v2","sam2","confirmed_hair"),"알 수 없는 얼굴 분리 방식입니다.")
         point=checked_nose(nose_joint,head)
         size=(736,1232)
         rgb=checked_image(head.normalized_file,head.normalized_sha256,size,"RGB")
@@ -151,7 +174,11 @@ def prepare_head_lines(head, nose_joint, directory, segmenter_factory=None, *, f
         ys,xs=np.where(mask>0);box=(int(xs.min()),int(ys.min()),int(xs.max()+1),int(ys.max()+1))
         input_record={"point":point,"label":1,"box":box,"nose_confidence":nose_joint["confidence_score"]}
         record["face_input"]=input_record
-        if face_method=="skin_color_v2":
+        if face_method=="confirmed_hair":
+            require(hair_confirmation is not None,"확인한 머리카락 영역 폴더가 필요합니다.")
+            face, details = confirmed_hair_face(mask, hair_confirmation)
+            record["face_segmentation"] = details
+        elif face_method=="skin_color_v2":
             candidates, details = cheek_skin_candidates(rgb, mask, nose_joint.get("face_points", []), nose_joint.get("face_scores", []))
             record["face_segmentation"] = details
             face = connected_cheeks(candidates, details["cheek_pixels"])
@@ -206,9 +233,12 @@ def checked_lines(options, size, *, require_review=True):
     require(record["status"]=="needs_user_review" and record["rules"]==RULES,"머리 선 규칙·준비 상태가 다릅니다.")
     require(record["head"]==json_value(asdict(options.head)),"다른 머리의 안쪽 선입니다.")
     method=record.get("face_method","sam2")
-    require(method in ("skin_color_v1","skin_color_v2","sam2"),"얼굴 분리 방식 기록이 다릅니다.")
+    require(method in ("skin_color_v1","skin_color_v2","sam2","confirmed_hair"),"얼굴 분리 방식 기록이 다릅니다.")
     if method=="sam2":
         for path,digest in record["sam_model"]["files"].items():require(sha(path)==digest,"SAM2 파일이 변경됐습니다.")
+    elif method=="confirmed_hair":
+        details=record["face_segmentation"]
+        require(all(details.get(k)==v for k,v in CONFIRMED_HAIR_RULES.items()),"확인 머리카락 분리 규칙이 변경됐습니다.")
     else:
         details=record["face_segmentation"]
         expected_rules = CHEEK_RULES if method == "skin_color_v2" else SKIN_RULES

@@ -1,0 +1,187 @@
+"""분할 모델과 생성 모델을 순서대로 사용한다. 실패·취소는 완료 후보를 만들지 않는다."""
+import os
+os.environ.update(HF_HUB_OFFLINE="1", TRANSFORMERS_OFFLINE="1", DIFFUSERS_OFFLINE="1", PYTHONDONTWRITEBYTECODE="1")
+import sys
+import time
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from dataclasses import asdict
+from types import SimpleNamespace
+import numpy as np
+from PIL import Image
+from genai_lab.proportion_inputs import sha, require, checked_image, json_value, ProportionOptions, validate_models
+from genai_lab.qwen_record_io import write_json
+from genai_lab.studio_head_paste import read, verify_manifest
+from genai_lab.studio_proportion import restore_head
+from genai_lab.studio_optional_finishing import restore_prompt
+from genai_lab.head_paste_rules import head_crop, padding_mask, hair_mask, crop_head, paste_canvas, blend_result
+from genai_lab.head_paste_semantics import HeadSegmenter, save_parts, load_parts, CHECKPOINT_SHA
+from genai_lab.head_paste_redraw import redraw_prepared, head_prompt
+from genai_lab.onepass_generation_settings import OnePassGenerationSettings
+from genai_lab.head_lines import extract_lines
+
+
+def save_image(directory, name, array):
+    path = directory / (name + ".png")
+    Image.fromarray(array).save(path)
+    return str(path), sha(path)
+
+
+def original_crop(request):
+    head = request["head"]
+    rgb = checked_image(head["normalized_file"], head["normalized_sha256"], (736, 1232), "RGB")
+    mask = checked_image(head["mask_file"], head["mask_sha256"], (736, 1232), "L")
+    return head_crop(rgb, mask)
+
+
+def preview_overlay(original, mask, color):
+    result = original.copy()
+    result[mask] = (.45 * result[mask] + .55 * np.asarray(color)).astype(np.uint8)
+    return result
+
+
+def prepare_preview(request, directory, segmenter_factory=HeadSegmenter):
+    """원본 한 번 분할 → 고정 규칙 보정 → 확인 그림·분할 고정 자료 저장."""
+    verify_manifest(request["manifest"])
+    started = time.perf_counter()
+    original, mask, box = original_crop(request)
+    segmenter = segmenter_factory(request["semantic_repo"], request["semantic_checkpoint"])
+    try:
+        parts = segmenter.parse(original)
+        semantic = segmenter.metrics()
+    finally:
+        segmenter.close()
+    H, counts = hair_mask(original, mask, parts, padding_mask(original))
+    original_file, original_sha = save_image(directory, "original", original)
+    mask_file, mask_sha = save_image(directory, "head-mask", mask.astype(np.uint8) * 255)
+    h_file, h_sha = save_image(directory, "H", H.astype(np.uint8) * 255)
+    corrected, _ = save_image(directory, "corrected-preview", preview_overlay(original, H, (0, 220, 120)))
+    automatic, _ = save_image(directory, "automatic-preview", preview_overlay(original, parts["hair"], (0, 200, 255)))
+    save_parts(directory / "original-parts.npz", parts)
+    manifest = {str(directory / name): sha(directory / name) for name in
+                ("original.png", "head-mask.png", "H.png", "corrected-preview.png", "automatic-preview.png", "original-parts.npz")}
+    manifest[str(request["semantic_checkpoint"])] = CHECKPOINT_SHA
+    verify_manifest(request["manifest"])
+    result = dict(directory=str(directory), identity=request["identity"], status="needs_user_review", box=box,
+        original_file=original_file, original_sha256=original_sha, H_file=h_file, H_sha256=h_sha,
+        head_mask_file=mask_file, head_mask_sha256=mask_sha, automatic_preview=automatic,
+        corrected_preview=corrected, manifest=manifest, measurements=counts, semantic=semantic, seconds=time.perf_counter()-started)
+    write_json(directory / "result.json", json_value(result))
+    return result
+
+
+def prepare_paste(request, directory, segmenter_factory=HeadSegmenter):
+    """확인 H와 생성 분할로 붙이기 재료를 만든 뒤 분할 모델을 먼저 내린다."""
+    preview = request["preview"]
+    original, mask, box = original_crop(request)
+    require(list(box) == preview["box"], "확인한 머리 자르기와 다릅니다.")
+    H = checked_image(preview["H_file"], preview["H_sha256"], (1024, 1024), "L") > 127
+    parts = load_parts(Path(preview["directory"]) / "original-parts.npz")
+    raw = checked_image(request["raw_file"], request["raw_sha256"], (736, 1232), "RGB")
+    gen = crop_head(raw, box)
+    segmenter = segmenter_factory(request["semantic_repo"], request["semantic_checkpoint"])
+    try:
+        generated_parts = segmenter.parse(gen)
+        semantic = segmenter.metrics()
+    finally:
+        segmenter.close()
+    save_parts(directory / "generated-parts.npz", generated_parts)
+    canvas, M, features, measurements = paste_canvas(original, mask, parts, H, gen, generated_parts)
+    seed = request["seed"]
+    init_file, init_sha = save_image(directory, "init", canvas)
+    mask_file, mask_sha = save_image(directory, "mask", M.astype(np.uint8) * 255)
+    features_file, features_sha = save_image(directory, "features", features.astype(np.uint8) * 255)
+    sketch = extract_lines(canvas, np.full((1024, 1024), 255, np.uint8))
+    _, sketch_sha = save_image(directory, f"sketch_{seed}", sketch)
+    pasted, checks = blend_result(raw, Image.fromarray(canvas), M.astype(np.uint8) * 255, features.astype(np.uint8) * 255, box)
+    paste_file, paste_sha = save_image(directory, "paste", pasted)
+    entry = dict(raw=request["raw_file"], raw_sha256=request["raw_sha256"], init=init_file, init_sha256=init_sha,
+                 mask=mask_file, mask_sha256=mask_sha, features=features_file, features_sha256=features_sha,
+                 sketch_sha256=sketch_sha, paste=paste_file, paste_sha256=paste_sha, checks=checks, **measurements)
+    return dict(box=box, seeds=[seed], H_sha256=preview["H_sha256"], semantic=semantic, per_seed={str(seed): entry})
+
+
+def restore_models(request):
+    fields = dict(request["settings"])
+    for name in ("model_root", "adapter_root", "ip_root"):
+        fields[name] = Path(fields[name])
+    settings = OnePassGenerationSettings(**fields)
+    options = dict(request["options"])
+    options["head"] = restore_head({"head": options["head"]})
+    for name in ("sketch_root", "foreground_model", "shoulder_record_file", "head_lines_file", "width_record_file"):
+        if name in options and options[name] is not None:
+            options[name] = Path(options[name])
+    options = ProportionOptions(**options)
+    models = validate_models(settings, options)
+    return settings, options, models
+
+
+def complete_apply(request, directory):
+    """단계별 기록을 남기고, 보호 검사까지 통과한 파일만 검토 후보로 반환한다."""
+    verify_manifest(request["manifest"])
+    settings, options, models = restore_models(request)
+    model_files = {}
+    for root in (settings.model_root, settings.ip_root / settings.image_encoder_subfolder, options.sketch_root):
+        for path in Path(root).rglob("*"):
+            if path.is_file() and path.suffix in (".safetensors", ".json", ".txt"):
+                model_files[str(path)] = sha(path)
+    ip_weight = settings.ip_root / settings.ip_subfolder / settings.ip_weight_name
+    model_files[str(ip_weight)] = sha(ip_weight)
+    manifest = {**request["manifest"], **model_files}
+    rec = prepare_paste(request, directory)
+    entry = rec["per_seed"][str(request["seed"])]
+    for key in ("init", "mask", "features", "paste"):
+        manifest[entry[key]] = entry[key + "_sha256"]
+    manifest[str(directory / f"sketch_{request['seed']}.png")] = entry["sketch_sha256"]
+    manifest[str(directory / "generated-parts.npz")] = sha(directory / "generated-parts.npz")
+    inputs = SimpleNamespace(**{**request["inputs"], "prompt": restore_prompt(request["inputs"]["prompt"])})
+    from genai_lab.onepass_prompt_tokenizers import load_onepass_tokenizers
+    prompt = head_prompt(inputs, request["analysis"], load_onepass_tokenizers())
+    prepared = dict(run=directory, rec=rec, inputs=inputs, settings=settings, options=options,
+                    prompt=prompt, manifest=manifest, paste_dir=directory)
+    state = dict(status="generating", completed=[], models=models, start_index=24, memory_mode="block")
+    output = directory / "redraw"
+    output.mkdir()
+    write_json(directory / "paste-inputs.json", json_value(rec))
+    verify_manifest(manifest)
+    redraw_prepared([prepared], output, state)
+    require(not state.get("final_cleanup_errors"), "머리 모델 정리 실패")
+    generated = output / directory.name[:8] / f"seed-{request['seed']}"
+    run = read(generated / "run.json")
+    require(run["status"] == "review_pending", "머리 다시 그리기가 완료되지 않았습니다.")
+    before = checked_image(request["before_file"], request["before_sha256"], (736, 1232), "RGB")
+    M = checked_image(entry["mask"], entry["mask_sha256"], (1024, 1024), "L")
+    features = checked_image(entry["features"], entry["features_sha256"], (1024, 1024), "L")
+    with Image.open(generated / "head_1024.png") as image:
+        product, checks = blend_result(before, image.convert("RGB"), M, features, rec["box"])
+    product_file, product_sha = save_image(directory, "product", product)
+    for path in (generated / "head_1024.png", generated / "raw_redraw.png", generated / "run.json", directory / "paste-inputs.json"):
+        manifest[str(path)] = sha(path)
+    verify_manifest(manifest)
+    info = dict(status="awaiting_user_review", directory=str(directory), raw_sha256=request["raw_sha256"],
+                product_file=product_file, product_sha256=product_sha, before_file=request["before_file"],
+                before_sha256=request["before_sha256"], checks=checks, redraw_record=str(generated / "run.json"),
+                H_sha256=request["preview"]["H_sha256"], semantic=rec["semantic"], manifest=manifest, seed=request["seed"], rule="G3+H2",
+                known_limits="모자·후드·옆모습 미검증; 원본 외곽선·얼룩·귀 조각이 남을 수 있음")
+    write_json(directory / "result.json", info)
+    return info
+
+
+def main():
+    mode, filename = sys.argv[1:]
+    directory = Path(filename).parent
+    request = read(filename)
+    try:
+        if mode == "hair":
+            prepare_preview(request, directory)
+        elif mode == "apply":
+            complete_apply(request, directory)
+        else:
+            raise ValueError("알 수 없는 머리 처리 단계입니다.")
+    except BaseException as error:
+        write_json(directory / "worker-error.json", {"status": "failed", "stage": mode, "error": str(error)})
+        raise
+
+
+if __name__ == "__main__":
+    main()

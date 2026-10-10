@@ -62,6 +62,8 @@ class StudioController(QObject):
         window.studio_raw_button.clicked.connect(lambda: self.original(raw=True))
         from genai_lab.studio_identity_report import IdentityReportController
         self.identity_report_controller = IdentityReportController(self)
+        from genai_lab.studio_head_paste_gui import HeadPasteController
+        self.head_paste_controller = HeadPasteController(self)
 
     @property
     def occupied(self):
@@ -542,6 +544,7 @@ class StudioController(QObject):
         w.studio_finish_button.setToolTip(reason or FINISHING_NOTICE)
         w.studio_finish_notice.setText(reason or FINISHING_NOTICE)
         w.studio_finish_notice.setVisible(self.results is not None)
+        self.head_paste_controller.refresh(ready)
         self.identity_report_controller.refresh()
 
     def launch(self, action, complete, *, on_error=None):

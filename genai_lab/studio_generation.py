@@ -49,10 +49,16 @@ class StudioRuntime:
     finishing_face_reference: bool = False
     analysis_timeout: float = 600.0
     proportion_sketch_root: Path = Path("G:/genai-cache/models/t2i-adapter-sketch-sdxl-1.0")
+    head_semantic_repo: Path = Path("D:/genai-cache/tools/see-through")
+    head_semantic_checkpoint: Path = Path("D:/genai-cache/huggingface/models--24yearsold--l2d_sam_iter2/snapshots/0b0608310fb7a89e32ecd7397147a249540cf1e7/checkpoint-18000.pt")
+    head_paste_timeout: float = 1200.0
     skin_recommendation: SkinRecommendationSettings = field(default_factory=SkinRecommendationSettings)
     garment_warnings: GarmentWarningSettings = field(default_factory=GarmentWarningSettings.load)
 
     def __post_init__(self):
+        import math
+        if not isinstance(self.head_paste_timeout, (int, float)) or not math.isfinite(self.head_paste_timeout) or self.head_paste_timeout <= 0:
+            raise ValueError("머리 작업 시간 한도는 양의 유한값이어야 합니다.")
         if any(type(value) is not bool for value in (self.quality_tags, self.finishing, self.finishing_face_reference)):
             raise ValueError("품질 태그·마무리 설정은 bool이어야 합니다.")
 
@@ -62,12 +68,12 @@ class StudioRuntime:
         if not config:
             return cls()
         values = json.loads(Path(config).read_text(encoding="utf-8"))
-        allowed = {"pose_python", "pose_models", "model_cache", "analysis_python", "head_cache", "garment_warning_rules", "proportion_sketch_root", "quality_tags", "finishing", "finishing_face_reference", "skin_recommendation"}
+        allowed = {"pose_python", "pose_models", "model_cache", "analysis_python", "head_cache", "garment_warning_rules", "proportion_sketch_root", "quality_tags", "finishing", "finishing_face_reference", "skin_recommendation", "head_semantic_repo", "head_semantic_checkpoint", "head_paste_timeout"}
         if set(values) - allowed:
             raise ValueError("작업실 실행 설정에 알 수 없는 항목이 있습니다.")
         skin = SkinRecommendationSettings(**values.pop("skin_recommendation", {}))
         warnings = GarmentWarningSettings.load(values.pop("garment_warning_rules")) if "garment_warning_rules" in values else GarmentWarningSettings.load()
-        return cls(**{key: value if key in ("quality_tags", "finishing", "finishing_face_reference") else Path(value)
+        return cls(**{key: value if key in ("quality_tags", "finishing", "finishing_face_reference", "head_paste_timeout") else Path(value)
                       for key, value in values.items()}, garment_warnings=warnings, skin_recommendation=skin)
 
 
@@ -299,6 +305,44 @@ class StudioResults:
         return self.candidate.path
 
     @property
+    def head_paste_unavailable_reason(self):
+        if not self.two_pass:
+            return "원본 비율 참고로 만든 결과에서만 사용할 수 있습니다."
+        if self.tail_edit or self.optional_finishing:
+            return "머리 붙이기는 꼬리 편집·마무리 전에 적용해 주세요."
+        if self.selected >= len(self.product_records):
+            return "완료된 비율 생성 기록이 없습니다."
+        if self.product_records[self.selected].get("head_paste"):
+            return "이미 원본 머리를 붙인 후보입니다. 원래 후보를 골라 주세요."
+        return ""
+
+    def add_head_candidate(self, directory):
+        """검사된 파생 후보를 추가한다. 선택·저장은 기존 사용자 승인 흐름을 따른다."""
+        from genai_lab.studio_head_paste import head_product_info
+        from genai_lab.proportion_generation import ProportionCandidate
+        from genai_lab.proportion_inputs import require
+        require(not self.head_paste_unavailable_reason, self.head_paste_unavailable_reason)
+        info = head_product_info(directory, self.verify_original())
+        require(info["before_sha256"] == self.verify_current(), "머리 붙이기의 기준 후보가 다릅니다.")
+        data = {**self.product_records[self.selected], "product_file": info["product_file"],
+                "product_sha256": info["product_sha256"], "head_paste": info}
+        path = Path(directory) / "candidate.json"
+        record(path, data)
+        candidate = ProportionCandidate(self.candidate.seed, self.candidate.raw, Path(info["product_file"]), path, data)
+        previous = (self.batch, self.product_records, self.backgrounds, self.finishings, self.selected,
+                    self.tail_edit, self.optional_finishing, self.approved_sha, self.checks, self.status)
+        try:
+            self.batch = replace(self.batch, candidates=(*self.batch.candidates, candidate))
+            self.product_records = (*self.product_records, data)
+            self.backgrounds = (*self.backgrounds, None)
+            self.finishings = (*self.finishings, None)
+            self.select(len(self.batch.candidates) - 1)
+        except Exception:
+            (self.batch, self.product_records, self.backgrounds, self.finishings, self.selected,
+             self.tail_edit, self.optional_finishing, self.approved_sha, self.checks, self.status) = previous
+            raise
+
+    @property
     def finishing_unavailable_reason(self):
         if self.tail_edit:
             return "꼬리를 고친 뒤에는 고화질 마무리를 적용할 수 없습니다."
@@ -366,6 +410,10 @@ class StudioResults:
                     or Path(data["raw_file"]).resolve() != self.raw_path.resolve()
                     or Path(data["product_file"]).resolve() != self.original_basis_path.resolve()):
                 raise ValueError("2단계 생성 결과나 기록이 변경됐습니다.")
+            if data.get("head_paste"):
+                from genai_lab.studio_head_paste import head_product_info
+                if head_product_info(data["head_paste"]["directory"], raw_sha) != data["head_paste"]:
+                    raise ValueError("머리 붙이기 기록이 변경됐습니다.")
             return data["product_sha256"]
         if self.finishings[self.selected]:
             from genai_lab.studio_finishing import finishing_source
@@ -438,6 +486,8 @@ class StudioResults:
         metadata = {"source_run": str(self.candidate.record_path), "sha256": self.approved_sha,
                     "approval_record": str(self.batch.directory / "user-review.json"),
                     "reviewer": "user", "automatic_gates_executed": False}
+        if self.two_pass and self.product_records[self.selected].get("head_paste"):
+            metadata["head_paste"] = self.product_records[self.selected]["head_paste"]
         metadata["identity_report"] = self.identity_report_record
         metadata["raw_sha256"] = self.verify_original()
         metadata["proportion_mode"] = "two_pass" if self.two_pass else "off"

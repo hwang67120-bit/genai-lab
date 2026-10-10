@@ -87,6 +87,47 @@ def test_cleanup_error_does_not_stop_remaining_release():
     assert seen == [True] and errors[0]["step"]=="first"
 
 
+
+def test_memory_snapshot_writes_actual_jsonl_and_counts_gpu_parameters(tmp_path, monkeypatch):
+    """GPU 없이 실제 기록을 저장·재독해한다. CPU 파라미터는 상주량에서 제외한다."""
+    from types import SimpleNamespace
+    from genai_lab import head_paste_redraw
+
+    stats = dict(allocated_bytes=1024, reserved_bytes=2048,
+                 peak_allocated_bytes=1536, peak_reserved_bytes=4096)
+    cuda = SimpleNamespace(
+        memory_allocated=lambda: stats["allocated_bytes"],
+        memory_reserved=lambda: stats["reserved_bytes"],
+        max_memory_allocated=lambda: stats["peak_allocated_bytes"],
+        max_memory_reserved=lambda: stats["peak_reserved_bytes"],
+    )
+    names = ("text_encoder", "text_encoder_2", "image_encoder", "adapter", "unet", "vae")
+    def parameter(device, count, size):
+        return SimpleNamespace(device=SimpleNamespace(type=device),
+                               numel=lambda: count, element_size=lambda: size)
+    modules = {}
+    for index, name in enumerate(names, 1):
+        values = (parameter("cuda", index * 10, 2), parameter("cpu", 999, 4))
+        modules[name] = SimpleNamespace(parameters=lambda values=values: iter(values))
+    pipe = SimpleNamespace(**modules)
+    times = iter((1.5, 2.5))
+    monkeypatch.setattr(head_paste_redraw.time, "perf_counter", lambda: next(times))
+
+    before = head_paste_redraw.memory_snapshot(SimpleNamespace(cuda=cuda), pipe, tmp_path, "models_loaded_cpu")
+    stats.update(allocated_bytes=512, reserved_bytes=1024)
+    after = head_paste_redraw.memory_snapshot(SimpleNamespace(cuda=cuda), pipe, tmp_path, "models_released")
+
+    lines = (tmp_path / "memory.jsonl").read_text(encoding="utf-8").splitlines()
+    assert len(lines) == 2
+    assert [json.loads(line) for line in lines] == [before, after]
+    assert before == dict(stage="models_loaded_cpu", seconds=1.5,
+                          allocated_bytes=1024, reserved_bytes=2048,
+                          peak_allocated_bytes=1536, peak_reserved_bytes=4096,
+                          gpu_parameter_bytes={name: index * 20 for index, name in enumerate(names, 1)})
+    assert after == {**before, "stage": "models_released", "seconds": 2.5,
+                     "allocated_bytes": 512, "reserved_bytes": 1024}
+
+
 def sample_parts():
     parts={t:np.zeros((1024,1024),bool) for t in TAGS}
     parts["eyes"][:]=features()

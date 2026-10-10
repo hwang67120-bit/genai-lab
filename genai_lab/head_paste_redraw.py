@@ -1,5 +1,6 @@
 """선택 머리 한 장의 마지막 4단계를 재생성한다. H2/G3 붙이기 뒤에만 호출한다."""
 import gc
+import json
 import time
 from pathlib import Path
 import numpy as np

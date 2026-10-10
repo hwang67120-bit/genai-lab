@@ -1,6 +1,6 @@
 # 원본 머리 붙이기 — Claude GPU 재현 인수인계
 
-구현과 개별 CPU 검사를 마쳤다. 제품 GPU 재현과 실제 GUI 생성은 아직 확인하지 않았다.
+구현과 개별 CPU 검사를 마쳤다. 1차 GPU 재현은 라쿤 첫 건의 H2·붙이기·마스크까지 SHA가 같았지만, 메모리 기록의 json import 누락으로 재그리기 전에 멈췄다. 나머지 5건과 재그리기 결과, 실제 GUI 생성은 아직 확인하지 않았다.
 
 ## 사용자 흐름
 
@@ -35,6 +35,12 @@
 - **시험 당시 See-through 전체 분할 결과는 저장돼 있지 않다.** H·init·마스크 파일의 SHA를 확인한 것과 H2·G3를 처음부터 계산한 것은 다르다. CPU 전체 재계산 통과로 보고하지 않는다. 아래 GPU 실행에서 분할을 다시 저장하고 H·init·마스크·붙이기 SHA를 대조한다.
 - 전체 회귀 검사 2,063개 통과, 기존 경고 2개 (343.25초, pytest-full.log). 이후 분할 도구 경로 검사 보완과 원본 자르기 검사 추가를 각각 해당 CPU 검사로 확인했다. 테스트 로그는 outputs/head-paste-product-verify-20261010/에 있다.
 
+## 메모리 기록 오류 수정
+
+1차 실패 기록은 outputs/head-paste-product-verify-20261010/claude_gpu_verify_01.md와 gpu-01/에 보존한다. head_paste_redraw.py에 import json을 추가했다. CPU 테스트는 실제 memory_snapshot을 두 번 호출해 JSONL 저장·재독해, 단계와 사용량, CPU 파라미터 제외, 기록 추가 보존을 검사한다. GPU를 사용하지 않는다. 수정 전 새 테스트에서 같은 NameError를 재현했고, 수정 후 관련 CPU 검사 35개가 모두 통과했다(64.36초, pytest-memory-fix-local.log). 이번 수정 뒤 전체 프로젝트 테스트를 다시 실행한 것은 아니다.
+
+라쿤 첫 건에서 분할부터 붙이기까지의 재계산은 확인됐다. 이를 전체 6건이나 재그리기 통과로 확대하지 않는다. 생성 입력·강도·단계·메모리 한도는 변경하지 않았다. 재실행은 새 gpu-02 폴더를 사용한다.
+
 ## Claude 실행 명령
 
 프로젝트 폴더의 PowerShell에서 먼저 CPU 확인만 실행한다.
@@ -46,7 +52,7 @@
 GPU 재현은 아래 한 줄이다. **기존 사용자 확인 H와 새 H가 같은 경우에만 기존 확인을 가져온다.** H가 다르면 자동 승인하지 않고 중단한다. 기존 실행 폴더를 덮어쓰지 않는다. 다른 GPU 작업과 동시에 실행하지 않는다.
 
 ```powershell
-& 'D:\genai-cache\venv\Scripts\python.exe' -B '\\192.168.0.109\win_g\genai-lab\scripts\verify_head_paste_product.py' --run --output '\\192.168.0.109\win_g\genai-lab\outputs\head-paste-product-verify-20261010\gpu-01'
+& 'D:\genai-cache\venv\Scripts\python.exe' -B '\\192.168.0.109\win_g\genai-lab\scripts\verify_head_paste_product.py' --run --output '\\192.168.0.109\win_g\genai-lab\outputs\head-paste-product-verify-20261010\gpu-02'
 ```
 
 라쿤·근육 남성·늑대 각 seed 2개를 순서대로 실행한다. H·init·마스크·얼굴 보호·붙이기만 SHA가 다르면 즉시 중단한다. `head_1024.png`·`raw_redraw.png`는 `verify_reference.md`의 6건과 대조한다. 다르면 평균/최대 픽셀 차이·변경 픽셀 비율을 기록한다. 자동 통과시키지 않고 `needs_blind_review`로 남긴다. attention·오프로드 등 차이 원인을 조사하고 사용자 블라인드 판정 뒤 결론을 낸다.

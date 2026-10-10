@@ -30,6 +30,64 @@ def verify_manifest(manifest):
         require(sha(path) == digest, "머리 붙이기 입력이 변경됐습니다: " + str(path))
 
 
+def source_request(analysis, head, runtime):
+    """생성 전에 원본과 확인한 윤곽만 잠근다. 생성 후보는 이 계약에 필요하지 않다."""
+    require(head.confirmed, "원본 머리 윤곽이 확인되지 않았습니다.")
+    confirmation = Path(head.contour_file).parent / "user-confirmation.json"
+    choice = read(confirmation)
+    require(choice["reviewer"] == "user" and choice["automatic_approval"] is False
+            and choice["head"] == json_value(asdict(head)), "원본 머리 확인 기록이 다릅니다.")
+    reference = analysis["references"]["character"]
+    identity = dict(rule="G3+H2", source_sha256=reference["sha256"],
+                    normalized_sha256=head.normalized_sha256, head_mask_sha256=head.mask_sha256)
+    key = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
+    manifest = {str(reference["source"]): reference["sha256"], str(confirmation): sha(confirmation),
+                str(head.normalized_file): head.normalized_sha256, str(head.mask_file): head.mask_sha256,
+                str(head.contour_file): head.contour_sha256}
+    verify_manifest(manifest)
+    return json_value(dict(identity=identity, cache_key=key, head=asdict(head), manifest=manifest,
+        semantic_repo=runtime.head_semantic_repo, semantic_checkpoint=runtime.head_semantic_checkpoint))
+
+
+def automatic_skip_reason(appearance, garments):
+    """확인된 태그만 검사한다. 후드 상의 자체를 머리 덮개로 추측하지 않는다."""
+    tags = {tag.strip().replace("_", " ") for tag in appearance}
+    if "short hair" not in tags:
+        return "긴 머리는 여성 머리카락 조정 작업에서 지원 예정입니다."
+    coverings = {"hat", "cap", "hood", "hood up", "helmet", "beret", "beanie", "headwear"}
+    if coverings & {tag.strip().replace("_", " ") for tag in garments}:
+        return "머리를 덮는 의상이 있어 머리 붙이기를 건너뛰었습니다."
+    return ""
+
+
+def preview_skip_reason(info):
+    """캐시도 같은 픽셀로 다시 검사한다. 불명확한 배경이나 눈은 자동 승인하지 않는다."""
+    import numpy as np
+    from genai_lab.head_paste_semantics import load_parts
+    from genai_lab.head_paste_rules import padding_mask, dil, split_features
+    from PIL import Image
+    verify_preview(info, info["identity"])
+    with Image.open(info["original_file"]) as image:
+        original = np.asarray(image.convert("RGB"))
+    with Image.open(info["head_mask_file"]) as image:
+        head = np.asarray(image.convert("L")) > 127
+    parts = load_parts(Path(info["directory"]) / "original-parts.npz")
+    background = ~dil(np.logical_or.reduce(list(parts.values())) | head, 6) & ~padding_mask(original)
+    if not background.any():
+        return "원본 배경색을 확인하지 못해 머리 붙이기를 건너뛰었습니다.", None
+    median = np.median(original[background], axis=0)
+    distance = float(np.linalg.norm(median - 255))
+    measurement = dict(median_rgb=median.tolist(), white_distance=distance, pixels=int(background.sum()),
+                       distance_space="RGB", foreground_expansion_px=6)
+    if distance > 10:
+        return "원본 배경이 흰색이 아니어서 머리 붙이기를 건너뛰었습니다.", measurement
+    try:
+        split_features(parts["eyes"] | parts["nose"] | parts["mouth"])
+    except ValueError as error:
+        return str(error), measurement
+    return "", measurement
+
+
 def selected_request(results, runtime):
     """완료된 2단계 원본과 승인된 머리만 받아 입력 계약을 잠근다."""
     require(not results.head_paste_unavailable_reason, results.head_paste_unavailable_reason)
@@ -174,3 +232,38 @@ def head_product_info(directory, original_sha):
             and all(row.get("index") == index and row.get("mode") == ("overwrite" if index < 24 else "blend")
                     for index, row in enumerate(record["callback"])), "머리 다시 그리기 실행 검사가 실패했습니다.")
     return info
+
+
+def apply_head_batch(batch, preview, runtime, *, cancelled=lambda: False, progress=lambda _: None):
+    """4장 계약을 잠그고 별도 프로세스 하나로 처리한다. 원래 후보는 덮어쓰지 않는다."""
+    from genai_lab.studio_generation import StudioResults
+    from genai_lab.generation_cleanup import release_cuda_cache, GenerationCleanupError
+    memory = release_cuda_cache(sys.modules.get("torch"))
+    if memory["allocated_bytes"] or memory["reserved_bytes"]:
+        raise GenerationCleanupError("머리 붙이기 전에 생성 GPU 자원이 남아 있습니다.")
+    results = StudioResults(batch)
+    jobs = []
+    for index in range(len(batch.candidates)):
+        check_cancel(cancelled)
+        results.select(index)
+        request = selected_request(results, runtime)
+        verify_preview(preview, request["identity"])
+        confirmation = Path(preview["directory"]) / "confirmation.json"
+        accepted = read(confirmation)
+        require(accepted["confirmed"] and accepted["identity"] == request["identity"]
+                and accepted["preview_sha256"] == sha(Path(preview["directory"]) / "result.json"),
+                "머리 영역을 먼저 확인해 주세요.")
+        jobs.append({**request, "preview": preview, "manifest": {**request["manifest"], **preview["manifest"],
+                     str(confirmation): sha(confirmation)}})
+    manifest = {}
+    for job in jobs:
+        manifest.update(job["manifest"])
+    directory = batch.directory / "auto-head-pastes" / uuid.uuid4().hex
+    request = dict(jobs=jobs, manifest=manifest, gui_memory_before_worker=memory)
+    report = run_worker("batch", request, directory, runtime, cancelled, progress)
+    require(len(report["items"]) == len(jobs), "머리 결과 수가 다릅니다.")
+    for item, job in zip(report["items"], jobs):
+        require(item["seed"] == job["seed"], "머리 결과 순서가 다릅니다.")
+        if item["status"] == "completed":
+            head_product_info(item["directory"], job["raw_sha256"])
+    return report

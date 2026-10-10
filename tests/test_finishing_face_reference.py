@@ -89,7 +89,7 @@ def test_backend_loads_exact_local_ip_only_when_enabled(monkeypatch,enabled):
         @staticmethod
         def from_pretrained(path,**kwargs):seen["encoder"]=(path,kwargs);return "encoder"
     monkeypatch.setattr(backend_module,"validate_local_models",lambda _:None)
-    monkeypatch.setitem(sys.modules,"torch",SimpleNamespace(float16="fp16",cuda=SimpleNamespace(is_available=lambda:True)))
+    monkeypatch.setitem(sys.modules,"torch",SimpleNamespace(float16="fp16",cuda=SimpleNamespace(is_available=lambda:True,is_initialized=lambda:False)))
     monkeypatch.setitem(sys.modules,"diffusers",SimpleNamespace(StableDiffusionXLImg2ImgPipeline=Pipe,EulerAncestralDiscreteScheduler=object))
     monkeypatch.setitem(sys.modules,"transformers",SimpleNamespace(CLIPVisionModelWithProjection=Encoder))
     monkeypatch.setattr(backend_module,"configure_offload",lambda pipe,torch,record:seen.update(group_offload=True))

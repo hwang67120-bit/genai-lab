@@ -209,7 +209,7 @@ def build_studio(window, framing_options, clothing_mode):
     window.studio_mode_note = _label("자세를 따로 지정하지 않고 생성합니다. 자세 변경은 이번 범위에서 제외합니다.", "muted")
     box.addWidget(window.studio_mode_note)
     window.studio_proportion_checkbox.toggled.connect(lambda enabled: window.studio_mode_note.setText(
-        "원본 자세와 확인한 머리 윤곽을 참고합니다. 생성량은 2배이며, 다른 캐릭터의 효과는 아직 미검증입니다."
+        "원본 비율과 머리 영역을 확인하고 4장을 만듭니다. 짧은 머리는 자동으로 붙입니다. 생성량은 2배이며 머리 처리 시간이 추가됩니다."
         if enabled else "자세를 따로 지정하지 않고 생성합니다. 자세 변경은 이번 범위에서 제외합니다."))
     input_layout.addWidget(card)
 
@@ -309,6 +309,9 @@ def build_studio(window, framing_options, clothing_mode):
     image_actions.addStretch(1)
     image_actions.addWidget(window.open_original_size_button)
     image_actions.addWidget(window.studio_raw_button)
+    window.studio_before_head_button = QPushButton("붙이기 전 보기")
+    window.studio_before_head_button.hide()
+    image_actions.addWidget(window.studio_before_head_button)
     result.addLayout(image_actions)
     window.identity_report_label = _label("", "muted")
     window.identity_report_label.setWordWrap(True)

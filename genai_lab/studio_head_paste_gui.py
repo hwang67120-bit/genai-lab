@@ -7,7 +7,8 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from genai_lab.onepass_generation import OnePassCancelled
 from genai_lab.proportion_inputs import require
-from genai_lab.studio_head_paste import selected_request, prepare_hair, confirm_hair, apply_head, head_product_info
+from genai_lab.studio_head_paste import (selected_request, prepare_hair, confirm_hair, apply_head, head_product_info,
+    source_request, automatic_skip_reason, preview_skip_reason, apply_head_batch)
 from genai_lab.studio_generation import StudioRuntime
 
 NOTICE = "원본 머리 영역을 확인한 뒤 한 장에 적용합니다 · 원래 결과는 보존합니다"
@@ -53,6 +54,7 @@ class HeadPasteController:
     def __init__(self, studio):
         self.studio = studio
         self.context = None
+        self.generation_context = None
         button = getattr(studio.window, "studio_head_paste_button", None)
         if button is not None:
             button.clicked.connect(self.start)
@@ -62,10 +64,97 @@ class HeadPasteController:
         if button is None:
             return
         results = self.studio.results
-        button.setVisible(bool(results and results.two_pass))
+        button.setVisible(False)  # 자동 흐름으로 대체했다. 중복 적용 버튼은 표시하지 않는다.
         reason = results.head_paste_unavailable_reason if results else ""
         button.setEnabled(bool(ready and results and not reason))
         button.setToolTip(reason or NOTICE + " · " + LIMITS)
+
+    def prepare_generation(self, decision, pose, options):
+        """윤곽 확인 뒤 머리 영역을 먼저 확인한다. 거부해도 의상 생성은 이어간다."""
+        studio = self.studio
+        reason = automatic_skip_reason(studio.analysis["groups"]["appearance"], decision[1])
+        self.generation_context = dict(decision=decision, pose=pose, options=options,
+                                       reason=reason, preview=None, background=None)
+        if reason:
+            self.begin_confirmed_generation()
+            return
+        try:
+            request = source_request(studio.analysis, options.head, studio.runtime)
+            studio.launch(lambda cancel, progress: prepare_hair(request, studio.output_root / "hair-confirmations",
+                studio.runtime, cancelled=cancel, progress=progress), self.generation_preview_ready,
+                on_error=self.preparation_failed)
+        except Exception as error:
+            self.preparation_failed(error, traceback.format_exc())
+
+    def generation_preview_ready(self, info):
+        studio = self.studio
+        reason, background = preview_skip_reason(info)
+        self.generation_context["background"] = background
+        if reason:
+            self.generation_context["reason"] = reason
+        else:
+            studio.confirming = True
+            studio.controls()
+            try:
+                accepted = bool(info.get("remembered")) or review_hair(studio.window, info)
+                if not info.get("remembered"):
+                    confirm_hair(info, accepted)
+            finally:
+                studio.confirming = False
+                studio.controls()
+            if accepted:
+                self.generation_context["preview"] = info
+            else:
+                self.generation_context["reason"] = "머리카락 영역을 확인하지 않아 머리 붙이기를 건너뛰었습니다."
+        self.begin_confirmed_generation()
+
+    def preparation_failed(self, error, details=""):
+        from genai_lab.generation_cleanup import GenerationCleanupError
+        if isinstance(error, GenerationCleanupError):
+            self.generation_context = None
+            self.studio.fail(error, details)
+            return
+        if isinstance(error, OnePassCancelled):
+            self.generation_context = None
+            self.studio.cancel_proportion_setup()
+            return
+        self.generation_context["reason"] = "머리 영역 준비 실패: " + str(error)
+        self.begin_confirmed_generation()
+
+    def begin_confirmed_generation(self):
+        from genai_lab.studio_generation import record
+        context = self.generation_context
+        record(self.studio.run_directory / "auto-head-confirmation.json", dict(
+            status="confirmed" if context["preview"] else "skipped", reason=context["reason"],
+            preview_directory=context["preview"]["directory"] if context["preview"] else None,
+            remembered=bool(context["preview"] and context["preview"].get("remembered")),
+            background=context["background"]))
+        self.studio.begin_generation(context["decision"], pose=context["pose"], options=context["options"])
+
+    def apply_automatically(self, batch, cancelled, progress):
+        """완성된 4장만 후처리한다. 실패한 장은 이유와 함께 붙이기 전 후보를 유지한다."""
+        from dataclasses import replace
+        from genai_lab.studio_generation import record
+        from genai_lab.generation_cleanup import GenerationCleanupError, detach_error_frames
+        context = self.generation_context
+        if context is None:
+            return batch
+        if context["preview"] is None:
+            report = dict(status="skipped", items=[dict(seed=c.seed, status="skipped", reason=context["reason"])
+                for c in batch.candidates], background=context["background"])
+        else:
+            try:
+                report = apply_head_batch(batch, context["preview"], self.studio.runtime,
+                                          cancelled=cancelled, progress=progress)
+            except (OnePassCancelled, GenerationCleanupError):
+                raise
+            except Exception as error:
+                reason = str(error)
+                detach_error_frames(error)
+                report = dict(status="failed", items=[dict(seed=c.seed, status="failed", reason=reason)
+                    for c in batch.candidates])
+        record(batch.directory / "auto-head-result.json", report)
+        return replace(batch, auto_head=report)
 
     def start(self):
         studio = self.studio

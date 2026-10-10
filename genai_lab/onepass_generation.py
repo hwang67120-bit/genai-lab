@@ -12,6 +12,7 @@ from typing import Callable
 
 from PIL import Image
 
+from genai_lab.generation_cleanup import (GenerationCleanupError, release_pipeline, release_cuda_cache)
 from genai_lab.onepass_generation_settings import OnePassGenerationSettings, scheduler_config
 from genai_lab.onepass_prompt import OnePassPrompt, AppearanceOverrides, assemble_onepass_prompt
 from genai_lab.onepass_prompt_settings import OnePassPromptSettings
@@ -324,6 +325,7 @@ class DiffusersOnePassBackend:
 
         if not torch.cuda.is_available():
             raise OnePassGenerationError("CUDA 장치가 없습니다.")
+        self.start_memory = release_cuda_cache(torch)
         self.torch = torch
         self.scheduler_type = EulerAncestralDiscreteScheduler
         self.settings = settings
@@ -394,17 +396,15 @@ class DiffusersOnePassBackend:
             handle.remove()
 
     def close(self):
-        import gc
-        pipe = getattr(self, "pipe", None)
-        self.pipe = None
-        if pipe is not None:
-            remove = getattr(pipe, "remove_all_hooks", None)
-            if callable(remove):
-                remove()
-        del pipe
-        gc.collect()
-        if hasattr(self, "torch"):
-            self.torch.cuda.empty_cache()
+        pipe, self.pipe = getattr(self, "pipe", None), None
+        errors = release_pipeline(pipe) if pipe is not None else []
+        del pipe  # 바인딩된 훅 함수도 release_pipeline 반환 시 해제된다.
+        try:
+            release_cuda_cache(getattr(self, "torch", None))
+        except Exception as error:
+            errors.append(f"GPU 캐시 정리: {error}")
+        if errors:
+            raise GenerationCleanupError("생성 모델 정리 실패: " + "; ".join(errors))
 
 
 def generate_onepass_image(
@@ -442,6 +442,9 @@ def generate_onepass_image(
         key: str(value) if isinstance(value, Path) else value
         for key, value in record["settings"].items()
     }
+    start_memory = getattr(backend, "start_memory", None)
+    if start_memory is not None:
+        record["memory_before_backend"] = start_memory
     metadata = getattr(backend, "record_metadata", None)
     if metadata is not None:
         record.update(metadata(seed))
@@ -482,6 +485,7 @@ def generate_onepass_image(
 def generate_onepass_request(
     request, directory, *, on_image: Callable[[OnePassCandidate], None] = lambda _image: None,
     cancelled=lambda: False, backend_factory=DiffusersOnePassBackend, proportion=None,
+    on_directory_created=lambda _directory: None,
 ):
     """재시도 없이 네 seed를 생성한다. 기능이 꺼지면 원본 후보의 OnePassBatch를 반환한다. proportion.enabled를 명시하면 원본·제품
     참조를 구분한 ProportionBatch를 반환한다. 검토 연결을 승인하기 전에는 화면에서 이 설정을 사용하지 않는다.
@@ -496,13 +500,15 @@ def generate_onepass_request(
             from genai_lab.proportion_generation import generate_proportion_batch
             return generate_proportion_batch(
                 request.inputs, request.seeds, directory, settings=request.settings, options=proportion,
-                cancelled=cancelled, on_image=on_image, base_factory=backend_factory)
+                cancelled=cancelled, on_image=on_image, base_factory=backend_factory,
+                on_directory_created=on_directory_created)
     if cancelled():
         raise OnePassCancelled("요청 시작 전에 취소됐습니다.")
     for image in read_inputs(request.inputs, request.settings):
         image.close()
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=False)
+    on_directory_created(directory)
     backend = None
     candidates = []
     manifest = {"seeds": list(request.seeds), "completed_seeds": [],

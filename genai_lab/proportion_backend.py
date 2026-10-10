@@ -6,6 +6,7 @@ from genai_lab.onepass_generation import (
     encode_prompt_plan, pipeline_callback_kwargs)
 from genai_lab.onepass_generation_settings import scheduler_config
 from genai_lab.proportion_inputs import checked_image, validate_models, require
+from genai_lab.generation_cleanup import GenerationCleanupError, cleanup_steps, release_cuda_cache
 
 
 class StepGuard:
@@ -29,12 +30,14 @@ class GuardedBase:
     def __init__(self, backend, settings):
         self.backend, self.settings = backend, settings
         self.pipe, self.callback_mode = backend.pipe, backend.callback_mode
+        self.start_memory = getattr(backend, "start_memory", None)
 
     def generate(self, inputs, images, seed, observation, cancelled):
         guard = StepGuard(observation, self.settings, inputs, self.backend.torch.cuda)
         return self.backend.generate(inputs, images, seed, guard, cancelled)
 
     def close(self):
+        self.pipe = None  # 래퍼가 파이프라인을 붙잡지 않게 먼저 끊는다.
         self.backend.close()
 
 
@@ -53,6 +56,7 @@ class ProportionBackend(DiffusersOnePassBackend):
         self.scheduler_type = EulerAncestralDiscreteScheduler
         self.versions = {"torch": torch.__version__, "diffusers": diffusers.__version__}
         require(torch.cuda.is_available(), "CUDA 장치가 없습니다.")
+        self.start_memory = release_cuda_cache(torch)
         try:
             pose = T2IAdapter.from_pretrained(str(settings.adapter_root), torch_dtype=torch.float16,
                                               use_safetensors=True, local_files_only=True)
@@ -122,7 +126,10 @@ class ProportionBackend(DiffusersOnePassBackend):
             contour.close()
 
     def close(self):
-        for handle in getattr(self, "adapter_handles", []):
-            handle.remove()
-        self.adapter_handles = []
-        super().close()
+        handles, self.adapter_handles = getattr(self, "adapter_handles", []), []
+        errors = cleanup_steps([(f"어댑터 훅 {index}", handle.remove)
+                                for index, handle in enumerate(handles)])
+        del handles
+        errors.extend(cleanup_steps((("비율 모델 정리", super().close),)))
+        if errors:
+            raise GenerationCleanupError("비율 모델 정리 실패: " + "; ".join(errors))

@@ -33,6 +33,7 @@ class ProportionBatch:
     candidates: tuple[ProportionCandidate, ...]
     review_stage: str = "proportion_unreviewed"
     final_return_eligible: bool = False
+    auto_head: dict | None = None
 
 
 def check_cancel(cancelled):
@@ -180,7 +181,8 @@ def generate_proportion_batch(inputs, seeds, directory, *, settings=OnePassGener
                               options, cancelled=lambda: False, on_image=lambda _image: None,
                               base_factory=DiffusersOnePassBackend, contour_factory=ProportionBackend,
                               foreground_factory=AnimeForeground,
-                              expected_base=None, expected_sketch=None, expected_raw=None):
+                              expected_base=None, expected_sketch=None, expected_raw=None,
+                              on_directory_created=lambda _directory: None):
     """기존 생성 → CPU 스케치 → 어댑터 두 개 → CPU 흰 배경 순서이며 재시도는 없다. 예상 해시는 선택적인 재현 검사이고 대체 입력이 아니다. 6
     seed 재현과 4 seed 제품 진입점은 같은 함수를 쓴다.
     """
@@ -200,6 +202,7 @@ def generate_proportion_batch(inputs, seeds, directory, *, settings=OnePassGener
     inputs, shoulder_record = resolve_shoulder_inputs(inputs, options)
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=False)
+    on_directory_created(directory)
     lock = json_value({"inputs": asdict(inputs), "settings": asdict(settings), "options": asdict(options),
                        "seeds": seeds, "models": models, "adapter_strengths": [1.2, .5],
                        "shared_adapter_steps": list(range(11)), "expected_base": expected_base,

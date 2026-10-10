@@ -71,7 +71,7 @@ def prepare_preview(request, directory, segmenter_factory=HeadSegmenter):
     return result
 
 
-def prepare_paste(request, directory, segmenter_factory=HeadSegmenter):
+def prepare_paste(request, directory, segmenter_factory=HeadSegmenter, *, segmenter=None):
     """확인 H와 생성 분할로 붙이기 재료를 만든 뒤 분할 모델을 먼저 내린다."""
     preview = request["preview"]
     original, mask, box = original_crop(request)
@@ -80,12 +80,15 @@ def prepare_paste(request, directory, segmenter_factory=HeadSegmenter):
     parts = load_parts(Path(preview["directory"]) / "original-parts.npz")
     raw = checked_image(request["raw_file"], request["raw_sha256"], (736, 1232), "RGB")
     gen = crop_head(raw, box)
-    segmenter = segmenter_factory(request["semantic_repo"], request["semantic_checkpoint"])
+    owns_segmenter = segmenter is None
+    if owns_segmenter:
+        segmenter = segmenter_factory(request["semantic_repo"], request["semantic_checkpoint"])
     try:
         generated_parts = segmenter.parse(gen)
         semantic = segmenter.metrics()
     finally:
-        segmenter.close()
+        if owns_segmenter:
+            segmenter.close()
     save_parts(directory / "generated-parts.npz", generated_parts)
     canvas, M, features, measurements = paste_canvas(original, mask, parts, H, gen, generated_parts)
     seed = request["seed"]
@@ -139,9 +142,8 @@ def prepare_white_product(before, raw_redraw_file, mask, features, box, options,
     return product, checks, background
 
 
-def complete_apply(request, directory):
-    """단계별 기록을 남기고, 보호 검사까지 통과한 파일만 검토 후보로 반환한다."""
-    verify_manifest(request["manifest"])
+def redraw_models(request):
+    """같은 일괄 작업의 모델 파일을 한 번 잠근다. 모델 추론은 하지 않는다."""
     settings, options, models = restore_models(request)
     model_files = {}
     for root in (settings.model_root, settings.ip_root / settings.image_encoder_subfolder, options.sketch_root):
@@ -151,8 +153,15 @@ def complete_apply(request, directory):
     ip_weight = settings.ip_root / settings.ip_subfolder / settings.ip_weight_name
     model_files[str(ip_weight)] = sha(ip_weight)
     model_files[str(options.foreground_model)] = options.foreground_sha256
+    return settings, options, model_files
+
+
+def prepare_redraw(request, directory, segmenter=None, model_context=None):
+    """확인한 원본과 생성 분할로 다시 그리기 입력을 준비한다."""
+    verify_manifest(request["manifest"])
+    settings, options, model_files = model_context or redraw_models(request)
     manifest = {**request["manifest"], **model_files}
-    rec = prepare_paste(request, directory)
+    rec = prepare_paste(request, directory, segmenter=segmenter)
     entry = rec["per_seed"][str(request["seed"])]
     for key in ("init", "mask", "features", "paste"):
         manifest[entry[key]] = entry[key + "_sha256"]
@@ -163,13 +172,16 @@ def complete_apply(request, directory):
     prompt = head_prompt(inputs, request["analysis"], load_onepass_tokenizers())
     prepared = dict(run=directory, rec=rec, inputs=inputs, settings=settings, options=options,
                     prompt=prompt, manifest=manifest, paste_dir=directory)
-    state = dict(status="generating", completed=[], models=models, start_index=24, memory_mode="block")
-    output = directory / "redraw"
-    output.mkdir()
     write_json(directory / "paste-inputs.json", json_value(rec))
     verify_manifest(manifest)
-    redraw_prepared([prepared], output, state)
-    require(not state.get("final_cleanup_errors"), "머리 모델 정리 실패")
+    return prepared
+
+
+def complete_product(request, prepared, output):
+    """보호 검사와 파일 잠금을 확인한 장만 완성 결과로 기록한다."""
+    directory, rec = prepared["run"], prepared["rec"]
+    options, manifest = prepared["options"], prepared["manifest"]
+    entry = rec["per_seed"][str(request["seed"])]
     generated = output / directory.name[:8] / f"seed-{request['seed']}"
     run = read(generated / "run.json")
     require(run["status"] == "review_pending", "머리 다시 그리기가 완료되지 않았습니다.")
@@ -192,6 +204,90 @@ def complete_apply(request, directory):
     return info
 
 
+
+def complete_apply(request, directory):
+    """기존 한 장 처리 계약을 유지한다. 일괄 처리도 같은 준비·합성 함수를 쓴다."""
+    prepared = prepare_redraw(request, directory)
+    state = dict(status="generating", completed=[], start_index=24, memory_mode="block")
+    output = directory / "redraw"
+    output.mkdir()
+    redraw_prepared([prepared], output, state)
+    require(not state.get("final_cleanup_errors"), "머리 모델 정리 실패")
+    return complete_product(request, prepared, output)
+
+
+def complete_batch(request, directory):
+    """생성 분할 모두 → 분할 모델 해제 → 다시 그리기 한 번 로드 → 장별 보호 합성."""
+    from genai_lab.generation_cleanup import detach_error_frames, release_cuda_cache
+    import torch
+    started = time.perf_counter()
+    verify_manifest(request["manifest"])
+    memory = release_cuda_cache(torch)
+    free, total = torch.cuda.mem_get_info()
+    report = dict(status="processing", items=[], timings={}, memory_before_models={**memory,
+        "device_free_bytes": free, "device_total_bytes": total},
+        gui_memory_before_worker=request["gui_memory_before_worker"])
+    jobs = request["jobs"]
+    first = jobs[0]
+    require(len({job["seed"] for job in jobs}) == len(jobs), "seed가 중복됐습니다.")
+    require(all(job["settings"] == first["settings"] and job["options"] == first["options"] for job in jobs), "일괄 생성 계약이 다릅니다.")
+    model_context = redraw_models(first)
+    segmenter = HeadSegmenter(first["semantic_repo"], first["semantic_checkpoint"])
+    prepared = []
+    try:
+        for index, job in enumerate(jobs):
+            folder = directory / f"candidate-{index+1}"
+            folder.mkdir()
+            item = dict(seed=job["seed"], directory=str(folder), status="failed", reason="")
+            report["items"].append(item)
+            try:
+                require((job["semantic_repo"], job["semantic_checkpoint"]) ==
+                        (first["semantic_repo"], first["semantic_checkpoint"]), "분할 모델이 다릅니다.")
+                prepared.append(prepare_redraw(job, folder, segmenter, model_context))
+                item["status"] = "prepared"
+            except Exception as error:
+                # 입력 변경은 실패한 장만 원래 결과로 표시한다. CUDA 한도는 전체 모델 작업을 중단한다.
+                item["reason"] = str(error)
+                detach_error_frames(error)
+                if "메모리 한도" in str(error):
+                    raise
+    finally:
+        segmenter.close()
+        del segmenter
+    report["timings"]["generated_segmentation_seconds"] = time.perf_counter()-started
+    output = directory / "redraw"
+    output.mkdir()
+    state = dict(status="generating", completed=[], start_index=24, memory_mode="block", isolate_failures=True)
+    redraw_started = time.perf_counter()
+    if prepared:
+        try:
+            redraw_prepared(prepared, output, state)
+        except Exception as error:
+            # 전역 로드·메모리 실패는 재시도하지 않고 처리되지 않은 장에 같은 사유를 남긴다.
+            report["global_error"] = str(error)
+            detach_error_frames(error)
+    report["timings"]["redraw_seconds"] = time.perf_counter()-redraw_started
+    for index, (job, item) in enumerate(zip(jobs, report["items"])):
+        if item["status"] != "prepared":
+            continue
+        p = next(p for p in prepared if str(p["run"]) == item["directory"])
+        key = [p["run"].name[:8], job["seed"]]
+        if key not in state["completed"] or state.get("final_cleanup_errors"):
+            item.update(status="failed", reason=state.get("candidate_errors", {}).get(str(job["seed"]))
+                or report.get("global_error") or "머리 모델 실행·정리 실패")
+            continue
+        try:
+            info = complete_product(job, p, output)
+            item.update(status="completed", product_file=info["product_file"], product_sha256=info["product_sha256"])
+        except Exception as error:
+            item.update(status="failed", reason=str(error))
+            detach_error_frames(error)
+    report.update(status="awaiting_user_review", seconds=time.perf_counter()-started,
+                  segmentation_model_loads=1, redraw=state)
+    verify_manifest(request["manifest"])
+    write_json(directory / "result.json", report)
+    return report
+
 def main():
     mode, filename = sys.argv[1:]
     directory = Path(filename).parent
@@ -201,6 +297,8 @@ def main():
             prepare_preview(request, directory)
         elif mode == "apply":
             complete_apply(request, directory)
+        elif mode == "batch":
+            complete_batch(request, directory)
         else:
             raise ValueError("알 수 없는 머리 처리 단계입니다.")
     except BaseException as error:

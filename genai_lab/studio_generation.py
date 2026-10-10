@@ -234,6 +234,15 @@ class StudioResults:
         self.appendage_review_required = appendage_review_required or any(
             c.record.get("prompt", {}).get("rules", {}).get("appendage_review_required", False)
             for c in batch.candidates)
+        self.auto_head = getattr(batch, "auto_head", None)
+        self.head_records = ()
+        if self.auto_head:
+            if len(self.auto_head["items"]) != len(batch.candidates):
+                raise ValueError("자동 머리 결과 수가 다릅니다.")
+            self.head_records = tuple(json.loads((Path(item["directory"]) / "result.json").read_text(encoding="utf-8"))
+                if item["status"] == "completed" else None for item in self.auto_head["items"])
+        self.show_before_head = False
+        self.rejections = []
         self.identity_reports = {}
         self.selected = 0
         self.tail_edit = None
@@ -246,6 +255,7 @@ class StudioResults:
     def persist(self, **extra):
         record(self.batch.directory / "user-review.json", {
             "status": self.status, "selected": self.selected,
+            "head_view": self.head_view, "auto_head": self.auto_head, "rejections": self.rejections,
             "approved_sha256": self.approved_sha, "automatic_gates_executed": False,
             "reviewer": "user", "identity_report": self.identity_report_record, "checks": self.checks, "appendage_review_required": self.appendage_review_required,
             "background": self.active_background,
@@ -291,6 +301,8 @@ class StudioResults:
     def basis_path(self):
         if self.optional_finishing:
             return Path(self.optional_finishing["product_file"])
+        if self.active_head and not self.show_before_head:
+            return Path(self.active_head["product_file"])
         return self.original_basis_path
 
     @property
@@ -305,9 +317,43 @@ class StudioResults:
         return self.candidate.path
 
     @property
+    def active_head(self):
+        """화면에서는 고정한 제품 정보를 읽는다. 전체 모델 검사는 승인·저장 전에 수행한다."""
+        return self.head_records[self.selected] if self.auto_head else None
+
+    @property
+    def head_view(self):
+        return "before" if self.show_before_head or not self.active_head else "pasted"
+
+    @property
+    def head_notice(self):
+        if not self.auto_head:
+            return ""
+        item = self.auto_head["items"][self.selected]
+        if item["status"] != "completed":
+            return "머리 붙이기 건너뜀: " + item["reason"]
+        return ("붙이기 전 결과" if self.show_before_head else "원본 머리 붙이기 완료") + " · 테두리·작은 조각은 남을 수 있습니다."
+
+    def toggle_head_view(self):
+        """두 보기를 한 후보 안에서 바꾼다. 보기를 바꾸면 이전 승인은 해제한다."""
+        if not self.active_head:
+            return
+        self.show_before_head = not self.show_before_head
+        self.select(self.selected)
+
+    def reject_and_next(self):
+        """현재 보기의 미승인을 기록하고 같은 보기 방식으로 다음 후보로 이동한다."""
+        self.rejections.append(dict(selected=self.selected, seed=self.candidate.seed,
+            head_view=self.head_view, status="not_approved", sha256=self.verify_current()))
+        self.select((self.selected + 1) % len(self.batch.candidates))
+        return self.selected
+
+    @property
     def head_paste_unavailable_reason(self):
         if not self.two_pass:
             return "원본 비율 참고로 만든 결과에서만 사용할 수 있습니다."
+        if self.auto_head:
+            return "머리는 생성 뒤 자동으로 처리됩니다."
         if self.tail_edit or self.optional_finishing:
             return "머리 붙이기는 꼬리 편집·마무리 전에 적용해 주세요."
         if self.selected >= len(self.product_records):
@@ -393,6 +439,12 @@ class StudioResults:
 
     def verify_basis(self):
         before_sha = self.verify_original_basis()
+        if self.active_head and not self.show_before_head:
+            from genai_lab.studio_head_paste import head_product_info
+            info = head_product_info(self.active_head["directory"], self.verify_original())
+            if info != self.active_head or info["before_sha256"] != before_sha:
+                raise ValueError("자동 머리 붙이기의 기준 결과가 다릅니다.")
+            before_sha = info["product_sha256"]
         if self.optional_finishing:
             from genai_lab.studio_optional_finishing import finishing_info
             info = finishing_info(self.optional_finishing["directory"], self.verify_original(), before_sha)
@@ -484,10 +536,15 @@ class StudioResults:
         if hashlib.sha256(data).hexdigest() != self.approved_sha:
             raise ValueError("확인한 이미지가 변경됐습니다.")
         metadata = {"source_run": str(self.candidate.record_path), "sha256": self.approved_sha,
+                    "head_view": self.head_view,
                     "approval_record": str(self.batch.directory / "user-review.json"),
                     "reviewer": "user", "automatic_gates_executed": False}
         if self.two_pass and self.product_records[self.selected].get("head_paste"):
             metadata["head_paste"] = self.product_records[self.selected]["head_paste"]
+        if self.active_head and not self.show_before_head:
+            metadata["head_paste"] = self.active_head
+        if self.auto_head:
+            metadata["auto_head_status"] = self.auto_head["items"][self.selected]
         metadata["identity_report"] = self.identity_report_record
         metadata["raw_sha256"] = self.verify_original()
         metadata["proportion_mode"] = "two_pass" if self.two_pass else "off"

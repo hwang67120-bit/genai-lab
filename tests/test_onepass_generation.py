@@ -499,7 +499,7 @@ def test_local_only_loading_flags_and_fp16(monkeypatch, settings, pipeline_type)
         CLIPVisionModelWithProjection=LocalEncoder
     ))
     monkeypatch.setitem(sys.modules, "torch", SimpleNamespace(
-        cuda=SimpleNamespace(is_available=lambda: True), float16="mock-fp16", __version__="mock"
+        cuda=SimpleNamespace(is_available=lambda: True, is_initialized=lambda: False), float16="mock-fp16", __version__="mock"
     ))
     loaded = generation.DiffusersOnePassBackend(settings)
     assert loaded.pipe.scale_sets == [0.0]

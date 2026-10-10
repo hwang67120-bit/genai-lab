@@ -426,3 +426,77 @@ def test_result_dialog_requires_appendage_check_only_when_present(tmp_path, monk
     monkeypatch.setattr(QDialog, "exec", inspect)
     checks = ui.confirm_result(None, SimpleNamespace(path=Path(a["source"])), a)
     assert ("appendages" in checks) == has_tail
+
+
+@pytest.mark.parametrize("proportion", [False, True])
+def test_gui_generation_cancel_discards_partial_outputs_after_cleanup(tmp_path, monkeypatch, proportion):
+    import threading
+    from genai_lab.generation_cleanup import CancelledGeneration
+    app = QApplication.instance() or QApplication([])
+    window = GenAILabWindow()
+    controller = window.studio
+    controller.run_directory = tmp_path / "run"
+    controller.run_directory.mkdir()
+    controller.analysis = {}
+    controller.runtime = service.StudioRuntime()
+    original = tmp_path / "original.png"
+    original.write_bytes(b"input original")
+    saved = tmp_path / "previous.png"
+    saved.write_bytes(b"saved result")
+    started, cleaning, release = threading.Event(), threading.Event(), threading.Event()
+    monkeypatch.setattr(ui, "build_request", lambda *a, **kw: SimpleNamespace())
+    def generate(request, directory, **kwargs):
+        directory.mkdir()
+        kwargs["on_directory_created"](directory)
+        (directory / "raw.png").write_bytes(b"cancelled output")
+        started.set()
+        while not kwargs["cancelled"](): threading.Event().wait(.005)
+        raise engine.OnePassCancelled("partial generation cancelled")
+    real_cleanup = CancelledGeneration.cleanup
+    def cleanup(job):
+        cleaning.set()
+        assert release.wait(5)
+        return real_cleanup(job)
+    monkeypatch.setattr(ui, "generate_onepass_request", generate)
+    monkeypatch.setattr(CancelledGeneration, "cleanup", cleanup)
+    try:
+        controller.begin_generation(("male", [], None), options=object() if proportion else None)
+        wait_for(app, started.is_set)
+        window.studio_cancel_button.click()
+        wait_for(app, cleaning.is_set)
+        assert controller.task is not None and window.worker_thread is controller.task
+        assert not window.generate_button.isEnabled() and not window.save_candidate_button.isEnabled()
+        release.set()
+        wait_for(app, lambda: controller.task is None)
+        assert controller.results is None and not (controller.run_directory / "generation").exists()
+        assert original.read_bytes() == b"input original" and saved.read_bytes() == b"saved result"
+        state = json.loads((controller.run_directory / "gui-status.json").read_text(encoding="utf-8"))
+        assert state["status"] == "cancelled" and state["cleanup"]["outputs_removed"]
+        assert "정리 완료" in window.status_label.text()
+        assert not controller.cleanup_blocked
+    finally:
+        release.set()
+        if controller.task is not None: controller.task.stop.set(); controller.task.wait(5000)
+        window.close()
+
+
+def test_gui_cleanup_failure_blocks_new_generation(tmp_path, monkeypatch):
+    from genai_lab.generation_cleanup import GenerationCleanupError
+    app = QApplication.instance() or QApplication([])
+    window = GenAILabWindow()
+    controller = window.studio
+    controller.run_directory = tmp_path
+    monkeypatch.setattr(QMessageBox, "exec", lambda *a: 0)
+    def action(cancel, progress): raise engine.OnePassCancelled("cancel")
+    def cleanup(): raise GenerationCleanupError("remaining GPU memory")
+    try:
+        controller.launch(action, lambda result: pytest.fail("cancelled result"), on_cancel=cleanup)
+        wait_for(app, lambda: controller.task is None)
+        assert controller.cleanup_blocked and controller.occupied
+        assert not window.generate_button.isEnabled()
+        assert not window.style_button.isEnabled()
+        with pytest.raises(RuntimeError): controller.launch(action, lambda _: None)
+        state = json.loads((tmp_path / "gui-status.json").read_text(encoding="utf-8"))
+        assert state["status"] == "cancel_cleanup_failed"
+        assert "앱을 다시 시작" in window.status_label.text()
+    finally: window.close()

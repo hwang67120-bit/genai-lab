@@ -185,7 +185,10 @@ def redraw_prepared(prepared, output, state, cancelled=lambda: False, progress=l
     settings, options = (prepared[0]['settings'], prepared[0]['options'])
     for p in prepared:
         require(p['settings'].model_root == settings.model_root and p['settings'].ip_root == settings.ip_root and (p['options'].sketch_root == options.sketch_root), '실행마다 모델이 다릅니다')
+    from genai_lab.generation_cleanup import release_cuda_cache
+    state["memory_before_backend"] = release_cuda_cache(torch)
     pipe = load_redraw_pipeline(settings, options)
+    state["pipeline_loads"] = 1
     initial, offload, adapter_hook = ({}, None, None)
     try:
         memory_snapshot(torch, pipe, output, 'models_loaded_cpu')
@@ -204,7 +207,21 @@ def redraw_prepared(prepared, output, state, cancelled=lambda: False, progress=l
             pipe.text_encoder_2.to('cpu')
             torch.cuda.empty_cache()
             for seed in p['rec']['seeds']:
-                redraw_candidate(pipe, p, seed, initial, embeds, output, state, offload, adapter_hook, cancelled, progress)
+                try:
+                    redraw_candidate(pipe, p, seed, initial, embeds, output, state, offload, adapter_hook, cancelled, progress)
+                except Exception as error:
+                    from genai_lab.onepass_generation import OnePassCancelled
+                    from genai_lab.generation_cleanup import detach_error_frames
+                    if (not state.get('isolate_failures') or isinstance(error, OnePassCancelled)
+                            or state.get('cleanup_errors') or '메모리 한도' in str(error)):
+                        raise
+                    memory_guard(torch)
+                    if isinstance(error, torch.cuda.OutOfMemoryError):
+                        raise
+                    state.setdefault('candidate_errors', {})[str(seed)] = str(error)
+                    detach_error_frames(error)
+                    gc.collect()
+                    torch.cuda.empty_cache()
     finally:
         errors = state.setdefault('final_cleanup_errors', [])
         cleanup([('offload.close', lambda: offload is not None and offload.close()), ('adapter_hook.offload', lambda: adapter_hook is not None and adapter_hook.offload()), ('adapter_hook.remove', lambda: adapter_hook is not None and adapter_hook.remove()), ('models_released_snapshot', lambda: memory_snapshot(torch, pipe, output, 'models_released'))], errors)

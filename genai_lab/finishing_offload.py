@@ -1,6 +1,7 @@
 """기능을 켠 경우에만 블록별 오프로드를 사용하고 UNet 외 모델의 훅도 명시적으로 관리한다."""
 import time
 from genai_lab.proportion_inputs import require
+from genai_lab.generation_cleanup import GenerationCleanupError, cleanup_steps
 
 
 def group_inventory(unet):
@@ -75,17 +76,17 @@ class FinishingOffload:
         return observe
 
     def close(self):
-        try:
-            self.release()
-        finally:
-            for hook in self.observer_hooks:
-                hook.remove()
-            for hook in self.model_hooks:
-                hook.remove()
-            self.observer_hooks.clear()
-            self.model_hooks.clear()
-            self.groups.clear()
-            self.pipe = None
+        steps = [("마무리 모델 내리기", hook.offload) for hook in self.model_hooks]
+        steps.extend(("마무리 블록 내리기", group.offload_) for group, _, _ in self.groups)
+        steps.extend(("마무리 관측 훅", hook.remove) for hook in self.observer_hooks)
+        steps.extend(("마무리 모델 훅", hook.remove) for hook in self.model_hooks)
+        self.observer_hooks.clear()
+        self.model_hooks.clear()
+        self.groups.clear()
+        self.pipe = None
+        errors = cleanup_steps(steps)
+        if errors:
+            raise GenerationCleanupError("마무리 오프로드 정리 실패: " + "; ".join(errors))
 
 
 def configure_offload(pipe, torch, record, *, device="cuda:0"):

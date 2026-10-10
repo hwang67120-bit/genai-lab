@@ -8,6 +8,7 @@ from genai_lab.onepass_generation_settings import scheduler_config
 from genai_lab.finishing_reference import IP_SCALE, observe_face_reference
 from genai_lab.finishing_memory import prepare_face_cache, unet_attention
 from genai_lab.finishing_offload import configure_offload
+from genai_lab.generation_cleanup import GenerationCleanupError, cleanup_steps, release_cuda_cache
 
 
 class FinishingBackend:
@@ -27,6 +28,7 @@ class FinishingBackend:
         try:
             if not torch.cuda.is_available():
                 raise OnePassGenerationError("CUDA 장치가 없습니다.")
+            self.start_memory = release_cuda_cache(torch)
             extra = {}
             if face_reference:
                 from transformers import CLIPVisionModelWithProjection
@@ -116,7 +118,7 @@ class FinishingBackend:
         started = time.perf_counter()
         face_cache, face_hook = None, None
         ip_calls = []
-        self.last_refine = {}
+        self.last_refine = {"memory_before_backend": getattr(self, "start_memory", None)}
         offload = getattr(self,"offload",None)
         metrics = {}
         if offload is not None:
@@ -182,13 +184,12 @@ class FinishingBackend:
                     metrics.update(release_metrics)
 
     def close(self):
-        offload = getattr(self,"offload",None)
-        if offload is not None:
-            offload.close()
-            self.offload = None
-        cache = getattr(self, "face_cache", None)
-        if cache is not None:
-            cache.close()
-            self.face_cache = None
+        offload, self.offload = getattr(self, "offload", None), None
+        cache, self.face_cache = getattr(self, "face_cache", None), None
         self.embeds = None
-        DiffusersOnePassBackend.close(self)
+        errors = cleanup_steps([(name, owner.close) for name, owner in
+                                (("마무리 훅", offload), ("얼굴 참조 캐시", cache)) if owner is not None])
+        del offload, cache
+        errors.extend(cleanup_steps((("마무리 모델", lambda: DiffusersOnePassBackend.close(self)),)))
+        if errors:
+            raise GenerationCleanupError("마무리 모델 정리 실패: " + "; ".join(errors))

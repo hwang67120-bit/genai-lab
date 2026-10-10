@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QCheck
 from genai_lab.studio_generation import (StudioRuntime, StudioResults, analyze_inputs,
     build_request, generate_onepass_request, record)
 from genai_lab.onepass_generation import OnePassCancelled, validate_local_models
+from genai_lab.generation_cleanup import CancelledGeneration, GenerationCleanupError, detach_error_frames, release_cuda_cache
 from genai_lab.studio_background import prepare_backgrounds
 from genai_lab.studio_optional_finishing import finish_selected
 from genai_lab.studio_finishing_gui import choose_finished, NOTICE as FINISHING_NOTICE
@@ -38,6 +39,8 @@ class StudioController(QObject):
         super().__init__(window)
         self.window = window
         self.task = None
+        self.cleanup_blocked = False
+        self.last_cleanup_report = None
         self.analysis = None
         self.results = None
         self.runtime = None
@@ -60,6 +63,7 @@ class StudioController(QObject):
         window.tail_edit_button.clicked.connect(self.edit_tail)
         window.studio_finish_button.clicked.connect(self.finish_selected_image)
         window.studio_raw_button.clicked.connect(lambda: self.original(raw=True))
+        window.studio_before_head_button.clicked.connect(self.toggle_before_head)
         from genai_lab.studio_identity_report import IdentityReportController
         self.identity_report_controller = IdentityReportController(self)
         from genai_lab.studio_head_paste_gui import HeadPasteController
@@ -67,7 +71,7 @@ class StudioController(QObject):
 
     @property
     def occupied(self):
-        return self.task is not None or self.confirming or self.results is not None
+        return self.task is not None or self.confirming or self.results is not None or self.cleanup_blocked
 
     # 1. 입력 준비: CPU 분석 완료 후 inputs_ready로 이어진다.
 
@@ -84,6 +88,7 @@ class StudioController(QObject):
             self.shoulder_enabled = self.proportion_enabled and w.studio_shoulder_checkbox.isChecked()
             self.proportion_pending = None
             self.prepared_proportion_pose = None
+            self.head_paste_controller.generation_context = None
             validate_local_models(self.runtime.generation)
             w.candidate_preview.clear()
             w.candidate_preview.setText("선택한 캐릭터와 옷을 준비하고 있습니다.")
@@ -158,7 +163,7 @@ class StudioController(QObject):
                 from genai_lab.proportion_inputs import sha
                 path = Path(draft["head"]["contour_file"]).parent / "shoulder/shoulder.json"
                 options = replace(options, shoulder_pull="0.85", shoulder_record_file=path, shoulder_record_sha256=sha(path))
-            self.begin_generation(self.proportion_pending, pose=pose, options=options)
+            self.head_paste_controller.prepare_generation(self.proportion_pending, pose, options)
         else:
             self.cancel_proportion_setup()
 
@@ -178,6 +183,7 @@ class StudioController(QObject):
                                 appearance=appearance, **kwargs)
         self.window.status_label.setText("상태: 2단계 비율 생성 중 · 먼저 1단계 4장을 만듭니다." if options
                                          else "상태: 이미지 만드는 중 · 0/4")
+        cancellation = CancelledGeneration(self.run_directory)
         def generate(cancel, progress):
             count = [0]
             def on_image(candidate):
@@ -186,17 +192,18 @@ class StudioController(QObject):
                 count[0] += 1
                 progress(f"상태: {'2단계 결과 준비' if options else '이미지 만드는 중'} · {count[0]}/4 · 아직 결과 확인 전")
             generation_options = {"proportion": options} if options is not None else {}
-            batch = generate_onepass_request(request, self.run_directory / "generation",
-                                             cancelled=cancel, on_image=on_image, **generation_options)
+            batch = generate_onepass_request(request, cancellation.directory,
+                                             cancelled=cancel, on_image=on_image,
+                                             on_directory_created=cancellation.claim, **generation_options)
             if options is not None:
-                return batch  # ProportionBatch에는 최종 흰 배경 제품이 이미 포함돼 있다.
+                return self.head_paste_controller.apply_automatically(batch, cancel, progress)
             if self.runtime.finishing:
                 from genai_lab.studio_finishing import finish_batch
                 finish_batch(batch, request.inputs.prompt, replace(self.runtime, finishing_face_reference=True), cancelled=cancel, progress=progress)
                 return prepare_backgrounds(batch, self.runtime.model_cache, cancelled=cancel, progress=progress, finishing=True)
             # CPU 외곽 모델을 로드하기 전에 생성 실행기를 닫는다.
             return prepare_backgrounds(batch, self.runtime.model_cache, cancelled=cancel, progress=progress)
-        self.launch(generate, self.generated)
+        self.launch(generate, self.generated, on_cancel=cancellation.cleanup)
 
     # 3. 생성 완료: 원시 결과를 검토 대기로 표시한다. 아직 승인·저장 상태가 아니다.
 
@@ -210,7 +217,7 @@ class StudioController(QObject):
             combo.addItem(f"결과 {i+1}")
         combo.blockSignals(False)
         self.select(0)
-        self.window.status_label.setText("상태: 결과 4장 준비됨 · 마음에 드는 결과를 골라 확인해 주세요.")
+        self.window.status_label.setText("상태: 결과 4장 준비됨 · 마음에 드는 결과를 골라 확인해 주세요. " + self.results.head_notice)
         self.controls()
 
     # 4. 결과 선택: 후보를 바꾸면 기존 승인은 해제된다.
@@ -220,7 +227,7 @@ class StudioController(QObject):
             return
         self.results.select(index)
         self.window.candidate_preview.setPixmap(QPixmap(str(self.results.current_path)))
-        self.window.status_label.setText(f"상태: 결과 {index+1} 확인 전 · 다른 결과와 비교할 수 있습니다.")
+        self.window.status_label.setText(f"상태: 결과 {index+1} 확인 전 · 다른 결과와 비교할 수 있습니다. " + self.results.head_notice)
         self.controls()
 
     # 5. 사용자 승인: 캐릭터·의상·노출 확인을 저장한다.
@@ -257,9 +264,21 @@ class StudioController(QObject):
 
     def reject(self):
         if self.results is not None:
-            self.results.select(self.results.selected)
+            index = self.results.reject_and_next()
+            combo = self.window.studio_candidate_combo
+            combo.blockSignals(True)
+            combo.setCurrentIndex(index)
+            combo.blockSignals(False)
             self.window.candidate_preview.setPixmap(QPixmap(str(self.results.current_path)))
-            self.window.status_label.setText("상태: 이 결과를 승인하지 않았습니다. 다른 결과를 선택하거나 다시 만드세요.")
+            self.window.status_label.setText(f"상태: 이전 결과 승인 안 함 · 결과 {index+1}을 표시합니다. " + self.results.head_notice)
+        self.controls()
+
+    def toggle_before_head(self):
+        if self.results is None or self.task is not None or self.confirming:
+            return
+        self.results.toggle_head_view()
+        self.window.candidate_preview.setPixmap(QPixmap(str(self.results.current_path)))
+        self.window.status_label.setText("상태: " + self.results.head_notice + " · 저장 전 다시 확인해 주세요.")
         self.controls()
 
     def discard(self):
@@ -273,8 +292,7 @@ class StudioController(QObject):
         self.controls()
 
     def cancel(self):
-        if self.task:
-            self.task.stop.set()
+        if self.task and self.task.request_cancel():
             self.window.status_label.setText("상태: 취소 중 · 현재 단계를 안전하게 마칠 때까지 기다려 주세요.")
 
     def original(self, *, raw=False):
@@ -532,6 +550,9 @@ class StudioController(QObject):
         w.open_original_size_button.setEnabled(ready)
         w.studio_raw_button.setEnabled(ready)
         w.studio_raw_button.setVisible(self.results is not None)
+        w.studio_before_head_button.setVisible(bool(self.results and self.results.auto_head))
+        w.studio_before_head_button.setEnabled(ready and bool(self.results.active_head))
+        w.studio_before_head_button.setText("붙인 결과 보기" if self.results and self.results.show_before_head else "붙이기 전 보기")
         w.studio_background_notice.setVisible(self.results is not None)
         if self.results is not None:
             w.studio_background_notice.setText(self.results.background_notice)
@@ -547,10 +568,10 @@ class StudioController(QObject):
         self.head_paste_controller.refresh(ready)
         self.identity_report_controller.refresh()
 
-    def launch(self, action, complete, *, on_error=None):
-        if self.task is not None:
-            raise RuntimeError("이미 실행 중입니다.")
-        task = StudioTask(action, self.window)
+    def launch(self, action, complete, *, on_error=None, on_cancel=None):
+        if self.task is not None or self.cleanup_blocked:
+            raise RuntimeError("실행 중이거나 GPU 정리를 마치지 못했습니다.")
+        task = StudioTask(action, self.window, on_cancel=on_cancel)
         self.task = task
         # 기존 앱 종료·GPU 동시 사용 방지 검사에도 이 작업을 포함한다.
         self.window.worker_thread = task
@@ -567,11 +588,14 @@ class StudioController(QObject):
         task = self.task
         complete = self.pending_action
         failed = self.pending_error or self.fail
+        self.last_cleanup_report = task.cleanup_report
         self.task = None
         self.window.worker_thread = None
         self.pending_action = None
         self.pending_error = None
         try:
+            if self.run_directory and task.end_memory is not None:
+                record(self.run_directory / "task-memory.json", task.end_memory)
             if task.error:
                 failed(task.error, task.detail)
             else:
@@ -579,19 +603,24 @@ class StudioController(QObject):
         except Exception as error:
             failed(error, traceback.format_exc())
         finally:
+            task.result = None
             task.deleteLater()
             self.controls()
 
     def fail(self, error, details=""):
         cancelled = isinstance(error, OnePassCancelled)
-        self.results = None  # 부분 생성 원본은 디스크에 보존하지만 완성 묶음으로 제시하지 않는다.
+        self.cleanup_blocked = self.cleanup_blocked or isinstance(error, GenerationCleanupError)
+        self.results = None  # 취소한 생성 결과는 폐기하며 완성 후보로 제시하지 않는다.
         self.window.candidate_preview.clear()
         self.window.candidate_preview.setText("취소되었습니다." if cancelled else "완성된 결과가 없습니다.")
-        self.window.status_label.setText("상태: 취소됨" if cancelled else "상태: 생성하지 못했습니다. 입력과 실행 정보를 확인해 주세요.")
+        message = "상태: 취소됨 · 생성 결과와 GPU 자원 정리 완료" if cancelled and self.last_cleanup_report else "상태: 취소됨"
+        if not cancelled:
+            message = "상태: 정리 실패 · 앱을 다시 시작해 주세요." if self.cleanup_blocked else "상태: 생성하지 못했습니다. 입력과 실행 정보를 확인해 주세요."
+        self.window.status_label.setText(message)
         if self.run_directory:
             self.run_directory.mkdir(parents=True, exist_ok=True)
-            record(self.run_directory / "gui-status.json", {"status": "cancelled" if cancelled else "failed",
-                   "error": str(error), "detail": details})
+            record(self.run_directory / "gui-status.json", {"status": "cancel_cleanup_failed" if self.cleanup_blocked else "cancelled" if cancelled else "failed",
+                   "error": str(error), "detail": details, "cleanup": self.last_cleanup_report})
         if not cancelled:
             box = QMessageBox(self.window)
             box.setWindowTitle("작업을 마치지 못했습니다")
@@ -604,10 +633,15 @@ class StudioController(QObject):
 class StudioTask(QThread):
     progress = Signal(str)
 
-    def __init__(self, action, parent):
+    def __init__(self, action, parent, *, on_cancel=None):
         super().__init__(parent)
         self.action = action
+        self.on_cancel = on_cancel
+        self.cleanup_report = None
+        self.end_memory = None
         self.stop = threading.Event()
+        self.cancel_lock = threading.Lock()
+        self.accepting_cancel = True
         self.result = None
         self.error = None
         self.detail = ""
@@ -620,6 +654,49 @@ class StudioTask(QThread):
         except Exception as error:
             self.error = error
             self.detail = traceback.format_exc()
+            detach_error_frames(error)
+        finally:
+            self.action = None  # 완료된 작업의 클로저에 모델·중간 결과가 남지 않게 한다.
+        with self.cancel_lock:
+            self.accepting_cancel = False
+            cancelled = isinstance(self.error, OnePassCancelled) or self.stop.is_set()
+        if cancelled:
+            self.discard_cancelled_result()
+        self.on_cancel = None
+        # 종료 신호 전에 정리해 완료 콜백에서 시작할 다음 GPU 작업과 겹치지 않는다.
+        try:
+            import sys
+            self.end_memory = release_cuda_cache(sys.modules.get("torch"))
+        except Exception as error:
+            self.error = GenerationCleanupError("작업 종료 GPU 정리 실패: " + str(error))
+            detach_error_frames(error)
+            self.result = None
+
+    def request_cancel(self):
+        """완료 판정과 같은 잠금으로 취소를 받는다. 이미 완료된 작업에는 취소를 표시하지 않는다."""
+        with self.cancel_lock:
+            if not self.accepting_cancel:
+                return False
+            self.stop.set()
+            return True
+
+    def discard_cancelled_result(self):
+        """작업과 참조를 해제한 뒤 결과를 폐기한다. 정리 실패는 정상 취소로 바꾸지 않는다."""
+        self.result = None
+        if self.on_cancel is None:
+            return
+        self.progress.emit("상태: 취소 정리 중 · GPU 자원과 생성 결과를 폐기합니다.")
+        try:
+            self.cleanup_report = self.on_cancel()
+        except Exception as error:
+            self.error = error
+            self.detail += "\n취소 정리 오류:\n" + traceback.format_exc()
+            detach_error_frames(error)
+            return
+        if isinstance(self.error, GenerationCleanupError):
+            self.cleanup_report["status"] = "cancel_cleanup_failed"
+        else:
+            self.error = OnePassCancelled("생성을 취소하고 결과와 GPU 자원을 정리했습니다.")
 
 # 확인창의 배치 세부사항: 주 흐름에서는 confirm_inputs / confirm_result만 읽으면 된다.
 

@@ -248,7 +248,7 @@ def test_controller_runs_finishing_only_between_single_pass_release_and_backgrou
     monkeypatch.setattr(ui,"generate_onepass_request",generate)
     monkeypatch.setattr(finish,"finish_batch",finishing_call)
     monkeypatch.setattr(ui,"prepare_backgrounds",background)
-    def launch(work,done):assert work(lambda:False,lambda _:None) is batch
+    def launch(work,done,**kwargs):assert work(lambda:False,lambda _:None) is batch
     monkeypatch.setattr(controller,"launch",launch)
     try:
         controller.begin_generation(("male",[],None),options=object() if proportion else None)

@@ -2,6 +2,9 @@
 원래 실행 폴더는 읽기만 한다. --gpu가 없으면 입력 계약(후보·머리 영역 확인·경로 선택)만 검사한다."""
 import argparse
 import shutil
+import time
+import traceback
+import uuid
 from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -69,6 +72,24 @@ def head_sheet(results, report, box, path):
     Image.fromarray(np.concatenate(rows, 0)).save(path)
 
 
+def probe_write(directory, attempts=3, wait=2.0):
+    """작업 프로세스와 같은 방식(새 폴더 + 파일)으로 쓰기를 먼저 확인한다. 모델은 아직 올리지 않는다."""
+    errors = []
+    for attempt in range(1, attempts + 1):
+        probe = directory / "auto-head-pastes" / ("write-probe-" + uuid.uuid4().hex)
+        try:
+            probe.mkdir(parents=True, exist_ok=False)
+            (probe / "probe.txt").write_text("ok", encoding="utf-8")
+            (probe / "probe.txt").unlink()
+            probe.rmdir()
+            return dict(status="ok", attempts=attempt, errors=errors, path=str(directory / "auto-head-pastes"))
+        except OSError as error:
+            errors.append(dict(attempt=attempt, type=type(error).__name__, winerror=getattr(error, "winerror", None),
+                               message=str(error), path=str(probe)))
+            time.sleep(wait)
+    return dict(status="failed", attempts=attempts, errors=errors, path=str(directory / "auto-head-pastes"))
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--run", type=Path, required=True, help="완료된 원본 비율 참고 실행 폴더(studio-runs/…)")
@@ -77,6 +98,18 @@ def main():
     parser.add_argument("--gpu", action="store_true", help="명시적 GPU 실행 승인. 없으면 입력 계약만 검사")
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=False)
+    summary = dict(status="started", run=str(args.run), preview=str(args.preview), gpu_executed=False)
+    try:
+        run(args, summary)
+    except BaseException as error:
+        # 작업 프로세스 밖 실패도 상태·호출 경로를 남긴다.
+        summary.update(status="failed", error_type=type(error).__name__, error=str(error),
+                       winerror=getattr(error, "winerror", None), traceback=traceback.format_exc())
+        write_json(args.output / "summary.json", summary)
+        raise
+
+
+def run(args, summary):
     copy = copy_run(args.run, args.output)
     batch = load_batch(copy / "generation")
     analysis = read(copy / "inputs/analysis.json")
@@ -89,15 +122,20 @@ def main():
     for index in range(len(batch.candidates)):
         results.select(index)
         verify_preview(preview, selected_request(results, StudioRuntime())["identity"])
-    summary = dict(run=str(args.run), preview=str(args.preview), rule=rule_name(profile), appearance=appearance,
-                   tag_skip_reason=reason, preview_skip_reason=skip, background=background,
-                   seeds=[c.seed for c in batch.candidates], gpu_executed=False)
+    summary.update(rule=rule_name(profile), appearance=appearance, tag_skip_reason=reason, preview_skip_reason=skip,
+                   background=background, seeds=[c.seed for c in batch.candidates],
+                   write_probe=probe_write(batch.directory))
     write_json(args.output / "summary.json", summary)
-    print("입력 계약 통과:", summary["rule"], "건너뛰기:", reason or skip or "없음", flush=True)
+    print("입력 계약 통과:", summary["rule"], "건너뛰기:", reason or skip or "없음",
+          "쓰기 확인:", summary["write_probe"]["status"], flush=True)
+    require(summary["write_probe"]["status"] == "ok", "작업 폴더를 만들 수 없어 모델을 시작하지 않았습니다: "
+            + summary["write_probe"]["path"])
     if not args.gpu or reason or skip:
+        summary["status"] = "contract_checked"
+        write_json(args.output / "summary.json", summary)
         return
     report = apply_head_batch(batch, preview, StudioRuntime(), progress=print)
-    summary.update(gpu_executed=True, items=[dict(seed=item["seed"], status=item["status"], reason=item.get("reason", ""),
+    summary.update(status="completed", gpu_executed=True, items=[dict(seed=item["seed"], status=item["status"], reason=item.get("reason", ""),
                    long_hair=read(Path(item["directory"]) / "result.json").get("long_hair")
                    if item["status"] == "completed" else None) for item in report["items"]],
                    worker=str(Path(report["items"][0]["directory"]).parent))

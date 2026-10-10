@@ -41,9 +41,10 @@ def test_beard_rule_only_with_facial_hair_tag():
     bare = prepare_original(original, hm, parts, H, paste_profile(["long_hair"]))
     bearded = prepare_original(original, hm, parts, H, paste_profile(["long_hair", "facial_hair"]))
     assert legacy["beard"].any() and bearded["beard"].any()
-    assert not bare["beard"].any()
+    # 두꺼운 옆머리는 붙인다. 열기 연산이 모서리 몇 px만 남길 수 있다.
+    assert bare["beard"].sum() < 0.01 * legacy["beard"].sum()
     # 수염으로 빠졌던 얼굴 옆 머리가 긴 머리 경로에서는 원본 머리로 붙는다.
-    assert bare["o_head"][legacy["beard"]].all()
+    assert bare["o_head"][legacy["beard"]].mean() > 0.99
 
 
 def test_colored_plain_background_is_not_pasted_as_hair():
@@ -167,3 +168,68 @@ def test_long_hair_summary_only_for_long_rule():
     assert long_hair_summary(dict(skin_dE=1.0)) is None
     summary = long_hair_summary(dict(rule="G3+H2+L1", shift_px=[3, 0], hair={}, figure={"hair_iou": 0.5}))
     assert summary["shift_px"] == [3, 0] and summary["figure"] == {"hair_iou": 0.5}
+
+
+def two_eye_parts(centers, size=(60, 80)):
+    parts = {name: np.zeros((1024, 1024), bool) for name in TAGS}
+    for cx, cy in centers:
+        h, w = size
+        parts["eyes"][cy - h // 2:cy + h // 2, cx - w // 2:cx + w // 2] = True
+    return parts
+
+
+def test_alignment_recovers_rotation_and_scale_from_two_eyes():
+    from genai_lab.head_paste_rules import align_long_hair
+    original = two_eye_parts([(400, 500), (600, 500)])
+    angle = np.radians(8)
+    mid = np.array([512.0, 520.0])
+    gen_centers = [tuple((mid + 1.05 * 100 * np.array([np.cos(angle), np.sin(angle)]) * sign).round().astype(int))
+                   for sign in (-1, 1)]
+    generated = two_eye_parts(gen_centers)
+    image = np.zeros((1024, 1024, 3), np.uint8)
+    H = np.zeros((1024, 1024), bool)
+    *_, alignment = align_long_hair(image, H.copy(), original, H, generated)
+    assert alignment["rotate_deg"] == pytest.approx(8, abs=0.6)
+    assert alignment["scale"] == pytest.approx(1.05, abs=0.02)
+
+
+def test_rotation_beyond_limit_skips():
+    from genai_lab.head_paste_rules import align_long_hair
+    original = two_eye_parts([(400, 500), (600, 500)])
+    generated = two_eye_parts([(420, 440), (590, 560)])  # 약 35도
+    H = np.zeros((1024, 1024), bool)
+    with pytest.raises(ValueError, match="기울기"):
+        align_long_hair(np.zeros((1024, 1024, 3), np.uint8), H.copy(), original, H, generated)
+
+
+def test_bangs_may_cover_part_of_generated_eye_but_not_most():
+    from genai_lab.head_paste_rules import uncover_eyes
+    feat = np.zeros((1024, 1024), bool)
+    feat[400:460, 250:330] = True   # 왼쪽 눈 4800px
+    feat[400:460, 650:730] = True   # 오른쪽 눈
+    feat[520:530, 480:540] = True   # 입: 대상 아님
+    H = np.zeros((1024, 1024), bool)
+    H[380:415, 200:800] = True      # 두 눈 위 25% 덮음
+    H[380:460, 650:700] = True      # 오른쪽 눈은 더 덮어 한도 초과
+    keep, ratios = uncover_eyes(feat, H)
+    assert ratios[0] == pytest.approx(0.25) and ratios[1] > 0.5
+    assert not keep[400:415, 250:330].any() and keep[415:460, 250:330].all()
+    assert keep[400:460, 650:730].all() and keep[520:530, 480:540].all()
+
+
+def test_thin_or_unlike_jaw_line_is_not_pasted_as_long_hair():
+    original, hm, parts, H, *_ = scene()
+    parts["hair"][460:] = False
+    H[460:] = False
+    original[hm & ~H] = (200, 160, 130)
+    jaw = np.zeros((1024, 1024), bool); jaw[590:594, 320:680] = True       # 얇은 턱선
+    blob = np.zeros((1024, 1024), bool); blob[560:580, 330:360] = True     # 두껍지만 빨간 덩어리
+    side = np.zeros((1024, 1024), bool); side[470:600, 300:330] = True     # 머리색 옆머리
+    for mask, color in ((jaw, (60, 90, 130)), (blob, (200, 40, 40)), (side, (50, 90, 130))):
+        original[mask] = color
+        H |= mask
+    parts["face"][300:600, 300:700] = True
+    prepared = prepare_original(original, hm, parts, H, paste_profile(["long_hair"]))
+    assert prepared["o_head"][jaw].mean() < 0.2
+    assert not prepared["o_head"][blob].any()
+    assert prepared["o_head"][side].mean() > 0.9

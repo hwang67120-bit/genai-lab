@@ -9,6 +9,10 @@ DE_LIMIT = 15.0
 # 긴 머리 경로(L1). 짧은 머리는 검증된 G3+H2 그대로 둔다. 아래 값은 GPU 측정 뒤 잠근다.
 FACIAL_HAIR = frozenset({'facial hair', 'beard', 'mustache', 'goatee', 'stubble'})
 SHIFT_LIMIT = 0.08
+ROTATE_LIMIT = 15.0
+SCALE_RANGE = (0.85, 1.15)
+EYE_COVER_LIMIT = 0.5
+HAIR_COLOR_DE = 25.0
 BG_NEAR_DE = 10.0
 BG_PLAIN_MIN = 0.6
 
@@ -149,7 +153,10 @@ def prepare_original(orig, hm, parts, H, profile=None):
     feat_o_all = po['eyes'] | po['nose'] | po['mouth']
     feat_o_keep, _, _, o_ball_bottom = split_features(feat_o_all)
     body = po['face'] | po['neck'] | po['neckwear'] | po['topwear'] | po['handwear'] | po['bottomwear']
-    o_head = ((po['hair'] | po['headwear'] | po['ears'] | po['earwear']) & dil(hm, 9) | hm & ~body & ~near_bg) & ~pad
+    loose = hm & ~body & ~near_bg
+    if profile:
+        loose[o_ball_bottom:] = False  # 원본 턱·목 외곽선이 생성 목 위에 붙지 않게 한다.
+    o_head = ((po['hair'] | po['headwear'] | po['ears'] | po['earwear']) & dil(hm, 9) | loose) & ~pad
     hull = np.zeros((N, N), np.uint8)
     pts = cv2.findNonZero(po['face'].astype(np.uint8))
     if pts is not None:
@@ -157,7 +164,21 @@ def prepare_original(orig, hm, parts, H, profile=None):
     beard = po['hair'] & (hull > 0)
     beard[:o_ball_bottom] = False
     if profile and not profile['facial_hair']:
-        beard[:] = False  # 수염 태그가 없으면 얼굴 옆 긴 머리를 수염으로 보지 않는다.
+        # 수염 태그가 없으면 얼굴 옆 긴 머리는 붙인다. 머리로 분류된 턱 외곽선만 뺀다:
+        # 폭 7px 미만의 얇은 선이거나, 눈 위 머리의 대표색 4개 중 어느 것과도 Lab ΔE 25 이상 다른 픽셀.
+        thick = cv2.morphologyEx(beard.astype(np.uint8), cv2.MORPH_OPEN, k(3)) > 0
+        above_hair = po['hair'].copy()
+        above_hair[o_ball_bottom:] = False
+        unlike = np.zeros_like(beard)
+        if above_hair.any() and beard.any():
+            from sklearn.cluster import KMeans
+            lo_all = lab(orig)
+            source = lo_all[above_hair]
+            sample = source[np.random.default_rng(0).choice(len(source), min(20000, len(source)), replace=False)]
+            centers = KMeans(n_clusters=min(4, len(sample)), n_init=4, random_state=0).fit(sample).cluster_centers_
+            near = np.linalg.norm(lo_all[beard][:, None] - centers[None], axis=2).min(1)
+            unlike[beard] = near >= HAIR_COLOR_DE
+        beard &= ~thick | unlike
     o_head &= ~beard
     o_skin = po['face'] & fg_o
     o_bg = ~fg_o
@@ -210,22 +231,72 @@ def eye_anchor(features):
     x1 = max(st[i, 0] + st[i, 2] for i in balls)
     return (x0 + x1) / 2, max(st[i, 1] + st[i, 3] for i in balls)
 
-def shift_head(orig, hm, parts, H, dx, dy):
-    """원본 머리 재료를 정수 픽셀만큼 옮긴다. 들어오는 가장자리 마스크는 비운다."""
-    matrix = np.float32([[1, 0, dx], [0, 1, dy]])
+def warp_head(orig, hm, parts, H, matrix):
+    """원본 머리 재료를 같은 2×3 행렬로 옮긴다. 들어오는 가장자리 마스크는 비운다."""
+    matrix = np.float32(matrix)
+    plain = np.allclose(matrix[:, :2], np.eye(2))
     def move(mask):
         return cv2.warpAffine(mask.astype(np.uint8), matrix, (N, N), flags=cv2.INTER_NEAREST, borderValue=0) > 0
-    moved = cv2.warpAffine(orig, matrix, (N, N), flags=cv2.INTER_NEAREST, borderMode=cv2.BORDER_REPLICATE)
+    moved = cv2.warpAffine(orig, matrix, (N, N), flags=cv2.INTER_NEAREST if plain else cv2.INTER_LINEAR,
+                           borderMode=cv2.BORDER_REPLICATE)
     return moved, move(hm), {name: move(mask) for name, mask in parts.items()}, move(H)
 
+def shift_head(orig, hm, parts, H, dx, dy):
+    """원본 머리 재료를 정수 픽셀만큼 옮긴다."""
+    return warp_head(orig, hm, parts, H, [[1, 0, dx], [0, 1, dy]])
+
+def eye_points(features):
+    """가장 큰 눈알 덩어리 두 개의 무게중심, 왼쪽부터. 둘이 아니면 None.
+    아래끝은 눈 밑 그림자·볼 표시에 따라 흔들려서 기울기·크기는 무게중심으로 잰다."""
+    n, labels, st, cen = cv2.connectedComponentsWithStats(features.astype(np.uint8), 8)
+    balls = sorted((i for i in range(1, n) if st[i, cv2.CC_STAT_AREA] >= 3000), key=lambda i: -st[i, cv2.CC_STAT_AREA])[:2]
+    if len(balls) != 2:
+        return None
+    return sorted((float(cen[i][0]), float(cen[i][1])) for i in balls)
+
 def align_long_hair(orig, hm, parts, H, pg):
-    """원본 눈 위치를 생성 눈 위치에 맞춘다. 차이가 크면 붙이지 않는다."""
-    ox, oy = eye_anchor(parts['eyes'] | parts['nose'] | parts['mouth'])
-    gx, gy = eye_anchor(pg['eyes'] | pg['nose'] | pg['mouth'])
-    dx, dy = int(round(gx - ox)), int(round(gy - oy))
+    """원본 두 눈을 생성 두 눈에 맞춘다: 기울기·크기는 눈 무게중심, 이동은 눈 묶음 기준점.
+    눈이 하나면 이동만 한다. 범위를 넘으면 추측하지 않고 붙이지 않는다."""
+    o_pts = eye_points(parts['eyes'] | parts['nose'] | parts['mouth'])
+    g_pts = eye_points(pg['eyes'] | pg['nose'] | pg['mouth'])
+    o_anchor = np.float32(eye_anchor(parts['eyes'] | parts['nose'] | parts['mouth']))
+    g_anchor = np.float32(eye_anchor(pg['eyes'] | pg['nose'] | pg['mouth']))
+    if o_pts and g_pts:
+        (o1, o2), (g1, g2) = np.float32(o_pts), np.float32(g_pts)
+        # 회전·크기 중심은 두 눈 가운데다.
+        o_mid = (o1 + o2) / 2
+        angle = float(np.degrees(np.arctan2(*(g2 - g1)[::-1]) - np.arctan2(*(o2 - o1)[::-1])))
+        scale = float(np.linalg.norm(g2 - g1) / max(1e-6, np.linalg.norm(o2 - o1)))
+    else:
+        o_mid = o_anchor
+        angle, scale = 0.0, 1.0
+    matrix = cv2.getRotationMatrix2D((float(o_mid[0]), float(o_mid[1])), -angle, scale)
+    # cv2 각도는 화면 기준 반시계 방향이 양수라 이미지 좌표 각도의 부호를 바꾼다.
+    moved_anchor = matrix[:, :2] @ o_anchor + matrix[:, 2]
+    matrix[:, 2] += g_anchor - moved_anchor
+    dx, dy = (g_anchor - o_anchor).round().astype(int).tolist()
     if max(abs(dx), abs(dy)) > SHIFT_LIMIT * N:
         raise ValueError('원본과 생성 얼굴 위치 차이가 커서 머리 붙이기를 건너뛰었습니다.')
-    return (*shift_head(orig, hm, parts, H, dx, dy), (dx, dy))
+    if abs(angle) > ROTATE_LIMIT or not SCALE_RANGE[0] <= scale <= SCALE_RANGE[1]:
+        raise ValueError('원본과 생성 얼굴의 기울기·크기 차이가 커서 머리 붙이기를 건너뛰었습니다.')
+    if angle == 0.0 and scale == 1.0:
+        matrix = np.float32([[1, 0, dx], [0, 1, dy]])
+    return (*warp_head(orig, hm, parts, H, matrix),
+            dict(shift_px=[dx, dy], rotate_deg=round(angle, 2), scale=round(scale, 3)))
+
+def uncover_eyes(feat_g, H):
+    """원본 앞머리가 덮는 생성 눈알 부분은 보호에서 뺀다. 눈알마다 덮이는 비율이 한도를 넘으면 그 눈은 그대로 보호한다."""
+    n, labels, st, _ = cv2.connectedComponentsWithStats(feat_g.astype(np.uint8), 8)
+    keep, ratios = feat_g.copy(), []
+    for i in range(1, n):
+        if st[i, cv2.CC_STAT_AREA] < 3000:
+            continue
+        ball = labels == i
+        ratio = float((ball & H).sum()) / float(ball.sum())
+        ratios.append(round(ratio, 3))
+        if ratio <= EYE_COVER_LIMIT:
+            keep &= ~(ball & H)
+    return keep, ratios
 
 def hair_palette(lab_pixels, centers):
     distance = np.linalg.norm(lab_pixels[:, None] - centers[None], axis=2)
@@ -286,15 +357,17 @@ def figure_measurements(o_hair, g_hair, orig, gen, head_bottom):
 def paste_canvas(orig, hm, parts, H, gen, pg, profile=None):
     """생성 앞머리만 원본으로 교체하고 눈알·코·입과 생성 수염을 보호한다."""
     validate_parts(pg)
-    offset = None
+    alignment, eye_cover = None, None
     if profile:
-        orig, hm, parts, H, offset = align_long_hair(orig, hm, parts, H, pg)
+        orig, hm, parts, H, alignment = align_long_hair(orig, hm, parts, H, pg)
     prepared = prepare_original(orig, hm, parts, H, profile)
     po, pad = (prepared['po'], prepared['pad'])
     o_head, o_skin, o_bg = (prepared[key] for key in ('o_head', 'o_skin', 'o_bg'))
     lowc, fgcol, a3, feat_o_all = (prepared[key] for key in ('lowc', 'fgcol', 'a3', 'feat_o_all'))
     feats_all = pg['eyes'] | pg['nose'] | pg['mouth']
     feat_g, _, ball_top, _ = split_features(feats_all)
+    if profile:
+        feat_g, eye_cover = uncover_eyes(feat_g, H)
     fg_g = np.logical_or.reduce([pg[t] for t in TAGS])
     g_hair = pg['hair'] | pg['headwear']
     g_skin = pg['face'] & ~g_hair
@@ -332,7 +405,7 @@ def paste_canvas(orig, hm, parts, H, gen, pg, profile=None):
     require(np.array_equal(canvas[~M], gen[~M]), '붙이기 영역 밖 픽셀 변경')
     measurements = dict(skin_dE=round(dE, 2), forehead_blend=dE <= DE_LIMIT, erase_fill='gen_inpaint' if dE > DE_LIMIT else 'orig_skin', beard_px=int(prepared['beard'].sum()), erase_px=int((erase & M).sum()))
     if profile:
-        measurements.update(rule=profile['rule'], facial_hair_rule=profile['facial_hair'], shift_px=list(offset),
+        measurements.update(rule=profile['rule'], facial_hair_rule=profile['facial_hair'], **alignment, eye_cover_ratio=eye_cover,
             original_background_rgb=prepared['background'].round(1).tolist(), background_as_hair_removed_px=int(prepared['near_bg'].sum()),
             chin_row=chin, kept_generated_hair_px=int(keep_hair.sum()), hair=hair_measurements(orig, H, po['face'], gen, pg, M))
     return (canvas, M, feat_g, measurements)

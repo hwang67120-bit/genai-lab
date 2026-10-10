@@ -233,3 +233,19 @@ def test_thin_or_unlike_jaw_line_is_not_pasted_as_long_hair():
     assert prepared["o_head"][jaw].mean() < 0.2
     assert not prepared["o_head"][blob].any()
     assert prepared["o_head"][side].mean() > 0.9
+
+
+def test_face_offset_within_limit_pastes_and_beyond_limit_keeps_generated():
+    original, hm, parts, H, generated, generated_parts = scene()
+    near = {name: np.roll(mask, 30, axis=1) for name, mask in generated_parts.items()}
+    *_, measured = paste_canvas(original, hm, parts, H, np.roll(generated, 30, axis=1), near, paste_profile(["long_hair"]))
+    assert measured["face_offset_px"] == [30, 0]
+    far = {name: np.roll(mask, 50, axis=0) for name, mask in generated_parts.items()}
+    with pytest.raises(ValueError, match="세로 \+50px"):
+        paste_canvas(original, hm, parts, H, np.roll(generated, 50, axis=0), far, paste_profile(["long_hair"]))
+
+
+def test_face_offset_rule_does_not_touch_short_hair_path():
+    original, hm, parts, H, generated, generated_parts = scene()
+    far = {name: np.roll(mask, 50, axis=0) for name, mask in generated_parts.items()}
+    paste_canvas(original, hm, parts, H, np.roll(generated, 50, axis=0), far)  # 짧은 머리는 기존대로 진행

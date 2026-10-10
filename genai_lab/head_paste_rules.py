@@ -13,6 +13,7 @@ ROTATE_LIMIT = 15.0
 SCALE_RANGE = (0.85, 1.15)
 EYE_COVER_LIMIT = 0.5
 HAIR_COLOR_DE = 25.0
+FACE_OFFSET_LIMIT = 35  # 1024 자른 그림 px. 검증 짧은 머리 3~27, 긴 머리 실패 53~74(D-081)
 BG_NEAR_DE = 10.0
 BG_PLAIN_MIN = 0.6
 
@@ -254,6 +255,22 @@ def eye_points(features):
         return None
     return sorted((float(cen[i][0]), float(cen[i][1])) for i in balls)
 
+def face_offset(parts, pg):
+    """원본 비율 참고 좌표에서 원본·생성 눈 가운데 차이(px). 눈이 둘이 아니면 눈 묶음 기준점으로 잰다."""
+    def middle(p):
+        points = eye_points(p['eyes'] | p['nose'] | p['mouth'])
+        return np.mean(points, axis=0) if points else np.float32(eye_anchor(p['eyes'] | p['nose'] | p['mouth']))
+    dx, dy = (middle(pg) - middle(parts)).round().astype(int).tolist()
+    return dx, dy
+
+def check_face_offset(parts, pg):
+    """생성 얼굴이 원본 머리 윤곽 안에서 다른 곳에 있으면 머리와 얼굴을 함께 맞출 수 없다. 붙이지 않는다."""
+    dx, dy = face_offset(parts, pg)
+    if max(abs(dx), abs(dy)) > FACE_OFFSET_LIMIT:
+        raise ValueError(f'생성 얼굴 위치 차이(가로 {dx:+d}px, 세로 {dy:+d}px)가 커서 머리 붙이기를 건너뛰었습니다. '
+                         '붙이기 전 결과를 유지합니다.')
+    return [dx, dy]
+
 def align_long_hair(orig, hm, parts, H, pg):
     """원본 두 눈을 생성 두 눈에 맞춘다: 기울기·크기는 눈 무게중심, 이동은 눈 묶음 기준점.
     눈이 하나면 이동만 한다. 범위를 넘으면 추측하지 않고 붙이지 않는다."""
@@ -359,7 +376,9 @@ def paste_canvas(orig, hm, parts, H, gen, pg, profile=None):
     validate_parts(pg)
     alignment, eye_cover = None, None
     if profile:
+        offset = check_face_offset(parts, pg)
         orig, hm, parts, H, alignment = align_long_hair(orig, hm, parts, H, pg)
+        alignment = dict(alignment, face_offset_px=offset)
     prepared = prepare_original(orig, hm, parts, H, profile)
     po, pad = (prepared['po'], prepared['pad'])
     o_head, o_skin, o_bg = (prepared[key] for key in ('o_head', 'o_skin', 'o_bg'))

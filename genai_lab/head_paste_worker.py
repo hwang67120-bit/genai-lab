@@ -220,7 +220,7 @@ def long_hair_summary(entry):
     """긴 머리 경로의 표시용 측정만 모은다. 짧은 머리는 None."""
     if entry.get("rule") != "G3+H2+L1":
         return None
-    keys = ("shift_px", "rotate_deg", "scale", "eye_cover_ratio", "facial_hair_rule", "original_background_rgb", "background_as_hair_removed_px",
+    keys = ("face_offset_px", "shift_px", "rotate_deg", "scale", "eye_cover_ratio", "facial_hair_rule", "original_background_rgb", "background_as_hair_removed_px",
             "chin_row", "kept_generated_hair_px", "hair", "figure")
     return {key: entry.get(key) for key in keys}
 

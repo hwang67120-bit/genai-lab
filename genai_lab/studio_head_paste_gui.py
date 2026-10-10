@@ -12,7 +12,8 @@ from genai_lab.studio_head_paste import (selected_request, prepare_hair, confirm
 from genai_lab.studio_generation import StudioRuntime
 
 NOTICE = "원본 머리 영역을 확인한 뒤 한 장에 적용합니다 · 원래 결과는 보존합니다"
-LIMITS = "코트·정면 캐릭터에서 확인했습니다. 모자·후드·옆모습은 미검증이며 테두리나 작은 조각이 남을 수 있습니다."
+LIMITS = ("코트·정면 캐릭터에서 확인했습니다. 모자·후드·옆모습은 미검증이며 테두리나 작은 조각이 남을 수 있습니다. "
+          "긴 머리는 머리 주변만 원본으로 바꾸고, 그 아래 머리는 생성 결과가 남습니다.")
 
 
 class HairConfirmationDialog(QDialog):
@@ -88,7 +89,7 @@ class HeadPasteController:
 
     def generation_preview_ready(self, info):
         studio = self.studio
-        reason, background = preview_skip_reason(info)
+        reason, background = preview_skip_reason(info, studio.analysis["groups"]["appearance"])
         self.generation_context["background"] = background
         if reason:
             self.generation_context["reason"] = reason

@@ -14,7 +14,8 @@ from genai_lab.qwen_record_io import write_json
 from genai_lab.studio_head_paste import read, verify_manifest
 from genai_lab.studio_proportion import restore_head
 from genai_lab.studio_optional_finishing import restore_prompt
-from genai_lab.head_paste_rules import head_crop, padding_mask, hair_mask, crop_head, paste_canvas, blend_result, blend_white_product
+from genai_lab.head_paste_rules import (head_crop, padding_mask, hair_mask, crop_head, paste_canvas, blend_result,
+    blend_white_product, paste_profile, rule_name, figure_measurements)
 from genai_lab.head_paste_semantics import HeadSegmenter, save_parts, load_parts, CHECKPOINT_SHA
 from genai_lab.head_paste_redraw import redraw_prepared, head_prompt
 from genai_lab.onepass_generation_settings import OnePassGenerationSettings
@@ -71,6 +72,34 @@ def prepare_preview(request, directory, segmenter_factory=HeadSegmenter):
     return result
 
 
+FIGURE_PARTS = {}
+
+
+def figure_parts(segmenter, rgb):
+    """736×1232 전체 그림을 정사각형 흰 여백으로 감싸 분할하고 원래 좌표로 되돌린다."""
+    height, width = rgb.shape[:2]
+    side = max(height, width)
+    x0, y0 = (side - width) // 2, (side - height) // 2
+    square = np.full((side, side, 3), 255, np.uint8)
+    square[y0:y0 + height, x0:x0 + width] = rgb
+    parts = segmenter.parse(np.asarray(Image.fromarray(square).resize((1024, 1024), Image.Resampling.LANCZOS)))
+    def back(mask):
+        full = np.asarray(Image.fromarray(mask.astype(np.uint8) * 255).resize((side, side), Image.Resampling.NEAREST)) > 127
+        return full[y0:y0 + height, x0:x0 + width]
+    return {name: back(mask) for name, mask in parts.items()}
+
+
+def figure_hair(segmenter, rgb, key=None):
+    """같은 원본은 한 작업 안에서 한 번만 분할한다."""
+    if key is not None and key in FIGURE_PARTS:
+        return FIGURE_PARTS[key]
+    parts = figure_parts(segmenter, rgb)
+    hair = parts["hair"] | parts["headwear"]
+    if key is not None:
+        FIGURE_PARTS[key] = hair
+    return hair
+
+
 def prepare_paste(request, directory, segmenter_factory=HeadSegmenter, *, segmenter=None):
     """확인 H와 생성 분할로 붙이기 재료를 만든 뒤 분할 모델을 먼저 내린다."""
     preview = request["preview"]
@@ -83,14 +112,23 @@ def prepare_paste(request, directory, segmenter_factory=HeadSegmenter, *, segmen
     owns_segmenter = segmenter is None
     if owns_segmenter:
         segmenter = segmenter_factory(request["semantic_repo"], request["semantic_checkpoint"])
+    profile = paste_profile(request["analysis"]["groups"]["appearance"])
+    figure = None
     try:
         generated_parts = segmenter.parse(gen)
+        if profile:
+            # 긴 머리는 자른 범위 밖이 대부분이라 전체 그림 머리도 측정한다(표시만).
+            head = request["head"]
+            source = checked_image(head["normalized_file"], head["normalized_sha256"], (736, 1232), "RGB")
+            figure = (figure_hair(segmenter, source, head["normalized_sha256"]), figure_hair(segmenter, raw), source)
         semantic = segmenter.metrics()
     finally:
         if owns_segmenter:
             segmenter.close()
     save_parts(directory / "generated-parts.npz", generated_parts)
-    canvas, M, features, measurements = paste_canvas(original, mask, parts, H, gen, generated_parts)
+    canvas, M, features, measurements = paste_canvas(original, mask, parts, H, gen, generated_parts, profile)
+    if figure is not None:
+        measurements["figure"] = figure_measurements(figure[0], figure[1], figure[2], raw, int(box[3]))
     seed = request["seed"]
     init_file, init_sha = save_image(directory, "init", canvas)
     mask_file, mask_sha = save_image(directory, "mask", M.astype(np.uint8) * 255)
@@ -102,7 +140,8 @@ def prepare_paste(request, directory, segmenter_factory=HeadSegmenter, *, segmen
     entry = dict(raw=request["raw_file"], raw_sha256=request["raw_sha256"], init=init_file, init_sha256=init_sha,
                  mask=mask_file, mask_sha256=mask_sha, features=features_file, features_sha256=features_sha,
                  sketch_sha256=sketch_sha, paste=paste_file, paste_sha256=paste_sha, checks=checks, **measurements)
-    return dict(box=box, seeds=[seed], H_sha256=preview["H_sha256"], semantic=semantic, per_seed={str(seed): entry})
+    return dict(box=box, seeds=[seed], H_sha256=preview["H_sha256"], semantic=semantic, rule=rule_name(profile),
+                per_seed={str(seed): entry})
 
 
 def restore_models(request):
@@ -177,6 +216,15 @@ def prepare_redraw(request, directory, segmenter=None, model_context=None):
     return prepared
 
 
+def long_hair_summary(entry):
+    """긴 머리 경로의 표시용 측정만 모은다. 짧은 머리는 None."""
+    if entry.get("rule") != "G3+H2+L1":
+        return None
+    keys = ("shift_px", "facial_hair_rule", "original_background_rgb", "background_as_hair_removed_px",
+            "chin_row", "kept_generated_hair_px", "hair", "figure")
+    return {key: entry.get(key) for key in keys}
+
+
 def complete_product(request, prepared, output):
     """보호 검사와 파일 잠금을 확인한 장만 완성 결과로 기록한다."""
     directory, rec = prepared["run"], prepared["rec"]
@@ -198,7 +246,8 @@ def complete_product(request, prepared, output):
     info = dict(status="awaiting_user_review", directory=str(directory), raw_sha256=request["raw_sha256"],
                 product_file=product_file, product_sha256=product_sha, before_file=request["before_file"],
                 before_sha256=request["before_sha256"], checks=checks, product_background=background, redraw_record=str(generated / "run.json"),
-                H_sha256=request["preview"]["H_sha256"], semantic=rec["semantic"], manifest=manifest, seed=request["seed"], rule="G3+H2",
+                H_sha256=request["preview"]["H_sha256"], semantic=rec["semantic"], manifest=manifest, seed=request["seed"], rule=rec["rule"],
+                long_hair=long_hair_summary(entry),
                 known_limits="모자·후드·옆모습 미검증; 원본 외곽선·얼룩·귀 조각이 남을 수 있음")
     write_json(directory / "result.json", info)
     return info

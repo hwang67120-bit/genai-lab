@@ -51,20 +51,18 @@ def source_request(analysis, head, runtime):
 
 def automatic_skip_reason(appearance, garments):
     """확인된 태그만 검사한다. 후드 상의 자체를 머리 덮개로 추측하지 않는다."""
-    tags = {tag.strip().replace("_", " ") for tag in appearance}
-    if "short hair" not in tags:
-        return "긴 머리는 여성 머리카락 조정 작업에서 지원 예정입니다."
     coverings = {"hat", "cap", "hood", "hood up", "helmet", "beret", "beanie", "headwear"}
     if coverings & {tag.strip().replace("_", " ") for tag in garments}:
         return "머리를 덮는 의상이 있어 머리 붙이기를 건너뛰었습니다."
     return ""
 
 
-def preview_skip_reason(info):
-    """캐시도 같은 픽셀로 다시 검사한다. 불명확한 배경이나 눈은 자동 승인하지 않는다."""
+def preview_skip_reason(info, appearance=("short_hair",)):
+    """캐시도 같은 픽셀로 다시 검사한다. 불명확한 배경이나 눈은 자동 승인하지 않는다.
+    짧은 머리는 검증된 흰 배경만, 긴 머리는 단색 배경이면 색이 있어도 진행한다."""
     import numpy as np
     from genai_lab.head_paste_semantics import load_parts
-    from genai_lab.head_paste_rules import padding_mask, dil, split_features
+    from genai_lab.head_paste_rules import padding_mask, dil, split_features, paste_profile, background_measure, BG_PLAIN_MIN
     from PIL import Image
     verify_preview(info, info["identity"])
     with Image.open(info["original_file"]) as image:
@@ -79,7 +77,13 @@ def preview_skip_reason(info):
     distance = float(np.linalg.norm(median - 255))
     measurement = dict(median_rgb=median.tolist(), white_distance=distance, pixels=int(background.sum()),
                        distance_space="RGB", foreground_expansion_px=6)
-    if distance > 10:
+    profile = paste_profile(appearance)
+    if profile:
+        measurement.update(rule=profile["rule"], plain_ratio=background_measure(original, head, parts)["plain_ratio"],
+                           plain_minimum=BG_PLAIN_MIN)
+        if measurement["plain_ratio"] < BG_PLAIN_MIN:
+            return "원본 배경 무늬가 강해서 머리 붙이기를 건너뛰었습니다.", measurement
+    elif distance > 10:
         return "원본 배경이 흰색이 아니어서 머리 붙이기를 건너뛰었습니다.", measurement
     try:
         split_features(parts["eyes"] | parts["nose"] | parts["mouth"])

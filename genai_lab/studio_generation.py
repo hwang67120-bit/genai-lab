@@ -218,6 +218,22 @@ def build_request(analysis, garment_tags, gender, *, confirmed, runtime, prefere
     return request
 
 
+def long_hair_notice(summary):
+    """긴 머리 측정을 한 줄로 보여 준다. 판정 기준이 정해지기 전이라 경고·거부는 하지 않는다."""
+    if not summary:
+        return ""
+    figure = summary.get("figure") or {}
+    parts = []
+    if figure.get("lowest_hair_row") and None not in figure["lowest_hair_row"]:
+        original, generated = figure["lowest_hair_row"]
+        parts.append(f"머리 끝 높이 차이 {abs(generated - original) / 1232:.0%}")
+    if "tails_below_head" in figure:
+        parts.append("머리 아래 덩어리 원본 {} · 생성 {}".format(*figure["tails_below_head"]))
+    if "hair_color_dE" in figure:
+        parts.append(f"머리 색 차이 {figure['hair_color_dE']:.0f}")
+    return "\n긴 머리 측정(참고용): " + " · ".join(parts) if parts else ""
+
+
 class StudioResults:
     """사용자 검토·내보내기 기록을 분리한다. 원본 검사 근거를 바꾸지 않는다."""
     def __init__(self, batch, *, appendage_review_required=False):
@@ -332,7 +348,8 @@ class StudioResults:
         item = self.auto_head["items"][self.selected]
         if item["status"] != "completed":
             return "머리 붙이기 건너뜀: " + item["reason"]
-        return ("붙이기 전 결과" if self.show_before_head else "원본 머리 붙이기 완료") + " · 테두리·작은 조각은 남을 수 있습니다."
+        notice = ("붙이기 전 결과" if self.show_before_head else "원본 머리 붙이기 완료") + " · 테두리·작은 조각은 남을 수 있습니다."
+        return notice + long_hair_notice(self.active_head.get("long_hair"))
 
     def toggle_head_view(self):
         """두 보기를 한 후보 안에서 바꾼다. 보기를 바꾸면 이전 승인은 해제한다."""

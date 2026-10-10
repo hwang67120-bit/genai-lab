@@ -6,6 +6,11 @@ from genai_lab.proportion_inputs import require
 TAGS = ('hair', 'headwear', 'face', 'eyes', 'eyewear', 'ears', 'earwear', 'nose', 'mouth', 'neck', 'neckwear', 'topwear', 'handwear', 'bottomwear', 'legwear', 'footwear', 'tail', 'wings', 'objects')
 N = 1024
 DE_LIMIT = 15.0
+# 긴 머리 경로(L1). 짧은 머리는 검증된 G3+H2 그대로 둔다. 아래 값은 GPU 측정 뒤 잠근다.
+FACIAL_HAIR = frozenset({'facial hair', 'beard', 'mustache', 'goatee', 'stubble'})
+SHIFT_LIMIT = 0.08
+BG_NEAR_DE = 10.0
+BG_PLAIN_MIN = 0.6
 
 def k(radius):
     return cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * radius + 1, 2 * radius + 1))
@@ -104,24 +109,55 @@ def split_features(features):
         (brow if y + h <= st[near, 1] + 15 else keep)[comp] = True
     return (keep, brow, int(min((st[b, 1] for b in balls))), int(max((st[b, 1] + st[b, 3] for b in balls))))
 
-def prepare_original(orig, hm, parts, H):
+def paste_profile(appearance):
+    """확인된 외형 태그로 경로를 고른다. short_hair면 None(검증된 기존 경로)이다."""
+    tags = {str(tag).strip().replace('_', ' ') for tag in appearance}
+    if 'short hair' in tags:
+        return None
+    return dict(rule='G3+H2+L1', facial_hair=bool(FACIAL_HAIR & tags))
+
+def rule_name(profile):
+    return profile['rule'] if profile else 'G3+H2'
+
+def background_measure(orig, hm, parts):
+    """분할·윤곽 6px 밖, 정규화 여백 제외 픽셀로 원본 배경색과 단색 정도를 잰다."""
+    pixels = ~dil(np.logical_or.reduce(list(parts.values())) | hm, 6) & ~padding_mask(orig)
+    if not pixels.any():
+        return None
+    median = np.median(orig[pixels], axis=0).astype(np.float32)
+    de = np.linalg.norm(lab(orig)[pixels] - lab(median[None, None])[0, 0], axis=1)
+    return dict(color=median, white_distance=float(np.linalg.norm(median - 255)),
+                plain_ratio=float((de < BG_NEAR_DE).mean()), pixels=int(pixels.sum()))
+
+def prepare_original(orig, hm, parts, H, profile=None):
     """확인한 머리 영역으로 분할을 보완하고, 피부·수염·배경 출처를 준비한다."""
     validate_parts(parts)
     po = {name: mask.copy() for name, mask in parts.items()}
     pad = padding_mask(orig)
-    po['face'] = (po['face'] | hm & ~H) & ~H
+    background = np.full(3, 255, np.float32)
+    near_bg = np.zeros((N, N), bool)
+    if profile:
+        # 흰색이 아닌 배경: 윤곽 안이라도 어느 분할에도 없고 배경색에 가까우면 배경으로 본다.
+        measured = background_measure(orig, hm, parts)
+        require(measured is not None, '원본 배경색을 확인하지 못했습니다.')
+        background = measured['color']
+        close = np.linalg.norm(lab(orig) - lab(background[None, None])[0, 0], axis=2) < BG_NEAR_DE
+        near_bg = hm & ~np.logical_or.reduce([parts[t] for t in TAGS]) & ~H & close
+    po['face'] = (po['face'] | hm & ~H & ~near_bg) & ~H
     po['hair'] = H
-    fg_o = (np.logical_or.reduce([po[t] for t in TAGS]) | hm) & ~pad
+    fg_o = (np.logical_or.reduce([po[t] for t in TAGS]) | hm & ~near_bg) & ~pad
     feat_o_all = po['eyes'] | po['nose'] | po['mouth']
     feat_o_keep, _, _, o_ball_bottom = split_features(feat_o_all)
     body = po['face'] | po['neck'] | po['neckwear'] | po['topwear'] | po['handwear'] | po['bottomwear']
-    o_head = ((po['hair'] | po['headwear'] | po['ears'] | po['earwear']) & dil(hm, 9) | hm & ~body) & ~pad
+    o_head = ((po['hair'] | po['headwear'] | po['ears'] | po['earwear']) & dil(hm, 9) | hm & ~body & ~near_bg) & ~pad
     hull = np.zeros((N, N), np.uint8)
     pts = cv2.findNonZero(po['face'].astype(np.uint8))
     if pts is not None:
         cv2.fillConvexPoly(hull, cv2.convexHull(pts), 1)
     beard = po['hair'] & (hull > 0)
     beard[:o_ball_bottom] = False
+    if profile and not profile['facial_hair']:
+        beard[:] = False  # 수염 태그가 없으면 얼굴 옆 긴 머리를 수염으로 보지 않는다.
     o_head &= ~beard
     o_skin = po['face'] & fg_o
     o_bg = ~fg_o
@@ -131,16 +167,17 @@ def prepare_original(orig, hm, parts, H):
     require(skin_ref_o.any(), '원본 피부 기준 영역이 비었습니다.')
     lowc = po['face'] & (chroma < 0.5 * float(np.median(chroma[skin_ref_o])))
     clean = cv2.inpaint(orig, dil(feat_o_keep, 6).astype(np.uint8) * 255, 5, cv2.INPAINT_TELEA)
-    dist = np.linalg.norm(clean.astype(np.float32) - 255, axis=2)
+    dist = np.linalg.norm(clean.astype(np.float32) - background, axis=2)
     alpha = np.zeros((N, N), np.float32)
     band = dil(fg_o, 4) & ~ero(fg_o, 3)
     alpha[ero(fg_o, 3)] = 1
     alpha[band] = np.clip(dist[band] / 60, 0, 1)
     a3 = alpha[..., None]
-    fgcol = np.where(a3 > 0.02, np.clip((clean.astype(np.float32) - (1 - a3) * 255) / np.maximum(a3, 0.02), 0, 255), clean.astype(np.float32))
-    return dict(po=po, pad=pad, o_head=o_head, o_skin=o_skin, o_bg=o_bg, lowc=lowc, fgcol=fgcol, a3=a3, feat_o_all=feat_o_all, beard=beard)
+    fgcol = np.where(a3 > 0.02, np.clip((clean.astype(np.float32) - (1 - a3) * background) / np.maximum(a3, 0.02), 0, 255), clean.astype(np.float32))
+    return dict(po=po, pad=pad, o_head=o_head, o_skin=o_skin, o_bg=o_bg, lowc=lowc, fgcol=fgcol, a3=a3, feat_o_all=feat_o_all,
+                beard=beard, background=background, near_bg=near_bg)
 
-def paste_weights(o_head, o_skin, o_bg, lowc, pad, hm, g_hair, g_skin, region, ball_top, dE):
+def paste_weights(o_head, o_skin, o_bg, lowc, pad, hm, g_hair, g_skin, region, ball_top, dE, keep_hair=None):
     """머리는 원본, 눈 아래 피부는 생성, 피부색이 가까운 이마만 40px 섞는다."""
     above = np.zeros((N, N), bool)
     above[:ball_top] = True
@@ -155,15 +192,104 @@ def paste_weights(o_head, o_skin, o_bg, lowc, pad, hm, g_hair, g_skin, region, b
         m = skin_g3 & g_skin & above
         w[m] = ramp[m]
         w[skin_g3 & ~g_skin & ~g_hair & above] = 1
-    w[o_bg & g_hair] = 1
+    erase_hair = o_bg & g_hair
+    if keep_hair is not None:
+        erase_hair &= ~keep_hair  # 자른 범위 밖으로 이어지는 생성 긴 머리는 남기고 이음은 다시 그리기에 맡긴다.
+    w[erase_hair] = 1
     w[o_bg & ~g_hair & ~g_skin & above] = 1
     w[~region] = 0
     return (w, skin_g3, erase)
 
-def paste_canvas(orig, hm, parts, H, gen, pg):
+def eye_anchor(features):
+    """눈알 덩어리 묶음의 가로 중심과 아래끝. 앞머리가 눈 위를 가려도 아래끝은 덜 흔들린다."""
+    n, labels, st, _ = cv2.connectedComponentsWithStats(features.astype(np.uint8), 8)
+    balls = [i for i in range(1, n) if st[i, cv2.CC_STAT_AREA] >= 3000]
+    if not balls:
+        raise ValueError('눈알 덩어리를 찾지 못했습니다(규칙 실패)')
+    x0 = min(st[i, 0] for i in balls)
+    x1 = max(st[i, 0] + st[i, 2] for i in balls)
+    return (x0 + x1) / 2, max(st[i, 1] + st[i, 3] for i in balls)
+
+def shift_head(orig, hm, parts, H, dx, dy):
+    """원본 머리 재료를 정수 픽셀만큼 옮긴다. 들어오는 가장자리 마스크는 비운다."""
+    matrix = np.float32([[1, 0, dx], [0, 1, dy]])
+    def move(mask):
+        return cv2.warpAffine(mask.astype(np.uint8), matrix, (N, N), flags=cv2.INTER_NEAREST, borderValue=0) > 0
+    moved = cv2.warpAffine(orig, matrix, (N, N), flags=cv2.INTER_NEAREST, borderMode=cv2.BORDER_REPLICATE)
+    return moved, move(hm), {name: move(mask) for name, mask in parts.items()}, move(H)
+
+def align_long_hair(orig, hm, parts, H, pg):
+    """원본 눈 위치를 생성 눈 위치에 맞춘다. 차이가 크면 붙이지 않는다."""
+    ox, oy = eye_anchor(parts['eyes'] | parts['nose'] | parts['mouth'])
+    gx, gy = eye_anchor(pg['eyes'] | pg['nose'] | pg['mouth'])
+    dx, dy = int(round(gx - ox)), int(round(gy - oy))
+    if max(abs(dx), abs(dy)) > SHIFT_LIMIT * N:
+        raise ValueError('원본과 생성 얼굴 위치 차이가 커서 머리 붙이기를 건너뛰었습니다.')
+    return (*shift_head(orig, hm, parts, H, dx, dy), (dx, dy))
+
+def hair_palette(lab_pixels, centers):
+    distance = np.linalg.norm(lab_pixels[:, None] - centers[None], axis=2)
+    return np.bincount(distance.argmin(1), minlength=len(centers)) / max(1, len(lab_pixels))
+
+def hair_measurements(orig, H, po_face, gen, pg, M):
+    """표시용 측정. 자동 거부에 쓰지 않는다(기준은 머리 모양별 시험 뒤 정한다)."""
+    g_hair = pg['hair'] | pg['headwear']
+    lo, lg = lab(orig), lab(gen)
+    result = dict(hair_area_ratio=round(float(g_hair.sum()) / max(1, int(H.sum())), 3),
+                  overflow_px=int((g_hair & ~dil(H, 6)).sum()),
+                  generated_hair_on_original_face_px=int((g_hair & po_face & ~H).sum()),
+                  paste_on_generated_clothes_px=int((M & (pg['topwear'] | pg['neckwear']) & ~dil(H, 6)).sum()))
+    if H.any() and g_hair.any():
+        from sklearn.cluster import KMeans
+        source = lo[H]
+        rng = np.random.default_rng(0)
+        sample = source[rng.choice(len(source), min(20000, len(source)), replace=False)]
+        centers = KMeans(n_clusters=4, n_init=4, random_state=0).fit(sample).cluster_centers_
+        result.update(hair_color_dE=round(float(np.linalg.norm(lg[g_hair].mean(0) - source.mean(0))), 2),
+                      hair_palette_difference=round(float(np.abs(hair_palette(source, centers)
+                          - hair_palette(lg[g_hair], centers)).sum() / 2), 3))
+    return result
+
+def continuing_hair(g_hair, o_hair, chin):
+    """원본 머리 밖 생성 머리 중 아래 가장자리, 또는 턱 아래 좌우 가장자리에 닿는 덩어리.
+    가로 줄로 자르면 떠 있는 머리 조각이 생겨서 덩어리 단위로 남긴다."""
+    outside = g_hair & ~dil(o_hair, 6)
+    n, labels = cv2.connectedComponents(outside.astype(np.uint8), connectivity=8)
+    edge = np.concatenate([labels[-1], labels[chin:, 0], labels[chin:, -1]])
+    return np.isin(labels, list(set(np.unique(edge)) - {0}))
+
+def figure_measurements(o_hair, g_hair, orig, gen, head_bottom):
+    """전체 그림(정규화 좌표)에서 원본·생성 머리 모양과 색을 비교한다. 표시용이며 자동 거부는 없다."""
+    def tails(mask):
+        below = mask.copy()
+        below[:head_bottom] = False
+        n, _, st, _ = cv2.connectedComponentsWithStats(below.astype(np.uint8), 8)
+        return sum(1 for i in range(1, n) if st[i, cv2.CC_STAT_AREA] >= 1500)
+    def lowest(mask):
+        rows = np.nonzero(mask.any(1))[0]
+        return int(rows.max()) if len(rows) else None
+    union = int((o_hair | g_hair).sum())
+    result = dict(hair_iou=round(float((o_hair & g_hair).sum()) / max(1, union), 3),
+                  hair_area_ratio=round(float(g_hair.sum()) / max(1, int(o_hair.sum())), 3),
+                  lowest_hair_row=[lowest(o_hair), lowest(g_hair)], tails_below_head=[tails(o_hair), tails(g_hair)],
+                  overflow_px=int((g_hair & ~dil(o_hair, 12)).sum()))
+    if o_hair.any() and g_hair.any():
+        from sklearn.cluster import KMeans
+        source, target = lab(orig)[o_hair], lab(gen)[g_hair]
+        rng = np.random.default_rng(0)
+        sample = source[rng.choice(len(source), min(20000, len(source)), replace=False)]
+        centers = KMeans(n_clusters=4, n_init=4, random_state=0).fit(sample).cluster_centers_
+        result.update(hair_color_dE=round(float(np.linalg.norm(target.mean(0) - source.mean(0))), 2),
+                      hair_palette_difference=round(float(np.abs(hair_palette(source, centers) - hair_palette(target, centers)).sum() / 2), 3))
+    return result
+
+def paste_canvas(orig, hm, parts, H, gen, pg, profile=None):
     """생성 앞머리만 원본으로 교체하고 눈알·코·입과 생성 수염을 보호한다."""
     validate_parts(pg)
-    prepared = prepare_original(orig, hm, parts, H)
+    offset = None
+    if profile:
+        orig, hm, parts, H, offset = align_long_hair(orig, hm, parts, H, pg)
+    prepared = prepare_original(orig, hm, parts, H, profile)
     po, pad = (prepared['po'], prepared['pad'])
     o_head, o_skin, o_bg = (prepared[key] for key in ('o_head', 'o_skin', 'o_bg'))
     lowc, fgcol, a3, feat_o_all = (prepared[key] for key in ('lowc', 'fgcol', 'a3', 'feat_o_all'))
@@ -183,7 +309,12 @@ def paste_canvas(orig, hm, parts, H, gen, pg):
     require(ref.any() and src.any(), '원본·생성 피부색 비교 영역이 비었습니다.')
     shift = lab(gen)[ref].mean(0) - lab(fgcol)[src].mean(0)
     dE = float(np.linalg.norm(shift))
-    w, skin_g3, erase = paste_weights(o_head, o_skin, o_bg, lowc, pad, hm, g_hair, g_skin, region, ball_top, dE)
+    keep_hair, chin = None, None
+    if profile:
+        rows = np.nonzero(parts['face'].any(1))[0]
+        chin = int(rows.max()) + 1 if len(rows) else N
+        keep_hair = continuing_hair(g_hair, po['hair'] | po['headwear'], chin)
+    w, skin_g3, erase = paste_weights(o_head, o_skin, o_bg, lowc, pad, hm, g_hair, g_skin, region, ball_top, dE, keep_hair)
     M = w > 0
     soft = cv2.GaussianBlur(M.astype(np.float32), (0, 0), 1.5)
     soft[~M] = 0
@@ -199,7 +330,12 @@ def paste_canvas(orig, hm, parts, H, gen, pg):
         fill[erase] = gen_fill[erase]
     canvas = np.clip(np.rint(gen * (1 - soft) + fill * soft), 0, 255).astype(np.uint8)
     require(np.array_equal(canvas[~M], gen[~M]), '붙이기 영역 밖 픽셀 변경')
-    return (canvas, M, feat_g, dict(skin_dE=round(dE, 2), forehead_blend=dE <= DE_LIMIT, erase_fill='gen_inpaint' if dE > DE_LIMIT else 'orig_skin', beard_px=int(prepared['beard'].sum()), erase_px=int((erase & M).sum())))
+    measurements = dict(skin_dE=round(dE, 2), forehead_blend=dE <= DE_LIMIT, erase_fill='gen_inpaint' if dE > DE_LIMIT else 'orig_skin', beard_px=int(prepared['beard'].sum()), erase_px=int((erase & M).sum()))
+    if profile:
+        measurements.update(rule=profile['rule'], facial_hair_rule=profile['facial_hair'], shift_px=list(offset),
+            original_background_rgb=prepared['background'].round(1).tolist(), background_as_hair_removed_px=int(prepared['near_bg'].sum()),
+            chin_row=chin, kept_generated_hair_px=int(keep_hair.sum()), hair=hair_measurements(orig, H, po['face'], gen, pg, M))
+    return (canvas, M, feat_g, measurements)
 
 def protected_support(mask, features, box):
     """최종 4px 확장 영역에서 눈·코·입을 빼고 합성 허용 범위를 반환한다."""

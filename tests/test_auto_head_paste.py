@@ -27,8 +27,9 @@ from test_studio_generation import Tokens, wait_for
 @pytest.mark.parametrize('appearance,garments,skip', [
     (['short_hair'], ['hoodie'], False),
     (['short hair'], ['coat'], False),
-    (['long_hair'], ['coat'], True),
-    ([], ['coat'], True),
+    (['long_hair'], ['coat'], False),
+    ([], ['coat'], False),
+    (['long_hair'], ['hood'], True),
     *[(['short_hair'], [tag], True) for tag in
       ['hat', 'cap', 'hood', 'hood_up', 'helmet', 'beret', 'beanie', 'headwear']]])
 def test_confirmed_tags_only_skip_exact_coverings(appearance, garments, skip):
@@ -58,6 +59,23 @@ def test_background_distance_and_missing_eyeballs_skip(tmp_path,color,eyes,skip)
     assert measurement['distance_space']=='RGB'
     assert measurement['white_distance']==pytest.approx(np.sqrt(3)*(255-color))
     if not eyes: assert '눈알' in reason
+
+
+@pytest.mark.parametrize('color,plain,skip', [((240,236,225),True,False),((240,236,225),False,True),((255,255,255),True,False)])
+def test_long_hair_allows_plain_colored_background_only(tmp_path,color,plain,skip):
+    info=measured_preview(tmp_path/'preview',255,True,True)
+    original=np.asarray(Image.open(info['original_file'])).copy()
+    original[20:]=color
+    if not plain:
+        original[20:][::2]=(90,60,40)  # 줄무늬 배경
+    Image.fromarray(original).save(info['original_file'])
+    info['manifest'][info['original_file']]=sha(info['original_file'])
+    reason, measurement=service.preview_skip_reason(info,['long_hair'])
+    assert bool(reason) is skip
+    assert measurement['rule']=='G3+H2+L1'
+    if skip: assert '무늬' in reason
+    short_reason, _=service.preview_skip_reason(info,['short_hair'])
+    assert bool(short_reason) is (color!=(255,255,255))
 
 
 def auto_results(tmp_path,failed=2):

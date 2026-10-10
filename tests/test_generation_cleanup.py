@@ -322,3 +322,73 @@ def test_accepted_cancel_request_is_applied_before_completion(tmp_path, monkeypa
     assert isinstance(task.error, OnePassCancelled) and task.result is None
     assert not job.directory.exists()
     assert task.request_cancel() is False
+
+
+def workspace_torch(events, *, model_bytes=0):
+    """라이브러리 작업 공간과 모델 할당을 구분하는 가짜 GPU다."""
+    memory = {"workspace": 9568256, "model": model_bytes, "reserved": 23068672}
+    torch = fake_torch(events)
+    torch.cuda.memory_allocated = lambda: memory["workspace"] + memory["model"]
+    torch.cuda.memory_reserved = lambda: memory["reserved"]
+    def clear_workspace():
+        events.append("workspace")
+        memory["workspace"] = 0
+    def empty_cache():
+        events.append("empty_cache")
+        memory["reserved"] = memory["workspace"] + memory["model"]
+    torch.cuda.empty_cache = empty_cache
+    torch._C = SimpleNamespace(_cuda_clearCublasWorkspaces=clear_workspace)
+    return torch
+
+
+def test_library_workspace_is_released_before_allocator_cache():
+    events = []
+    report = cleanup.release_cuda_cache(workspace_torch(events))
+    assert events == ["synchronize", "workspace", "empty_cache"]
+    assert report["before_workspace_cleanup"]["allocated_bytes"] == 9568256
+    assert report["allocated_bytes"] == report["reserved_bytes"] == 0
+    assert report["cublas_workspace_cleanup"] == "completed"
+
+
+def test_cancel_releases_library_workspace_and_discards_outputs(tmp_path, monkeypatch):
+    job = owned_job(tmp_path)
+    monkeypatch.setitem(sys.modules, "torch", workspace_torch([]))
+    report = job.cleanup()
+    assert report["status"] == "cancelled_cleaned"
+    assert report["allocated_bytes"] == report["reserved_bytes"] == 0
+    assert not job.directory.exists()
+
+
+def test_workspace_cleanup_does_not_hide_live_model_memory(tmp_path, monkeypatch):
+    job = owned_job(tmp_path)
+    monkeypatch.setitem(sys.modules, "torch", workspace_torch([], model_bytes=512))
+    with pytest.raises(cleanup.GenerationCleanupError, match="allocated=512"):
+        job.cleanup()
+    assert not job.directory.exists()
+
+
+def test_missing_workspace_api_keeps_strict_memory_check(tmp_path, monkeypatch):
+    job = owned_job(tmp_path)
+    monkeypatch.setitem(sys.modules, "torch", fake_torch([], allocated=9568256, reserved=23068672))
+    with pytest.raises(cleanup.GenerationCleanupError, match="메모리가 남아"):
+        job.cleanup()
+
+
+def test_workspace_release_failure_still_returns_allocator_cache():
+    events = []
+    torch = workspace_torch(events)
+    def broken():
+        events.append("workspace")
+        raise RuntimeError("workspace release failed")
+    torch._C._cuda_clearCublasWorkspaces = broken
+    with pytest.raises(RuntimeError, match="workspace release failed"):
+        cleanup.release_cuda_cache(torch)
+    assert events == ["synchronize", "workspace", "empty_cache"]
+
+
+def test_cpu_only_cleanup_does_not_call_workspace_api():
+    def forbidden():
+        raise AssertionError("CPU 정리에서 CUDA를 초기화하면 안 된다.")
+    torch = SimpleNamespace(cuda=SimpleNamespace(is_initialized=lambda: False),
+                            _C=SimpleNamespace(_cuda_clearCublasWorkspaces=forbidden))
+    assert cleanup.release_cuda_cache(torch)["cuda_initialized"] is False

@@ -38,10 +38,21 @@ def release_cuda_cache(torch):
     if torch is None or not torch.cuda.is_initialized():
         return {"cuda_initialized": False, "allocated_bytes": 0, "reserved_bytes": 0}
     torch.cuda.synchronize()
-    torch.cuda.empty_cache()
+    before = {"allocated_bytes": torch.cuda.memory_allocated(),
+              "reserved_bytes": torch.cuda.memory_reserved()}
+    # cuBLAS 작업 공간은 사용 중 할당으로 집계되어 empty_cache만으로 반환되지 않는다.
+    # 설치 버전의 내부 API를 확인해서 쓰며, 실제 모델 참조가 남은 경우는 숨기지 않는다.
+    clear_workspace = getattr(getattr(torch, "_C", None), "_cuda_clearCublasWorkspaces", None)
+    try:
+        if callable(clear_workspace):
+            clear_workspace()
+    finally:
+        torch.cuda.empty_cache()
     return {"cuda_initialized": True,
             "allocated_bytes": torch.cuda.memory_allocated(),
-            "reserved_bytes": torch.cuda.memory_reserved()}
+            "reserved_bytes": torch.cuda.memory_reserved(),
+            "before_workspace_cleanup": before,
+            "cublas_workspace_cleanup": "completed" if callable(clear_workspace) else "unavailable"}
 
 
 def detach_error_frames(error):

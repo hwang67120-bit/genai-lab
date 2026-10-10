@@ -346,3 +346,26 @@ def test_redraw_reuses_model_and_isolates_only_recoverable_failure(tmp_path,monk
         assert state['candidate_errors']['2']=='한 장 실패'
     assert calls.count('load-once')==1 and calls.count('closed')==1
     assert state['pipeline_loads']==1
+
+
+
+def test_auto_batch_starts_worker_after_library_workspace_release(tmp_path, monkeypatch):
+    from test_generation_cleanup import workspace_torch
+    events = []
+    monkeypatch.setitem(sys.modules, "torch", workspace_torch(events))
+    batch = two_pass_batch(tmp_path / "batch")
+    preview = preview_at(tmp_path / "preview")
+    service.confirm_hair(preview, True)
+    monkeypatch.setattr(service, "selected_request",
+        lambda results, runtime: dict(seed=results.candidate.seed,
+                                     identity=preview["identity"], manifest={}))
+    def run_worker(mode, request, directory, runtime, cancelled, progress):
+        assert events == ["synchronize", "workspace", "empty_cache"]
+        assert request["gui_memory_before_worker"]["allocated_bytes"] == 0
+        assert request["gui_memory_before_worker"]["reserved_bytes"] == 0
+        assert len(request["jobs"]) == 4
+        return {"items": [dict(seed=job["seed"], status="failed", reason="fixture")
+                          for job in request["jobs"]]}
+    monkeypatch.setattr(service, "run_worker", run_worker)
+    report = service.apply_head_batch(batch, preview, None)
+    assert len(report["items"]) == 4

@@ -61,3 +61,12 @@ def test_frame_is_an_accepted_head_line_mode():
     spec = importlib.util.spec_from_file_location("head_lines_trial", ROOT / "scripts/head_lines_trial.py")
     module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
     assert module.MODES == ("hair", "all", "frame")
+
+
+def test_measure_reads_face_strip_layout(tmp_path):
+    spec = importlib.util.spec_from_file_location("measure_face_offset", ROOT / "scripts/measure_face_offset.py")
+    module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+    for folder in ("trial/no_face/generation/CONTOUR_7", "gen/CONTOUR_7"):
+        (tmp_path / folder).mkdir(parents=True); (tmp_path / folder / "raw.png").write_bytes(b"x")
+    (tmp_path / "trial/no_face/inputs").mkdir()
+    assert set(module.raws(tmp_path / "trial", tmp_path / "gen")) == {("no_face", 7), ("C0", 7)}

@@ -7,7 +7,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import numpy as np
 from PIL import Image
-from genai_lab.head_paste_rules import crop_head, face_offset, eye_points, FACE_OFFSET_LIMIT
+from genai_lab.head_paste_rules import crop_head, face_offset, face_turn, eye_points, FACE_OFFSET_LIMIT, FACE_TURN_LIMIT
 from genai_lab.head_paste_semantics import HeadSegmenter, load_parts, save_parts
 from genai_lab.proportion_inputs import require, sha
 from genai_lab.qwen_record_io import write_json
@@ -16,9 +16,11 @@ from genai_lab.qwen_record_io import write_json
 def raws(trial, comparison):
     """조건별 CONTOUR raw를 모은다. comparison은 같은 seed의 기존(C0) 실행 generation 폴더다."""
     found = {}
-    for condition in ("hair", "all", "frame"):
-        for folder in sorted((trial / condition).glob("CONTOUR_*")):
-            found[(condition, int(folder.name.split("_")[1]))] = folder / "raw.png"
+    # 머리 안쪽 선 시험(<조건>/CONTOUR_*)과 얼굴 점 시험(<조건>/generation/CONTOUR_*)을 모두 읽는다.
+    for condition_dir in sorted(p for p in trial.iterdir() if p.is_dir()):
+        for folder in sorted(condition_dir.rglob("CONTOUR_*")):
+            if (folder / "raw.png").is_file():
+                found[(condition_dir.name, int(folder.name.split("_")[1]))] = folder / "raw.png"
     seeds = sorted({seed for _, seed in found})
     for seed in seeds:
         found[("C0", seed)] = comparison / f"CONTOUR_{seed}" / "raw.png"
@@ -56,6 +58,7 @@ def main():
     items = raws(args.trial, args.comparison)
     rows = []
     reference = face_shape(original_parts)
+    reference_turn = face_turn(original_parts)
     segmenter = HeadSegmenter(args.semantic_repo, args.semantic_checkpoint)
     try:
         for (condition, seed), path in items.items():
@@ -70,18 +73,23 @@ def main():
                 shape = face_shape(parts)
                 ratios = {key: round(shape[key] / reference[key], 3) if shape[key] and reference[key] else None
                           for key in shape}
+                turn = face_turn(parts)
                 row = dict(condition=condition, seed=seed, face_offset_px=[dx, dy],
-                           within_limit=max(abs(dx), abs(dy)) <= FACE_OFFSET_LIMIT, shape=shape, shape_ratio=ratios)
+                           within_limit=max(abs(dx), abs(dy)) <= FACE_OFFSET_LIMIT, shape=shape, shape_ratio=ratios,
+                           face_turn=None if turn is None else round(turn, 3),
+                           turn_within_limit=None if turn is None or reference_turn is None
+                           else abs(turn - reference_turn) <= FACE_TURN_LIMIT)
             except ValueError as error:
                 row = dict(condition=condition, seed=seed, error=str(error))
             rows.append(dict(row, raw=str(path), raw_sha256=sha(path), parts_file=str(parts_file)))
             print(json.dumps(rows[-1], ensure_ascii=False), flush=True)
-            write_json(args.output / "face-offset.json", dict(limit_px=FACE_OFFSET_LIMIT, box=box, original_shape=reference, rows=rows))
+            write_json(args.output / "face-offset.json", dict(limit_px=FACE_OFFSET_LIMIT, box=box, original_shape=reference,
+                                                             original_turn=reference_turn, rows=rows))
         metrics = segmenter.metrics()
     finally:
         segmenter.close()
     write_json(args.output / "face-offset.json", dict(limit_px=FACE_OFFSET_LIMIT, box=box, original_shape=reference,
-                                                     rows=rows, segmenter=metrics))
+                                                     original_turn=reference_turn, rows=rows, segmenter=metrics))
 
 
 if __name__ == "__main__":

@@ -181,6 +181,7 @@ def test_prompts_differ_only_in_head_accessory_sentence():
     keep, remove = script.PROMPT_HEAD["keep"], script.PROMPT_HEAD["remove"]
     assert "head accessories" in keep and "remove every head accessory" in remove.lower()
     assert keep.startswith(script.OUTFIT_HEAD) and remove.startswith(script.OUTFIT_HEAD)
+    assert "same person" in remove and "same gender" in remove          # 시험 10: 삭제 지시가 인물을 바꿈
 
 
 def test_failure_during_first_load_is_named_and_measured(tmp_path):

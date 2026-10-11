@@ -49,9 +49,11 @@ OUTFIT_HEAD = ("Dress the character from image 1 in the outfit shown in image 2:
 PROMPT_HEAD = {
     "keep": OUTFIT_HEAD + ("Keep the character's face, hairstyle, hair color, head accessories and body proportions exactly the "
                            "same as in image 1. "),
-    "remove": OUTFIT_HEAD + ("Also remove every head accessory (headphones, headbands, hair ornaments, hats, earrings and glasses) "
-                             "and draw natural hair where they were. Keep the character's face, hairstyle, hair color and body "
-                             "proportions exactly the same as in image 1. "),
+    # 시험 10: 장식 삭제 지시에서 다른 인물(갈색 머리 남성)이 나왔다. 같은 인물(성별·나이·얼굴·머리색·머리 모양) 유지를 먼저 못 박는다.
+    "remove": OUTFIT_HEAD + ("The character must stay the same person as in image 1: same gender, age, face, hair color and "
+                             "hairstyle. Only take off the head accessories: remove every head accessory (headphones, headbands, "
+                             "hair ornaments, hats, earrings and glasses) and show the character's own hair where they were. "
+                             "Keep body proportions exactly the same as in image 1. "),
 }
 FRAMING = "Do not change the camera angle, framing or the character's size or position."
 PROMPT_HEAD = {k: v + FRAMING for k, v in PROMPT_HEAD.items()}

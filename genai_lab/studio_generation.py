@@ -409,11 +409,48 @@ class StudioResults:
     def finishing_unavailable_reason(self):
         if self.tail_edit:
             return "꼬리를 고친 뒤에는 고화질 마무리를 적용할 수 없습니다."
-        if self.two_pass:
-            return "원본 비율 참고로 만든 결과에는 이번 마무리를 적용하지 않습니다."
         if self.optional_finishing or self.finishings[self.selected]:
             return "이미 마무리한 결과입니다. 중복 마무리는 지원하지 않습니다."
+        if self.two_pass and self.head_view == "pasted":
+            try:
+                self.head_redraw_source()
+            except (ValueError, OSError, KeyError):
+                return "이 머리 붙이기 결과에는 마무리에 쓸 원본이 없습니다. 붙이기 전 보기에서 마무리해 주세요."
         return ""
+
+    def head_redraw_source(self):
+        """머리 붙이기 보기의 마무리 입력: 생성 배경이 남은 전체 그림(raw_redraw.png)과 그 SHA."""
+        record_file = Path(self.active_head["redraw_record"])
+        record = json.loads(record_file.read_text(encoding="utf-8"))
+        path = record_file.parent / "raw_redraw.png"
+        if record.get("status") != "review_pending" or digest(path) != record["result_sha256"]:
+            raise ValueError("머리 다시 그리기 원본이 변경됐습니다.")
+        return path, record["result_sha256"]
+
+    def finishing_raw_sha(self):
+        """마무리가 시작한 그림의 SHA. 머리 붙이기 보기면 붙인 전체 그림, 아니면 생성 원본이다."""
+        if self.two_pass and self.head_view == "pasted":
+            return self.head_redraw_source()[1]
+        return self.verify_original()
+
+    def finishing_candidate(self, workspace):
+        """지금 보고 있는 그림을 마무리 입력으로 만든다. 원본 생성 기록은 바꾸지 않는다."""
+        from genai_lab.onepass_generation import OnePassCandidate
+        if not self.two_pass:
+            return self.candidate
+        raw = self.candidate.raw
+        if self.head_view != "pasted":
+            return raw
+        path, raw_sha = self.head_redraw_source()
+        record = json.loads(raw.record_path.read_text(encoding="utf-8"))
+        record.update(raw_sha256=raw_sha, finishing_source=dict(kind="head_paste_redraw",
+            head_directory=self.active_head["directory"], redraw_record=self.active_head["redraw_record"],
+            original_raw_file=str(raw.path), original_raw_sha256=self.verify_original()))
+        workspace = Path(workspace)
+        workspace.mkdir(parents=True, exist_ok=False)
+        record_path = workspace / "run.json"
+        record_path.write_text(json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8")
+        return OnePassCandidate(raw.seed, path, record_path, record)
 
     @property
     def active_finishing(self):
@@ -427,7 +464,7 @@ class StudioResults:
         from genai_lab.studio_optional_finishing import finishing_info
         if self.finishing_unavailable_reason:
             raise ValueError(self.finishing_unavailable_reason)
-        info = finishing_info(directory, self.verify_original(), self.verify_basis())
+        info = finishing_info(directory, self.finishing_raw_sha(), self.verify_basis())
         previous = (self.optional_finishing, self.approved_sha, self.checks, self.status)
         try:
             self.optional_finishing = info
@@ -464,7 +501,7 @@ class StudioResults:
             before_sha = info["product_sha256"]
         if self.optional_finishing:
             from genai_lab.studio_optional_finishing import finishing_info
-            info = finishing_info(self.optional_finishing["directory"], self.verify_original(), before_sha)
+            info = finishing_info(self.optional_finishing["directory"], self.finishing_raw_sha(), before_sha)
             if info != self.optional_finishing:
                 raise ValueError("선택한 마무리 기록이 변경됐습니다.")
             return info["product_sha256"]

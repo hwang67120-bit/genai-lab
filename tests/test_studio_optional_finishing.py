@@ -244,19 +244,17 @@ def test_real_button_worker_selection_and_save(tmp_path, monkeypatch, outcome):
     finally: window.close()
 
 
-def test_two_pass_rejected_and_disabled(tmp_path):
+def test_two_pass_result_enables_finishing_button(tmp_path):
+    """원본 비율 참고 결과도 고화질 마무리를 선택할 수 있다(2026-10-11 사용자 결정)."""
     app = QApplication.instance() or QApplication([])
     window = GenAILabWindow()
     batch, _ = inputs(tmp_path,1)
     try:
-        assert not window.studio_finish_button.isEnabled()
         window.studio.generated(batch)
         window.studio.results.two_pass = True
         window.studio.controls()
-        assert not window.studio_finish_button.isEnabled()
-        assert "원본 비율" in window.studio_finish_notice.text()
-        window.studio.finish_selected_image()
-        assert window.studio.task is None
+        assert window.studio_finish_button.isEnabled()
+        assert not window.studio.results.finishing_unavailable_reason
     finally: window.close()
 
 

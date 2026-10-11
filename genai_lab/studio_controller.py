@@ -324,7 +324,8 @@ class StudioController(QObject):
             context = {"selected": self.results.selected, "before": str(self.results.current_path),
                        "before_sha256": before_sha, "directory": str(destination)}
             self.finishing_context = context
-            candidate = self.results.candidate
+            # 원본 비율 참고 결과는 지금 보는 그림(머리 붙이기 또는 붙이기 전)의 전체 원본을 마무리한다.
+            candidate = self.results.finishing_candidate(destination.parent / (destination.name + "-source"))
             runtime = self.runtime or StudioRuntime.from_environment()
             self.release_tail_predecessor()
             self.window.status_label.setText("상태: 선택한 한 장 고화질 마무리 중 · 원본은 그대로 보관합니다.")
@@ -344,7 +345,7 @@ class StudioController(QObject):
         try:
             # 파생 결과를 보여주기 전에 화면 스레드에서 검증한다.
             from genai_lab.studio_optional_finishing import finishing_info
-            verified = finishing_info(context["directory"], self.results.verify_original(), context["before_sha256"])
+            verified = finishing_info(context["directory"], self.results.finishing_raw_sha(), context["before_sha256"])
             if verified != info:
                 raise ValueError("마무리 결과 기록이 변경됐습니다.")
             adopted = choose_finished(self.window, context["before"], info)

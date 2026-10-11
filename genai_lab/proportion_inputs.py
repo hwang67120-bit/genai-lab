@@ -83,7 +83,7 @@ class ProportionOptions:
         require(self.shoulder_pull == "off" or (self.enabled and self.outline_source == "base" and self.body_widths == "off"), "어깨 보정은 2단계 base 윤곽에서만 사용하며 폭 맞추기와 함께 쓰지 않습니다.")
         require(self.body_widths in ("off", "match_original"), "체형 폭 옵션 오류")
         require(self.body_widths == "off" or (self.enabled and self.outline_source == "base" and self.head_lines == "none"), "폭 맞추기는 2단계 base 윤곽·머리 안쪽 선 없음에서만 사용합니다.")
-        require(self.head_lines in ("none","hair","all"), "머리 선은 none, hair, all 중 하나여야 합니다.")
+        require(self.head_lines in ("none","hair","all","frame"), "머리 선은 none, hair, all, frame 중 하나여야 합니다.")
         require(type(self.head_lines_confirmed) is bool,"머리 선 확인 여부는 bool입니다.")
         require(type(self.enabled) is bool, "비율 생성 사용 여부는 bool입니다.")
         require(self.outline_source in ("base", "original"), "윤곽 출처는 base 또는 original이어야 합니다.")

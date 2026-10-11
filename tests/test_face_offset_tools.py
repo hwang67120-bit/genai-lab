@@ -43,3 +43,21 @@ def test_measure_collects_conditions_and_matching_c0(tmp_path):
         (tmp_path / folder).mkdir(parents=True); (tmp_path / folder / "raw.png").write_bytes(b"x")
     found = module.raws(tmp_path / "trial", tmp_path / "gen")
     assert set(found) == {("hair", 7), ("all", 7), ("C0", 7)}
+
+
+def test_frame_keeps_hair_lines_and_face_border_above_nose_only():
+    from genai_lab.head_lines import frame_lines
+    all_lines = np.zeros((100, 100), np.uint8); hair = np.zeros_like(all_lines)
+    all_lines[20, 10:90] = 255   # 앞머리 끝선(코 위)
+    all_lines[80, 30:70] = 255   # 턱선(코 아래)
+    all_lines[60:95, 5] = 255; hair[60:95, 5] = 255  # 코 아래 머리카락 가닥
+    frame, cut = frame_lines(all_lines, hair, 49.6)
+    assert cut == 50
+    assert frame[20, 10:90].all() and not frame[80, 30:70].any() and frame[60:95, 5].all()
+
+
+def test_frame_is_an_accepted_head_line_mode():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("head_lines_trial", ROOT / "scripts/head_lines_trial.py")
+    module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+    assert module.MODES == ("hair", "all", "frame")

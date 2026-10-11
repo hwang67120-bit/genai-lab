@@ -99,8 +99,11 @@ def load_case(studio,foreground_model):
     return inputs,settings,options,seeds,candidates,expected,manifest,nose,name,comparisons
 
 
+MODES=('hair','all','frame')
+
+
 def prepare_case(case,directory,segmenter_factory=None,foreground_factory=AnimeForeground,*,face_method="skin_color_v2",
-                 hair_confirmation=None):
+                 hair_confirmation=None,modes=('hair','all')):
     inputs,settings,options,seeds,bases,expected,sources,nose,name,comparisons=case
     directory=Path(directory).resolve();directory.mkdir(parents=True,exist_ok=False)
     state={'status':'started','gpu_generation':False,'case':name}
@@ -113,8 +116,9 @@ def prepare_case(case,directory,segmenter_factory=None,foreground_factory=AnimeF
         record_file=directory/'head-lines/head-lines.json'
         baseline=directory/'baseline-maps';baseline.mkdir()
         base_maps=build_maps(bases,mask,contour,baseline,foreground_factory,options,lambda:False,expected)
-        modes={}
-        for mode in ('hair','all'):
+        prepared_modes={}
+        require(modes and set(modes)<=set(MODES) and len(set(modes))==len(modes),'시험 조건이 다릅니다.')
+        for mode in modes:
             active=replace(options,head_lines=mode,head_lines_file=record_file,head_lines_sha256=sha(record_file))
             lines,details=checked_lines(active,(settings.width,settings.height),require_review=False)
             folder=directory/mode;folder.mkdir();maps={}
@@ -130,11 +134,11 @@ def prepare_case(case,directory,segmenter_factory=None,foreground_factory=AnimeF
                 overlay=folder/f'preview_{seed}.png';save_overlay(rgb,hair,face,sketch[...,0],overlay)
                 maps[seed]={**base,'path':str(path),'sha256':sha(path),'head_lines':details,
                             'preview_file':str(overlay),'preview_sha256':sha(overlay)}
-            modes[mode]={'options':asdict(active),'maps':maps}
+            prepared_modes[mode]={'options':asdict(active),'maps':maps}
         files={str(p):sha(p) for p in directory.rglob('*') if p.is_file()}
         lock=json_value({'case':name,'inputs':asdict(inputs),'settings':asdict(settings),'seeds':seeds,'models':models,
-            'modes':modes,'source_files':sources,'prepared_files':files,'C0':comparisons,
-            'base_stage':'reused','new_generation_count':4,'code_sha256':{str(p):sha(p) for p in CODE_FILES}})
+            'modes':prepared_modes,'source_files':sources,'prepared_files':files,'C0':comparisons,
+            'base_stage':'reused','new_generation_count':len(seeds)*len(modes),'code_sha256':{str(p):sha(p) for p in CODE_FILES}})
         verify_manifest(sources)
         write_json(directory/'preflight.json',lock)
         digest=sha(directory/'preflight.json');(directory/'preflight.sha256').write_text(digest+'\n')
@@ -157,7 +161,7 @@ def run_prepared(prepared,review_sha,output,*,contour_factory=ProportionBackend,
     lock=read(prepared/'preflight.json')
     verify_manifest({**lock['source_files'],**lock['prepared_files'],**lock['code_sha256']})
     inputs,settings=restore_request({'inputs':{'BASE':lock['inputs']},'settings':lock['settings']})
-    require(set(lock['modes'])=={'hair','all'} and len(lock['seeds'])==2 and len(set(lock['seeds']))==2,'시험 조건·seed 수가 다릅니다.')
+    require(lock['modes'] and set(lock['modes'])<=set(MODES) and len(lock['seeds'])==2 and len(set(lock['seeds']))==2,'시험 조건·seed 수가 다릅니다.')
     options={mode:restore_mode(saved['options']) for mode,saved in lock['modes'].items()}
     for mode,opt in options.items():
         require(opt.head_lines==mode,'머리 선 모드 불일치')
@@ -168,7 +172,7 @@ def run_prepared(prepared,review_sha,output,*,contour_factory=ProportionBackend,
     write_json(output/'preflight.json',lock)
     write_json(output/'preview-confirmation.json',{'review_sha256':review_sha,'explicit_cli_confirmation':True})
     try:
-        for mode in ('hair','all'):
+        for mode in lock['modes']:
             folder=output/mode;folder.mkdir()
             maps={int(k):v for k,v in lock['modes'][mode]['maps'].items()}
             local={'status':'started','phase':'CONTOUR','BASE':[],'CONTOUR':[],'products':[],
@@ -205,6 +209,7 @@ def main(argv=None):
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--face-method',choices=('skin_color_v1','skin_color_v2','sam2','confirmed_hair'),default='skin_color_v2')
     parser.add_argument('--hair-confirmation',type=Path,help='confirmed_hair용: 머리 붙이기에서 사용자가 확인한 머리카락 영역 폴더')
+    parser.add_argument('--modes',nargs='+',choices=MODES,default=['hair','all'],help='CPU 준비에서 만들 선 조건')
     parser.add_argument('--run',action='store_true');parser.add_argument('--review-sha')
     args=parser.parse_args(argv)
     require(not args.output.exists(),'새 출력 폴더만 사용할 수 있습니다.')
@@ -230,7 +235,7 @@ def main(argv=None):
                         str(folder/'result.json'):sha(folder/'result.json'),str(info['H_file']):info['H_sha256']})
     else:
         require(args.hair_confirmation is None,'--hair-confirmation은 confirmed_hair에서만 씁니다.')
-    _,digest=prepare_case(case,args.output,factory,face_method=args.face_method,hair_confirmation=hair)
+    _,digest=prepare_case(case,args.output,factory,face_method=args.face_method,hair_confirmation=hair,modes=tuple(args.modes))
     print(json.dumps({'status':'needs_user_review','gpu_generation':0,'review_sha256':digest,'output':str(args.output)},ensure_ascii=False))
 
 

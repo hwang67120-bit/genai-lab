@@ -25,6 +25,16 @@ CHEEK_RULES = {**SKIN_RULES, "method": "skin_color_v2", "sample_location": "bila
                "component_seed": "both_cheeks", "missing_landmarks": "stop"}
 
 
+# frame: 머리카락 선 + 코 높이 위의 얼굴 경계선(앞머리 끝선·관자놀이). 턱·볼 윤곽은 넣지 않는다(D-082).
+FRAME_RULES = {"mode": "frame", "keep": "hair_lines_or_all_lines_at_or_above_nose_row", "cut_row": "nose_y_rounded"}
+
+
+def frame_lines(all_lines, hair_lines, nose_y):
+    cut = int(round(nose_y))
+    rows = np.arange(all_lines.shape[0])[:, None]
+    return np.where((hair_lines > 0) | ((all_lines > 0) & (rows <= cut)), 255, 0).astype(np.uint8), cut
+
+
 CONFIRMED_HAIR_RULES = {"method": "confirmed_hair_v1", "source": "user_confirmed_H2_head_paste",
                         "mapping": "H_1024_crop_resized_nearest_to_box", "face": "head_mask_minus_hair"}
 
@@ -204,13 +214,16 @@ def prepare_head_lines(head, nose_joint, directory, segmenter_factory=None, *, f
         skin,hair,ratio=face_regions(face,mask)
         all_lines=extract_lines(rgb,mask)
         hair_lines=all_lines.copy();hair_lines[hair==0]=0
-        for name,values in (("face",skin),("hair-mask",hair),("all",all_lines),("hair",hair_lines)):
+        frame,cut=frame_lines(all_lines,hair_lines,point[1])
+        record["frame_rules"]={**FRAME_RULES,"cut_row_value":cut}
+        for name,values in (("face",skin),("hair-mask",hair),("all",all_lines),("hair",hair_lines),("frame",frame)):
             path=directory/(name+".png");Image.fromarray(values).save(path)
             record["files"][name]={"path":str(path.resolve()),"sha256":sha(path)}
-        for mode,lines in (("hair",hair_lines),("all",all_lines)):
+        for mode,lines in (("hair",hair_lines),("all",all_lines),("frame",frame)):
             path=directory/(mode+"-preview.png");save_overlay(rgb,hair,skin,lines,path)
             record["files"][mode+"-preview"]={"path":str(path.resolve()),"sha256":sha(path)}
-        record["line_pixels"]={"hair":int(np.count_nonzero(hair_lines)),"all":int(np.count_nonzero(all_lines))}
+        record["line_pixels"]={"hair":int(np.count_nonzero(hair_lines)),"all":int(np.count_nonzero(all_lines)),
+                               "frame":int(np.count_nonzero(frame))}
         record.update(status="needs_user_review",face_area_ratio=ratio)
         return record
     except BaseException as error:
@@ -244,6 +257,9 @@ def checked_lines(options, size, *, require_review=True):
         expected_rules = CHEEK_RULES if method == "skin_color_v2" else SKIN_RULES
         require(all(details.get(k)==v for k,v in expected_rules.items()),"피부색 분리 규칙이 변경됐습니다.")
     for item in record["files"].values():require(sha(item["path"])==item["sha256"],"머리 선·미리보기 입력이 변경됐습니다.")
+    if options.head_lines=="frame":
+        rules=record.get("frame_rules",{})
+        require(all(rules.get(k)==v for k,v in FRAME_RULES.items()) and "frame" in record["files"],"frame 선 기록이 없습니다.")
     item=record["files"][options.head_lines]
     pixels=checked_image(item["path"],item["sha256"],size,"L")
     mask=checked_image(options.head.mask_file,options.head.mask_sha256,size,"L")

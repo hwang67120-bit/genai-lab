@@ -33,3 +33,47 @@ def test_composite_changes_only_inside_mask():
     result = script.composite(person, edited, change)
     assert np.array_equal(result[~change], person[~change])
     assert not np.array_equal(result[change], person[change])
+
+
+def test_head_composite_keeps_head_core_and_drops_original_background():
+    person = textured(3)
+    edited = textured(4)
+    protect = np.zeros(person.shape[:2], bool); protect[100:400, 250:550] = True
+    result, core = script.head_composite(person, edited, protect)
+    assert core.any() and np.array_equal(result[core], person[core])
+    assert np.array_equal(result[~protect], edited[~protect])          # 머리 밖은 원본 배경·소품이 남지 않는다
+    edge = protect & ~(np.roll(protect, 3, 0) & np.roll(protect, -3, 0))
+    assert not np.array_equal(result[edge], person[edge])               # 가장자리는 Qwen 쪽과 섞인다
+
+
+def test_border_white_ratio():
+    image = np.full((1024, 768, 3), 255, np.uint8)
+    assert script.border_white_ratio(image) == 1.0
+    image[:, :20] = (200, 40, 90)
+    assert 0 < script.border_white_ratio(image) < 1
+
+
+class FakeCuda:
+    def __init__(self, reserved):
+        self.reserved = reserved
+
+    def max_memory_reserved(self):
+        return self.reserved * 2 ** 30
+
+    def memory_allocated(self):
+        return 2 ** 30
+
+
+def test_memory_guard_records_and_stops_over_limit(tmp_path):
+    guard = script.MemoryGuard(FakeCuda(6.0), 6.5, tmp_path / "memory.json")
+    callback = guard.step_callback("W3")
+    assert callback(None, 0, None, {"latents": 1}) == {"latents": 1}
+    guard.cuda.reserved = 7.0
+    try:
+        callback(None, 1, None, {})
+        raise AssertionError("한도 초과인데 멈추지 않았습니다")
+    except MemoryError as error:
+        assert "W3/step1" in str(error)
+    import json
+    log = json.loads((tmp_path / "memory.json").read_text(encoding="utf-8"))
+    assert [s["stage"] for s in log["stages"]] == ["W3/step0", "W3/step1"] and log["limit_gib"] == 6.5

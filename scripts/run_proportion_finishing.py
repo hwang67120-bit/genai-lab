@@ -60,7 +60,7 @@ def eye_stats(parts, crop):
     eyes = []
     for i in balls:
         mask = labels == i
-        iris = mask & (chroma > np.quantile(chroma[mask], 0.5))
+        iris = mask & (chroma >= np.quantile(chroma[mask], 0.5))  # 색이 고르면 전체를 쓴다
         eyes.append(dict(area=int(st[i, 4]), center=[round(float(cen[i][0]), 1), round(float(cen[i][1]), 1)],
                          iris_lab=lab_img[iris].mean(0).round(2).tolist()))
     return eyes

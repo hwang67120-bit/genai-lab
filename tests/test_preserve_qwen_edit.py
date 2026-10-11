@@ -55,17 +55,30 @@ def test_border_white_ratio():
 
 class FakeCuda:
     def __init__(self, reserved):
-        self.reserved = reserved
+        self.reserved, self.fraction = reserved, None
 
     def max_memory_reserved(self):
+        return self.reserved * 2 ** 30
+
+    def memory_reserved(self):
         return self.reserved * 2 ** 30
 
     def memory_allocated(self):
         return 2 ** 30
 
+    def reset_peak_memory_stats(self):
+        pass
 
-def test_memory_guard_records_and_stops_over_limit(tmp_path):
+    def get_device_properties(self, device):
+        return type("Props", (), {"total_memory": 8 * 2 ** 30})()
+
+    def set_per_process_memory_fraction(self, fraction, device):
+        self.fraction = fraction
+
+
+def test_memory_guard_caps_allocation_records_stages_and_stops(tmp_path):
     guard = script.MemoryGuard(FakeCuda(6.0), 6.5, tmp_path / "memory.json")
+    assert guard.apply_cap() == guard.cuda.fraction == 6.5 / 8   # 한도 이상은 할당 자체가 실패하게 상한을 건다
     callback = guard.step_callback("W3")
     assert callback(None, 0, None, {"latents": 1}) == {"latents": 1}
     guard.cuda.reserved = 7.0
@@ -76,4 +89,52 @@ def test_memory_guard_records_and_stops_over_limit(tmp_path):
         assert "W3/step1" in str(error)
     import json
     log = json.loads((tmp_path / "memory.json").read_text(encoding="utf-8"))
-    assert [s["stage"] for s in log["stages"]] == ["W3/step0", "W3/step1"] and log["limit_gib"] == 6.5
+    assert [s["stage"] for s in log["stages"]] == ["W3/step0(조건 그림 VAE 인코딩 포함)", "W3/step1"]
+    assert log["limit_gib"] == 6.5 and "W3/step1" in log["stopped"]
+
+
+def test_memory_guard_records_where_allocation_failed(tmp_path):
+    guard = script.MemoryGuard(FakeCuda(5.0), 6.5, tmp_path / "memory.json")
+    guard.check("W3/step39")
+    guard.fail("CUDA out of memory")
+    import json
+    log = json.loads((tmp_path / "memory.json").read_text(encoding="utf-8"))
+    assert "W3/step39" in log["stopped"] and "out of memory" in log["stopped"]   # 디코딩 중 실패면 마지막 단계 다음으로 남는다
+
+
+def fake_parts():
+    shape = (1024, 768)
+    parts = {k: np.zeros(shape, bool) for k in script.HEAD_KEEP + script.HEAD_ACCESSORIES}
+    parts["hair"][100:300, 300:500] = True
+    parts["face"][200:300, 350:450] = True
+    parts["headwear"][90:120, 300:500] = True      # 머리띠·헤드셋
+    parts["earwear"][220:240, 290:300] = True
+    return parts
+
+
+def test_head_accessories_toggle_only_changes_head_accessories():
+    parts = fake_parts()
+    protect = np.logical_or.reduce(list(parts.values()))
+    keep = script.head_protect(parts, protect, "keep")
+    remove = script.head_protect(parts, protect, "remove")
+    worn = parts["headwear"] | parts["earwear"]
+    assert np.array_equal(keep, protect)
+    assert not (remove & worn).any()                 # 끄면 머리 장식은 원본에서 가져오지 않는다
+    assert np.array_equal(keep ^ remove, worn)       # 차이는 머리 장식뿐(머리카락과 겹친 장식 픽셀도 장식으로 본다)
+
+
+def test_head_protect_rejects_mismatched_segmentation():
+    parts = fake_parts()
+    protect = np.logical_or.reduce(list(parts.values()))
+    protect[600:700, 100:200] = True
+    try:
+        script.head_protect(parts, protect, "keep")
+        raise AssertionError("분할 불일치를 통과했습니다")
+    except ValueError:
+        pass
+
+
+def test_prompts_differ_only_in_head_accessory_sentence():
+    keep, remove = script.PROMPT_HEAD["keep"], script.PROMPT_HEAD["remove"]
+    assert "head accessories" in keep and "remove every head accessory" in remove.lower()
+    assert keep.startswith(script.OUTFIT_HEAD) and remove.startswith(script.OUTFIT_HEAD)

@@ -127,6 +127,12 @@ class MemoryGuard:
 
     def __init__(self, cuda, limit_gib, log_path=None):
         self.cuda, self.limit, self.log_path, self.stages, self.stopped = cuda, limit_gib, log_path, [], None
+        self.current = "시작"
+
+    def begin(self, stage):
+        """다음 작업 이름을 먼저 남긴다. 그 작업 중 할당이 실패해도 어느 단계였는지 남는다."""
+        self.current = stage
+        self.write()
 
     def apply_cap(self, device=0):
         if self.limit is None:
@@ -138,9 +144,11 @@ class MemoryGuard:
 
     def write(self):
         if self.log_path is not None:  # 한도로 멈춰도 어느 단계까지 썼는지 남는다
-            write_json(self.log_path, dict(limit_gib=self.limit, stages=self.stages, stopped=self.stopped))
+            write_json(self.log_path, dict(limit_gib=self.limit, current=self.current, stages=self.stages,
+                                           stopped=self.stopped))
 
     def check(self, stage):
+        self.current = stage
         peak = self.cuda.max_memory_reserved() / 2 ** 30
         self.stages.append(dict(stage=stage, allocated_gib=round(self.cuda.memory_allocated() / 2 ** 30, 3),
                                 reserved_gib=round(self.cuda.memory_reserved() / 2 ** 30, 3),
@@ -153,15 +161,29 @@ class MemoryGuard:
             raise MemoryError(self.stopped)
 
     def fail(self, error):
-        last = self.stages[-1]["stage"] if self.stages else "시작"
-        self.stopped = f"'{last}' 다음 단계에서 할당 실패: {error}"
+        try:
+            at_failure = dict(allocated_gib=round(self.cuda.memory_allocated() / 2 ** 30, 3),
+                              reserved_gib=round(self.cuda.memory_reserved() / 2 ** 30, 3),
+                              stage_peak_reserved_gib=round(self.cuda.max_memory_reserved() / 2 ** 30, 3))
+        except Exception as reason:  # 수집 실패는 미측정으로 남긴다
+            at_failure = dict(unmeasured=str(reason))
+        self.stages.append(dict(stage=f"{self.current}(실패)", **at_failure))
+        self.stopped = f"'{self.current}' 중 할당 실패: {error}"
         self.write()
 
     def step_callback(self, name):
         def callback(pipe, step, timestep, kwargs):
             self.check(f"{name}/step{step}" + ("(조건 그림 VAE 인코딩 포함)" if step == 0 else ""))
+            last = step + 1 == pipe.num_timesteps if hasattr(pipe, "num_timesteps") else False
+            self.current = f"{name}/decode" if last else f"{name}/step{step + 1}"
             return kwargs
         return callback
+
+
+def text_encoder_device_map():
+    """문장 인코딩은 마지막 은닉 상태만 쓰고 lm_head(어휘 152,064 × 3,584, bf16 1.02GiB) 출력은 쓰지 않는다.
+    그래서 lm_head는 GPU에 올리지 않고 CPU에 둔 뒤 적재 후 Identity로 바꿔 계산도 하지 않는다. 인코딩 결과는 같다."""
+    return {"model": 0, "lm_head": "cpu"}
 
 
 def load_pipeline(model_root, gguf_file):
@@ -169,8 +191,11 @@ def load_pipeline(model_root, gguf_file):
     from diffusers import QwenImageEditPlusPipeline, QwenImageTransformer2DModel, GGUFQuantizationConfig
     from transformers import Qwen2_5_VLForConditionalGeneration, BitsAndBytesConfig
     te = Qwen2_5_VLForConditionalGeneration.from_pretrained(str(Path(model_root) / "text_encoder"), torch_dtype=torch.bfloat16,
-        local_files_only=True, device_map={"": 0}, quantization_config=BitsAndBytesConfig(load_in_4bit=True,
-        bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.bfloat16, llm_int8_skip_modules=["visual", "lm_head"]))
+        local_files_only=True, device_map=text_encoder_device_map(), quantization_config=BitsAndBytesConfig(load_in_4bit=True,
+        bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.bfloat16, llm_int8_skip_modules=["visual", "lm_head"],
+        llm_int8_enable_fp32_cpu_offload=True))
+    te.lm_head = torch.nn.Identity()  # 쓰지 않는 어휘 출력(전체 토큰 × 152,064) 계산을 없앤다
+    gc.collect()
     encoder = QwenImageEditPlusPipeline.from_pretrained(model_root, transformer=None, vae=None, text_encoder=te,
                                                         torch_dtype=torch.bfloat16, local_files_only=True)
     return encoder, te
@@ -209,6 +234,7 @@ def generate(args, cases, lock, lock_file, garment, prompt, guard, width, height
     from diffusers.pipelines.qwenimage.pipeline_qwenimage_edit_plus import calculate_dimensions, CONDITION_IMAGE_SIZE
     results, rows = [], []
     # 1) 문장·그림 인코딩(4비트 텍스트 인코더)을 장마다 먼저 하고 내린다.
+    guard.begin("text_encoder_load")
     encoder, te = load_pipeline(args.model_root, args.gguf_file)
     guard.check("text_encoder_loaded")
     encoded = {}
@@ -220,6 +246,7 @@ def generate(args, cases, lock, lock_file, garment, prompt, guard, width, height
         for image in (person, garment):
             cw, ch = calculate_dimensions(CONDITION_IMAGE_SIZE, image.width / image.height)
             cond.append(encoder.image_processor.resize(image, ch, cw))
+        guard.begin(f"{case['name']}/encode")
         with torch.no_grad():
             pe, pm = encoder.encode_prompt(prompt=prompt, image=cond, device=torch.device("cuda"))
             ne, nm = encoder.encode_prompt(prompt=" ", image=cond, device=torch.device("cuda"))
@@ -229,6 +256,7 @@ def generate(args, cases, lock, lock_file, garment, prompt, guard, width, height
     gc.collect()
     torch.cuda.empty_cache()
     # 2) GGUF 변환기를 블록 단위로 GPU에 올려 생성한다(기존 Qwen 작업 프로세스와 같은 메모리 방식).
+    guard.begin("transformer_load")
     tr = QwenImageTransformer2DModel.from_single_file(args.gguf_file, quantization_config=GGUFQuantizationConfig(
         compute_dtype=torch.bfloat16), torch_dtype=torch.bfloat16, config=args.model_root, subfolder="transformer",
         local_files_only=True)
@@ -253,6 +281,7 @@ def generate(args, cases, lock, lock_file, garment, prompt, guard, width, height
                 protect = head_protect(parts, protect, args.head_accessories)
         pe, pm, ne, nm = encoded[case["name"]]
         t0 = time.perf_counter()
+        guard.begin(f"{case['name']}/step0(조건 그림 VAE 인코딩 포함)")
         image = pipe(image=[person_img, garment], prompt_embeds=pe.to("cuda"), prompt_embeds_mask=pm.to("cuda") if pm is not None else None,
                      negative_prompt_embeds=ne.to("cuda"), negative_prompt_embeds_mask=nm.to("cuda") if nm is not None else None,
                      true_cfg_scale=args.true_cfg, guidance_scale=1.0, num_inference_steps=args.steps, height=height, width=width,

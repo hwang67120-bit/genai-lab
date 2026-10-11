@@ -138,3 +138,28 @@ def test_prompts_differ_only_in_head_accessory_sentence():
     keep, remove = script.PROMPT_HEAD["keep"], script.PROMPT_HEAD["remove"]
     assert "head accessories" in keep and "remove every head accessory" in remove.lower()
     assert keep.startswith(script.OUTFIT_HEAD) and remove.startswith(script.OUTFIT_HEAD)
+
+
+def test_failure_during_first_load_is_named_and_measured(tmp_path):
+    guard = script.MemoryGuard(FakeCuda(5.7), 6.5, tmp_path / "memory.json")
+    guard.begin("text_encoder_load")
+    guard.fail("CUDA out of memory. Tried to allocate 1.02 GiB")
+    import json
+    log = json.loads((tmp_path / "memory.json").read_text(encoding="utf-8"))
+    assert log["stopped"].startswith("'text_encoder_load' 중")
+    assert log["stages"] == [dict(stage="text_encoder_load(실패)", allocated_gib=1.0, reserved_gib=5.7,
+                                  stage_peak_reserved_gib=5.7)]
+
+
+def test_failure_measurement_errors_are_recorded_as_unmeasured(tmp_path):
+    class Broken(FakeCuda):
+        def memory_allocated(self):
+            raise RuntimeError("CUDA 오류")
+    guard = script.MemoryGuard(Broken(5.0), 6.5, tmp_path / "memory.json")
+    guard.begin("transformer_load")
+    guard.fail("out of memory")
+    assert "unmeasured" in guard.stages[-1] and guard.stages[-1]["stage"] == "transformer_load(실패)"
+
+
+def test_text_encoder_keeps_lm_head_off_gpu():
+    assert script.text_encoder_device_map() == {"model": 0, "lm_head": "cpu"}

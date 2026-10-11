@@ -15,15 +15,58 @@ def textured(seed=0):
     return np.kron(base, np.ones((16, 16, 1), np.uint8))
 
 
-def test_shift_is_measured_and_undone():
-    original = textured()
-    edited = np.roll(original, (6, -4), axis=(0, 1))   # 아래로 6, 왼쪽으로 4
-    area = np.ones(original.shape[:2], bool)
-    dx, dy, _ = script.estimate_shift(original, edited, area)
-    assert abs(dx + 4) < 1 and abs(dy - 6) < 1
-    back = script.align(edited, dx, dy)
-    inner = (slice(40, -40), slice(40, -40))
-    assert np.abs(back[inner].astype(int) - original[inner]).mean() < 3
+def drawing(seed=0):
+    """특징점이 많은 가짜 그림(흰 바탕에 도형). 머리 창은 위쪽 가운데."""
+    import cv2
+    rng = np.random.default_rng(seed)
+    image = np.full((1024, 768, 3), 255, np.uint8)
+    for _ in range(160):
+        x, y = int(rng.integers(150, 620)), int(rng.integers(80, 900))
+        color = tuple(int(c) for c in rng.integers(0, 200, 3))
+        if rng.random() < 0.5:
+            cv2.circle(image, (x, y), int(rng.integers(4, 25)), color, -1)
+        else:
+            cv2.line(image, (x, y), (x + int(rng.integers(-40, 40)), y + int(rng.integers(-40, 40))), color, 3)
+    return image
+
+
+def head_area():
+    window = np.zeros((1024, 768), bool)
+    window[150:450, 230:540] = True
+    return window
+
+
+def warp(image, scale=1.0, dy=0.0, angle=0.0):
+    import cv2
+    matrix = cv2.getRotationMatrix2D((384, 300), angle, scale)
+    matrix[1, 2] += dy
+    return cv2.warpAffine(image, matrix, (768, 1024), borderValue=(255, 255, 255))
+
+
+def test_known_head_shift_is_measured_and_undone():
+    # 시험 10 결함 회귀: 128px 이동을 약 0px로 읽고 통과시키던 문제
+    original = drawing()
+    for dy in (-16, -32, -128):
+        back, report = script.realign(original, warp(original, dy=dy), head_area())
+        assert report["decision"] == "aligned" and abs(report["first"]["head_shift_px"][1] - dy) < 1.5
+        inner = (slice(200, 400), slice(260, 500))
+        assert np.abs(back[inner].astype(int) - original[inner]).mean() < 6
+
+
+def test_head_scale_change_is_undone():
+    # 시험 10 실제 실패: Qwen이 머리를 약 24% 크게, 128px 위로 그림
+    original = drawing(1)
+    back, report = script.realign(original, warp(original, scale=1.24, dy=-120), head_area())
+    assert report["decision"] == "aligned" and abs(report["first"]["scale"] - 1.24) < 0.02
+    assert script.near_identity(report["second"])
+
+
+def test_unrecognisable_or_too_different_head_is_not_pasted():
+    original = drawing(2)
+    back, report = script.realign(original, drawing(3), head_area())      # 다른 인물(장식 삭제 실패 사례)
+    assert back is None and report["decision"] in ("unmeasured", "rejected")
+    back, report = script.realign(original, warp(original, scale=1.6), head_area())
+    assert back is None and report["decision"] == "rejected"
 
 
 def test_composite_changes_only_inside_mask():

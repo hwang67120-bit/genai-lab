@@ -3,7 +3,10 @@
 --paste mask: CatVTON 시험(tryon-01)에서 사용자가 확인한 의상 마스크 안에서만 합성한다(시험 08). 마스크 밖·보존 영역 픽셀이 바뀌면 실패.
 --paste head: 머리(머리카락·얼굴·머리 장식 등 보존 영역)만 원본 픽셀이고 나머지는 Qwen 결과를 쓴다(시험 09). Qwen이 소품을 빼고
               흰 배경으로 그리므로 원본 배경·소품·신발이 남지 않고, 다리와 신발이 한 그림에서 나와 발목이 꺾이지 않는다.
-              머리 위치는 머리 주변에서 재서 맞춘다. 머리 가장자리 2px는 Qwen 머리를 써서 원본 배경색이 번지지 않게 한다.
+              머리 가장자리 2px는 Qwen 머리를 써서 원본 배경색이 번지지 않게 한다.
+머리 정렬(두 방식 공통): 원본 머리 주변과 Qwen 결과 전체에서 특징점(SIFT)을 맞춰 위치·크기·기울기를 잰다. 일치점이 적으면
+붙이지 않는다(unmeasured). 차이가 허용 범위 안이면 Qwen 결과 전체를 원본 좌표로 되돌린 뒤(크기·기울기·위치) 다시 재서
+거의 일치할 때만 붙인다. 범위를 넘거나 다시 재도 어긋나면 붙이지 않는다(rejected). 붙이지 않은 장은 raw만 남긴다.
               --head-accessories keep: 머리 장식(머리띠·모자·헤드셋·귀걸이·안경)을 원본 그대로 유지, remove: 지운다.
               이 선택은 머리 장식에만 적용된다. 무기 등 다른 소품은 어느 쪽이든 지운다.
 메모리: --reserved-limit-gib를 PyTorch 할당 상한으로 걸어 그 이상은 할당 자체가 실패한다(공유 메모리로 넘기지 않음).
@@ -23,8 +26,15 @@ from PIL import Image
 
 SIZE = (768, 1024)
 FEATHER = 2
-MAX_SHIFT = 24
 HEAD_EDGE = 2
+MATCH_RATIO = 0.75
+RANSAC_PX = 3.0
+MIN_INLIERS = 12
+SCALE_RANGE = (0.75, 1.35)      # 되돌릴 수 있는 크기 차이
+ROTATE_LIMIT = 10.0             # 되돌릴 수 있는 기울기(도)
+RESIDUAL_SHIFT = 2.0            # 되돌린 뒤 남아도 되는 위치 차이(px)
+RESIDUAL_SCALE = 0.02
+RESIDUAL_ROTATE = 1.0
 HEAD_WINDOW = 15
 BORDER = 32
 PROMPT = ("Dress the character from image 1 in the outfit shown in image 2: a long dark brown coat, a white shirt with a black "
@@ -65,18 +75,57 @@ def load(path, mode="RGB"):
         return np.asarray(image.convert(mode))
 
 
-def estimate_shift(original, edited, reference_area):
-    """보존해야 할 영역(마스크 밖)에서 편집 결과가 원본에서 얼마나 평행 이동했는지 잰다(위상 상관)."""
-    window = reference_area.astype(np.float32)
-    a = cv2.cvtColor(original, cv2.COLOR_RGB2GRAY).astype(np.float32) * window
-    b = cv2.cvtColor(edited, cv2.COLOR_RGB2GRAY).astype(np.float32) * window
-    (dx, dy), response = cv2.phaseCorrelate(a, b)
-    return float(dx), float(dy), float(response)
+def gray(image):
+    return cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 
 
-def align(edited, dx, dy):
-    matrix = np.float32([[1, 0, -dx], [0, 1, -dy]])
-    return cv2.warpAffine(edited, matrix, (edited.shape[1], edited.shape[0]), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+def match_head(person, edited, window):
+    """원본 머리 주변(window)의 특징점을 Qwen 결과 전체에서 찾아 원본→편집 닮음 변환(위치·크기·기울기)을 잰다."""
+    sift = cv2.SIFT_create()
+    kp1, des1 = sift.detectAndCompute(gray(person), window.astype(np.uint8) * 255)
+    kp2, des2 = sift.detectAndCompute(gray(edited), None)
+    record = dict(source_features=len(kp1), target_features=len(kp2), matches=0, inliers=0)
+    if des1 is None or des2 is None or len(kp1) < 2 or len(kp2) < 2:
+        return dict(record, status="unmeasured")
+    pairs = [m[0] for m in cv2.BFMatcher().knnMatch(des1, des2, k=2) if len(m) == 2 and m[0].distance < MATCH_RATIO * m[1].distance]
+    record["matches"] = len(pairs)
+    if len(pairs) < MIN_INLIERS:
+        return dict(record, status="unmeasured")
+    src = np.float32([kp1[m.queryIdx].pt for m in pairs])
+    dst = np.float32([kp2[m.trainIdx].pt for m in pairs])
+    matrix, inliers = cv2.estimateAffinePartial2D(src, dst, method=cv2.RANSAC, ransacReprojThreshold=RANSAC_PX)
+    record["inliers"] = int(inliers.sum()) if inliers is not None else 0
+    if matrix is None or record["inliers"] < MIN_INLIERS:
+        return dict(record, status="unmeasured")
+    a, b = float(matrix[0, 0]), float(matrix[1, 0])
+    ys, xs = np.nonzero(window)
+    center = np.array([xs.mean(), ys.mean(), 1.0])
+    moved = matrix @ center
+    return dict(record, status="measured", matrix=matrix.tolist(), scale=float(np.hypot(a, b)),
+                rotate_deg=float(np.degrees(np.arctan2(b, a))), head_shift_px=[float(moved[0] - center[0]), float(moved[1] - center[1])])
+
+
+def near_identity(match):
+    return (match["status"] == "measured" and abs(match["scale"] - 1) <= RESIDUAL_SCALE
+            and abs(match["rotate_deg"]) <= RESIDUAL_ROTATE and max(map(abs, match["head_shift_px"])) <= RESIDUAL_SHIFT)
+
+
+def realign(person, edited, window):
+    """머리가 원본과 같은 자리·크기가 되도록 Qwen 결과 전체를 되돌린다. 확인되지 않으면 None(붙이지 않음)."""
+    first = match_head(person, edited, window)
+    report = dict(first=first)
+    if first["status"] != "measured":
+        return None, dict(report, decision="unmeasured")
+    if not (SCALE_RANGE[0] <= first["scale"] <= SCALE_RANGE[1] and abs(first["rotate_deg"]) <= ROTATE_LIMIT):
+        return None, dict(report, decision="rejected", reason="크기·기울기 차이가 범위를 넘음")
+    inverse = cv2.invertAffineTransform(np.float32(first["matrix"]))
+    back = cv2.warpAffine(edited, inverse, (edited.shape[1], edited.shape[0]), flags=cv2.INTER_LANCZOS4,
+                          borderMode=cv2.BORDER_CONSTANT, borderValue=(255, 255, 255))
+    second = match_head(person, back, window)
+    report.update(second=second)
+    if not near_identity(second):
+        return None, dict(report, decision="rejected", reason="되돌린 뒤에도 머리가 맞지 않음")
+    return back, dict(report, decision="aligned")
 
 
 def composite(person, edited, change):
@@ -292,15 +341,19 @@ def generate(args, cases, lock, lock_file, garment, prompt, guard, width, height
         name = f"{case['name']}_{args.seed}"
         image.save(out / f"{name}_raw.png")
         edited = np.asarray(image.convert("RGB").resize(SIZE, Image.LANCZOS))
-        if args.paste == "head":
-            dx, dy, response = estimate_shift(person, edited, head_window(protect))
-        else:
-            dx, dy, response = estimate_shift(person, edited, ~change & ~protect)
-        shifted = abs(dx) <= MAX_SHIFT and abs(dy) <= MAX_SHIFT
-        aligned = align(edited, dx, dy) if shifted else edited
+        window = head_window(protect)
+        aligned, alignment = realign(person, edited, window)
         record = dict(case=case["name"], seed=args.seed, paste=args.paste, seconds=round(seconds, 1),
                       head_accessories=args.head_accessories if args.paste == "head" else None,
-                      shift_px=[round(dx, 2), round(dy, 2)], shift_response=round(response, 3), aligned=shifted)
+                      alignment=alignment)
+        if aligned is None:  # 머리를 확인할 수 없거나 어긋나면 붙이지 않는다
+            record.update(composited=False)
+            results.append(record)
+            print(json.dumps(record, ensure_ascii=False), flush=True)
+            rows.append(np.concatenate([person, edited, np.full_like(person, 255)], 1))
+            write_json(out / "results.json", dict(results=results, memory=guard.stages))
+            continue
+        record.update(composited=True)
         if args.paste == "head":
             result, core = head_composite(person, aligned, protect)
             record.update(head_core_equal=bool(np.array_equal(result[core], person[core])), head_core_px=int(core.sum()),
@@ -313,11 +366,11 @@ def generate(args, cases, lock, lock_file, garment, prompt, guard, width, height
                           outside_equal=bool(np.array_equal(result[~change], person[~change])),
                           protect_equal=bool(np.array_equal(result[protect], person[protect])))
             ok = record["outside_equal"] and record["protect_equal"]
+        Image.fromarray(aligned).save(out / f"{name}_aligned.png")
         Image.fromarray(result).save(out / f"{name}.png")
         record["result_sha256"] = sha(out / f"{name}.png")
         results.append(record)
         print(json.dumps(results[-1], ensure_ascii=False), flush=True)
-        require(shifted or args.paste == "mask", f"{name}: 머리 위치 차이가 {MAX_SHIFT}px를 넘습니다.")
         require(ok, f"{name}: 보존해야 할 원본 픽셀이 바뀌었습니다.")
         rows.append(np.concatenate([person, edited, result], 1))
         write_json(out / "results.json", dict(results=results, memory=guard.stages))

@@ -28,6 +28,8 @@ def scene(background=(255, 255, 255)):
     original[parts["face"]] = (200, 160, 130)
     original[H] = (50, 90, 130)
     generated_parts = sample_parts()
+    for p in (parts, generated_parts):
+        p["mouth"][520:530, 480:540] = True  # 얼굴 방향 측정용 입(두 눈 가운데 근처)
     generated = np.full((1024, 1024, 3), 200, np.uint8)
     generated[generated_parts["face"]] = (205, 165, 135)
     generated[generated_parts["hair"]] = (70, 80, 90)
@@ -249,3 +251,18 @@ def test_face_offset_rule_does_not_touch_short_hair_path():
     original, hm, parts, H, generated, generated_parts = scene()
     far = {name: np.roll(mask, 50, axis=0) for name, mask in generated_parts.items()}
     paste_canvas(original, hm, parts, H, np.roll(generated, 50, axis=0), far)  # 짧은 머리는 기존대로 진행
+
+
+def test_turned_or_unmeasurable_generated_face_keeps_generated():
+    original, hm, parts, H, generated, generated_parts = scene()
+    turned = {name: mask.copy() for name, mask in generated_parts.items()}
+    turned["mouth"][:] = False; turned["mouth"][520:530, 580:640] = True  # 입이 눈 사이 0.25만큼 옆으로
+    with pytest.raises(ValueError, match="다른 방향"):
+        paste_canvas(original, hm, parts, H, generated, turned, paste_profile(["long_hair"]))
+    blind = {name: mask.copy() for name, mask in generated_parts.items()}
+    blind["mouth"][:] = False; blind["nose"][:] = False
+    with pytest.raises(ValueError, match="얼굴 방향"):
+        paste_canvas(original, hm, parts, H, generated, blind, paste_profile(["long_hair"]))
+    *_, measured = paste_canvas(original, hm, parts, H, generated, generated_parts, paste_profile(["long_hair"]))
+    assert measured["face_turn"][0] == measured["face_turn"][1]
+    paste_canvas(original, hm, parts, H, generated, blind)  # 짧은 머리 경로는 방향 검사를 하지 않는다

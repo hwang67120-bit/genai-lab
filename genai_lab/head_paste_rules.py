@@ -14,6 +14,7 @@ SCALE_RANGE = (0.85, 1.15)
 EYE_COVER_LIMIT = 0.5
 HAIR_COLOR_DE = 25.0
 FACE_OFFSET_LIMIT = 35  # 1024 자른 그림 px. 검증 짧은 머리 3~27, 긴 머리 실패 53~74(D-081)
+FACE_TURN_LIMIT = 0.15  # 코·입 가로 치우침 차이(눈 사이 기준). 원본 −0.07, 방향 불일치 GUI 사례 0.20~0.23(D-085)
 BG_NEAR_DE = 10.0
 BG_PLAIN_MIN = 0.6
 
@@ -263,6 +264,25 @@ def face_offset(parts, pg):
     dx, dy = (middle(pg) - middle(parts)).round().astype(int).tolist()
     return dx, dy
 
+def face_turn(parts):
+    """코·입 픽셀의 가로 중심이 두 눈 가운데에서 얼마나 치우쳤는지(두 눈 간격으로 나눔). 측정 불가면 None."""
+    points = eye_points(parts['eyes'] | parts['nose'] | parts['mouth'])
+    lower = parts['nose'] | parts['mouth']
+    if not points or lower.sum() < 20:
+        return None
+    middle = (points[0][0] + points[1][0]) / 2
+    return float((np.nonzero(lower)[1].mean() - middle) / max(1e-6, points[1][0] - points[0][0]))
+
+def check_face_turn(parts, pg):
+    """얼굴이 원본과 다른 방향을 보면 정면 원본 머리가 어긋난다. 방향을 잴 수 없어도 붙이지 않는다."""
+    original, generated = face_turn(parts), face_turn(pg)
+    if original is None or generated is None:
+        raise ValueError('얼굴 방향(코·입 위치)을 확인하지 못해 머리 붙이기를 건너뛰었습니다. 붙이기 전 결과를 유지합니다.')
+    if abs(generated - original) > FACE_TURN_LIMIT:
+        raise ValueError(f'생성 얼굴이 원본과 다른 방향을 보고 있어(코·입 치우침 원본 {original:+.2f}, 생성 {generated:+.2f}) '
+                         '머리 붙이기를 건너뛰었습니다. 붙이기 전 결과를 유지합니다.')
+    return [round(original, 3), round(generated, 3)]
+
 def check_face_offset(parts, pg):
     """생성 얼굴이 원본 머리 윤곽 안에서 다른 곳에 있으면 머리와 얼굴을 함께 맞출 수 없다. 붙이지 않는다."""
     dx, dy = face_offset(parts, pg)
@@ -377,8 +397,9 @@ def paste_canvas(orig, hm, parts, H, gen, pg, profile=None):
     alignment, eye_cover = None, None
     if profile:
         offset = check_face_offset(parts, pg)
+        turn = check_face_turn(parts, pg)
         orig, hm, parts, H, alignment = align_long_hair(orig, hm, parts, H, pg)
-        alignment = dict(alignment, face_offset_px=offset)
+        alignment = dict(alignment, face_offset_px=offset, face_turn=turn)
     prepared = prepare_original(orig, hm, parts, H, profile)
     po, pad = (prepared['po'], prepared['pad'])
     o_head, o_skin, o_bg = (prepared[key] for key in ('o_head', 'o_skin', 'o_bg'))

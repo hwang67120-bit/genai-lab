@@ -24,3 +24,20 @@ def test_canvas_keeps_whole_figure_on_white(size):
     ys, xs = np.nonzero(painted)
     w, h = size
     assert abs((xs.max() - xs.min() + 1) / (ys.max() - ys.min() + 1) - w / h) < 0.02   # 비율 유지, 자르지 않음
+
+
+def test_garment_terms_keep_clothing_and_drop_pose_tags():
+    # 제품 의상 분석이 이 정장에서 실제로 낸 태그(outputs/studio-runs/179d…/inputs/analysis.json)
+    tags = ['shirt', 'suspenders', 'pants', 'hands in pockets', 'shoes', 'black ribbon', 'coat', 'Coat', 'black_socks']
+    terms = outfit_edit.clean_garment_terms(tags)
+    assert "hands in pockets" not in terms and terms.count("coat") == 1
+    assert {"shoes", "black ribbon", "black socks"} <= set(terms)
+    prompt = outfit_edit.outfit_prompt("keep", terms)
+    assert "consists of: shirt, suspenders" in prompt and prompt.startswith(outfit_edit.OUTFIT_BASE)
+    with pytest.raises(ValueError):
+        outfit_edit.outfit_prompt("keep", ("shirt", "hands in pockets"))   # 정리되지 않은 목록은 거부
+
+
+def test_base_prompt_asks_to_replace_all_current_clothing():
+    # 요청 12 W3: "그림 2의 옷을 입혀라"만으로는 몸에 붙는 원래 옷이 남았다
+    assert "Replace all of the character's current clothing" in outfit_edit.outfit_prompt("keep")

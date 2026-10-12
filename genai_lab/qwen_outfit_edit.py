@@ -27,9 +27,10 @@ class OutfitEditSpec:
     garment_sha256: str
     head_accessories: str     # keep | remove (머리 장식에만 적용)
     confirmed: bool = False
+    garment_terms: tuple = ()  # 의상 그림 자동 분석에서 사용자가 확인한 옷 이름(정리 후)
 
     def record(self):
-        return asdict(self)
+        return dict(asdict(self), garment_terms=list(self.garment_terms))
 
     @property
     def sha256(self):
@@ -40,7 +41,7 @@ class OutfitEditSpec:
             require_sha(value)
         if self.confirmed is not True:
             raise ValueError("캐릭터·의상과 머리 장식 선택을 확인해 주세요.")
-        outfit_prompt(self.head_accessories)
+        outfit_prompt(self.head_accessories, self.garment_terms)
         if file_sha(self.image_path) != self.image_sha256:
             raise ValueError("준비한 캐릭터 그림이 변경됐습니다.")
         if file_sha(self.garment_path) != self.garment_sha256:
@@ -50,11 +51,13 @@ class OutfitEditSpec:
                 raise ValueError("캐릭터 그림은 768×1024 RGB 캔버스여야 합니다.")
 
 
-def prepare_outfit_spec(canvas_path, garment_path, *, head_accessories, confirmed, directory):
+def prepare_outfit_spec(canvas_path, garment_path, *, head_accessories, confirmed, directory, garment_terms=()):
     """두 입력을 실행 폴더로 복사해 고정한다."""
     if confirmed is not True:
         raise ValueError("캐릭터·의상과 머리 장식 선택을 확인해 주세요.")
-    outfit_prompt(head_accessories)
+    from genai_lab.outfit_edit import clean_garment_terms
+    garment_terms = clean_garment_terms(garment_terms)
+    outfit_prompt(head_accessories, garment_terms)
     directory = Path(directory).resolve()
     directory.mkdir(parents=True, exist_ok=False)
     character, garment = Path(canvas_path).read_bytes(), Path(garment_path).read_bytes()
@@ -63,16 +66,17 @@ def prepare_outfit_spec(canvas_path, garment_path, *, head_accessories, confirme
     (directory / f"garment{suffix}").write_bytes(garment)
     spec = OutfitEditSpec(str(directory / "character.png"), hashlib.sha256(character).hexdigest(),
                           str(directory / f"garment{suffix}"), hashlib.sha256(garment).hexdigest(),
-                          head_accessories, confirmed)
+                          head_accessories, confirmed, garment_terms)
     spec.verify_image()
     return spec
 
 
 def make_outfit_request(spec, *, settings):
     spec.verify_image()
+    positive = outfit_prompt(spec.head_accessories, spec.garment_terms)
     return {"schema_version": 1, "task_kind": "outfit_edit", "images": 2, "outfit_spec": spec.record(),
-            "prompt": {"positive": outfit_prompt(spec.head_accessories), "negative": " ",
-                       "positive_sha256": hashlib.sha256(outfit_prompt(spec.head_accessories).encode("utf-8")).hexdigest()},
+            "prompt": {"positive": positive, "negative": " ",
+                       "positive_sha256": hashlib.sha256(positive.encode("utf-8")).hexdigest()},
             "settings": settings.record(), "seed": OUTFIT_SEED, "memory": dict(MEMORY_POLICY),
             "basis_size": list(SIZE), "output_size": list(output_dimensions(*SIZE))}
 
@@ -80,14 +84,15 @@ def make_outfit_request(spec, *, settings):
 def validate_outfit_request(request):
     if request.get("task_kind") != "outfit_edit" or request.get("schema_version") != 1 or request.get("images") != 2:
         raise ValueError("의상 편집 요청 형식 오류")
-    spec = OutfitEditSpec(**request["outfit_spec"])
+    record = dict(request["outfit_spec"])
+    spec = OutfitEditSpec(**dict(record, garment_terms=tuple(record.get("garment_terms", ()))))
     spec.verify_image()
     QwenPoseSettings(**request["settings"])
     if request.get("seed") != OUTFIT_SEED or type(request.get("seed")) is not int:
         raise ValueError("의상 편집 seed 계약 오류")
     if request.get("memory") != MEMORY_POLICY:
         raise ValueError("의상 편집 메모리 계약 오류(6.5GiB 상한·VAE 타일·lm_head CPU)")
-    if request["prompt"]["positive"] != outfit_prompt(spec.head_accessories) or request["prompt"]["negative"] != " ":
+    if request["prompt"]["positive"] != outfit_prompt(spec.head_accessories, spec.garment_terms) or request["prompt"]["negative"] != " ":
         raise ValueError("확인한 머리 장식 선택과 지시문이 다릅니다.")
     if request.get("basis_size") != list(SIZE) or request.get("output_size") != list(output_dimensions(*SIZE)):
         raise ValueError("의상 편집 이미지 크기 계약 오류")

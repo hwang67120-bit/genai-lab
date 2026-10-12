@@ -8,6 +8,7 @@
 """
 import hashlib
 import json
+import re
 from pathlib import Path
 
 import cv2
@@ -304,9 +305,11 @@ def canvas(image):
     return out
 
 
-# 제품 지시문: 의상 묘사를 쓰지 않고 그림 2를 따르게 한다(시험 지시문의 "long dark brown coat"가 의상을 바꾼 정황, D-092).
-OUTFIT_BASE = ("Dress the character from image 1 in the outfit shown in image 2, matching its shape, length, colors and "
-               "details. Remove any weapon and every carried or held prop. Place the character alone on a plain pure white "
+# 제품 지시문: 캐릭터별 의상 묘사를 손으로 쓰지 않는다(시험 지시문의 "long dark brown coat"가 의상을 바꾼 정황, D-092).
+# 요청 12: "그림 2의 옷을 입혀라"만으로는 W3의 몸에 붙는 원래 옷이 그대로 남았다 → 지금 옷 전체를 바꾸라고 명시한다(D-095).
+OUTFIT_BASE = ("Replace all of the character's current clothing in image 1, including any bodysuit, jacket, socks and shoes, "
+               "with the complete outfit shown in image 2, matching its shape, length, colors and details. "
+               "Remove any weapon and every carried or held prop. Place the character alone on a plain pure white "
                "background with nothing else. ")
 OUTFIT_KEEP = ("Keep the character's face, hairstyle, hair color, head accessories and body proportions exactly the same as "
                "in image 1. ")
@@ -315,11 +318,35 @@ OUTFIT_REMOVE = ("The character must stay the same person as in image 1: same ge
                  "hats, earrings and glasses) and show the character's own hair where they were. Keep body proportions "
                  "exactly the same as in image 1. ")
 OUTFIT_FRAMING = "Do not change the camera angle, framing or the character's size or position."
+GARMENT_TERM = re.compile(r"[a-z][a-z0-9 '-]{0,39}")
+NOT_GARMENT = ("hand", "arm", "leg", "pose", "holding", "pocket", "standing", "sitting", "looking")
+MAX_GARMENT_TERMS = 20
 
 
-def outfit_prompt(head_accessories):
-    """제품용 고정 지시문. 머리 장식 선택(keep/remove)만 바뀐다."""
+def clean_garment_terms(terms):
+    """의상 그림 자동 분석(사용자 확인)의 옷 이름만 남긴다. 자세·손 동작 태그(예: hands in pockets)는 뺀다."""
+    from genai_lab.onepass_garment_vocabulary import garment_nouns
+    from genai_lab.garment_detail_analysis import detail_group
+    kept = []
+    for term in terms:
+        text = str(term).replace("_", " ").strip().lower()
+        words = text.split()
+        # 제품 입력 분석(studio_analysis.features)과 같은 옷 판정 규칙
+        garment = garment_nouns((text,)) or detail_group(text) in (
+            "component_candidate", "construction", "shape", "surface", "style_context")
+        if (GARMENT_TERM.fullmatch(text) and garment
+                and not any(w in words or w + "s" in words for w in NOT_GARMENT) and text not in kept):
+            kept.append(text)
+    return tuple(kept[:MAX_GARMENT_TERMS])
+
+
+def outfit_prompt(head_accessories, garment_terms=()):
+    """제품용 고정 지시문. 머리 장식 선택(keep/remove)과, 있으면 의상 그림에서 자동으로 읽은 옷 이름 목록만 바뀐다."""
     if head_accessories not in ("keep", "remove"):
         raise ValueError("머리 장식은 keep 또는 remove만 고를 수 있습니다.")
+    terms = tuple(garment_terms)
+    if terms != clean_garment_terms(terms):
+        raise ValueError("옷 이름 목록은 정리된 의상 용어만 쓸 수 있습니다.")
+    listed = f"The outfit in image 2 consists of: {', '.join(terms)}. " if terms else ""
     body = OUTFIT_KEEP if head_accessories == "keep" else OUTFIT_REMOVE
-    return OUTFIT_BASE + body + OUTFIT_FRAMING
+    return OUTFIT_BASE + listed + body + OUTFIT_FRAMING

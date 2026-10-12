@@ -72,3 +72,18 @@ def test_workflow_checks_gpu_before_launch_and_only_once(tmp_path):
     assert probes == [1] and flow.phase == "qwen_running"
     with pytest.raises(ValueError):
         flow.before_launch(spec)
+
+
+def test_garment_terms_are_part_of_the_checked_prompt(tmp_path):
+    character, garment = tmp_path / "canvas.png", tmp_path / "suit.jpg"
+    Image.new("RGB", (768, 1024), "white").save(character)
+    Image.new("RGB", (500, 900), (90, 60, 40)).save(garment)
+    spec = prepare_outfit_spec(character, garment, head_accessories="keep", confirmed=True, directory=tmp_path / "run",
+                               garment_terms=["coat", "hands in pockets", "shoes"])
+    assert spec.garment_terms == ("coat", "shoes")
+    request = json.loads(json.dumps(make_outfit_request(spec, settings=settings(tmp_path))))
+    assert "consists of: coat, shoes" in request["prompt"]["positive"]
+    assert validate_outfit_request(request).garment_terms == ("coat", "shoes")
+    request["outfit_spec"]["garment_terms"] = ["coat"]
+    with pytest.raises(ValueError):
+        validate_outfit_request(request)

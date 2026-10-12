@@ -206,10 +206,32 @@ def build_studio(window, framing_options, clothing_mode):
     window.studio_proportion_checkbox.toggled.connect(window.studio_shoulder_checkbox.setEnabled)
     window.studio_proportion_checkbox.toggled.connect(lambda enabled: None if enabled else window.studio_shoulder_checkbox.setChecked(False))
     box.addWidget(window.studio_shoulder_checkbox)
+    # D-094: 원본 편집형 의상 교체. 2단계 비율 생성과 함께 쓰지 않는다.
+    window.studio_outfit_edit_checkbox = QCheckBox("원본 그림에서 옷만 바꾸기 (약 30분)")
+    window.studio_outfit_edit_checkbox.setObjectName("studio_outfit_edit_checkbox")
+    window.studio_outfit_edit_checkbox.setChecked(False)
+    window.studio_outfit_edit_checkbox.setToolTip(
+        "원본 캐릭터 그림을 편집해 옷만 바꾸고, 얼굴·머리카락은 원본 그대로 붙입니다. 자세는 바뀔 수 있습니다.")
+    box.addWidget(window.studio_outfit_edit_checkbox)
+    window.studio_head_accessory_checkbox = QCheckBox("머리 장식 유지 (머리띠·헤드셋·귀걸이·안경)")
+    window.studio_head_accessory_checkbox.setObjectName("studio_head_accessory_checkbox")
+    window.studio_head_accessory_checkbox.setChecked(True)
+    window.studio_head_accessory_checkbox.setEnabled(False)
+    window.studio_head_accessory_checkbox.setToolTip("끄면 머리 장식만 지웁니다. 다른 소품(무기 등)은 항상 지웁니다.")
+    box.addWidget(window.studio_head_accessory_checkbox)
+    window.studio_outfit_edit_checkbox.toggled.connect(window.studio_head_accessory_checkbox.setEnabled)
+    window.studio_outfit_edit_checkbox.toggled.connect(
+        lambda enabled: enabled and window.studio_proportion_checkbox.setChecked(False))
+    window.studio_proportion_checkbox.toggled.connect(
+        lambda enabled: enabled and window.studio_outfit_edit_checkbox.setChecked(False))
     window.studio_mode_note = _label("자세를 따로 지정하지 않고 생성합니다. 자세 변경은 이번 범위에서 제외합니다.", "muted")
     box.addWidget(window.studio_mode_note)
     window.studio_proportion_checkbox.toggled.connect(lambda enabled: window.studio_mode_note.setText(
         "원본 비율과 머리 영역을 확인하고 4장을 만듭니다. 짧은 머리는 자동으로 붙입니다. 생성량은 2배이며 머리 처리 시간이 추가됩니다."
+        if enabled else "자세를 따로 지정하지 않고 생성합니다. 자세 변경은 이번 범위에서 제외합니다."))
+    window.studio_outfit_edit_checkbox.toggled.connect(lambda enabled: window.studio_mode_note.setText(
+        "원본 그림을 편집해 옷만 바꾸고 결과 1장을 만듭니다. 얼굴·머리는 원본 그대로이며 자세는 바뀔 수 있습니다. "
+        "머리를 확인할 수 없거나 팔이 사라지면 원본 머리를 붙이지 않고 알려 드립니다."
         if enabled else "자세를 따로 지정하지 않고 생성합니다. 자세 변경은 이번 범위에서 제외합니다."))
     input_layout.addWidget(card)
 

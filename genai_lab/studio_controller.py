@@ -15,6 +15,7 @@ import threading
 import logging
 import traceback
 import uuid
+from types import SimpleNamespace
 from PySide6.QtCore import QThread, Qt, Signal, QObject
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox,
@@ -56,6 +57,8 @@ class StudioController(QObject):
         self.tail_settings_path = ""
         self.pending_tail_recognition = None
         self.finishing_context = None
+        self.outfit_edit_enabled = False
+        self.head_accessories = "keep"
         self.last_saved = None
         self.output_root = Path(__file__).resolve().parents[1] / "outputs" / "studio-runs"
         window.studio_candidate_combo.currentIndexChanged.connect(self.select)
@@ -86,10 +89,13 @@ class StudioController(QObject):
             self.runtime = StudioRuntime.from_environment()
             self.proportion_enabled = w.studio_proportion_checkbox.isChecked()
             self.shoulder_enabled = self.proportion_enabled and w.studio_shoulder_checkbox.isChecked()
+            self.outfit_edit_enabled = w.studio_outfit_edit_checkbox.isChecked() and not self.proportion_enabled
+            self.head_accessories = "keep" if w.studio_head_accessory_checkbox.isChecked() else "remove"
             self.proportion_pending = None
             self.prepared_proportion_pose = None
             self.head_paste_controller.generation_context = None
-            validate_local_models(self.runtime.generation)
+            if not self.outfit_edit_enabled:  # 원본 편집형은 SDXL 생성 모델을 쓰지 않는다
+                validate_local_models(self.runtime.generation)
             w.candidate_preview.clear()
             w.candidate_preview.setText("선택한 캐릭터와 옷을 준비하고 있습니다.")
             w.status_label.setText("상태: 캐릭터와 옷 확인 중")
@@ -104,6 +110,9 @@ class StudioController(QObject):
 
     def inputs_ready(self, analysis):
         self.analysis = analysis
+        if self.outfit_edit_enabled:
+            self.begin_outfit_edit(analysis)
+            return
         self.confirming = True
         self.controls()
         try:
@@ -205,6 +214,54 @@ class StudioController(QObject):
             return prepare_backgrounds(batch, self.runtime.model_cache, cancelled=cancel, progress=progress)
         self.launch(generate, self.generated, on_cancel=cancellation.cleanup)
 
+    # 원본 편집형 의상 교체(D-094): 입력 확인 → Qwen 편집 → 머리·팔 검사 → 결과 1장 검토.
+
+    def begin_outfit_edit(self, analysis):
+        from genai_lab.qwen_pose_settings import QwenPoseSettings
+        self.confirming = True
+        self.controls()
+        try:
+            settings_path = confirm_outfit_edit(self.window, analysis, self.head_accessories, self.tail_settings_path)
+        finally:
+            self.confirming = False
+        if settings_path is None:
+            self.window.status_label.setText("상태: 옷 바꾸기를 취소했습니다. 다른 이미지를 선택할 수 있습니다.")
+            self.window.candidate_preview.clear()
+            self.window.candidate_preview.setText("아직 생성하지 않았습니다.")
+            self.controls()
+            return
+        try:
+            settings = QwenPoseSettings.load(settings_path)
+        except (ValueError, OSError, TypeError) as error:
+            QMessageBox.warning(self.window, "실행 환경 확인", str(error))
+            self.controls()
+            return
+        self.tail_settings_path = settings_path
+        self.release_tail_predecessor()
+        directory = self.run_directory / "outfit-edit"
+        source = Path(analysis["directory"])
+        accessories, runtime = self.head_accessories, self.runtime
+        def operation(cancel, progress):
+            from genai_lab.outfit_edit_pipeline import run_outfit_pipeline
+            return run_outfit_pipeline(source / "character.png", source / "garment.png", settings=settings,
+                                       head_accessories=accessories, runtime=runtime, directory=directory,
+                                       cancelled=cancel, progress=progress)
+        self.window.status_label.setText("상태: 옷 바꾸기 준비 중 · 약 30분 걸릴 수 있습니다.")
+        self.launch(operation, self.outfit_edited)
+
+    def outfit_edited(self, outcome):
+        from genai_lab.outfit_edit_results import OutfitEditResults
+        self.results = OutfitEditResults(outcome, appendage_review_required=bool(
+            self.analysis and any(appendage_tags(self.analysis["groups"]["fixed"]).values())))
+        combo = self.window.studio_candidate_combo
+        combo.blockSignals(True)
+        combo.clear()
+        combo.addItem("옷 바꾼 결과")
+        combo.blockSignals(False)
+        self.window.candidate_preview.setPixmap(QPixmap(str(self.results.current_path)))
+        self.window.status_label.setText("상태: 결과 1장 준비됨 · 확인해 주세요. " + self.results.head_notice)
+        self.controls()
+
     # 3. 생성 완료: 원시 결과를 검토 대기로 표시한다. 아직 승인·저장 상태가 아니다.
 
     def generated(self, batch):
@@ -235,7 +292,9 @@ class StudioController(QObject):
     def approve(self):
         if self.results is None:
             return
-        checks = confirm_result(self.window, replace(self.results.candidate, path=self.results.current_path), self.analysis)
+        candidate = (SimpleNamespace(path=self.results.current_path) if getattr(self.results, "edit_mode", False)
+                     else replace(self.results.candidate, path=self.results.current_path))
+        checks = confirm_result(self.window, candidate, self.analysis)
         if checks is not None:
             try:
                 self.results.approve(checks)
@@ -538,6 +597,9 @@ class StudioController(QObject):
                         w.qwen_pose_button, w.external_candidate_button):
             control.setEnabled(not self.occupied)
         w.studio_proportion_checkbox.setEnabled(not self.occupied)
+        w.studio_outfit_edit_checkbox.setEnabled(not self.occupied)
+        w.studio_head_accessory_checkbox.setEnabled(not self.occupied and w.studio_outfit_edit_checkbox.isChecked())
+        edit_result = bool(getattr(self.results, "edit_mode", False))
         w.studio_shoulder_checkbox.setEnabled(not self.occupied and w.studio_proportion_checkbox.isChecked())
         w.generate_button.setEnabled(not self.occupied and bool(w.style_path and w.selected_outfit_path))
         w.studio_cancel_button.setVisible(self.task is not None)
@@ -558,14 +620,14 @@ class StudioController(QObject):
         if self.results is not None:
             w.studio_background_notice.setText(self.results.background_notice)
         has_tail = bool(self.analysis and appendage_tags(self.analysis["groups"]["fixed"])["tail"])
-        w.tail_edit_button.setVisible(self.results is not None and has_tail)
-        w.tail_edit_button.setEnabled(ready and has_tail)
+        w.tail_edit_button.setVisible(self.results is not None and has_tail and not edit_result)
+        w.tail_edit_button.setEnabled(ready and has_tail and not edit_result)
         reason = self.results.finishing_unavailable_reason if self.results else ""
-        w.studio_finish_button.setVisible(self.results is not None)
+        w.studio_finish_button.setVisible(self.results is not None and not edit_result)
         w.studio_finish_button.setEnabled(ready and not reason)
         w.studio_finish_button.setToolTip(reason or FINISHING_NOTICE)
         w.studio_finish_notice.setText(reason or FINISHING_NOTICE)
-        w.studio_finish_notice.setVisible(self.results is not None)
+        w.studio_finish_notice.setVisible(self.results is not None and not edit_result)
         self.head_paste_controller.refresh(ready)
         self.identity_report_controller.refresh()
 
@@ -845,6 +907,53 @@ def confirm_inputs(window, analysis, enable_ear_override=False, runtime=None):
         for part, (text, confirmed) in fields.items()
     })
     return gender.currentData(), tuple(t.strip() for t in tags.toPlainText().split(",") if t.strip()), appearance
+
+def confirm_outfit_edit(window, analysis, head_accessories, settings_path=""):
+    """옷 바꾸기 시작 전 확인. 실행 환경 설정 파일(꼬리 편집과 같은 Qwen 설정)을 고른다. 취소하면 None."""
+    from genai_lab.qwen_outfit_edit import LIMITATIONS
+    dialog = QDialog(window)
+    dialog.setWindowTitle("원본 그림에서 옷만 바꾸기")
+    dialog.resize(640, 620)
+    layout = QVBoxLayout(dialog)
+    row = QHBoxLayout()
+    for name, label in (("character.png", "원래 캐릭터"), ("garment.png", "입힐 옷")):
+        row.addLayout(picture(Path(analysis["directory"]) / name, label, 260, 360))
+    layout.addLayout(row)
+    accessory = ("머리 장식(머리띠·헤드셋·귀걸이·안경)은 원본대로 유지합니다." if head_accessories == "keep"
+                 else "머리 장식(머리띠·헤드셋·귀걸이·안경)은 지웁니다. 머리 모양이 바뀌면 원본 머리를 붙이지 않습니다.")
+    for text in (accessory, "무기 등 들고 있는 소품과 배경은 지웁니다.", LIMITATIONS):
+        note = QLabel(text)
+        note.setWordWrap(True)
+        layout.addWidget(note)
+    chosen = {"path": settings_path}
+    path_label = QLabel()
+    def show_path():
+        path_label.setText("실행 환경 설정: " + (chosen["path"] or "선택되지 않음"))
+    show_path()
+    layout.addWidget(path_label)
+    pick = QPushButton("실행 환경 설정 파일 선택")
+    def choose():
+        path, _ = QFileDialog.getOpenFileName(dialog, "편집 실행 환경 설정", "", "JSON (*.json)")
+        if path:
+            chosen["path"] = path
+            show_path()
+            refresh()
+    pick.clicked.connect(choose)
+    layout.addWidget(pick)
+    confirm = QCheckBox("캐릭터와 옷을 확인했고, 약 30분 걸리는 것을 이해했습니다.")
+    layout.addWidget(confirm)
+    run = QPushButton("옷 바꾸기 시작")
+    back = QPushButton("취소")
+    def refresh():
+        run.setEnabled(confirm.isChecked() and bool(chosen["path"]))
+    confirm.toggled.connect(refresh)
+    refresh()
+    run.clicked.connect(dialog.accept)
+    back.clicked.connect(dialog.reject)
+    layout.addWidget(run)
+    layout.addWidget(back)
+    return chosen["path"] if dialog.exec() == QDialog.DialogCode.Accepted else None
+
 
 def confirm_result(window, candidate, analysis):
     dialog = QDialog(window)

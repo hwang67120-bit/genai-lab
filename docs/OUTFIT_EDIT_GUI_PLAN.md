@@ -19,7 +19,7 @@
 | 2 | Qwen 작업 프로세스에 `outfit_edit` 종류 추가(`genai_lab/qwen_outfit_edit.py`, `qwen_pose_worker.py`). lm_head CPU, VAE 타일, 6.5GiB 할당 상한, 단계별 메모리를 적용한다. 자세·꼬리 경로는 바꾸지 않는다. | CPU 완료 → GPU 요청 12 |
 | 3 | `genai_lab/outfit_edit_pipeline.py`: 캔버스 준비 → See-through 분할(`outfit_edit_worker.py`, 별도 프로세스라 GUI 프로세스는 CUDA를 잡지 않음) → Qwen → CPU 정렬·검사·합성. GPU 확인 실행기 `scripts/outfit_edit_gpu_check.py`. | CPU 완료 → GPU 요청 12 |
 | 4 | 작업실 연결 | CPU GUI 테스트 → 사용자 GUI 확인 |
-| 5 | 자유 생성(편집 결과를 기준 이미지로): 자세·구도·배경·문장 | 별도 설계·시험 |
+| 5 | 자유 생성(편집 결과를 기준 이미지로): 자세·구도·배경·문장. 요청 문장이 없으면 무작위 전신 자세(D-098) | 별도 설계·시험 |
 
 4단계 작업실 연결의 세부:
 - 선택 체크 "원본 그림에서 옷만 바꾸기(약 30분)"를 둔다. 기본은 꺼짐이다.

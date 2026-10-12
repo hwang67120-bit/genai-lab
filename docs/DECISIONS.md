@@ -21,6 +21,13 @@
   - 저장 결과 9건의 판정이 이전과 같다(메인·Qwen 환경 모두).
   - 제품 지시문은 의상 묘사 없이 그림 2를 따르게 했다. GPU는 미확인이다.
 - 계획: `docs/OUTFIT_EDIT_GUI_PLAN.md`.
+- 제품 계약 갱신 승인(2026-10-12): FLOW.md에 원본 편집형 의상 교체 경로와 머리 합성 예외를 추가했다.
+- 2·3단계 CPU 완료:
+  - `qwen_outfit_edit.py`: 요청 계약(seed 42, 6.5GiB·VAE 타일·lm_head CPU 고정, 지시문·입력 SHA 검증).
+  - `qwen_pose_worker.py`: `outfit_edit` 종류에만 메모리 구성과 단계 기록을 넣었다. 자세·꼬리 경로는 그대로다.
+  - `outfit_edit_worker.py`: See-through 분할을 별도 프로세스로 돌린다. GUI 프로세스가 CUDA를 잡지 않아 Qwen 몫이 줄지 않는다.
+  - `outfit_edit_pipeline.py`: 캔버스 → 분할 → Qwen → 정렬·형태 검사·합성. 붙이지 못하면 사유를 낸다.
+  - 전체 테스트 2250 통과. GPU 확인은 요청 12(W3·W4, 일반 지시문)다.
 
 ## D-093 머리 합성 검사를 위치 검사와 형태·연결 검사로 나눔 (2026-10-12)
 

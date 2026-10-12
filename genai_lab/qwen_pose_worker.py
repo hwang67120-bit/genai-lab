@@ -44,6 +44,9 @@ def validate_request(request):
     if kind == "tail_edit":
         from genai_lab.qwen_tail_edit import validate_tail_request
         return validate_tail_request(request)
+    if kind == "outfit_edit":
+        from genai_lab.qwen_outfit_edit import validate_outfit_request
+        return validate_outfit_request(request)
     if kind != "pose_edit":
         raise ValueError("지원하지 않는 편집 종류")
     if request.get("schema_version") != 1 or request.get("images") != 2:
@@ -82,6 +85,19 @@ def generate(request, directory, record):
     if not torch.cuda.is_available():
         raise RuntimeError("Qwen CUDA 장치가 없습니다.")
     images, p1, te, pipe, tr = [], None, None, None, None
+    outfit = request.get("task_kind") == "outfit_edit"
+    guard = None
+    if outfit:  # D-094: 6.5GiB 할당 상한과 단계별 기록(시험 09~11 구성). 자세·꼬리 경로는 바꾸지 않는다.
+        from genai_lab.outfit_edit import MemoryGuard
+        guard = MemoryGuard(torch.cuda, request["memory"]["reserved_limit_gib"], directory / "memory.json")
+        record["memory_cap_fraction"] = guard.apply_cap()
+        torch.cuda.reset_peak_memory_stats()
+    def stage(name):
+        if guard is not None:
+            guard.check(name)
+    def begin(name):
+        if guard is not None:
+            guard.begin(name)
     pe = pm = ne = nm = None
     original_preprocess = None
     start = time.perf_counter()
@@ -91,6 +107,7 @@ def generate(request, directory, record):
             raise WorkerCancelled("사용자 취소")
     try:
         reference = ((spec.crop_path, spec.crop_sha256) if request.get("task_kind") == "tail_edit"
+                     else (spec.garment_path, spec.garment_sha256) if outfit
                      else (request["skeleton_path"], request["skeleton_sha256"]))
         record["task_kind"] = request.get("task_kind", "pose_edit")
         for path, expected in ((spec.image_path, spec.image_sha256), reference):
@@ -115,11 +132,24 @@ def generate(request, directory, record):
         check()
         tick = time.perf_counter()
         torch.cuda.reset_peak_memory_stats()
-        te = Qwen2_5_VLForConditionalGeneration.from_pretrained(
-            str(Path(settings.model_root) / "text_encoder"), torch_dtype=torch.bfloat16,
-            local_files_only=True, device_map={"": 0},
-            quantization_config=BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4",
-                bnb_4bit_compute_dtype=torch.bfloat16, llm_int8_skip_modules=["visual", "lm_head"]))
+        begin("text_encoder_load")
+        if outfit:  # lm_head(1.02GiB)는 문장 인코딩에 쓰지 않으므로 CPU에 두고 계산하지 않는다(D-090, 시험 10)
+            from genai_lab.outfit_edit import text_encoder_device_map
+            te = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+                str(Path(settings.model_root) / "text_encoder"), torch_dtype=torch.bfloat16,
+                local_files_only=True, device_map=text_encoder_device_map(),
+                quantization_config=BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4",
+                    bnb_4bit_compute_dtype=torch.bfloat16, llm_int8_skip_modules=["visual", "lm_head"],
+                    llm_int8_enable_fp32_cpu_offload=True))
+            te.lm_head = torch.nn.Identity()
+            gc.collect()
+        else:
+            te = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+                str(Path(settings.model_root) / "text_encoder"), torch_dtype=torch.bfloat16,
+                local_files_only=True, device_map={"": 0},
+                quantization_config=BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4",
+                    bnb_4bit_compute_dtype=torch.bfloat16, llm_int8_skip_modules=["visual", "lm_head"]))
+        stage("text_encoder_loaded")
         p1 = QwenImageEditPlusPipeline.from_pretrained(settings.model_root, transformer=None, vae=None,
             text_encoder=te, torch_dtype=torch.bfloat16, local_files_only=True)
         p1.processor = UntruncatedProcessor(p1.processor, record)
@@ -129,6 +159,7 @@ def generate(request, directory, record):
             c = p1.image_processor.resize(image, ch, cw)
             c.save(mi / f"vl_picture{index}_{cw}x{ch}.png")
             cond.append(c)
+        begin("encode")
         with torch.no_grad():
             pe, pm = p1.encode_prompt(prompt=request["prompt"]["positive"], image=cond, device=torch.device("cuda"))
             ne, nm = p1.encode_prompt(prompt=" ", image=cond, device=torch.device("cuda"))
@@ -148,9 +179,11 @@ def generate(request, directory, record):
         gc.collect()
         torch.cuda.empty_cache()
         record["text_encoder_released"] = True
+        stage("encoded_and_released")
         save()
         check()
         tick = time.perf_counter()
+        begin("transformer_load")
         tr = QwenImageTransformer2DModel.from_single_file(settings.gguf_file,
             quantization_config=GGUFQuantizationConfig(compute_dtype=torch.bfloat16), torch_dtype=torch.bfloat16,
             config=settings.model_root, subfolder="transformer", local_files_only=True)
@@ -159,8 +192,12 @@ def generate(request, directory, record):
         pipe = QwenImageEditPlusPipeline.from_pretrained(settings.model_root, transformer=tr,
             text_encoder=None, tokenizer=None, processor=None, torch_dtype=torch.bfloat16, local_files_only=True)
         pipe.vae.to("cuda")
+        if outfit and request["memory"]["vae_tiling"]:  # 타일 없이는 6.5GiB 상한에서 VAE 복원이 실패했다(시험 10 진단 C)
+            pipe.vae.enable_tiling()
+            record["vae_tiling"] = True
         tr.enable_group_offload(onload_device=torch.device("cuda"), offload_device=torch.device("cpu"),
                                 offload_type="block_level", num_blocks_per_group=1)
+        stage("transformer_loaded")
         record["stage_seconds"]["pipeline_load"] = time.perf_counter() - tick
         record["scheduler"] = {"class": type(pipe.scheduler).__name__, "config": dict(pipe.scheduler.config)}
         record["offload"] = settings.offload
@@ -177,6 +214,8 @@ def generate(request, directory, record):
         previous = [time.perf_counter()]
         def callback(pipeline, index, timestep, kwargs):
             check()
+            stage(f"step{index}")
+            begin("decode" if index + 1 == settings.steps else f"step{index + 1}")
             now = time.perf_counter()
             record["steps"].append({"index": index, "seconds": now - previous[0]})
             previous[0] = now
@@ -187,7 +226,9 @@ def generate(request, directory, record):
             "num_images_per_prompt": 1, "seed": request["seed"], "generator_device": "cpu",
             "positive": request["prompt"]["positive"], "negative": " ", "images": 2}
         save()
-        torch.cuda.reset_peak_memory_stats()
+        if guard is None:
+            torch.cuda.reset_peak_memory_stats()
+        begin("step0")
         tick = time.perf_counter()
         result = pipe(image=images, prompt_embeds=pe.to("cuda"), prompt_embeds_mask=pm.to("cuda") if pm is not None else None,
             negative_prompt_embeds=ne.to("cuda"), negative_prompt_embeds_mask=nm.to("cuda") if nm is not None else None,
@@ -195,6 +236,9 @@ def generate(request, directory, record):
             num_inference_steps=settings.steps, height=height, width=width,
             generator=torch.Generator("cpu").manual_seed(request["seed"]), callback_on_step_end=callback)
         record["stage_seconds"]["generation"] = time.perf_counter() - tick
+        stage("decoded")
+        if guard is not None:
+            record["memory_stages"] = guard.stages
         record["generation_memory"] = {"allocated_bytes": torch.cuda.max_memory_allocated(),
                                       "reserved_bytes": torch.cuda.max_memory_reserved()}
         if len(result.images) != 1 or len(record["steps"]) != settings.steps or count[0] != 2:
@@ -205,6 +249,11 @@ def generate(request, directory, record):
         record["raw_sha256"] = file_sha(directory / "raw.png")
         record["model_inputs"] = {p.name: file_sha(p) for p in sorted(mi.iterdir())}
         record["seconds"] = time.perf_counter() - start
+    except torch.OutOfMemoryError as error:
+        if guard is not None:
+            guard.fail(str(error).splitlines()[0])
+            record["memory_stages"] = guard.stages
+        raise
     finally:
         for image in images:
             image.close()

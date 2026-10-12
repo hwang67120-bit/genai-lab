@@ -1,0 +1,101 @@
+"""원본 편집형 의상 교체 실행 흐름(GPU 없이): 분할 작업 프로세스 계약과 합성·거부 판정."""
+import json
+
+import cv2
+import numpy as np
+import pytest
+from PIL import Image
+
+from genai_lab import outfit_edit_pipeline as pipeline
+from genai_lab import outfit_edit_worker as worker
+from genai_lab.head_paste_rules import TAGS
+
+
+def scene(seed=0):
+    """특징점이 많은 얼굴·머리(위쪽)와 몸(아래쪽). parts는 TAGS 전체."""
+    rng = np.random.default_rng(seed)
+    image = np.full((1024, 768, 3), 255, np.uint8)
+    image[140:420, 250:520] = (230, 150, 200)          # 머리(단색) 위에 특징점용 무늬
+    image[240:360, 330:440] = (250, 220, 200)          # 얼굴
+    for _ in range(140):
+        x, y = int(rng.integers(260, 510)), int(rng.integers(140, 420))
+        cv2.circle(image, (x, y), int(rng.integers(3, 14)), tuple(int(c) for c in rng.integers(0, 200, 3)), -1)
+    image[450:980, 300:470] = (60, 40, 30)
+    parts = {name: np.zeros((1024, 768), bool) for name in TAGS}
+    parts["hair"][140:420, 250:520] = True
+    parts["face"][240:360, 330:440] = True
+    parts["hair"][240:360, 330:440] = False
+    parts["topwear"][450:980, 300:470] = True
+    return image, parts
+
+
+def save_case(tmp_path, image, parts, raw):
+    Image.fromarray(image).save(tmp_path / "canvas.png")
+    np.savez_compressed(tmp_path / "parts.npz", **parts)
+    Image.fromarray(raw).resize((896, 1184), Image.LANCZOS).save(tmp_path / "raw.png")
+    return tmp_path / "canvas.png", tmp_path / "parts.npz", tmp_path / "raw.png"
+
+
+def moved(image, scale=1.0, dy=0.0):
+    matrix = cv2.getRotationMatrix2D((384, 280), 0, scale)
+    matrix[1, 2] += dy
+    return cv2.warpAffine(image, matrix, (768, 1024), borderValue=(255, 255, 255))
+
+
+def test_compose_realigns_and_pastes_head_when_checks_pass(tmp_path):
+    image, parts = scene()
+    paths = save_case(tmp_path, image, parts, moved(image, 1.1, -60))      # Qwen이 머리를 키우고 위로 옮긴 경우
+    outcome = pipeline.compose(*paths, "keep", tmp_path / "out")
+    assert outcome["composited"] and outcome["alignment"]["decision"] == "aligned"
+    assert outcome["hair_shape"]["status"] == "ok"
+    assert (tmp_path / "out" / "result.png").is_file() and json.loads((tmp_path / "out" / "outcome.json").read_text(encoding="utf-8"))["composited"]
+
+
+def test_compose_refuses_unrelated_result_and_explains(tmp_path):
+    image, parts = scene(1)
+    other, _ = scene(2)
+    outcome = pipeline.compose(*save_case(tmp_path, image, parts, other), "keep", tmp_path / "out")
+    assert not outcome["composited"] and outcome["reason"]
+    assert not (tmp_path / "out" / "result.png").exists() and (tmp_path / "out" / "review.png").is_file()
+
+
+class FakeSegmenter:
+    def __init__(self, repo, checkpoint, parts):
+        self.parts, self.closed = parts, False
+
+    def parse(self, image):
+        return {name: np.asarray(Image.fromarray(mask.astype(np.uint8) * 255).resize((1024, 1024))) > 127
+                for name, mask in self.parts.items()}
+
+    def metrics(self):
+        return {"max_reserved_gib": 0.0}
+
+    def close(self):
+        self.closed = True
+
+
+def test_worker_segments_canvas_and_always_closes_model(tmp_path):
+    image, _ = scene()
+    prepared = pipeline.prepare_canvas(_write(tmp_path, image), tmp_path / "inputs")
+    square = {name: np.zeros((1024, 1024), bool) for name in TAGS}
+    square["face"][300:400, 450:560] = True
+    square["hair"][220:300, 420:600] = True
+    made = []
+    def factory(repo, checkpoint):
+        made.append(FakeSegmenter(repo, checkpoint, {k: v for k, v in square.items()}))
+        made[-1].parse = lambda img, s=square: s
+        return made[-1]
+    result = worker.segment(dict(prepared, semantic_repo="r", semantic_checkpoint="c"), tmp_path, factory)
+    assert made[0].closed and result["face_px"] > 0 and (tmp_path / "parts.npz").is_file()
+    empty = {name: np.zeros((1024, 1024), bool) for name in TAGS}
+    def blank(repo, checkpoint):
+        seg = FakeSegmenter(repo, checkpoint, {}); seg.parse = lambda img: empty; made.append(seg); return seg
+    with pytest.raises(ValueError, match="얼굴·머리"):
+        worker.segment(dict(prepared, semantic_repo="r", semantic_checkpoint="c"), tmp_path, blank)
+    assert made[-1].closed
+
+
+def _write(tmp_path, image):
+    path = tmp_path / "character.png"
+    Image.fromarray(image).save(path)
+    return path

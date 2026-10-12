@@ -591,8 +591,7 @@ class StudioController(QObject):
     def controls(self):
         w = self.window
         active = self.task is not None or self.confirming
-        for control in (w.style_button, w.outfit_button, w.clear_outfit_button,
-                        w.qwen_pose_button, w.external_candidate_button):
+        for control in (w.style_button, w.outfit_button, w.clear_outfit_button, w.qwen_pose_button):
             control.setEnabled(not self.occupied)
         edit_method = w.studio_method_combo.currentData() == "edit"
         w.studio_method_combo.setEnabled(not self.occupied)

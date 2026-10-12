@@ -100,7 +100,7 @@ def test_studio_generation_and_optional_actions_keep_existing_routes(monkeypatch
         def action(self):
             calls.append(name)
         return action
-    for method in ("start_generation", "open_qwen_pose_editor", "import_external_candidate"):
+    for method in ("start_generation", "open_qwen_pose_editor"):
         monkeypatch.setattr(GenAILabWindow, method, recorder(method))
     app, window = create_window()
     try:
@@ -112,8 +112,8 @@ def test_studio_generation_and_optional_actions_keep_existing_routes(monkeypatch
         assert not window.qwen_pose_button.isVisible()
         # 화면 진입 버튼이 없어도 보존된 호출 경로를 시험할 수 있다.
         window.qwen_pose_button.click()
-        window.external_candidate_button.click()
-        assert calls == ["start_generation", "open_qwen_pose_editor", "import_external_candidate"]
+        assert calls == ["start_generation", "open_qwen_pose_editor"]
+        assert not hasattr(window, "external_candidate_button")              # D-102: 쓰지 않던 외부 결과 불러오기 제거
         assert not window.save_candidate_button.isEnabled()
         assert not window.pose_button.isEnabled()
     finally:

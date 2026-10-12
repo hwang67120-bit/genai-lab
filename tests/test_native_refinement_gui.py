@@ -129,7 +129,6 @@ def test_gui_shows_local_pipeline_as_primary_action() -> None:
         assert "without_pose 1회 생성" in window.framing_help.text()
         assert window.refinement_mode_combo.isHidden()
         assert window.framing_combo.isHidden()
-        assert "선택 기능" in window.external_candidate_button.text()
         assert "SDXL" in window.local_engine_status_label.text()
         assert "OmniGen" not in window.local_engine_status_label.text()
     finally:

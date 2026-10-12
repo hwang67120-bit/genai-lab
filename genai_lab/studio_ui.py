@@ -241,19 +241,11 @@ def build_studio(window, framing_options, clothing_mode):
     update_method()
     input_layout.addWidget(card)
 
-    card, box = _card("완성 이미지로 이어서 작업", "필요할 때 선택하는 별도 기능입니다.")
     window.qwen_pose_button = _button("저장한 이미지 자세 바꾸기", window.open_qwen_pose_editor)
     window.qwen_pose_button.setToolTip("실행 설정, 승인한 완성 이미지, 자세 골격을 선택합니다.")
     # D-077: 처리 경로는 보존하되 이번 배포에서는 자세 편집을 표시하지 않는다.
     window.qwen_pose_button.setParent(window)
     window.qwen_pose_button.hide()
-    window.external_candidate_button = _button("외부 결과 불러오기 (선택 기능)", window.import_external_candidate)
-    box.addWidget(window.external_candidate_button)
-    window.external_candidate_notice = _label(
-        "외부 편집 결과는 로컬 생성 결과로 간주하지 않으며, 자동 게이트와 "
-        "원본 픽셀 보존 검사는 미실행 상태로 기록됩니다.", "muted")
-    window.external_candidate_button.setToolTip(window.external_candidate_notice.text())
-    input_layout.addWidget(card)
 
     window.diagnostics_toggle = QToolButton()
     window.diagnostics_toggle.setText("실행 정보·진단")
@@ -263,7 +255,6 @@ def build_studio(window, framing_options, clothing_mode):
     window.diagnostics_toggle.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
     input_layout.addWidget(window.diagnostics_toggle)
     window.diagnostics_panel, box = _card("실행 경로와 상세 진단")
-    box.addWidget(window.external_candidate_notice)
     window.refinement_mode_combo = QComboBox()
     window.refinement_mode_combo.setAccessibleName("정밀화 모드")
     window.refinement_mode_combo.addItem("SDXL 국소 정밀화", "sdxl_local")

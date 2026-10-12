@@ -62,7 +62,6 @@ from genai_lab.final_candidate_review import (
     APPROVED,
     REJECTED,
     FinalReviewEvidence,
-    build_external_review_evidence,
     write_final_review_decision,
 )
 from genai_lab.final_candidate_review_gui import FinalCandidateReviewDialog
@@ -189,10 +188,6 @@ from genai_lab.garment_lineart import (
 from genai_lab.result import (
     CharacterGenerationCandidate,
     save_approved_character_candidate,
-)
-from genai_lab.external_candidate import (
-    ExternalCandidateInputError,
-    load_external_character_candidate,
 )
 from genai_lab.refinement_result import (
     RefinementExecutionResult,
@@ -3174,25 +3169,6 @@ class GenAILabWindow(QMainWindow):
             )
         )
 
-    def can_import_external_candidate(self) -> bool:
-        if hasattr(self, "studio") and self.studio.occupied:
-            return False
-        """실행 중인 작업이나 검토 후보가 없을 때만 외부 결과를 받는다."""
-        if self.pending_character_candidate is not None or self.approval_dialog_open:
-            return False
-        if self.workflow_context is not None and self.workflow_context.active:
-            return False
-        return not any(
-            thread is not None and thread.isRunning()
-            for thread in (
-                self.reference_worker_thread, self.outfit_worker_thread,
-                self.mask_worker_thread, self.design_worker_thread,
-                self.body_comparison_worker_thread, self.pose_estimation_worker_thread,
-                self.original_body_pose_worker_thread, self.garment_geometry_worker_thread,
-                self.native_refinement_thread, self.worker_thread,
-            )
-        )
-
     def update_input_ready_status(self) -> None:
         if hasattr(self, "studio") and self.studio.occupied:
             self.studio.controls()
@@ -3206,9 +3182,6 @@ class GenAILabWindow(QMainWindow):
         )
         ready = self.can_start_registered_generation()
         self.generate_button.setEnabled(ready)
-        self.external_candidate_button.setEnabled(
-            self.can_import_external_candidate()
-        )
         missing_required_outfit = (
             CLOTHING_REFERENCE_GENERATION_MODE
             and self.selected_outfit_path is None
@@ -5460,81 +5433,6 @@ class GenAILabWindow(QMainWindow):
         self.clear_pose_button.setEnabled(enabled and not CLOTHING_REFERENCE_GENERATION_MODE)
         self.framing_combo.setEnabled(enabled)
         self.refinement_mode_combo.setEnabled(enabled)
-        self.external_candidate_button.setEnabled(
-            enabled and self.can_import_external_candidate()
-        )
-
-    @Slot()
-    def import_external_candidate(self) -> None:
-        if hasattr(self, "studio") and self.studio.occupied:
-            QMessageBox.information(self, "작업 확인", "현재 작업을 마치거나 결과를 저장하지 않음으로 정리한 뒤 계속해 주세요.")
-            return
-        """외부 편집 결과를 자동 검증 미실행 후보로 미리보기에 올린다."""
-        if not self.can_import_external_candidate():
-            QMessageBox.information(
-                self,
-                "외부 결과 불러오기",
-                "현재 작업이나 후보 검토를 마친 뒤 외부 결과를 불러오세요.",
-            )
-            return
-
-        project_output_dir = Path(__file__).resolve().parent / "outputs"
-        initial_directory = (
-            str(project_output_dir)
-            if project_output_dir.is_dir()
-            else self.default_get_dir
-        )
-        file_path, _ = QFileDialog.getOpenFileName(
-            self,
-            "외부 편집 결과 선택",
-            initial_directory,
-            "이미지 파일 (*.png *.jpg *.jpeg *.webp)",
-        )
-        if not file_path:
-            return
-
-        reference_name = Path(self.style_path).name if self.style_path else None
-        clothing_reference_name = (
-            self.selected_outfit_path.name
-            if self.selected_outfit_path is not None
-            else None
-        )
-        try:
-            candidate = load_external_character_candidate(
-                Path(file_path),
-                reference_image_name=reference_name,
-                clothing_reference_name=clothing_reference_name,
-                framing_type=str(self.framing_combo.currentData()),
-            )
-        except ExternalCandidateInputError as error:
-            self.status_label.setText(
-                f"상태: 외부 편집 결과 불러오기 실패 ({error})"
-            )
-            QMessageBox.critical(self, "외부 결과 불러오기 실패", str(error))
-            return
-
-        self.workflow_context = None
-        self.pending_character_candidate = candidate
-        self.pending_final_review_evidence = build_external_review_evidence(
-            candidate,
-            character_reference=self.style_path,
-            garment_reference=self.selected_outfit_path,
-            output_directory=project_output_dir / "external-reviews",
-        )
-        self.pending_final_review_orchestrator = None
-        self.candidate_is_approved = False
-        self.set_workflow_input_buttons_enabled(False)
-        self.generate_button.setEnabled(False)
-        self.save_candidate_button.setEnabled(False)
-        self.discard_candidate_button.setEnabled(False)
-        self.open_original_size_button.setEnabled(True)
-        self.show_character_candidate(candidate)
-        self.approve_candidate_button.setEnabled(True)
-        self.reject_candidate_button.setEnabled(True)
-        self.status_label.setText(
-            "상태: 외부 편집 후보 검토 중 - 자동 의미·성별·색상·구조·"
-            "유사도 게이트 및 원본 픽셀 보존 검사 미실행"
-        )
 
     def _start_model_generation(self):
         if self.pending_character_candidate is not None:
@@ -6332,7 +6230,6 @@ class GenAILabWindow(QMainWindow):
         self.approve_candidate_button.setEnabled(True)
         self.reject_candidate_button.setEnabled(True)
         self.generate_button.setEnabled(False)
-        self.external_candidate_button.setEnabled(False)
         self.status_label.setText(status_message)
         self.pipeline_stage_label.setText(stage_message)
         self.move_generation_workflow(
@@ -6848,9 +6745,6 @@ class GenAILabWindow(QMainWindow):
         self.workflow_context = None
         self.set_workflow_input_buttons_enabled(True)
         self.generate_button.setEnabled(self.can_start_registered_generation())
-        self.external_candidate_button.setEnabled(
-            self.can_import_external_candidate()
-        )
         self.generate_button.setText("이미지 생성 시작")
         self.status_label.setText(status_message)
 

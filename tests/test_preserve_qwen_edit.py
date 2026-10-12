@@ -1,12 +1,8 @@
-"""Qwen 비교 스크립트의 순수 함수: 평행 이동 측정·보정과 마스크 안 합성을 GPU 없이 확인한다."""
-import importlib.util
-from pathlib import Path
+"""원본 편집형 의상 교체 공통 모듈(genai_lab.outfit_edit)의 정렬·합성·검사·메모리 기록(GPU 없이).
+시험 08~13에서 쓰던 실행기(scripts/preserve_qwen_edit.py)는 정리했고, 같은 함수를 제품 모듈에서 검사한다."""
 import numpy as np
 
-ROOT = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location("preserve_qwen_edit", ROOT / "scripts/preserve_qwen_edit.py")
-script = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(script)
+from genai_lab import outfit_edit as script
 
 
 def textured(seed=0):
@@ -175,13 +171,6 @@ def test_head_protect_rejects_mismatched_segmentation():
         raise AssertionError("분할 불일치를 통과했습니다")
     except ValueError:
         pass
-
-
-def test_prompts_differ_only_in_head_accessory_sentence():
-    keep, remove = script.PROMPT_HEAD["keep"], script.PROMPT_HEAD["remove"]
-    assert "head accessories" in keep and "remove every head accessory" in remove.lower()
-    assert keep.startswith(script.OUTFIT_HEAD) and remove.startswith(script.OUTFIT_HEAD)
-    assert "same person" in remove and "same gender" in remove          # 시험 10: 삭제 지시가 인물을 바꿈
 
 
 def test_failure_during_first_load_is_named_and_measured(tmp_path):

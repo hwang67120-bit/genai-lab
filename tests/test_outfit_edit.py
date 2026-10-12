@@ -109,3 +109,13 @@ def test_low_confidence_joint_segments_are_skipped():
 def test_prop_removal_sentence_can_be_left_out_only_explicitly():
     assert outfit_edit.OUTFIT_PROPS in outfit_edit.outfit_prompt("keep")
     assert outfit_edit.OUTFIT_PROPS not in outfit_edit.outfit_prompt("keep", remove_props=False)
+
+
+def test_gender_sentence_keeps_male_body_with_womens_outfit():
+    # D-106: 남성 캐릭터에 크롭탑·치마를 입히자 여성 체형이 됐다
+    male = outfit_edit.outfit_prompt("keep", gender="male")
+    assert "male body with a flat chest" in male and "women's clothing" in male
+    assert "female" in outfit_edit.outfit_prompt("keep", gender="female")
+    assert outfit_edit.outfit_prompt("keep") == outfit_edit.outfit_prompt("keep", gender="unspecified")
+    with pytest.raises(ValueError):
+        outfit_edit.outfit_prompt("keep", gender="boy")

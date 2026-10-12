@@ -323,6 +323,13 @@ OUTFIT_REMOVE = ("The character must stay the same person as in image 1: same ge
                  "hats, earrings and glasses) and show the character's own hair where they were. Keep body proportions "
                  "exactly the same as in image 1. ")
 OUTFIT_FRAMING = "Do not change the camera angle, framing or the character's size or position."
+# D-106: 사용자 GUI 확인 — 남성 캐릭터에 여성복(크롭탑·치마)을 입히자 몸이 여성 체형으로 바뀌었다. 확인된 성별을 지시문에 넣는다.
+OUTFIT_GENDER = {
+    "male": ("The character is male. Keep a male body with a flat chest and male proportions, even if the outfit in "
+             "image 2 is women's clothing; fit the outfit to the male body. "),
+    "female": "The character is female. Keep her body shape and proportions as in image 1. ",
+    "unspecified": "",
+}
 GARMENT_TERM = re.compile(r"[a-z][a-z0-9 '-]{0,39}")
 NOT_GARMENT = ("hand", "arm", "leg", "pose", "holding", "pocket", "standing", "sitting", "looking")
 MAX_GARMENT_TERMS = 20
@@ -345,7 +352,7 @@ def clean_garment_terms(terms):
     return tuple(kept[:MAX_GARMENT_TERMS])
 
 
-def outfit_prompt(head_accessories, garment_terms=(), remove_props=True):
+def outfit_prompt(head_accessories, garment_terms=(), remove_props=True, gender="unspecified"):
     """제품용 고정 지시문. 머리 장식 선택(keep/remove)과, 있으면 의상 그림에서 자동으로 읽은 옷 이름 목록만 바뀐다.
     remove_props=False는 원인 확인 시험 전용이다(요청 12 W3: 소품 제거 지시와 함께 팔까지 지워졌는지 확인, D-096)."""
     if head_accessories not in ("keep", "remove"):
@@ -353,10 +360,12 @@ def outfit_prompt(head_accessories, garment_terms=(), remove_props=True):
     terms = tuple(garment_terms)
     if terms != clean_garment_terms(terms):
         raise ValueError("옷 이름 목록은 정리된 의상 용어만 쓸 수 있습니다.")
+    if gender not in OUTFIT_GENDER:
+        raise ValueError("캐릭터 성별은 unspecified / male / female 중 하나여야 합니다.")
     listed = f"The outfit in image 2 consists of: {', '.join(terms)}. " if terms else ""
     body = OUTFIT_KEEP if head_accessories == "keep" else OUTFIT_REMOVE
     base = OUTFIT_BASE if remove_props else OUTFIT_REPLACE + OUTFIT_BACKGROUND
-    return base + listed + body + OUTFIT_FRAMING
+    return base + listed + OUTFIT_GENDER[gender] + body + OUTFIT_FRAMING
 
 
 ARM_SEGMENTS = (("shoulder", "elbow"), ("elbow", "wrist"))

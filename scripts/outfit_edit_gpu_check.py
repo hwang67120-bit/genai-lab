@@ -28,22 +28,27 @@ def main():
     parser.add_argument("--head-accessories", choices=("keep", "remove"), default="keep")
     parser.add_argument("--garment-terms", default="", help="쉼표로 나눈 옷 이름(제품의 의상 자동 분석 결과). 비우면 목록 없이")
     parser.add_argument("--no-prop-removal", action="store_true", help="원인 확인 전용: 소품 제거 문장을 뺀다(D-096)")
+    parser.add_argument("--gender", nargs=2, action="append", default=[], metavar=("NAME", "GENDER"),
+                        help="캐릭터 성별(male/female/unspecified). 없으면 작업실에 저장된 값, 그것도 없으면 unspecified")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=False)
     settings = QwenPoseSettings.load(args.settings)
     runtime = StudioRuntime.from_environment()
     summary, rows = [], []
+    given = dict(args.gender)
+    from genai_lab.character_preferences import load_character_gender
     for name, image in args.case:
+        gender = given.get(name) or load_character_gender(str(Path(image))) or "unspecified"
         start = time.perf_counter()
         try:
             outcome = run_outfit_pipeline(image, args.garment, settings=settings, head_accessories=args.head_accessories,
                                           runtime=runtime, directory=args.output / name,
                                           garment_terms=[t for t in args.garment_terms.split(",") if t.strip()],
-                                          remove_props=not args.no_prop_removal,
+                                          remove_props=not args.no_prop_removal, gender=gender,
                                           progress=lambda text: print(f"[{name}] {text}", flush=True))
             memory = json.loads((Path(outcome["raw"]).parent / "memory.json").read_text(encoding="utf-8"))
-            record = dict(case=name, status="completed", composited=outcome["composited"], reason=outcome.get("reason"),
+            record = dict(case=name, gender=gender, status="completed", composited=outcome["composited"], reason=outcome.get("reason"),
                           decision=outcome["alignment"]["decision"], hair_shape=outcome.get("hair_shape"),
                           limbs=outcome.get("limbs"), attempts=outcome.get("attempts"),
                           canvas_pad=outcome["alignment"].get("canvas_pad"), memory_stopped=memory.get("stopped"),

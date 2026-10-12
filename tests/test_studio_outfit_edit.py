@@ -67,13 +67,17 @@ def test_gui_outfit_edit_runs_pipeline_and_saves_approved_result(tmp_path, monke
     monkeypatch.setattr(ui, "analyze_inputs", lambda *a, **k: analysis)
     monkeypatch.setattr(ui, "confirm_inputs", lambda *a: pytest.fail("SDXL 입력 확인 화면을 띄우지 않는다"))
     monkeypatch.setattr(ui, "generate_onepass_request", lambda *a, **k: pytest.fail("SDXL 생성을 하지 않는다"))
-    monkeypatch.setattr(ui, "confirm_outfit_edit", lambda window, a, accessories: True)
+    asked = []
+    monkeypatch.setattr(ui, "confirm_outfit_edit", lambda window, a, accessories, saved_gender=None: asked.append(saved_gender) or "male")
+    saved = {}
+    monkeypatch.setattr(ui, "load_character_gender", lambda source: None)
+    monkeypatch.setattr(ui, "save_character_gender", lambda source, gender: saved.update({source: gender}))
     from genai_lab import qwen_outfit_edit
     loaded = []
     monkeypatch.setattr(qwen_outfit_edit, "load_qwen_settings", lambda path: loaded.append(Path(path).name) or object())
     calls = []
     def pipeline(character, garment, **kw):
-        calls.append((Path(character).name, Path(garment).name, kw["head_accessories"]))
+        calls.append((Path(character).name, Path(garment).name, kw["head_accessories"], kw["gender"]))
         return fake_outcome(kw["directory"])
     monkeypatch.setattr(outfit_edit_pipeline, "run_outfit_pipeline", pipeline)
     monkeypatch.setattr(ui, "confirm_result", lambda *a: dict(character=True, garment=True, exposure=True, appendages=True))
@@ -82,7 +86,8 @@ def test_gui_outfit_edit_runs_pipeline_and_saves_approved_result(tmp_path, monke
     try:
         window.generate_button.click()
         wait_for(app, lambda: window.studio.task is None and window.studio.results is not None)
-        assert calls == [("character.png", "garment.png", "keep")]         # 머리 장식은 항상 유지(D-105)
+        assert calls == [("character.png", "garment.png", "keep", "male")]  # 머리 장식은 항상 유지(D-105), 확인한 성별 전달(D-106)
+        assert asked == [None] and list(saved.values()) == ["male"]          # 처음 보는 캐릭터는 고른 성별을 저장한다
         assert loaded == ["qwen_edit_settings.json"]                         # 사용자가 고르지 않고 작업실 기본 설정을 쓴다(D-101)
         results = window.studio.results
         assert isinstance(results, OutfitEditResults) and results.composited
@@ -104,7 +109,8 @@ def test_cancelled_confirmation_never_runs_qwen(tmp_path, monkeypatch):
     window.studio.run_directory = tmp_path / "run"
     window.studio.run_directory.mkdir()
     window.studio.outfit_edit_enabled = True
-    monkeypatch.setattr(ui, "confirm_outfit_edit", lambda *a: False)
+    monkeypatch.setattr(ui, "confirm_outfit_edit", lambda *a, **k: None)
+    monkeypatch.setattr(ui, "load_character_gender", lambda source: None)
     from genai_lab import qwen_outfit_edit
     monkeypatch.setattr(qwen_outfit_edit, "load_qwen_settings", lambda path: object())
     window.studio.runtime = ui.StudioRuntime()
@@ -147,7 +153,7 @@ def test_confirmation_needs_only_the_check_no_settings_file(tmp_path, monkeypatc
         seen["after"] = (start.isEnabled(), dialog.findChild(QLabel, "outfit_edit_hint").text())
         return QDialog.DialogCode.Rejected
     monkeypatch.setattr(QDialog, "exec", inspect)
-    assert ui.confirm_outfit_edit(None, analysis, "keep") is False
+    assert ui.confirm_outfit_edit(None, analysis, "keep") is None
     assert not any("설정" in text for text in seen["buttons"])
     assert seen["before"] is False and seen["after"][0] is True and "준비" in seen["after"][1]
 
@@ -187,3 +193,21 @@ def test_settings_path_is_remembered_only_if_file_exists(tmp_path):
     assert ui.remembered_qwen_settings(store) == str(path)
     path.unlink()
     assert ui.remembered_qwen_settings(store) == ""
+
+
+def test_gender_is_prefilled_from_saved_value_or_guess(tmp_path, monkeypatch):
+    # D-106: 저장된 성별은 그대로, 없으면 자동 분석 값을 채운다(자동 분석은 틀릴 수 있어 사용자가 확인)
+    from PySide6.QtWidgets import QCheckBox, QComboBox, QDialog
+    app = QApplication.instance() or QApplication([])
+    analysis = analysis_at(tmp_path / "inputs")
+    analysis["character_scores"] = {"1girl": 0.88, "1boy": 0.05}
+    chosen = {}
+    def accept(dialog):
+        chosen["value"] = dialog.findChild(QComboBox, "outfit_edit_gender").currentData()
+        dialog.findChildren(QCheckBox)[0].setChecked(True)
+        return QDialog.DialogCode.Accepted
+    monkeypatch.setattr(QDialog, "exec", accept)
+    assert ui.confirm_outfit_edit(None, analysis, "keep", saved_gender="male") == "male"
+    assert ui.confirm_outfit_edit(None, analysis, "keep") == "female" and chosen["value"] == "female"
+    analysis["character_scores"] = {}
+    assert ui.confirm_outfit_edit(None, analysis, "keep") == "unspecified"

@@ -38,6 +38,7 @@ def test_request_round_trip_through_worker_validation(tmp_path):
     (lambda r: r.update(memory={**MEMORY_POLICY, "vae_tiling": False}), "메모리"),
     (lambda r: r["prompt"].update(positive="Dress the character in a bikini."), "지시문"),
     (lambda r: r["outfit_spec"].update(head_accessories="remove"), "지시문"),
+    (lambda r: r["outfit_spec"].update(gender="male"), "지시문"),             # 확인한 성별과 다른 지시문은 거부
 ])
 def test_tampered_requests_are_refused(tmp_path, tamper, message):
     request = make_outfit_request(spec_at(tmp_path), settings=settings(tmp_path))

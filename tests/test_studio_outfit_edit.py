@@ -41,19 +41,16 @@ def fake_outcome(directory, composited=True):
     return outcome
 
 
-def test_outfit_edit_is_the_default_method():
-    # 사용자 GUI 확인(2026-10-12): 옷 바꾸기가 이 프로젝트의 기본인데 체크해야 쓰는 것은 잘못이다(D-100)
+def test_generation_settings_are_automatic():
+    # 사용자 GUI 확인(2026-10-12): 옷 바꾸기가 기본이고(D-100), 생성 설정은 수동 체크 없이 자동이다(D-105)
     app = QApplication.instance() or QApplication([])
     window = GenAILabWindow()
     try:
         assert window.studio_method_combo.currentData() == "edit"
-        assert window.studio_head_accessory_checkbox.isChecked() and window.studio_head_accessory_checkbox.isEnabled()
-        assert not window.studio_proportion_checkbox.isEnabled() and "옷만 바꾸고" in window.studio_mode_note.text()
-        window.studio_method_combo.setCurrentIndex(1)                          # 새로 그리기
-        assert window.studio_proportion_checkbox.isEnabled() and not window.studio_head_accessory_checkbox.isEnabled()
-        window.studio_proportion_checkbox.setChecked(True)
-        window.studio_method_combo.setCurrentIndex(0)                          # 원본 편집으로 돌아오면 비율 생성은 꺼진다
-        assert not window.studio_proportion_checkbox.isChecked()
+        for hidden in (window.studio_method_combo, window.studio_head_accessory_checkbox,
+                       window.studio_proportion_checkbox, window.studio_shoulder_checkbox):
+            assert hidden.isHidden()
+        assert "자동" in window.studio_mode_note.text() and "한 번 더" in window.studio_mode_note.text()
     finally:
         window.close()
 
@@ -65,7 +62,6 @@ def test_gui_outfit_edit_runs_pipeline_and_saves_approved_result(tmp_path, monke
     window.studio.output_root = tmp_path / "runs"
     window.style_path = Path(analysis["source"])
     window.selected_outfit_path = Path(analysis["directory"]) / "garment.png"
-    window.studio_head_accessory_checkbox.setChecked(False)               # 기본 방식 그대로, 체크 없이 생성
     window.update_input_ready_status()
     monkeypatch.setattr(ui, "validate_local_models", lambda _: pytest.fail("원본 편집형은 SDXL 모델을 확인하지 않는다"))
     monkeypatch.setattr(ui, "analyze_inputs", lambda *a, **k: analysis)
@@ -86,7 +82,7 @@ def test_gui_outfit_edit_runs_pipeline_and_saves_approved_result(tmp_path, monke
     try:
         window.generate_button.click()
         wait_for(app, lambda: window.studio.task is None and window.studio.results is not None)
-        assert calls == [("character.png", "garment.png", "remove")]       # 머리 장식 체크를 끈 선택이 전달된다
+        assert calls == [("character.png", "garment.png", "keep")]         # 머리 장식은 항상 유지(D-105)
         assert loaded == ["qwen_edit_settings.json"]                         # 사용자가 고르지 않고 작업실 기본 설정을 쓴다(D-101)
         results = window.studio.results
         assert isinstance(results, OutfitEditResults) and results.composited

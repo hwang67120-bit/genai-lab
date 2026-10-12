@@ -26,8 +26,9 @@ class OutfitEditResults:
         self.directory = Path(outcome["directory"])
         self.batch = SimpleNamespace(directory=self.directory, candidates=(None,))
         self.composited = bool(outcome["composited"])
-        self.result_path = Path(outcome["result"]) if self.composited else self.directory / "compose" / "qwen_view.png"
-        self.raw_path = self.directory / "qwen" / "raw.png"
+        self.result_path = (Path(outcome["result"]) if self.composited
+                            else Path(outcome.get("qwen_view", self.directory / "compose" / "qwen_view.png")))
+        self.raw_path = Path(outcome.get("raw", self.directory / "qwen" / "raw.png"))
         self.appendage_review_required = appendage_review_required
         self.expected_sha = outcome.get("result_sha256") if self.composited else None
         if self.expected_sha and sha(self.result_path) != self.expected_sha:
@@ -43,9 +44,11 @@ class OutfitEditResults:
 
     @property
     def head_notice(self):
+        retried = len(self.outcome.get("attempts", ())) > 1
         if self.composited:
-            return "머리(얼굴·머리카락·선택한 장식)는 원본 그대로 붙였습니다."
-        return "머리를 원본으로 붙이지 못했습니다: " + self.outcome.get("reason", "") + " Qwen이 그린 그대로입니다."
+            return "머리(얼굴·머리카락·장식)는 원본 그대로 붙였습니다." + (" 첫 결과가 검사에 걸려 한 번 더 그렸습니다." if retried else "")
+        return ("머리를 원본으로 붙이지 못했습니다" + (" (두 번 그렸지만 모두 검사에 걸림)" if retried else "") + ": "
+                + self.outcome.get("reason", "") + " Qwen이 그린 그대로입니다.")
 
     def verify_current(self):
         data = self.current_path.read_bytes()
@@ -91,7 +94,8 @@ class OutfitEditResults:
                     "head_composited": self.composited, "reason": self.outcome.get("reason"),
                     "head_accessories": self.outcome.get("head_accessories"), "alignment": self.outcome.get("alignment"),
                     "hair_shape": self.outcome.get("hair_shape"), "limbs": self.outcome.get("limbs"),
-                    "raw_sha256": self.outcome.get("raw_sha256"), "approval_record": str(self.directory / "user-review.json"),
+                    "raw_sha256": self.outcome.get("raw_sha256"), "attempts": self.outcome.get("attempts"),
+                    "approval_record": str(self.directory / "user-review.json"),
                     "reviewer": "user", "checks": self.checks}
         created = []
         try:

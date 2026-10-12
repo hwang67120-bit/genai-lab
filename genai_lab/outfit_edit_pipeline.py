@@ -125,6 +125,7 @@ def compose(canvas_path, parts_path, raw_path, head_accessories, directory, limb
     face = np.logical_or.reduce([parts[k] for k in FACE_PARTS])
     aligned, alignment = realign(person, edited, head_window(protect), expand=True, face=face)
     outcome = dict(head_accessories=head_accessories, alignment=alignment, composited=False, limbs=limbs,
+                   raw=str(raw_path), qwen_view=str(directory / "qwen_view.png"),
                    raw_sha256=sha(raw_path), canvas_sha256=sha(canvas_path), parts_sha256=sha(parts_path))
     Image.fromarray(edited).save(directory / "qwen_view.png")
     if limbs is not None and limbs["status"] == "rejected":
@@ -165,14 +166,25 @@ def run_outfit_pipeline(character_path, garment_path, *, settings, head_accessor
     spec = prepare_outfit_spec(prepared["canvas"], garment_path, head_accessories=head_accessories, confirmed=True,
                                directory=directory / "qwen-inputs", garment_terms=garment_terms,
                                remove_props=remove_props)
-    request = make_outfit_request(spec, settings=settings)
-    workflow = OutfitEditWorkflow(spec)
-    def report(data):
-        progress(f"상태: 옷 바꾸는 중 · {len(data.get('steps', []))}/40 · 약 30분")
-    run_outfit_edit(request, directory / "qwen", workflow, cancelled=cancelled, on_progress=report, popen=popen)
-    progress("상태: 팔·손 확인 중")
-    limbs = check_limbs(prepared["canvas"], directory / "qwen" / "raw.png", directory / "limbs", runtime, cancelled=cancelled)
-    progress("상태: 원본 머리 맞추는 중")
-    outcome = compose(prepared["canvas"], segmented["parts"], directory / "qwen" / "raw.png", head_accessories,
-                      directory / "compose", limbs=limbs)
+    from genai_lab.qwen_outfit_edit import OUTFIT_SEEDS
+    attempts = []
+    for number, seed in enumerate(OUTFIT_SEEDS, 1):  # D-105: 검사에 걸리면 다른 seed로 한 번만 더 그린다
+        suffix = "" if number == 1 else f"-{number}"
+        label = "" if number == 1 else f" · 다시 그리기 {number}/{len(OUTFIT_SEEDS)}"
+        request = make_outfit_request(spec, settings=settings, seed=seed)
+        workflow = OutfitEditWorkflow(spec)
+        def report(data, label=label):
+            progress(f"상태: 옷 바꾸는 중{label} · {len(data.get('steps', []))}/40 · 약 30분")
+        run_outfit_edit(request, directory / f"qwen{suffix}", workflow, cancelled=cancelled, on_progress=report, popen=popen)
+        raw = directory / f"qwen{suffix}" / "raw.png"
+        progress("상태: 팔·손 확인 중" + label)
+        limbs = check_limbs(prepared["canvas"], raw, directory / f"limbs{suffix}", runtime, cancelled=cancelled)
+        progress("상태: 원본 머리 맞추는 중" + label)
+        outcome = compose(prepared["canvas"], segmented["parts"], raw, head_accessories, directory / f"compose{suffix}",
+                          limbs=limbs)
+        attempts.append(dict(seed=seed, composited=outcome["composited"], reason=outcome.get("reason"),
+                             directory=str(directory / f"compose{suffix}")))
+        if outcome["composited"]:
+            break
+    outcome["attempts"] = attempts
     return dict(outcome, directory=str(directory), source=prepared["source"], source_sha256=prepared["source_sha256"])

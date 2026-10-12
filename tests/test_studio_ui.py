@@ -131,14 +131,12 @@ def test_generation_checkbox_labels_stay_readable_under_dark_system_palette():
     app.setPalette(dark)
     try:
         _, window = create_window()
-        from PySide6.QtWidgets import QCheckBox
-        for name in ("studio_proportion_checkbox", "studio_shoulder_checkbox"):
-            box = window.findChild(QCheckBox, name)
-            assert box.text()
-            image = box.grab().toImage()
-            dark_pixels = sum(1 for x in range(image.width()) for y in range(image.height())
-                              if QColor(image.pixel(x, y)).lightness() < 140)
-            assert dark_pixels > 20, name  # 글자를 흰색이 아닌 어두운 색으로 그리는지 확인한다.
+        # D-105: 생성 설정은 자동이라 화면의 선택란은 없다. 남은 안내 문구가 어두운 테마에서도 읽히는지 본다.
+        assert window.studio_proportion_checkbox.isHidden() and window.studio_shoulder_checkbox.isHidden()
+        image = window.studio_mode_note.grab().toImage()
+        dark_pixels = sum(1 for x in range(image.width()) for y in range(image.height())
+                          if QColor(image.pixel(x, y)).lightness() < 140)
+        assert dark_pixels > 20  # 글자를 흰색이 아닌 어두운 색으로 그리는지 확인한다.
         window.close()
     finally:
         app.setPalette(previous)

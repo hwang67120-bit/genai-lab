@@ -1,5 +1,7 @@
 """원본 편집형 의상 교체 실행 흐름(GPU 없이): 분할 작업 프로세스 계약과 합성·거부 판정."""
 import json
+import sys
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -107,3 +109,48 @@ def test_compose_refuses_when_arms_vanished_even_if_head_aligns(tmp_path):
     outcome = pipeline.compose(*save_case(tmp_path, image, parts, moved(image, 1.1, -60)), "keep", tmp_path / "out", limbs=limbs)
     assert not outcome["composited"] and outcome["reason"] == pipeline.REASONS["limbs"]
     assert outcome["alignment"]["decision"] == "aligned"            # 머리는 맞았지만 팔 때문에 거부
+
+
+def test_pipeline_retries_once_with_second_seed_when_checks_fail(tmp_path, monkeypatch):
+    # D-105: 검사에 걸리면 다른 seed로 한 번만 자동 재시도한다
+    from genai_lab import qwen_outfit_edit
+    image, parts = scene()
+    character, garment = tmp_path / "c.png", tmp_path / "g.png"
+    Image.fromarray(image).save(character)
+    Image.new("RGB", (300, 500), (40, 40, 40)).save(garment)
+    np.savez_compressed(tmp_path / "parts.npz", **parts)
+    monkeypatch.setattr(pipeline, "segment_canvas", lambda prepared, directory, runtime, **k: {"parts": str(tmp_path / "parts.npz")})
+    monkeypatch.setattr(qwen_outfit_edit.OutfitEditWorkflow, "__init__", lambda self, spec, **k: None)
+    seeds = []
+    def fake_run(request, directory, workflow, **kw):
+        seeds.append(request["seed"])
+        Path(directory).mkdir(parents=True)
+        Image.fromarray(image).resize((896, 1184)).save(Path(directory) / "raw.png")
+    monkeypatch.setattr(qwen_outfit_edit, "run_outfit_edit", fake_run)
+    monkeypatch.setattr(pipeline, "check_limbs", lambda *a, **k: {"status": "ok"})
+    results = iter([dict(composited=False, reason="머리 위치", alignment={}), dict(composited=True, alignment={})])
+    monkeypatch.setattr(pipeline, "compose", lambda *a, **k: dict(next(results)))
+    settings = qwen_outfit_edit.QwenPoseSettings(sys.executable, str(tmp_path), str(tmp_path / "m.gguf"), str(tmp_path / "m.json"), "a" * 64)
+    outcome = pipeline.run_outfit_pipeline(character, garment, settings=settings, head_accessories="keep", runtime=None,
+                                           directory=tmp_path / "run")
+    assert seeds == [42, 43] and outcome["composited"]
+    assert [a["composited"] for a in outcome["attempts"]] == [False, True]
+    assert (tmp_path / "run" / "qwen-2" / "raw.png").is_file()
+
+
+def test_pipeline_does_not_retry_when_first_result_passes(tmp_path, monkeypatch):
+    from genai_lab import qwen_outfit_edit
+    image, parts = scene()
+    character, garment = tmp_path / "c.png", tmp_path / "g.png"
+    Image.fromarray(image).save(character)
+    Image.new("RGB", (300, 500), (40, 40, 40)).save(garment)
+    monkeypatch.setattr(pipeline, "segment_canvas", lambda *a, **k: {"parts": "p"})
+    monkeypatch.setattr(qwen_outfit_edit.OutfitEditWorkflow, "__init__", lambda self, spec, **k: None)
+    seeds = []
+    monkeypatch.setattr(qwen_outfit_edit, "run_outfit_edit", lambda request, *a, **k: seeds.append(request["seed"]))
+    monkeypatch.setattr(pipeline, "check_limbs", lambda *a, **k: {"status": "ok"})
+    monkeypatch.setattr(pipeline, "compose", lambda *a, **k: dict(composited=True, alignment={}))
+    settings = qwen_outfit_edit.QwenPoseSettings(sys.executable, str(tmp_path), str(tmp_path / "m.gguf"), str(tmp_path / "m.json"), "a" * 64)
+    outcome = pipeline.run_outfit_pipeline(character, garment, settings=settings, head_accessories="keep", runtime=None,
+                                           directory=tmp_path / "run")
+    assert seeds == [42] and len(outcome["attempts"]) == 1

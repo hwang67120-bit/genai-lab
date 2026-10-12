@@ -42,13 +42,13 @@ def main():
                                           garment_terms=[t for t in args.garment_terms.split(",") if t.strip()],
                                           remove_props=not args.no_prop_removal,
                                           progress=lambda text: print(f"[{name}] {text}", flush=True))
-            memory = json.loads((args.output / name / "qwen" / "memory.json").read_text(encoding="utf-8"))
+            memory = json.loads((Path(outcome["raw"]).parent / "memory.json").read_text(encoding="utf-8"))
             record = dict(case=name, status="completed", composited=outcome["composited"], reason=outcome.get("reason"),
                           decision=outcome["alignment"]["decision"], hair_shape=outcome.get("hair_shape"),
-                          limbs=outcome.get("limbs"),
+                          limbs=outcome.get("limbs"), attempts=outcome.get("attempts"),
                           canvas_pad=outcome["alignment"].get("canvas_pad"), memory_stopped=memory.get("stopped"),
                           max_stage_peak_reserved_gib=max(s.get("stage_peak_reserved_gib", 0) for s in memory["stages"]))
-            rows.append(np.asarray(Image.open(args.output / name / "compose" / "review.png").convert("RGB").resize((1152, 512))))
+            rows.append(np.asarray(Image.open(Path(outcome["qwen_view"]).parent / "review.png").convert("RGB").resize((1152, 512))))
         except Exception as error:
             record = dict(case=name, status="failed", error=str(error), traceback=traceback.format_exc())
         record["seconds"] = round(time.perf_counter() - start, 1)

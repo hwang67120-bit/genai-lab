@@ -90,7 +90,7 @@ class StudioController(QObject):
             self.outfit_edit_enabled = w.studio_method_combo.currentData() == "edit"
             self.proportion_enabled = not self.outfit_edit_enabled and w.studio_proportion_checkbox.isChecked()
             self.shoulder_enabled = self.proportion_enabled and w.studio_shoulder_checkbox.isChecked()
-            self.head_accessories = "keep" if w.studio_head_accessory_checkbox.isChecked() else "remove"
+            self.head_accessories = "keep"  # D-105: 머리 장식은 항상 원본대로 유지(자동)
             self.proportion_pending = None
             self.prepared_proportion_pose = None
             self.head_paste_controller.generation_context = None

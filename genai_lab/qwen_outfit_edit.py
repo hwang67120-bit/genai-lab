@@ -13,10 +13,11 @@ from genai_lab.qwen_preservation import file_sha, json_sha, require_sha
 from genai_lab.qwen_pose_settings import QwenPoseSettings, output_dimensions
 
 OUTFIT_SEED = 42            # 시험 08~11과 같은 seed
+OUTFIT_SEEDS = (42, 43)     # D-105: 검사에 걸리면 두 번째 seed로 한 번만 자동 재시도
 RESERVED_LIMIT_GIB = 6.5
 MEMORY_POLICY = {"reserved_limit_gib": RESERVED_LIMIT_GIB, "vae_tiling": True, "text_encoder_lm_head": "cpu"}
-LIMITATIONS = ("한 장에 약 30분이 걸립니다. 원본 자세·체형은 유지되지 않을 수 있습니다(Qwen은 곧게 선 자세로 그리는 경향). "
-               "머리를 원본 위치에 확인할 수 없으면 머리를 붙이지 않고 그 사실을 알려 드립니다.")
+LIMITATIONS = ("한 장에 약 30분이 걸립니다. 검사(머리 위치·형태, 팔)에 걸리면 자동으로 한 번 더 그려 최대 약 1시간이 걸립니다. "
+               "원본 자세·체형은 유지되지 않을 수 있습니다. 두 번 모두 걸리면 원본 머리를 붙이지 않고 그 사실을 알려 드립니다.")
 
 
 @dataclass(frozen=True)
@@ -75,13 +76,13 @@ def prepare_outfit_spec(canvas_path, garment_path, *, head_accessories, confirme
     return spec
 
 
-def make_outfit_request(spec, *, settings):
+def make_outfit_request(spec, *, settings, seed=OUTFIT_SEED):
     spec.verify_image()
     positive = outfit_prompt(spec.head_accessories, spec.garment_terms, spec.remove_props)
     return {"schema_version": 1, "task_kind": "outfit_edit", "images": 2, "outfit_spec": spec.record(),
             "prompt": {"positive": positive, "negative": " ",
                        "positive_sha256": hashlib.sha256(positive.encode("utf-8")).hexdigest()},
-            "settings": settings.record(), "seed": OUTFIT_SEED, "memory": dict(MEMORY_POLICY),
+            "settings": settings.record(), "seed": seed, "memory": dict(MEMORY_POLICY),
             "basis_size": list(SIZE), "output_size": list(output_dimensions(*SIZE))}
 
 
@@ -92,7 +93,7 @@ def validate_outfit_request(request):
     spec = OutfitEditSpec(**dict(record, garment_terms=tuple(record.get("garment_terms", ()))))
     spec.verify_image()
     QwenPoseSettings(**request["settings"])
-    if request.get("seed") != OUTFIT_SEED or type(request.get("seed")) is not int:
+    if request.get("seed") not in OUTFIT_SEEDS or type(request.get("seed")) is not int:
         raise ValueError("의상 편집 seed 계약 오류")
     if request.get("memory") != MEMORY_POLICY:
         raise ValueError("의상 편집 메모리 계약 오류(6.5GiB 상한·VAE 타일·lm_head CPU)")

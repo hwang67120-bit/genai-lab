@@ -355,37 +355,56 @@ def outfit_prompt(head_accessories, garment_terms=(), remove_props=True):
     return base + listed + body + OUTFIT_FRAMING
 
 
-ARM_JOINTS = ("shoulder", "elbow", "wrist")
-ARM_LINE_MIN = 0.95     # 추정한 팔 선 위에 그림이 있어야 하는 비율(요청 12 W3 팔 없음: 0.79·0.50, 정상 11장: 1.00)
+ARM_SEGMENTS = (("shoulder", "elbow"), ("elbow", "wrist"))
+ARM_LINE_MIN = 0.95     # 팔 구간 위가 인물 영역이어야 하는 비율(요청 12 W3 팔 없음: 0.58, 팔 있는 13장: 모두 1.00)
+ARM_JOINT_CONF = 0.4    # 이보다 낮은 관절이 낀 구간은 판정하지 않는다(가려짐·잘못 찍힘)
 ARM_SAMPLES = 12
+NEAR_WHITE = 235
+
+
+def figure_mask(image):
+    """테두리와 이어진 거의 흰색만 배경이다. 윤곽선 안의 흰 소매·셔츠는 인물로 남는다(요청 13 B-W4: 흰 소매를 배경으로 오판)."""
+    near_white = (image.min(axis=2) >= NEAR_WHITE).astype(np.uint8)
+    _, labels = cv2.connectedComponents(near_white, connectivity=4)
+    border = np.unique(np.concatenate([labels[0], labels[-1], labels[:, 0], labels[:, -1]]))
+    background = np.isin(labels, border[border > 0]) & (near_white > 0)
+    return ~background
 
 
 def arm_lines(joints, image):
-    """관절 인식이 추정한 어깨→팔꿈치→손목 선을 따라 그림 내용(흰 바탕 아님)이 있는 비율을 팔마다 잰다.
-    관절 신뢰도만으로는 안 된다: 팔이 없는 그림에서도 팔 관절을 0.6 신뢰도로 추정했다."""
+    """관절 인식이 추정한 어깨→팔꿈치, 팔꿈치→손목 구간마다 인물 영역 위에 있는 비율을 잰다.
+    두 관절이 모두 찾아졌고 신뢰도 ARM_JOINT_CONF 이상인 구간만 잰다. 손이 주머니에 가려 손목을 못 찾으면 그 구간은 빠진다.
+    관절 신뢰도만으로 팔 유무를 정하지 않는다: 팔이 없는 그림에서도 팔 관절을 0.6 신뢰도로 추정했다(요청 12 W3)."""
     named = {j["joint_name"]: j for j in joints}
-    content = content_mask(image)
-    height, width = content.shape
+    figure = figure_mask(image)
+    height, width = figure.shape
     lines = {}
     for side in ("left", "right"):
-        points = [named.get(f"{side}_{name}") for name in ARM_JOINTS]
-        if any(p is None or not p.get("detected") for p in points):
-            lines[side] = None
-            continue
-        hits = []
-        for a, b in zip(points, points[1:]):
+        segments = []
+        for first, second in ARM_SEGMENTS:
+            a, b = named.get(f"{side}_{first}"), named.get(f"{side}_{second}")
+            if not (a and b and a.get("detected") and b.get("detected")
+                    and min(a.get("confidence_score", 0), b.get("confidence_score", 0)) >= ARM_JOINT_CONF):
+                continue
+            hits = []
             for t in np.linspace(0.15, 0.95, ARM_SAMPLES):
                 x = int(np.clip(a["x"] + (b["x"] - a["x"]) * t, 0, width - 1))
                 y = int(np.clip(a["y"] + (b["y"] - a["y"]) * t, 0, height - 1))
-                hits.append(bool(content[max(0, y - 2):y + 3, max(0, x - 2):x + 3].any()))
-        lines[side] = round(float(np.mean(hits)), 3)
+                hits.append(bool(figure[max(0, y - 2):y + 3, max(0, x - 2):x + 3].any()))
+            segments.append(round(float(np.mean(hits)), 3))
+        lines[side] = segments
     return lines
 
 
 def limb_check(original_joints, original_image, result_joints, result_image):
-    """원본에 있던 팔이 Qwen 결과에서 사라졌으면 거부한다. 원본에서 팔을 못 찾은 쪽은 판정하지 않는다."""
+    """원본에 있던 팔이 Qwen 결과에서 사라졌으면 거부한다.
+    - 원본에서 그 팔의 구간을 하나도 확인하지 못했으면 판정하지 않는다.
+    - 결과에서 잰 구간 중 하나라도 인물 영역 밖(ARM_LINE_MIN 미만)이면 그 팔은 사라진 것으로 본다.
+    - 결과에서 그 팔의 구간을 하나도 재지 못했으면(가려짐) 사라짐으로 단정하지 않고 확인 불가로 남긴다."""
     before, after = arm_lines(original_joints, original_image), arm_lines(result_joints, result_image)
-    checked = [side for side in ("left", "right") if before[side] is not None and before[side] >= ARM_LINE_MIN]
-    missing = [side for side in checked if after[side] is None or after[side] < ARM_LINE_MIN]
-    status = "unmeasured" if not checked else ("rejected" if missing else "ok")
-    return dict(status=status, original=before, result=after, checked=checked, missing=missing)
+    checked = [side for side in ("left", "right") if any(v >= ARM_LINE_MIN for v in before[side])]
+    missing = [side for side in checked if after[side] and min(after[side]) < ARM_LINE_MIN]
+    unverified = [side for side in checked if not after[side]]
+    measured = [side for side in checked if after[side]]
+    status = "rejected" if missing else ("ok" if measured else "unmeasured")
+    return dict(status=status, original=before, result=after, checked=checked, missing=missing, unverified=unverified)

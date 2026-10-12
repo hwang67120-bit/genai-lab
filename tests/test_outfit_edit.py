@@ -65,7 +65,7 @@ def joints():
 def test_limb_check_rejects_result_whose_arms_vanished():
     # 요청 12 W3: 재킷·총과 함께 팔이 지워졌는데 관절 인식은 팔 관절을 여전히 추정했다
     kept = outfit_edit.limb_check(joints(), figure(True), joints(), figure(True))
-    assert kept["status"] == "ok" and kept["result"] == {"left": 1.0, "right": 1.0}
+    assert kept["status"] == "ok" and kept["result"] == {"left": [1.0, 1.0], "right": [1.0, 1.0]}
     gone = outfit_edit.limb_check(joints(), figure(True), joints(), figure(False))
     assert gone["status"] == "rejected" and set(gone["missing"]) == {"left", "right"}
 
@@ -76,6 +76,34 @@ def test_limb_check_does_not_judge_arms_not_found_in_original():
     assert report["checked"] == ["right"] and report["missing"] == ["right"]
     report = outfit_edit.limb_check([dict(j, detected=False) for j in joints()], figure(True), joints(), figure(False))
     assert report["status"] == "unmeasured"
+
+
+def test_white_sleeves_inside_outline_count_as_arms():
+    # 요청 13 B-W4: 흰 소매를 배경으로 보고 팔이 사라졌다고 오판했다
+    import cv2
+    image = figure(False)
+    for (a, b) in (((320, 270), (250, 420)), ((250, 420), (240, 560)), ((450, 270), (520, 420)), ((520, 420), (530, 560))):
+        cv2.line(image, a, b, (40, 40, 40), 22)          # 윤곽선
+        cv2.line(image, a, b, (250, 250, 250), 14)       # 흰 소매 안쪽
+    report = outfit_edit.limb_check(joints(), figure(True), joints(), image)
+    assert report["status"] == "ok", report
+
+
+def test_hidden_hand_is_unverified_not_missing():
+    # 요청 13 A-W4·B-W3: 손이 주머니에 가려 손목을 못 찾으면 사라짐으로 단정하지 않는다
+    pocket = [dict(j, detected=False) if j["joint_name"].endswith("wrist") else j for j in joints()]
+    report = outfit_edit.limb_check(joints(), figure(True), pocket, figure(True))
+    assert report["status"] == "ok" and report["result"] == {"left": [1.0], "right": [1.0]}
+    nothing = [dict(j, detected=False) for j in joints()]
+    report = outfit_edit.limb_check(joints(), figure(True), nothing, figure(False))
+    assert report["status"] == "unmeasured" and set(report["unverified"]) == {"left", "right"}
+
+
+def test_low_confidence_joint_segments_are_skipped():
+    # 요청 13 A-W3: 손목이 머리카락 위에 낮은 신뢰도로 찍혔다
+    wrong = [dict(j, x=700, y=900, confidence_score=0.2) if j["joint_name"].endswith("wrist") else j for j in joints()]
+    report = outfit_edit.limb_check(joints(), figure(True), wrong, figure(True))
+    assert report["status"] == "ok"
 
 
 def test_prop_removal_sentence_can_be_left_out_only_explicitly():

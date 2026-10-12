@@ -28,6 +28,7 @@ class OutfitEditSpec:
     head_accessories: str     # keep | remove (머리 장식에만 적용)
     confirmed: bool = False
     garment_terms: tuple = ()  # 의상 그림 자동 분석에서 사용자가 확인한 옷 이름(정리 후)
+    remove_props: bool = True  # False는 원인 확인 시험 전용(D-096)
 
     def record(self):
         return dict(asdict(self), garment_terms=list(self.garment_terms))
@@ -41,7 +42,9 @@ class OutfitEditSpec:
             require_sha(value)
         if self.confirmed is not True:
             raise ValueError("캐릭터·의상과 머리 장식 선택을 확인해 주세요.")
-        outfit_prompt(self.head_accessories, self.garment_terms)
+        if type(self.remove_props) is not bool:
+            raise ValueError("소품 제거 선택 형식 오류")
+        outfit_prompt(self.head_accessories, self.garment_terms, self.remove_props)
         if file_sha(self.image_path) != self.image_sha256:
             raise ValueError("준비한 캐릭터 그림이 변경됐습니다.")
         if file_sha(self.garment_path) != self.garment_sha256:
@@ -51,7 +54,8 @@ class OutfitEditSpec:
                 raise ValueError("캐릭터 그림은 768×1024 RGB 캔버스여야 합니다.")
 
 
-def prepare_outfit_spec(canvas_path, garment_path, *, head_accessories, confirmed, directory, garment_terms=()):
+def prepare_outfit_spec(canvas_path, garment_path, *, head_accessories, confirmed, directory, garment_terms=(),
+                        remove_props=True):
     """두 입력을 실행 폴더로 복사해 고정한다."""
     if confirmed is not True:
         raise ValueError("캐릭터·의상과 머리 장식 선택을 확인해 주세요.")
@@ -66,14 +70,14 @@ def prepare_outfit_spec(canvas_path, garment_path, *, head_accessories, confirme
     (directory / f"garment{suffix}").write_bytes(garment)
     spec = OutfitEditSpec(str(directory / "character.png"), hashlib.sha256(character).hexdigest(),
                           str(directory / f"garment{suffix}"), hashlib.sha256(garment).hexdigest(),
-                          head_accessories, confirmed, garment_terms)
+                          head_accessories, confirmed, garment_terms, remove_props)
     spec.verify_image()
     return spec
 
 
 def make_outfit_request(spec, *, settings):
     spec.verify_image()
-    positive = outfit_prompt(spec.head_accessories, spec.garment_terms)
+    positive = outfit_prompt(spec.head_accessories, spec.garment_terms, spec.remove_props)
     return {"schema_version": 1, "task_kind": "outfit_edit", "images": 2, "outfit_spec": spec.record(),
             "prompt": {"positive": positive, "negative": " ",
                        "positive_sha256": hashlib.sha256(positive.encode("utf-8")).hexdigest()},
@@ -92,7 +96,7 @@ def validate_outfit_request(request):
         raise ValueError("의상 편집 seed 계약 오류")
     if request.get("memory") != MEMORY_POLICY:
         raise ValueError("의상 편집 메모리 계약 오류(6.5GiB 상한·VAE 타일·lm_head CPU)")
-    if request["prompt"]["positive"] != outfit_prompt(spec.head_accessories, spec.garment_terms) or request["prompt"]["negative"] != " ":
+    if request["prompt"]["positive"] != outfit_prompt(spec.head_accessories, spec.garment_terms, spec.remove_props) or request["prompt"]["negative"] != " ":
         raise ValueError("확인한 머리 장식 선택과 지시문이 다릅니다.")
     if request.get("basis_size") != list(SIZE) or request.get("output_size") != list(output_dimensions(*SIZE)):
         raise ValueError("의상 편집 이미지 크기 계약 오류")

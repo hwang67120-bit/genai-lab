@@ -99,3 +99,11 @@ def _write(tmp_path, image):
     path = tmp_path / "character.png"
     Image.fromarray(image).save(path)
     return path
+
+
+def test_compose_refuses_when_arms_vanished_even_if_head_aligns(tmp_path):
+    image, parts = scene()
+    limbs = {"status": "rejected", "missing": ["left"], "checked": ["left", "right"]}
+    outcome = pipeline.compose(*save_case(tmp_path, image, parts, moved(image, 1.1, -60)), "keep", tmp_path / "out", limbs=limbs)
+    assert not outcome["composited"] and outcome["reason"] == pipeline.REASONS["limbs"]
+    assert outcome["alignment"]["decision"] == "aligned"            # 머리는 맞았지만 팔 때문에 거부

@@ -307,10 +307,11 @@ def canvas(image):
 
 # 제품 지시문: 캐릭터별 의상 묘사를 손으로 쓰지 않는다(시험 지시문의 "long dark brown coat"가 의상을 바꾼 정황, D-092).
 # 요청 12: "그림 2의 옷을 입혀라"만으로는 W3의 몸에 붙는 원래 옷이 그대로 남았다 → 지금 옷 전체를 바꾸라고 명시한다(D-095).
-OUTFIT_BASE = ("Replace all of the character's current clothing in image 1, including any bodysuit, jacket, socks and shoes, "
-               "with the complete outfit shown in image 2, matching its shape, length, colors and details. "
-               "Remove any weapon and every carried or held prop. Place the character alone on a plain pure white "
-               "background with nothing else. ")
+OUTFIT_REPLACE = ("Replace all of the character's current clothing in image 1, including any bodysuit, jacket, socks and shoes, "
+                  "with the complete outfit shown in image 2, matching its shape, length, colors and details. ")
+OUTFIT_PROPS = "Remove any weapon and every carried or held prop. "
+OUTFIT_BACKGROUND = "Place the character alone on a plain pure white background with nothing else. "
+OUTFIT_BASE = OUTFIT_REPLACE + OUTFIT_PROPS + OUTFIT_BACKGROUND
 OUTFIT_KEEP = ("Keep the character's face, hairstyle, hair color, head accessories and body proportions exactly the same as "
                "in image 1. ")
 OUTFIT_REMOVE = ("The character must stay the same person as in image 1: same gender, age, face, hair color and hairstyle. "
@@ -340,8 +341,9 @@ def clean_garment_terms(terms):
     return tuple(kept[:MAX_GARMENT_TERMS])
 
 
-def outfit_prompt(head_accessories, garment_terms=()):
-    """제품용 고정 지시문. 머리 장식 선택(keep/remove)과, 있으면 의상 그림에서 자동으로 읽은 옷 이름 목록만 바뀐다."""
+def outfit_prompt(head_accessories, garment_terms=(), remove_props=True):
+    """제품용 고정 지시문. 머리 장식 선택(keep/remove)과, 있으면 의상 그림에서 자동으로 읽은 옷 이름 목록만 바뀐다.
+    remove_props=False는 원인 확인 시험 전용이다(요청 12 W3: 소품 제거 지시와 함께 팔까지 지워졌는지 확인, D-096)."""
     if head_accessories not in ("keep", "remove"):
         raise ValueError("머리 장식은 keep 또는 remove만 고를 수 있습니다.")
     terms = tuple(garment_terms)
@@ -349,4 +351,41 @@ def outfit_prompt(head_accessories, garment_terms=()):
         raise ValueError("옷 이름 목록은 정리된 의상 용어만 쓸 수 있습니다.")
     listed = f"The outfit in image 2 consists of: {', '.join(terms)}. " if terms else ""
     body = OUTFIT_KEEP if head_accessories == "keep" else OUTFIT_REMOVE
-    return OUTFIT_BASE + listed + body + OUTFIT_FRAMING
+    base = OUTFIT_BASE if remove_props else OUTFIT_REPLACE + OUTFIT_BACKGROUND
+    return base + listed + body + OUTFIT_FRAMING
+
+
+ARM_JOINTS = ("shoulder", "elbow", "wrist")
+ARM_LINE_MIN = 0.95     # 추정한 팔 선 위에 그림이 있어야 하는 비율(요청 12 W3 팔 없음: 0.79·0.50, 정상 11장: 1.00)
+ARM_SAMPLES = 12
+
+
+def arm_lines(joints, image):
+    """관절 인식이 추정한 어깨→팔꿈치→손목 선을 따라 그림 내용(흰 바탕 아님)이 있는 비율을 팔마다 잰다.
+    관절 신뢰도만으로는 안 된다: 팔이 없는 그림에서도 팔 관절을 0.6 신뢰도로 추정했다."""
+    named = {j["joint_name"]: j for j in joints}
+    content = content_mask(image)
+    height, width = content.shape
+    lines = {}
+    for side in ("left", "right"):
+        points = [named.get(f"{side}_{name}") for name in ARM_JOINTS]
+        if any(p is None or not p.get("detected") for p in points):
+            lines[side] = None
+            continue
+        hits = []
+        for a, b in zip(points, points[1:]):
+            for t in np.linspace(0.15, 0.95, ARM_SAMPLES):
+                x = int(np.clip(a["x"] + (b["x"] - a["x"]) * t, 0, width - 1))
+                y = int(np.clip(a["y"] + (b["y"] - a["y"]) * t, 0, height - 1))
+                hits.append(bool(content[max(0, y - 2):y + 3, max(0, x - 2):x + 3].any()))
+        lines[side] = round(float(np.mean(hits)), 3)
+    return lines
+
+
+def limb_check(original_joints, original_image, result_joints, result_image):
+    """원본에 있던 팔이 Qwen 결과에서 사라졌으면 거부한다. 원본에서 팔을 못 찾은 쪽은 판정하지 않는다."""
+    before, after = arm_lines(original_joints, original_image), arm_lines(result_joints, result_image)
+    checked = [side for side in ("left", "right") if before[side] is not None and before[side] >= ARM_LINE_MIN]
+    missing = [side for side in checked if after[side] is None or after[side] < ARM_LINE_MIN]
+    status = "unmeasured" if not checked else ("rejected" if missing else "ok")
+    return dict(status=status, original=before, result=after, checked=checked, missing=missing)

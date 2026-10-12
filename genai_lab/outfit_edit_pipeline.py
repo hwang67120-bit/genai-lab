@@ -11,13 +11,15 @@ import numpy as np
 from PIL import Image
 
 from genai_lab.outfit_edit import (HEAD_ACCESSORIES, HEAD_KEEP, SIZE, canvas, fit_white, hair_shape, head_composite,
-                                   head_protect, head_window, pad_image, realign, require, sha, write_json)
+                                   head_protect, head_window, limb_check, pad_image, realign, require, sha, write_json)
 
 FACE_PARTS = ("face", "eyes", "nose", "mouth")
 SEGMENT_TIMEOUT = 600
 REASONS = {"unmeasured": "머리 위치를 확인할 근거(얼굴 특징점)가 부족합니다.",
            "rejected": "Qwen 결과의 머리 위치·크기가 원본과 맞지 않습니다.",
-           "shape": "Qwen이 머리 모양을 바꿔서(예: 양갈래가 짧은 머리로) 원본 머리를 붙이면 어색해집니다."}
+           "shape": "Qwen이 머리 모양을 바꿔서(예: 양갈래가 짧은 머리로) 원본 머리를 붙이면 어색해집니다.",
+           "limbs": "Qwen 결과에서 원본에 있던 팔·손이 사라졌습니다."}
+POSE_TIMEOUT = 300
 
 
 def prepare_canvas(character_path, directory):
@@ -67,8 +69,49 @@ def segment_canvas(prepared, directory, runtime, *, cancelled=lambda: False, pop
                 process.wait()
 
 
-def compose(canvas_path, parts_path, raw_path, head_accessories, directory):
-    """Qwen 결과를 원본 좌표로 되돌리고 검사를 통과하면 머리만 원본 픽셀로 붙인다."""
+def detect_joints(image, directory, runtime, *, cancelled=lambda: False):
+    """기존 입력 분석의 관절 인식(DWPose, CPU, 별도 환경)을 그림 한 장에 돌린다."""
+    import json
+    directory = Path(directory)
+    directory.mkdir(parents=True, exist_ok=False)
+    Image.fromarray(image).save(directory / "character.png")
+    script = Path(__file__).with_name("studio_analysis.py")
+    env = dict(os.environ, HF_HUB_OFFLINE="1", PYTHONDONTWRITEBYTECODE="1")
+    with (directory / "pose.log").open("wb") as log:
+        process = subprocess.Popen([str(runtime.pose_python), str(script), "pose", str(directory), str(runtime.pose_models),
+                                    str(runtime.model_cache), str(runtime.head_cache)], stdout=log, stderr=subprocess.STDOUT,
+                                   env=env, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        start = time.perf_counter()
+        try:
+            while process.poll() is None:
+                if cancelled():
+                    raise RuntimeError("사용자가 취소했습니다.")
+                require(time.perf_counter() - start <= POSE_TIMEOUT, "관절 인식 시간이 초과됐습니다.")
+                time.sleep(.1)
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.wait()
+    require(process.returncode == 0, f"관절 인식 실패. 기록: {directory / 'pose.log'}")
+    return json.loads((directory / "pose.json").read_text(encoding="utf-8"))["joints"]
+
+
+def check_limbs(canvas_path, raw_path, directory, runtime, *, cancelled=lambda: False):
+    with Image.open(canvas_path) as image:
+        person = np.asarray(image.convert("RGB"))
+    with Image.open(raw_path) as raw:
+        edited = np.asarray(raw.convert("RGB").resize(SIZE, Image.LANCZOS))
+    directory = Path(directory)
+    original = detect_joints(person, directory / "original", runtime, cancelled=cancelled)
+    result = detect_joints(edited, directory / "qwen", runtime, cancelled=cancelled)
+    report = limb_check(original, person, result, edited)
+    write_json(directory / "limbs.json", report)
+    return report
+
+
+def compose(canvas_path, parts_path, raw_path, head_accessories, directory, limbs=None):
+    """Qwen 결과를 원본 좌표로 되돌리고 검사를 통과하면 머리만 원본 픽셀로 붙인다.
+    limbs(팔 검사)가 rejected면 머리 검사와 상관없이 붙이지 않는다."""
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
     with Image.open(canvas_path) as image:
@@ -81,10 +124,12 @@ def compose(canvas_path, parts_path, raw_path, head_accessories, directory):
     protect = head_protect(parts, union, head_accessories)
     face = np.logical_or.reduce([parts[k] for k in FACE_PARTS])
     aligned, alignment = realign(person, edited, head_window(protect), expand=True, face=face)
-    outcome = dict(head_accessories=head_accessories, alignment=alignment, composited=False,
+    outcome = dict(head_accessories=head_accessories, alignment=alignment, composited=False, limbs=limbs,
                    raw_sha256=sha(raw_path), canvas_sha256=sha(canvas_path), parts_sha256=sha(parts_path))
     Image.fromarray(edited).save(directory / "qwen_view.png")
-    if aligned is None:
+    if limbs is not None and limbs["status"] == "rejected":
+        outcome.update(reason=REASONS["limbs"])
+    elif aligned is None:
         outcome.update(reason=REASONS[alignment["decision"]])
     else:
         pad = alignment["canvas_pad"]
@@ -107,7 +152,8 @@ def compose(canvas_path, parts_path, raw_path, head_accessories, directory):
 
 
 def run_outfit_pipeline(character_path, garment_path, *, settings, head_accessories, runtime, directory,
-                        garment_terms=(), cancelled=lambda: False, progress=lambda _: None, popen=subprocess.Popen):
+                        garment_terms=(), remove_props=True, cancelled=lambda: False, progress=lambda _: None,
+                        popen=subprocess.Popen):
     """GUI·확인 스크립트 공통 진입점. 반환값은 compose()의 결과에 실행 폴더를 더한 것이다."""
     from genai_lab.qwen_outfit_edit import (OutfitEditWorkflow, make_outfit_request, prepare_outfit_spec,
                                             run_outfit_edit)
@@ -117,13 +163,16 @@ def run_outfit_pipeline(character_path, garment_path, *, settings, head_accessor
     progress("상태: 얼굴·머리 영역 분석 중")
     segmented = segment_canvas(prepared, directory / "parts", runtime, cancelled=cancelled, popen=popen)
     spec = prepare_outfit_spec(prepared["canvas"], garment_path, head_accessories=head_accessories, confirmed=True,
-                               directory=directory / "qwen-inputs", garment_terms=garment_terms)
+                               directory=directory / "qwen-inputs", garment_terms=garment_terms,
+                               remove_props=remove_props)
     request = make_outfit_request(spec, settings=settings)
     workflow = OutfitEditWorkflow(spec)
     def report(data):
         progress(f"상태: 옷 바꾸는 중 · {len(data.get('steps', []))}/40 · 약 30분")
     run_outfit_edit(request, directory / "qwen", workflow, cancelled=cancelled, on_progress=report, popen=popen)
+    progress("상태: 팔·손 확인 중")
+    limbs = check_limbs(prepared["canvas"], directory / "qwen" / "raw.png", directory / "limbs", runtime, cancelled=cancelled)
     progress("상태: 원본 머리 맞추는 중")
     outcome = compose(prepared["canvas"], segmented["parts"], directory / "qwen" / "raw.png", head_accessories,
-                      directory / "compose")
+                      directory / "compose", limbs=limbs)
     return dict(outcome, directory=str(directory), source=prepared["source"], source_sha256=prepared["source_sha256"])

@@ -41,3 +41,43 @@ def test_garment_terms_keep_clothing_and_drop_pose_tags():
 def test_base_prompt_asks_to_replace_all_current_clothing():
     # 요청 12 W3: "그림 2의 옷을 입혀라"만으로는 몸에 붙는 원래 옷이 남았다
     assert "Replace all of the character's current clothing" in outfit_edit.outfit_prompt("keep")
+
+
+def figure(arms=True):
+    image = np.full((1024, 768, 3), 255, np.uint8)
+    image[250:700, 320:450] = (230, 150, 200)                      # 몸통
+    if arms:
+        import cv2
+        cv2.line(image, (320, 270), (250, 420), (230, 150, 200), 18)  # 오른팔(그림 왼쪽)
+        cv2.line(image, (250, 420), (240, 560), (240, 200, 190), 14)
+        cv2.line(image, (450, 270), (520, 420), (230, 150, 200), 18)
+        cv2.line(image, (520, 420), (530, 560), (240, 200, 190), 14)
+    return image
+
+
+def joints():
+    def j(name, x, y):
+        return {"joint_name": name, "x": x, "y": y, "confidence_score": 0.6, "detected": True}
+    return [j("right_shoulder", 320, 270), j("right_elbow", 250, 420), j("right_wrist", 240, 560),
+            j("left_shoulder", 450, 270), j("left_elbow", 520, 420), j("left_wrist", 530, 560)]
+
+
+def test_limb_check_rejects_result_whose_arms_vanished():
+    # 요청 12 W3: 재킷·총과 함께 팔이 지워졌는데 관절 인식은 팔 관절을 여전히 추정했다
+    kept = outfit_edit.limb_check(joints(), figure(True), joints(), figure(True))
+    assert kept["status"] == "ok" and kept["result"] == {"left": 1.0, "right": 1.0}
+    gone = outfit_edit.limb_check(joints(), figure(True), joints(), figure(False))
+    assert gone["status"] == "rejected" and set(gone["missing"]) == {"left", "right"}
+
+
+def test_limb_check_does_not_judge_arms_not_found_in_original():
+    hidden = [dict(j, detected=False) if j["joint_name"].startswith("left") else j for j in joints()]
+    report = outfit_edit.limb_check(hidden, figure(True), joints(), figure(False))
+    assert report["checked"] == ["right"] and report["missing"] == ["right"]
+    report = outfit_edit.limb_check([dict(j, detected=False) for j in joints()], figure(True), joints(), figure(False))
+    assert report["status"] == "unmeasured"
+
+
+def test_prop_removal_sentence_can_be_left_out_only_explicitly():
+    assert outfit_edit.OUTFIT_PROPS in outfit_edit.outfit_prompt("keep")
+    assert outfit_edit.OUTFIT_PROPS not in outfit_edit.outfit_prompt("keep", remove_props=False)

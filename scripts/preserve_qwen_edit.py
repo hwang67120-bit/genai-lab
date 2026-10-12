@@ -7,6 +7,10 @@
 머리 정렬(두 방식 공통): 원본 머리 주변과 Qwen 결과 전체에서 특징점(SIFT)을 맞춰 위치·크기·기울기를 잰다. 일치점이 적으면
 붙이지 않는다(unmeasured). 차이가 허용 범위 안이면 Qwen 결과 전체를 원본 좌표로 되돌린 뒤(크기·기울기·위치) 다시 재서
 거의 일치할 때만 붙인다. 범위를 넘거나 다시 재도 어긋나면 붙이지 않는다(rejected). 붙이지 않은 장은 raw만 남긴다.
+위치 검사는 얼굴에 붙은 일치점(얼굴 경계 25px 안)이 8개 이상일 때만 믿는다(긴 머리·장식 일치점만으로 위치를 정하지 않음).
+--paste head는 위치가 맞아도 머리 형태·연결을 따로 본다(시험 11 W3: Qwen이 양갈래를 짧은 머리로 바꿈).
+  지지율: 얼굴에서 40px 넘게 떨어진 원본 머리를 Qwen 그림의 같은 머리색이 받쳐 주는 비율. 0.5 미만이면 거부.
+  떠 있는 조각: 붙인 원본 머리 중 (원본 머리 ∪ Qwen 머리색)을 따라 얼굴과 이어지지 않는 비율. 0.2 초과면 거부.
 --paste head에서는 되돌린 그림이 화면 밖으로 나가지 않도록 흰 여백으로 화면을 넓힌다(시험 11: 고정 768×1024에 넣어 발끝이 잘림).
 원본 머리는 넓힌 화면에서도 같은 크기·자리에 그대로 붙는다. 넓힌 양은 canvas_pad(왼쪽·위·오른쪽·아래)로 기록한다.
               --head-accessories keep: 머리 장식(머리띠·모자·헤드셋·귀걸이·안경)을 원본 그대로 유지, remove: 지운다.
@@ -29,7 +33,13 @@ from PIL import Image
 SIZE = (768, 1024)
 FEATHER = 2
 HEAD_EDGE = 2
-MATCH_RATIO = 0.75
+MATCH_RATIO = 0.8               # D-093: 0.75에서 0.8로. 대신 얼굴 일치점·되돌린 뒤 재검사·형태 검사로 거른다
+FACE_NEAR = 25                  # 얼굴 경계에서 이 거리 안의 일치점을 얼굴 일치점으로 센다
+MIN_FACE_INLIERS = 8
+HAIR_FAR = 40                   # 얼굴에서 이보다 먼 머리로 형태를 본다
+HAIR_COLOR_DE = 15              # 원본 머리색(Lab k-means 4개 중심)과 이 거리 안이면 Qwen 머리로 본다
+MIN_HAIR_SUPPORT = 0.5
+MAX_FLOATING_HAIR = 0.2
 RANSAC_PX = 3.0
 MIN_INLIERS = 12
 SCALE_RANGE = (0.75, 1.35)      # 되돌릴 수 있는 크기 차이
@@ -84,8 +94,9 @@ def gray(image):
     return cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 
 
-def match_head(person, edited, window):
-    """원본 머리 주변(window)의 특징점을 Qwen 결과 전체에서 찾아 원본→편집 닮음 변환(위치·크기·기울기)을 잰다."""
+def match_head(person, edited, window, face=None):
+    """원본 머리 주변(window)의 특징점을 Qwen 결과 전체에서 찾아 원본→편집 닮음 변환(위치·크기·기울기)을 잰다.
+    face가 있으면 얼굴 경계 FACE_NEAR px 안에 있는 일치점 수(face_inliers)를 센다."""
     sift = cv2.SIFT_create()
     kp1, des1 = sift.detectAndCompute(gray(person), window.astype(np.uint8) * 255)
     kp2, des2 = sift.detectAndCompute(gray(edited), None)
@@ -102,6 +113,10 @@ def match_head(person, edited, window):
     record["inliers"] = int(inliers.sum()) if inliers is not None else 0
     if matrix is None or record["inliers"] < MIN_INLIERS:
         return dict(record, status="unmeasured")
+    if face is not None:
+        near = cv2.distanceTransform((~face).astype(np.uint8), cv2.DIST_L2, 5) <= FACE_NEAR
+        points = src[inliers.ravel() == 1].astype(int)
+        record["face_inliers"] = int(near[points[:, 1], points[:, 0]].sum())
     a, b = float(matrix[0, 0]), float(matrix[1, 0])
     ys, xs = np.nonzero(window)
     center = np.array([xs.mean(), ys.mean(), 1.0])
@@ -132,13 +147,15 @@ def pad_image(image, pad, value):
     return np.pad(image, widths, constant_values=value)
 
 
-def realign(person, edited, window, expand=False):
+def realign(person, edited, window, expand=False, face=None):
     """머리가 원본과 같은 자리·크기가 되도록 Qwen 결과 전체를 되돌린다. 확인되지 않으면 None(붙이지 않음).
     expand=True면 되돌린 그림 내용이 잘리지 않게 화면을 흰 여백으로 넓힌다(원본 좌표는 pad만큼 옮겨진다)."""
-    first = match_head(person, edited, window)
+    first = match_head(person, edited, window, face)
     report = dict(first=first, canvas_pad=[0, 0, 0, 0])
     if first["status"] != "measured":
         return None, dict(report, decision="unmeasured")
+    if face is not None and first["face_inliers"] < MIN_FACE_INLIERS:
+        return None, dict(report, decision="unmeasured", reason="얼굴 일치점 부족")
     if not (SCALE_RANGE[0] <= first["scale"] <= SCALE_RANGE[1] and abs(first["rotate_deg"]) <= ROTATE_LIMIT):
         return None, dict(report, decision="rejected", reason="크기·기울기 차이가 범위를 넘음")
     height, width = person.shape[:2]
@@ -173,6 +190,31 @@ def fit_white(image, size):
     y, x = (height - small.shape[0]) // 2, (width - small.shape[1]) // 2
     out[y:y + small.shape[0], x:x + small.shape[1]] = small
     return out
+
+
+def lab(image):
+    return cv2.cvtColor(image, cv2.COLOR_RGB2LAB).astype(np.float32) * np.float32([100 / 255, 1, 1])
+
+
+def hair_shape(person, aligned, hair, face, pasted):
+    """위치가 맞은 뒤 머리 형태·연결 검사. 모두 같은 (넓힌) 화면 좌표여야 한다."""
+    if not hair.any() or not face.any():
+        return dict(status="unmeasured", reason="머리 또는 얼굴 분할 없음")
+    samples = lab(person)[hair]
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 20, 0.5)
+    cv2.setRNGSeed(0)
+    _, _, centers = cv2.kmeans(samples, min(4, len(samples)), None, criteria, 3, cv2.KMEANS_PP_CENTERS)
+    distance = np.min(np.linalg.norm(lab(aligned)[..., None, :] - centers[None, None], axis=-1), axis=-1)
+    qwen_hair = (distance < HAIR_COLOR_DE) & content_mask(aligned)
+    far = hair & (cv2.distanceTransform((~face).astype(np.uint8), cv2.DIST_L2, 5) > HAIR_FAR)
+    near_qwen = cv2.dilate(qwen_hair.astype(np.uint8), np.ones((7, 7), np.uint8)) > 0
+    support = float((far & near_qwen).sum() / far.sum()) if far.any() else 1.0
+    _, labels = cv2.connectedComponents((pasted | qwen_hair).astype(np.uint8), connectivity=8)
+    attached = np.setdiff1d(np.unique(labels[face & (pasted | qwen_hair)]), [0])
+    floating = float((pasted & ~np.isin(labels, attached)).sum() / max(1, pasted.sum()))
+    ok = support >= MIN_HAIR_SUPPORT and floating <= MAX_FLOATING_HAIR
+    return dict(status="ok" if ok else "rejected", far_hair_px=int(far.sum()), support=round(support, 3),
+                floating=round(floating, 3))
 
 
 def composite(person, edited, change):
@@ -389,12 +431,28 @@ def generate(args, cases, lock, lock_file, garment, prompt, guard, width, height
         image.save(out / f"{name}_raw.png")
         edited = np.asarray(image.convert("RGB").resize(SIZE, Image.LANCZOS))
         window = head_window(protect)
-        aligned, alignment = realign(person, edited, window, expand=args.paste == "head")
+        with np.load(folder / "parts.npz") as parts:
+            face = np.logical_or.reduce([parts[k] for k in ("face", "eyes", "nose", "mouth")])
+            hair = parts["hair"].copy()
+        aligned, alignment = realign(person, edited, window, expand=args.paste == "head", face=face)
         pad = alignment["canvas_pad"]
         record = dict(case=case["name"], seed=args.seed, paste=args.paste, seconds=round(seconds, 1),
                       head_accessories=args.head_accessories if args.paste == "head" else None,
                       alignment=alignment)
         if aligned is None:  # 머리를 확인할 수 없거나 어긋나면 붙이지 않는다
+            record.update(composited=False)
+            results.append(record)
+            print(json.dumps(record, ensure_ascii=False), flush=True)
+            rows.append(np.concatenate([person, edited, np.full_like(person, 255)], 1))
+            write_json(out / "results.json", dict(results=results, memory=guard.stages))
+            continue
+        if args.paste == "head":
+            shape = hair_shape(pad_image(person, pad, 255), aligned, pad_image(hair, pad, False),
+                               pad_image(face, pad, False), pad_image(protect, pad, False))
+            record.update(hair_shape=shape)
+            if shape["status"] != "ok":  # 위치가 맞아도 머리 형태가 바뀌었으면 붙이지 않는다
+                aligned = None
+        if aligned is None:
             record.update(composited=False)
             results.append(record)
             print(json.dumps(record, ensure_ascii=False), flush=True)

@@ -227,3 +227,35 @@ def test_fit_white_keeps_aspect_for_preview():
     image = np.zeros((1200, 768, 3), np.uint8)
     out = script.fit_white(image, (768, 1024))
     assert out.shape == (1024, 768, 3) and (out == 255).any() and (out == 0).any()
+
+
+def hair_scene(tails=True):
+    """얼굴(살색 사각형) + 양옆으로 길게 내려오는 분홍 머리. tails=False면 짧은 머리(시험 11 W3 장식 삭제)."""
+    image = np.full((1024, 768, 3), 255, np.uint8)
+    face = np.zeros((1024, 768), bool); face[200:300, 330:440] = True
+    hair = np.zeros((1024, 768), bool); hair[150:200, 310:460] = True
+    if tails:
+        hair[180:700, 260:310] = True; hair[180:700, 460:510] = True
+    image[face] = (250, 220, 200)
+    image[hair] = (230, 150, 200)
+    return image, hair, face
+
+
+def test_hair_shape_accepts_same_hair_and_rejects_short_hair():
+    person, hair, face = hair_scene(True)
+    pasted = hair | face
+    same = script.hair_shape(person, person.copy(), hair, face, pasted)
+    assert same["status"] == "ok" and same["support"] == 1.0 and same["floating"] == 0.0
+    short, _, _ = hair_scene(False)                       # Qwen이 양갈래를 짧은 머리로 바꿈
+    changed = script.hair_shape(person, short, hair, face, pasted)
+    assert changed["status"] == "rejected" and changed["support"] < 0.5
+
+
+def test_position_needs_inliers_on_the_face():
+    original = drawing(5)
+    far_face = np.zeros((1024, 768), bool); far_face[950:1000, 10:40] = True   # 일치점이 없는 곳을 얼굴로 지정
+    back, report = script.realign(original, warp(original, dy=-30), head_area(), face=far_face)
+    assert back is None and report["reason"] == "얼굴 일치점 부족"
+    near_face = np.zeros((1024, 768), bool); near_face[250:350, 330:440] = True
+    back, report = script.realign(original, warp(original, dy=-30), head_area(), face=near_face)
+    assert report["decision"] == "aligned" and report["first"]["face_inliers"] >= script.MIN_FACE_INLIERS

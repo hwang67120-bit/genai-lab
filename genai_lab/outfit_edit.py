@@ -36,7 +36,8 @@ CONTENT_DIFF = 25               # 흰색과 채널 차이가 이보다 크면 �
 HEAD_WINDOW = 15
 BORDER = 32
 HEAD_ACCESSORIES = ("headwear", "earwear", "eyewear")  # 사용자 선택 대상은 머리 장식뿐이다
-HEAD_KEEP = ("hair", "face", "eyes", "nose", "mouth", "ears", "tail", "wings")
+HEAD_KEEP = ("hair", "face", "eyes", "nose", "mouth", "ears", "tail", "wings")   # 1단계 보존 영역(protect.png) 구성
+NOT_PASTED = ("tail", "wings")   # D-103: 몸에 붙는 부분은 원본 자리에 붙이지 않는다(Qwen이 자세·키를 바꾸면 떨어져 보임)
 
 
 def sha(path):
@@ -196,7 +197,10 @@ def head_protect(parts, protect_png, accessories):
     base = np.logical_or.reduce([parts[k] for k in HEAD_KEEP])
     worn = np.logical_or.reduce([parts[k] for k in HEAD_ACCESSORIES])
     require(np.array_equal(base | worn, protect_png), "1단계 분할과 protect.png가 다릅니다.")
-    return base | worn if accessories == "keep" else base & ~worn
+    body = np.logical_or.reduce([parts[k] for k in NOT_PASTED])
+    head = np.logical_or.reduce([parts[k] for k in HEAD_KEEP if k not in NOT_PASTED])
+    body &= ~head   # 머리카락과 겹친 픽셀은 머리로 본다
+    return ((base | worn) if accessories == "keep" else (base & ~worn)) & ~body
 
 
 def head_weight(protect):

@@ -248,3 +248,15 @@ def test_position_needs_inliers_on_the_face():
     near_face = np.zeros((1024, 768), bool); near_face[250:350, 330:440] = True
     back, report = script.realign(original, warp(original, dy=-30), head_area(), face=near_face)
     assert report["decision"] == "aligned" and report["first"]["face_inliers"] >= script.MIN_FACE_INLIERS
+
+
+def test_tail_and_wings_are_not_pasted_from_original():
+    # D-103: 수인 캐릭터의 꼬리를 원본 자리에 붙이면 Qwen이 자세·키를 바꿨을 때 몸에서 떨어진다
+    parts = fake_parts()
+    parts["tail"][600:900, 500:560] = True
+    parts["wings"][300:400, 100:200] = True
+    protect = np.logical_or.reduce(list(parts.values()))
+    for mode in ("keep", "remove"):
+        pasted = script.head_protect(parts, protect, mode)
+        assert not (pasted & (parts["tail"] | parts["wings"])).any()
+        assert (pasted & parts["face"]).any()

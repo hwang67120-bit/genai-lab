@@ -187,16 +187,29 @@ def build_studio(window, framing_options, clothing_mode):
     input_layout.addWidget(card)
 
     card, box = _card("생성 설정")
-    box.addWidget(_label("전신 이미지 · 캐릭터와 옷을 함께 생성합니다.", "muted"))
     window.framing_combo = QComboBox()
     window.framing_combo.setAccessibleName("화면 범위")
     for framing_type, label in framing_options:
         window.framing_combo.addItem(label, framing_type.value)
     window.framing_combo.setParent(window)
     window.framing_combo.hide()
+    # D-100: 옷 바꾸기는 이 프로젝트의 기본 기능이다. 원본 편집이 기본이고, 새로 그리기(SDXL 4장)는 다른 방식으로 고를 수 있다.
+    box.addWidget(_label("만드는 방식", "muted"))
+    window.studio_method_combo = QComboBox()
+    window.studio_method_combo.setObjectName("studio_method_combo")
+    window.studio_method_combo.setAccessibleName("만드는 방식")
+    window.studio_method_combo.addItem("원본 그림에서 옷 바꾸기 (기본 · 결과 1장 · 약 30분)", "edit")
+    window.studio_method_combo.addItem("새로 그리기 (결과 4장)", "generate")
+    box.addWidget(window.studio_method_combo)
+    window.studio_head_accessory_checkbox = QCheckBox("머리 장식 유지 (머리띠·헤드셋·귀걸이·안경)")
+    window.studio_head_accessory_checkbox.setObjectName("studio_head_accessory_checkbox")
+    window.studio_head_accessory_checkbox.setChecked(True)
+    window.studio_head_accessory_checkbox.setToolTip("끄면 머리 장식만 지웁니다. 다른 소품(무기 등)은 항상 지웁니다.")
+    box.addWidget(window.studio_head_accessory_checkbox)
     window.studio_proportion_checkbox = QCheckBox("원본 비율 참고 (2단계 생성)")
     window.studio_proportion_checkbox.setObjectName("studio_proportion_checkbox")
     window.studio_proportion_checkbox.setChecked(False)
+    window.studio_proportion_checkbox.setEnabled(False)
     box.addWidget(window.studio_proportion_checkbox)
     window.studio_shoulder_checkbox = QCheckBox("어깨 보정(마른 체형 각진 어깨 줄이기)")
     window.studio_shoulder_checkbox.setObjectName("studio_shoulder_checkbox")
@@ -206,33 +219,26 @@ def build_studio(window, framing_options, clothing_mode):
     window.studio_proportion_checkbox.toggled.connect(window.studio_shoulder_checkbox.setEnabled)
     window.studio_proportion_checkbox.toggled.connect(lambda enabled: None if enabled else window.studio_shoulder_checkbox.setChecked(False))
     box.addWidget(window.studio_shoulder_checkbox)
-    # D-094: 원본 편집형 의상 교체. 2단계 비율 생성과 함께 쓰지 않는다.
-    window.studio_outfit_edit_checkbox = QCheckBox("원본 그림에서 옷만 바꾸기 (약 30분)")
-    window.studio_outfit_edit_checkbox.setObjectName("studio_outfit_edit_checkbox")
-    window.studio_outfit_edit_checkbox.setChecked(False)
-    window.studio_outfit_edit_checkbox.setToolTip(
-        "원본 캐릭터 그림을 편집해 옷만 바꾸고, 얼굴·머리카락은 원본 그대로 붙입니다. 자세는 바뀔 수 있습니다.")
-    box.addWidget(window.studio_outfit_edit_checkbox)
-    window.studio_head_accessory_checkbox = QCheckBox("머리 장식 유지 (머리띠·헤드셋·귀걸이·안경)")
-    window.studio_head_accessory_checkbox.setObjectName("studio_head_accessory_checkbox")
-    window.studio_head_accessory_checkbox.setChecked(True)
-    window.studio_head_accessory_checkbox.setEnabled(False)
-    window.studio_head_accessory_checkbox.setToolTip("끄면 머리 장식만 지웁니다. 다른 소품(무기 등)은 항상 지웁니다.")
-    box.addWidget(window.studio_head_accessory_checkbox)
-    window.studio_outfit_edit_checkbox.toggled.connect(window.studio_head_accessory_checkbox.setEnabled)
-    window.studio_outfit_edit_checkbox.toggled.connect(
-        lambda enabled: enabled and window.studio_proportion_checkbox.setChecked(False))
-    window.studio_proportion_checkbox.toggled.connect(
-        lambda enabled: enabled and window.studio_outfit_edit_checkbox.setChecked(False))
-    window.studio_mode_note = _label("자세를 따로 지정하지 않고 생성합니다. 자세 변경은 이번 범위에서 제외합니다.", "muted")
+    window.studio_mode_note = _label("", "muted")
     box.addWidget(window.studio_mode_note)
-    window.studio_proportion_checkbox.toggled.connect(lambda enabled: window.studio_mode_note.setText(
-        "원본 비율과 머리 영역을 확인하고 4장을 만듭니다. 짧은 머리는 자동으로 붙입니다. 생성량은 2배이며 머리 처리 시간이 추가됩니다."
-        if enabled else "자세를 따로 지정하지 않고 생성합니다. 자세 변경은 이번 범위에서 제외합니다."))
-    window.studio_outfit_edit_checkbox.toggled.connect(lambda enabled: window.studio_mode_note.setText(
-        "원본 그림을 편집해 옷만 바꾸고 결과 1장을 만듭니다. 얼굴·머리는 원본 그대로이며 자세는 바뀔 수 있습니다. "
-        "머리를 확인할 수 없거나 팔이 사라지면 원본 머리를 붙이지 않고 알려 드립니다."
-        if enabled else "자세를 따로 지정하지 않고 생성합니다. 자세 변경은 이번 범위에서 제외합니다."))
+
+    def update_method(*_):
+        edit = window.studio_method_combo.currentData() == "edit"
+        window.studio_head_accessory_checkbox.setEnabled(edit)
+        window.studio_proportion_checkbox.setEnabled(not edit)
+        if edit:
+            window.studio_proportion_checkbox.setChecked(False)
+        if edit:
+            text = ("원본 그림을 편집해 옷만 바꾸고 결과 1장을 만듭니다. 얼굴·머리는 원본 그대로이며 자세는 바뀔 수 있습니다. "
+                    "머리를 확인할 수 없거나 팔이 사라지면 원본 머리를 붙이지 않고 알려 드립니다.")
+        elif window.studio_proportion_checkbox.isChecked():
+            text = "원본 비율과 머리 영역을 확인하고 4장을 만듭니다. 짧은 머리는 자동으로 붙입니다. 생성량은 2배이며 머리 처리 시간이 추가됩니다."
+        else:
+            text = "캐릭터와 옷을 참고해 새로 4장을 그립니다. 자세는 따로 지정하지 않습니다."
+        window.studio_mode_note.setText(text)
+    window.studio_method_combo.currentIndexChanged.connect(update_method)
+    window.studio_proportion_checkbox.toggled.connect(update_method)
+    update_method()
     input_layout.addWidget(card)
 
     card, box = _card("완성 이미지로 이어서 작업", "필요할 때 선택하는 별도 기능입니다.")

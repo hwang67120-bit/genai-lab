@@ -71,6 +71,8 @@ def test_default_off_and_frozen_choice_during_work():
     window=GenAILabWindow()
     try:
         assert not window.studio_proportion_checkbox.isChecked()
+        assert not window.studio_proportion_checkbox.isEnabled()      # 기본 방식(원본 편집)에서는 쓰지 않는다
+        window.studio_method_combo.setCurrentIndex(1)
         window.studio_proportion_checkbox.setChecked(True)
         assert "2배" in window.studio_mode_note.text()
         window.studio.confirming=True
@@ -199,6 +201,7 @@ def test_gui_two_pass_request_approval_export_and_no_second_background(tmp_path,
     window.studio.output_root=tmp_path/"runs"
     window.style_path=Path(analysis["source"])
     window.selected_outfit_path=Path(analysis["directory"])/"garment.png"
+    window.studio_method_combo.setCurrentIndex(1)
     window.studio_proportion_checkbox.setChecked(True)
     window.update_input_ready_status()
     monkeypatch.setattr(ui,"validate_local_models",lambda _:None)

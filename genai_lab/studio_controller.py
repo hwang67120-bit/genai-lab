@@ -87,9 +87,9 @@ class StudioController(QObject):
             self.run_directory = self.output_root / uuid.uuid4().hex
             self.run_directory.mkdir(parents=True)
             self.runtime = StudioRuntime.from_environment()
-            self.proportion_enabled = w.studio_proportion_checkbox.isChecked()
+            self.outfit_edit_enabled = w.studio_method_combo.currentData() == "edit"
+            self.proportion_enabled = not self.outfit_edit_enabled and w.studio_proportion_checkbox.isChecked()
             self.shoulder_enabled = self.proportion_enabled and w.studio_shoulder_checkbox.isChecked()
-            self.outfit_edit_enabled = w.studio_outfit_edit_checkbox.isChecked() and not self.proportion_enabled
             self.head_accessories = "keep" if w.studio_head_accessory_checkbox.isChecked() else "remove"
             self.proportion_pending = None
             self.prepared_proportion_pose = None
@@ -597,9 +597,10 @@ class StudioController(QObject):
         for control in (w.style_button, w.outfit_button, w.clear_outfit_button,
                         w.qwen_pose_button, w.external_candidate_button):
             control.setEnabled(not self.occupied)
-        w.studio_proportion_checkbox.setEnabled(not self.occupied)
-        w.studio_outfit_edit_checkbox.setEnabled(not self.occupied)
-        w.studio_head_accessory_checkbox.setEnabled(not self.occupied and w.studio_outfit_edit_checkbox.isChecked())
+        edit_method = w.studio_method_combo.currentData() == "edit"
+        w.studio_method_combo.setEnabled(not self.occupied)
+        w.studio_proportion_checkbox.setEnabled(not self.occupied and not edit_method)
+        w.studio_head_accessory_checkbox.setEnabled(not self.occupied and edit_method)
         edit_result = bool(getattr(self.results, "edit_mode", False))
         w.studio_shoulder_checkbox.setEnabled(not self.occupied and w.studio_proportion_checkbox.isChecked())
         w.generate_button.setEnabled(not self.occupied and bool(w.style_path and w.selected_outfit_path))

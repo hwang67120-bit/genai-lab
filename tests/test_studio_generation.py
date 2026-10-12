@@ -104,6 +104,7 @@ def test_create_button_to_review_and_export_without_legacy_fallback(tmp_path, mo
     monkeypatch.setattr(ui, "confirm_result", lambda *a: {"character":True,"garment":True,"exposure":True,"appendages":True})
     destination = tmp_path/"chosen.png"
     monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *a: (str(destination), ""))
+    w.studio_method_combo.setCurrentIndex(1)  # 새로 그리기(SDXL)
     try:
         w.generate_button.click()
         assert not w.style_button.isEnabled()
@@ -293,6 +294,7 @@ def test_new_preflight_failure_does_not_rewrite_previous_run(tmp_path,monkeypatc
     def fail(_):
         raise FileNotFoundError("missing model")
     monkeypatch.setattr(ui,"validate_local_models",fail)
+    w.studio_method_combo.setCurrentIndex(1)  # 새로 그리기(SDXL)
     try:
         w.studio.start()
         assert (previous/"gui-status.json").read_bytes()==original

@@ -274,6 +274,7 @@ def test_generate_button_releases_backend_before_cpu_background_and_records_warn
         events.append("CPU background")
         return products(batch)
     monkeypatch.setattr(ui, "prepare_backgrounds", prepare)
+    window.studio_method_combo.setCurrentIndex(1)  # 새로 그리기(SDXL)
     try:
         window.generate_button.click()
         wait_for(app, lambda: window.studio.task is None and window.studio.results is not None)

@@ -41,17 +41,18 @@ def fake_outcome(directory, composited=True):
     return outcome
 
 
-def test_checkboxes_default_and_exclusive_with_two_pass():
+def test_outfit_edit_is_the_default_method():
+    # 사용자 GUI 확인(2026-10-12): 옷 바꾸기가 이 프로젝트의 기본인데 체크해야 쓰는 것은 잘못이다(D-100)
     app = QApplication.instance() or QApplication([])
     window = GenAILabWindow()
     try:
-        assert not window.studio_outfit_edit_checkbox.isChecked()
-        assert window.studio_head_accessory_checkbox.isChecked() and not window.studio_head_accessory_checkbox.isEnabled()
-        window.studio_outfit_edit_checkbox.setChecked(True)
-        assert window.studio_head_accessory_checkbox.isEnabled() and "옷만 바꾸고" in window.studio_mode_note.text()
+        assert window.studio_method_combo.currentData() == "edit"
+        assert window.studio_head_accessory_checkbox.isChecked() and window.studio_head_accessory_checkbox.isEnabled()
+        assert not window.studio_proportion_checkbox.isEnabled() and "옷만 바꾸고" in window.studio_mode_note.text()
+        window.studio_method_combo.setCurrentIndex(1)                          # 새로 그리기
+        assert window.studio_proportion_checkbox.isEnabled() and not window.studio_head_accessory_checkbox.isEnabled()
         window.studio_proportion_checkbox.setChecked(True)
-        assert not window.studio_outfit_edit_checkbox.isChecked()            # 2단계 비율 생성과 함께 쓰지 않는다
-        window.studio_outfit_edit_checkbox.setChecked(True)
+        window.studio_method_combo.setCurrentIndex(0)                          # 원본 편집으로 돌아오면 비율 생성은 꺼진다
         assert not window.studio_proportion_checkbox.isChecked()
     finally:
         window.close()
@@ -64,8 +65,7 @@ def test_gui_outfit_edit_runs_pipeline_and_saves_approved_result(tmp_path, monke
     window.studio.output_root = tmp_path / "runs"
     window.style_path = Path(analysis["source"])
     window.selected_outfit_path = Path(analysis["directory"]) / "garment.png"
-    window.studio_outfit_edit_checkbox.setChecked(True)
-    window.studio_head_accessory_checkbox.setChecked(False)
+    window.studio_head_accessory_checkbox.setChecked(False)               # 기본 방식 그대로, 체크 없이 생성
     window.update_input_ready_status()
     monkeypatch.setattr(ui, "validate_local_models", lambda _: pytest.fail("원본 편집형은 SDXL 모델을 확인하지 않는다"))
     monkeypatch.setattr(ui, "analyze_inputs", lambda *a, **k: analysis)

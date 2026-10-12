@@ -207,3 +207,23 @@ def test_failure_measurement_errors_are_recorded_as_unmeasured(tmp_path):
 
 def test_text_encoder_keeps_lm_head_off_gpu():
     assert script.text_encoder_device_map() == {"model": 0, "lm_head": "cpu"}
+
+
+def test_expanded_canvas_keeps_feet_inside_and_head_in_place():
+    # 시험 11 회귀: 머리를 맞추려 전체를 되돌리면 발끝이 768×1024 밖으로 나가 잘렸다
+    original = drawing(4)
+    edited = warp(original, scale=0.85, dy=-140)          # Qwen이 인물을 작게·위로 그린 경우 → 되돌리면 아래로 커진다
+    edited[960:1000, 300:460] = (20, 20, 20)              # 발(되돌리면 화면 아래로 나감)
+    back, report = script.realign(original, edited, head_area(), expand=False)
+    assert report["decision"] == "aligned" and report["content_outside_px"] > 0
+    back, report = script.realign(original, edited, head_area(), expand=True)
+    left, top, right, bottom = report["canvas_pad"]
+    assert report["content_outside_px"] == 0 and bottom > 0
+    assert back.shape[:2] == (1024 + top + bottom, 768 + left + right)
+    assert script.near_identity(report["second"])          # 넓힌 화면에서도 머리는 원본 자리·크기
+
+
+def test_fit_white_keeps_aspect_for_preview():
+    image = np.zeros((1200, 768, 3), np.uint8)
+    out = script.fit_white(image, (768, 1024))
+    assert out.shape == (1024, 768, 3) and (out == 255).any() and (out == 0).any()

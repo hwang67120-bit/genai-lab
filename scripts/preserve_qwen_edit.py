@@ -7,6 +7,8 @@
 머리 정렬(두 방식 공통): 원본 머리 주변과 Qwen 결과 전체에서 특징점(SIFT)을 맞춰 위치·크기·기울기를 잰다. 일치점이 적으면
 붙이지 않는다(unmeasured). 차이가 허용 범위 안이면 Qwen 결과 전체를 원본 좌표로 되돌린 뒤(크기·기울기·위치) 다시 재서
 거의 일치할 때만 붙인다. 범위를 넘거나 다시 재도 어긋나면 붙이지 않는다(rejected). 붙이지 않은 장은 raw만 남긴다.
+--paste head에서는 되돌린 그림이 화면 밖으로 나가지 않도록 흰 여백으로 화면을 넓힌다(시험 11: 고정 768×1024에 넣어 발끝이 잘림).
+원본 머리는 넓힌 화면에서도 같은 크기·자리에 그대로 붙는다. 넓힌 양은 canvas_pad(왼쪽·위·오른쪽·아래)로 기록한다.
               --head-accessories keep: 머리 장식(머리띠·모자·헤드셋·귀걸이·안경)을 원본 그대로 유지, remove: 지운다.
               이 선택은 머리 장식에만 적용된다. 무기 등 다른 소품은 어느 쪽이든 지운다.
 메모리: --reserved-limit-gib를 PyTorch 할당 상한으로 걸어 그 이상은 할당 자체가 실패한다(공유 메모리로 넘기지 않음).
@@ -35,6 +37,7 @@ ROTATE_LIMIT = 10.0             # 되돌릴 수 있는 기울기(도)
 RESIDUAL_SHIFT = 2.0            # 되돌린 뒤 남아도 되는 위치 차이(px)
 RESIDUAL_SCALE = 0.02
 RESIDUAL_ROTATE = 1.0
+CONTENT_DIFF = 25               # 흰색과 채널 차이가 이보다 크면 그림 내용으로 본다
 HEAD_WINDOW = 15
 BORDER = 32
 PROMPT = ("Dress the character from image 1 in the outfit shown in image 2: a long dark brown coat, a white shirt with a black "
@@ -112,22 +115,64 @@ def near_identity(match):
             and abs(match["rotate_deg"]) <= RESIDUAL_ROTATE and max(map(abs, match["head_shift_px"])) <= RESIDUAL_SHIFT)
 
 
-def realign(person, edited, window):
-    """머리가 원본과 같은 자리·크기가 되도록 Qwen 결과 전체를 되돌린다. 확인되지 않으면 None(붙이지 않음)."""
+def content_mask(image):
+    """흰 바탕이 아닌 그림 내용. 점 잡음은 3×3 열림으로 지운다."""
+    content = (np.abs(255 - image.astype(np.int16)).max(axis=2) > CONTENT_DIFF).astype(np.uint8)
+    return cv2.morphologyEx(content, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8)) > 0
+
+
+def outside_frame(points, width, height):
+    x, y = points
+    return (x < 0) | (y < 0) | (x > width - 1) | (y > height - 1)
+
+
+def pad_image(image, pad, value):
+    left, top, right, bottom = pad
+    widths = ((top, bottom), (left, right)) + (((0, 0),) if image.ndim == 3 else ())
+    return np.pad(image, widths, constant_values=value)
+
+
+def realign(person, edited, window, expand=False):
+    """머리가 원본과 같은 자리·크기가 되도록 Qwen 결과 전체를 되돌린다. 확인되지 않으면 None(붙이지 않음).
+    expand=True면 되돌린 그림 내용이 잘리지 않게 화면을 흰 여백으로 넓힌다(원본 좌표는 pad만큼 옮겨진다)."""
     first = match_head(person, edited, window)
-    report = dict(first=first)
+    report = dict(first=first, canvas_pad=[0, 0, 0, 0])
     if first["status"] != "measured":
         return None, dict(report, decision="unmeasured")
     if not (SCALE_RANGE[0] <= first["scale"] <= SCALE_RANGE[1] and abs(first["rotate_deg"]) <= ROTATE_LIMIT):
         return None, dict(report, decision="rejected", reason="크기·기울기 차이가 범위를 넘음")
-    inverse = cv2.invertAffineTransform(np.float32(first["matrix"]))
-    back = cv2.warpAffine(edited, inverse, (edited.shape[1], edited.shape[0]), flags=cv2.INTER_LANCZOS4,
+    height, width = person.shape[:2]
+    inverse = cv2.invertAffineTransform(np.float32(first["matrix"])).astype(np.float64)
+    ys, xs = np.nonzero(content_mask(edited))
+    mapped = inverse @ np.stack([xs, ys, np.ones_like(xs)]).astype(np.float64)
+    pad = [0, 0, 0, 0]
+    if expand and xs.size:
+        pad = [max(0, int(np.ceil(-mapped[0].min()))), max(0, int(np.ceil(-mapped[1].min()))),
+               max(0, int(np.ceil(mapped[0].max() - (width - 1)))), max(0, int(np.ceil(mapped[1].max() - (height - 1))))]
+    inverse[0, 2] += pad[0]
+    inverse[1, 2] += pad[1]
+    size = (width + pad[0] + pad[2], height + pad[1] + pad[3])
+    lost = int(outside_frame(mapped + np.array([[pad[0]], [pad[1]]]), *size).sum()) if xs.size else 0
+    back = cv2.warpAffine(edited, inverse, size, flags=cv2.INTER_LANCZOS4,
                           borderMode=cv2.BORDER_CONSTANT, borderValue=(255, 255, 255))
-    second = match_head(person, back, window)
-    report.update(second=second)
+    second = match_head(pad_image(person, pad, 255), back, pad_image(window, pad, False))
+    report.update(second=second, canvas_pad=pad, content_outside_px=lost)
     if not near_identity(second):
         return None, dict(report, decision="rejected", reason="되돌린 뒤에도 머리가 맞지 않음")
     return back, dict(report, decision="aligned")
+
+
+def fit_white(image, size):
+    """비교 그림용: 넓어진 화면을 비율 유지로 size 안에 줄여 흰 바탕 가운데 놓는다(결과 파일은 줄이지 않는다)."""
+    width, height = size
+    if image.shape[1] == width and image.shape[0] == height:
+        return image
+    scale = min(width / image.shape[1], height / image.shape[0])
+    small = cv2.resize(image, (round(image.shape[1] * scale), round(image.shape[0] * scale)), interpolation=cv2.INTER_AREA)
+    out = np.full((height, width, 3), 255, np.uint8)
+    y, x = (height - small.shape[0]) // 2, (width - small.shape[1]) // 2
+    out[y:y + small.shape[0], x:x + small.shape[1]] = small
+    return out
 
 
 def composite(person, edited, change):
@@ -344,7 +389,8 @@ def generate(args, cases, lock, lock_file, garment, prompt, guard, width, height
         image.save(out / f"{name}_raw.png")
         edited = np.asarray(image.convert("RGB").resize(SIZE, Image.LANCZOS))
         window = head_window(protect)
-        aligned, alignment = realign(person, edited, window)
+        aligned, alignment = realign(person, edited, window, expand=args.paste == "head")
+        pad = alignment["canvas_pad"]
         record = dict(case=case["name"], seed=args.seed, paste=args.paste, seconds=round(seconds, 1),
                       head_accessories=args.head_accessories if args.paste == "head" else None,
                       alignment=alignment)
@@ -357,9 +403,11 @@ def generate(args, cases, lock, lock_file, garment, prompt, guard, width, height
             continue
         record.update(composited=True)
         if args.paste == "head":
-            result, core = head_composite(person, aligned, protect)
-            record.update(head_core_equal=bool(np.array_equal(result[core], person[core])), head_core_px=int(core.sum()),
-                          head_mean_abs_diff=round(float(np.abs(aligned.astype(np.float32) - person)[protect].mean()), 2),
+            person_c, protect_c = pad_image(person, pad, 255), pad_image(protect, pad, False)
+            result, core = head_composite(person_c, aligned, protect_c)
+            record.update(head_core_equal=bool(np.array_equal(result[core], person_c[core])), head_core_px=int(core.sum()),
+                          head_mean_abs_diff=round(float(np.abs(aligned.astype(np.float32) - person_c)[protect_c].mean()), 2),
+                          output_size=[int(result.shape[1]), int(result.shape[0])],
                           border_white_ratio=round(border_white_ratio(result), 3))
             ok = record["head_core_equal"]
         else:
@@ -374,7 +422,7 @@ def generate(args, cases, lock, lock_file, garment, prompt, guard, width, height
         results.append(record)
         print(json.dumps(results[-1], ensure_ascii=False), flush=True)
         require(ok, f"{name}: 보존해야 할 원본 픽셀이 바뀌었습니다.")
-        rows.append(np.concatenate([person, edited, result], 1))
+        rows.append(np.concatenate([person, edited, fit_white(result, SIZE)], 1))
         write_json(out / "results.json", dict(results=results, memory=guard.stages))
     Image.fromarray(np.concatenate([np.asarray(Image.fromarray(r).resize((1152, 512))) for r in rows], 0)).save(out / "before_raw_after.png")
     write_json(out / "results.json", dict(results=results, seconds=time.perf_counter() - started, prompt=prompt, paste=args.paste, head_accessories=args.head_accessories,

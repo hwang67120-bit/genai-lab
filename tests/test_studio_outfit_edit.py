@@ -71,8 +71,10 @@ def test_gui_outfit_edit_runs_pipeline_and_saves_approved_result(tmp_path, monke
     monkeypatch.setattr(ui, "analyze_inputs", lambda *a, **k: analysis)
     monkeypatch.setattr(ui, "confirm_inputs", lambda *a: pytest.fail("SDXL 입력 확인 화면을 띄우지 않는다"))
     monkeypatch.setattr(ui, "generate_onepass_request", lambda *a, **k: pytest.fail("SDXL 생성을 하지 않는다"))
-    monkeypatch.setattr(ui, "confirm_outfit_edit", lambda window, a, accessories, path: str(settings_file(tmp_path)))
-    monkeypatch.setattr(ui, "remember_qwen_settings", lambda path: None)   # 실제 사용자 설정에 시험 경로를 남기지 않는다
+    monkeypatch.setattr(ui, "confirm_outfit_edit", lambda window, a, accessories: True)
+    from genai_lab import qwen_outfit_edit
+    loaded = []
+    monkeypatch.setattr(qwen_outfit_edit, "load_qwen_settings", lambda path: loaded.append(Path(path).name) or object())
     calls = []
     def pipeline(character, garment, **kw):
         calls.append((Path(character).name, Path(garment).name, kw["head_accessories"]))
@@ -85,6 +87,7 @@ def test_gui_outfit_edit_runs_pipeline_and_saves_approved_result(tmp_path, monke
         window.generate_button.click()
         wait_for(app, lambda: window.studio.task is None and window.studio.results is not None)
         assert calls == [("character.png", "garment.png", "remove")]       # 머리 장식 체크를 끈 선택이 전달된다
+        assert loaded == ["qwen_edit_settings.json"]                         # 사용자가 고르지 않고 작업실 기본 설정을 쓴다(D-101)
         results = window.studio.results
         assert isinstance(results, OutfitEditResults) and results.composited
         assert not window.tail_edit_button.isVisible() and not window.studio_finish_button.isVisible()
@@ -105,7 +108,10 @@ def test_cancelled_confirmation_never_runs_qwen(tmp_path, monkeypatch):
     window.studio.run_directory = tmp_path / "run"
     window.studio.run_directory.mkdir()
     window.studio.outfit_edit_enabled = True
-    monkeypatch.setattr(ui, "confirm_outfit_edit", lambda *a: None)
+    monkeypatch.setattr(ui, "confirm_outfit_edit", lambda *a: False)
+    from genai_lab import qwen_outfit_edit
+    monkeypatch.setattr(qwen_outfit_edit, "load_qwen_settings", lambda path: object())
+    window.studio.runtime = ui.StudioRuntime()
     monkeypatch.setattr(outfit_edit_pipeline, "run_outfit_pipeline", lambda *a, **k: pytest.fail("취소했는데 실행했다"))
     try:
         window.studio.inputs_ready(analysis)
@@ -131,23 +137,50 @@ def test_changed_result_blocks_approval(tmp_path):
         results.approve(dict(character=True, garment=True, exposure=True))
 
 
-def test_confirmation_explains_why_start_is_disabled(tmp_path, monkeypatch):
-    # 사용자 GUI 확인(2026-10-12): 설정 파일을 고르지 않아 버튼이 꺼졌는데 이유가 보이지 않았다
+def test_confirmation_needs_only_the_check_no_settings_file(tmp_path, monkeypatch):
+    # 사용자 GUI 확인(2026-10-12): 사용자가 실행 환경을 일일이 고르면 안 된다(D-101)
     from PySide6.QtWidgets import QCheckBox, QDialog, QLabel, QPushButton
     app = QApplication.instance() or QApplication([])
     analysis = analysis_at(tmp_path / "inputs")
     seen = {}
     def inspect(dialog):
-        hint = dialog.findChild(QLabel, "outfit_edit_hint")
         start = [b for b in dialog.findChildren(QPushButton) if b.text() == "옷 바꾸기 시작"][0]
-        seen["before"] = (start.isEnabled(), hint.text())
+        seen["buttons"] = [b.text() for b in dialog.findChildren(QPushButton)]
+        seen["before"] = start.isEnabled()
         dialog.findChildren(QCheckBox)[0].setChecked(True)
-        seen["checked_only"] = (start.isEnabled(), hint.text())
+        seen["after"] = (start.isEnabled(), dialog.findChild(QLabel, "outfit_edit_hint").text())
         return QDialog.DialogCode.Rejected
     monkeypatch.setattr(QDialog, "exec", inspect)
-    assert ui.confirm_outfit_edit(None, analysis, "keep", "") is None
-    assert seen["before"][0] is False and "실행 환경 설정 파일" in seen["before"][1] and "확인 체크" in seen["before"][1]
-    assert seen["checked_only"][0] is False and "실행 환경 설정 파일" in seen["checked_only"][1]
+    assert ui.confirm_outfit_edit(None, analysis, "keep") is False
+    assert not any("설정" in text for text in seen["buttons"])
+    assert seen["before"] is False and seen["after"][0] is True and "준비" in seen["after"][1]
+
+
+def test_missing_qwen_setup_is_reported_before_confirmation(tmp_path, monkeypatch):
+    app = QApplication.instance() or QApplication([])
+    window = GenAILabWindow()
+    window.studio.run_directory = tmp_path / "run"
+    window.studio.run_directory.mkdir()
+    window.studio.runtime = ui.StudioRuntime(qwen_settings=tmp_path / "none.json")
+    monkeypatch.setattr(ui, "confirm_outfit_edit", lambda *a: pytest.fail("설정이 없으면 확인 창을 띄우지 않는다"))
+    from PySide6.QtWidgets import QMessageBox
+    monkeypatch.setattr(QMessageBox, "exec", lambda *a: 0)
+    try:
+        window.studio.begin_outfit_edit(analysis_at(tmp_path / "inputs"))
+        status = json.loads((window.studio.run_directory / "gui-status.json").read_text(encoding="utf-8"))
+        assert "실행 설정 파일이 없습니다" in status["error"] and window.studio.task is None
+    finally:
+        window.close()
+
+
+def test_default_settings_resolve_manifest_next_to_config(tmp_path):
+    from genai_lab.qwen_pose_settings import QwenPoseSettings
+    config = tmp_path / "configs"
+    config.mkdir()
+    (config / "m.json").write_text("{}", encoding="utf-8")
+    values = json.loads(settings_file(tmp_path).read_text(encoding="utf-8"))
+    (config / "s.json").write_text(json.dumps(dict(values, artifact_manifest="m.json")), encoding="utf-8")
+    assert Path(QwenPoseSettings.load(config / "s.json").artifact_manifest) == (config / "m.json").resolve()
 
 
 def test_settings_path_is_remembered_only_if_file_exists(tmp_path):

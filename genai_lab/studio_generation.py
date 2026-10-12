@@ -52,6 +52,8 @@ class StudioRuntime:
     head_semantic_repo: Path = Path("D:/genai-cache/tools/see-through")
     head_semantic_checkpoint: Path = Path("D:/genai-cache/huggingface/models--24yearsold--l2d_sam_iter2/snapshots/0b0608310fb7a89e32ecd7397147a249540cf1e7/checkpoint-18000.pt")
     head_paste_timeout: float = 1200.0
+    # D-101: 원본 편집(Qwen) 실행 설정. 사용자가 고르지 않는다. 배포마다 GENAI_STUDIO_RUNTIME의 qwen_settings로 바꿀 수 있다.
+    qwen_settings: Path = field(default_factory=lambda: Path(__file__).resolve().parents[1] / "configs/qwen_edit_settings.json")
     skin_recommendation: SkinRecommendationSettings = field(default_factory=SkinRecommendationSettings)
     garment_warnings: GarmentWarningSettings = field(default_factory=GarmentWarningSettings.load)
 
@@ -68,7 +70,7 @@ class StudioRuntime:
         if not config:
             return cls()
         values = json.loads(Path(config).read_text(encoding="utf-8"))
-        allowed = {"pose_python", "pose_models", "model_cache", "analysis_python", "head_cache", "garment_warning_rules", "proportion_sketch_root", "quality_tags", "finishing", "finishing_face_reference", "skin_recommendation", "head_semantic_repo", "head_semantic_checkpoint", "head_paste_timeout"}
+        allowed = {"pose_python", "pose_models", "model_cache", "analysis_python", "head_cache", "garment_warning_rules", "proportion_sketch_root", "quality_tags", "finishing", "finishing_face_reference", "skin_recommendation", "head_semantic_repo", "head_semantic_checkpoint", "head_paste_timeout", "qwen_settings"}
         if set(values) - allowed:
             raise ValueError("작업실 실행 설정에 알 수 없는 항목이 있습니다.")
         skin = SkinRecommendationSettings(**values.pop("skin_recommendation", {}))

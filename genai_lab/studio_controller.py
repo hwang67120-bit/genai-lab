@@ -54,7 +54,7 @@ class StudioController(QObject):
         self.pending_action = None
         self.pending_error = None
         self.tail_context = None
-        self.tail_settings_path = remembered_qwen_settings()
+        self.tail_settings_path = remembered_qwen_settings() or str(StudioRuntime().qwen_settings)
         self.pending_tail_recognition = None
         self.finishing_context = None
         self.outfit_edit_enabled = False
@@ -217,27 +217,24 @@ class StudioController(QObject):
     # 원본 편집형 의상 교체(D-094): 입력 확인 → Qwen 편집 → 머리·팔 검사 → 결과 1장 검토.
 
     def begin_outfit_edit(self, analysis):
-        from genai_lab.qwen_pose_settings import QwenPoseSettings
+        from genai_lab.qwen_outfit_edit import load_qwen_settings
+        try:  # 실행 환경은 작업실 기본 설정(configs/qwen_edit_settings.json)이다. 사용자가 고르지 않는다(D-101).
+            settings = load_qwen_settings(self.runtime.qwen_settings)
+        except (ValueError, OSError, TypeError) as error:
+            self.fail(error, traceback.format_exc())
+            return
         self.confirming = True
         self.controls()
         try:
-            settings_path = confirm_outfit_edit(self.window, analysis, self.head_accessories, self.tail_settings_path)
+            confirmed = confirm_outfit_edit(self.window, analysis, self.head_accessories)
         finally:
             self.confirming = False
-        if settings_path is None:
+        if not confirmed:
             self.window.status_label.setText("상태: 옷 바꾸기를 취소했습니다. 다른 이미지를 선택할 수 있습니다.")
             self.window.candidate_preview.clear()
             self.window.candidate_preview.setText("아직 생성하지 않았습니다.")
             self.controls()
             return
-        try:
-            settings = QwenPoseSettings.load(settings_path)
-        except (ValueError, OSError, TypeError) as error:
-            QMessageBox.warning(self.window, "실행 환경 확인", str(error))
-            self.controls()
-            return
-        self.tail_settings_path = settings_path
-        remember_qwen_settings(settings_path)
         self.release_tail_predecessor()
         directory = self.run_directory / "outfit-edit"
         source = Path(analysis["directory"])
@@ -925,12 +922,12 @@ def remember_qwen_settings(path, store=None):
     store.sync()
 
 
-def confirm_outfit_edit(window, analysis, head_accessories, settings_path=""):
-    """옷 바꾸기 시작 전 확인. 실행 환경 설정 파일(꼬리 편집과 같은 Qwen 설정)을 고른다. 취소하면 None."""
+def confirm_outfit_edit(window, analysis, head_accessories):
+    """옷 바꾸기 시작 전 확인. 실행 환경은 작업실 기본 설정을 쓰므로 고르지 않는다. 취소하면 False."""
     from genai_lab.qwen_outfit_edit import LIMITATIONS
     dialog = QDialog(window)
-    dialog.setWindowTitle("원본 그림에서 옷만 바꾸기")
-    dialog.resize(640, 620)
+    dialog.setWindowTitle("원본 그림에서 옷 바꾸기")
+    dialog.resize(640, 580)
     layout = QVBoxLayout(dialog)
     row = QHBoxLayout()
     for name, label in (("character.png", "원래 캐릭터"), ("garment.png", "입힐 옷")):
@@ -942,21 +939,6 @@ def confirm_outfit_edit(window, analysis, head_accessories, settings_path=""):
         note = QLabel(text)
         note.setWordWrap(True)
         layout.addWidget(note)
-    chosen = {"path": settings_path}
-    path_label = QLabel()
-    def show_path():
-        path_label.setText("실행 환경 설정: " + (chosen["path"] or "선택되지 않음"))
-    show_path()
-    layout.addWidget(path_label)
-    pick = QPushButton("실행 환경 설정 파일 선택")
-    def choose():
-        path, _ = QFileDialog.getOpenFileName(dialog, "편집 실행 환경 설정", "", "JSON (*.json)")
-        if path:
-            chosen["path"] = path
-            show_path()
-            refresh()
-    pick.clicked.connect(choose)
-    layout.addWidget(pick)
     confirm = QCheckBox("캐릭터와 옷을 확인했고, 약 30분 걸리는 것을 이해했습니다.")
     layout.addWidget(confirm)
     run = QPushButton("옷 바꾸기 시작")
@@ -965,15 +947,8 @@ def confirm_outfit_edit(window, analysis, head_accessories, settings_path=""):
     hint.setWordWrap(True)
     hint.setObjectName("outfit_edit_hint")
     def refresh():
-        missing = []
-        if not chosen["path"]:
-            missing.append("실행 환경 설정 파일을 선택해 주세요(꼬리 편집과 같은 Qwen 설정 JSON).")
-        elif not Path(chosen["path"]).is_file():
-            missing.append("선택한 실행 환경 설정 파일이 없습니다. 다시 선택해 주세요.")
-        if not confirm.isChecked():
-            missing.append("확인 체크를 해 주세요.")
-        hint.setText(" ".join(missing) if missing else "준비됐습니다. 시작하면 약 30분 걸립니다.")
-        run.setEnabled(not missing)
+        hint.setText("준비됐습니다. 시작하면 약 30분 걸립니다." if confirm.isChecked() else "확인 체크를 해 주세요.")
+        run.setEnabled(confirm.isChecked())
     confirm.toggled.connect(refresh)
     refresh()
     run.clicked.connect(dialog.accept)
@@ -981,7 +956,7 @@ def confirm_outfit_edit(window, analysis, head_accessories, settings_path=""):
     layout.addWidget(hint)
     layout.addWidget(run)
     layout.addWidget(back)
-    return chosen["path"] if dialog.exec() == QDialog.DialogCode.Accepted else None
+    return dialog.exec() == QDialog.DialogCode.Accepted
 
 
 def confirm_result(window, candidate, analysis):

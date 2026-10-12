@@ -56,7 +56,11 @@ class QwenPoseSettings:
 
     @classmethod
     def load(cls, path):
-        return cls(**json.loads(Path(path).read_text(encoding="utf-8-sig")))
+        values = json.loads(Path(path).read_text(encoding="utf-8-sig"))
+        manifest = values.get("artifact_manifest")
+        if manifest and not Path(manifest).is_absolute():  # 프로젝트 기본 설정(configs/)은 같은 폴더의 명세를 가리킨다
+            values["artifact_manifest"] = str((Path(path).resolve().parent / manifest).resolve())
+        return cls(**values)
 
     def record(self):
         return asdict(self)

@@ -103,6 +103,21 @@ def validate_outfit_request(request):
     return spec
 
 
+def load_qwen_settings(path):
+    """작업실 기본 Qwen 실행 설정을 읽는다. 사용자가 파일을 고르지 않는다. 없으면 무엇이 없는지 알려 준다."""
+    path = Path(path)
+    if not path.is_file():
+        raise ValueError(f"옷 바꾸기 실행 설정 파일이 없습니다: {path}")
+    settings = QwenPoseSettings.load(path)
+    for label, target, check in (("Qwen 실행 환경", settings.python_executable, Path.is_file),
+                                 ("Qwen 모델 폴더", settings.model_root, Path.is_dir),
+                                 ("Qwen 모델 파일", settings.gguf_file, Path.is_file),
+                                 ("모델 파일 명세", settings.artifact_manifest, Path.is_file)):
+        if not check(Path(target)):
+            raise ValueError(f"{label}을(를) 찾지 못했습니다: {target}\n설정 파일: {path}")
+    return settings
+
+
 class OutfitEditWorkflow:
     """확인한 입력을 고정한 뒤 실제 GPU 점유를 검사하고 Qwen을 시작한다."""
 

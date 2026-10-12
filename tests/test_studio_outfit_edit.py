@@ -72,6 +72,7 @@ def test_gui_outfit_edit_runs_pipeline_and_saves_approved_result(tmp_path, monke
     monkeypatch.setattr(ui, "confirm_inputs", lambda *a: pytest.fail("SDXL 입력 확인 화면을 띄우지 않는다"))
     monkeypatch.setattr(ui, "generate_onepass_request", lambda *a, **k: pytest.fail("SDXL 생성을 하지 않는다"))
     monkeypatch.setattr(ui, "confirm_outfit_edit", lambda window, a, accessories, path: str(settings_file(tmp_path)))
+    monkeypatch.setattr(ui, "remember_qwen_settings", lambda path: None)   # 실제 사용자 설정에 시험 경로를 남기지 않는다
     calls = []
     def pipeline(character, garment, **kw):
         calls.append((Path(character).name, Path(garment).name, kw["head_accessories"]))
@@ -128,3 +129,32 @@ def test_changed_result_blocks_approval(tmp_path):
     Image.new("RGB", (768, 1024), "white").save(results.current_path)
     with pytest.raises(ValueError):
         results.approve(dict(character=True, garment=True, exposure=True))
+
+
+def test_confirmation_explains_why_start_is_disabled(tmp_path, monkeypatch):
+    # 사용자 GUI 확인(2026-10-12): 설정 파일을 고르지 않아 버튼이 꺼졌는데 이유가 보이지 않았다
+    from PySide6.QtWidgets import QCheckBox, QDialog, QLabel, QPushButton
+    app = QApplication.instance() or QApplication([])
+    analysis = analysis_at(tmp_path / "inputs")
+    seen = {}
+    def inspect(dialog):
+        hint = dialog.findChild(QLabel, "outfit_edit_hint")
+        start = [b for b in dialog.findChildren(QPushButton) if b.text() == "옷 바꾸기 시작"][0]
+        seen["before"] = (start.isEnabled(), hint.text())
+        dialog.findChildren(QCheckBox)[0].setChecked(True)
+        seen["checked_only"] = (start.isEnabled(), hint.text())
+        return QDialog.DialogCode.Rejected
+    monkeypatch.setattr(QDialog, "exec", inspect)
+    assert ui.confirm_outfit_edit(None, analysis, "keep", "") is None
+    assert seen["before"][0] is False and "실행 환경 설정 파일" in seen["before"][1] and "확인 체크" in seen["before"][1]
+    assert seen["checked_only"][0] is False and "실행 환경 설정 파일" in seen["checked_only"][1]
+
+
+def test_settings_path_is_remembered_only_if_file_exists(tmp_path):
+    from PySide6.QtCore import QSettings
+    store = QSettings(str(tmp_path / "prefs.ini"), QSettings.Format.IniFormat)
+    path = settings_file(tmp_path)
+    ui.remember_qwen_settings(path, store)
+    assert ui.remembered_qwen_settings(store) == str(path)
+    path.unlink()
+    assert ui.remembered_qwen_settings(store) == ""

@@ -54,7 +54,7 @@ class StudioController(QObject):
         self.pending_action = None
         self.pending_error = None
         self.tail_context = None
-        self.tail_settings_path = ""
+        self.tail_settings_path = remembered_qwen_settings()
         self.pending_tail_recognition = None
         self.finishing_context = None
         self.outfit_edit_enabled = False
@@ -237,6 +237,7 @@ class StudioController(QObject):
             self.controls()
             return
         self.tail_settings_path = settings_path
+        remember_qwen_settings(settings_path)
         self.release_tail_predecessor()
         directory = self.run_directory / "outfit-edit"
         source = Path(analysis["directory"])
@@ -908,6 +909,21 @@ def confirm_inputs(window, analysis, enable_ear_override=False, runtime=None):
     })
     return gender.currentData(), tuple(t.strip() for t in tags.toPlainText().split(",") if t.strip()), appearance
 
+def remembered_qwen_settings(store=None):
+    """한 번 고른 Qwen 실행 환경 설정 파일을 기억한다(꼬리 편집과 옷 바꾸기 공용). 파일이 없어졌으면 비운다."""
+    from PySide6.QtCore import QSettings
+    store = store if store is not None else QSettings("GenAILab", "QwenEdit")
+    path = str(store.value("settings_path", "") or "")
+    return path if path and Path(path).is_file() else ""
+
+
+def remember_qwen_settings(path, store=None):
+    from PySide6.QtCore import QSettings
+    store = store if store is not None else QSettings("GenAILab", "QwenEdit")
+    store.setValue("settings_path", str(path))
+    store.sync()
+
+
 def confirm_outfit_edit(window, analysis, head_accessories, settings_path=""):
     """옷 바꾸기 시작 전 확인. 실행 환경 설정 파일(꼬리 편집과 같은 Qwen 설정)을 고른다. 취소하면 None."""
     from genai_lab.qwen_outfit_edit import LIMITATIONS
@@ -944,12 +960,24 @@ def confirm_outfit_edit(window, analysis, head_accessories, settings_path=""):
     layout.addWidget(confirm)
     run = QPushButton("옷 바꾸기 시작")
     back = QPushButton("취소")
+    hint = QLabel()
+    hint.setWordWrap(True)
+    hint.setObjectName("outfit_edit_hint")
     def refresh():
-        run.setEnabled(confirm.isChecked() and bool(chosen["path"]))
+        missing = []
+        if not chosen["path"]:
+            missing.append("실행 환경 설정 파일을 선택해 주세요(꼬리 편집과 같은 Qwen 설정 JSON).")
+        elif not Path(chosen["path"]).is_file():
+            missing.append("선택한 실행 환경 설정 파일이 없습니다. 다시 선택해 주세요.")
+        if not confirm.isChecked():
+            missing.append("확인 체크를 해 주세요.")
+        hint.setText(" ".join(missing) if missing else "준비됐습니다. 시작하면 약 30분 걸립니다.")
+        run.setEnabled(not missing)
     confirm.toggled.connect(refresh)
     refresh()
     run.clicked.connect(dialog.accept)
     back.clicked.connect(dialog.reject)
+    layout.addWidget(hint)
     layout.addWidget(run)
     layout.addWidget(back)
     return chosen["path"] if dialog.exec() == QDialog.DialogCode.Accepted else None

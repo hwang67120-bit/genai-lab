@@ -68,16 +68,19 @@ def test_gui_outfit_edit_runs_pipeline_and_saves_approved_result(tmp_path, monke
     monkeypatch.setattr(ui, "confirm_inputs", lambda *a: pytest.fail("SDXL 입력 확인 화면을 띄우지 않는다"))
     monkeypatch.setattr(ui, "generate_onepass_request", lambda *a, **k: pytest.fail("SDXL 생성을 하지 않는다"))
     asked = []
-    monkeypatch.setattr(ui, "confirm_outfit_edit", lambda window, a, accessories, saved_gender=None: asked.append(saved_gender) or "male")
-    saved = {}
+    monkeypatch.setattr(ui, "confirm_outfit_edit", lambda window, a, accessories, saved_gender=None, saved_body_parts=None:
+                        asked.append((saved_gender, saved_body_parts)) or dict(gender="male", body_parts=("tail",)))
+    saved, saved_parts = {}, {}
     monkeypatch.setattr(ui, "load_character_gender", lambda source: None)
+    monkeypatch.setattr(ui, "load_character_body_parts", lambda source: None)
     monkeypatch.setattr(ui, "save_character_gender", lambda source, gender: saved.update({source: gender}))
+    monkeypatch.setattr(ui, "save_character_body_parts", lambda source, parts: saved_parts.update({source: parts}))
     from genai_lab import qwen_outfit_edit
     loaded = []
     monkeypatch.setattr(qwen_outfit_edit, "load_qwen_settings", lambda path: loaded.append(Path(path).name) or object())
     calls = []
     def pipeline(character, garment, **kw):
-        calls.append((Path(character).name, Path(garment).name, kw["head_accessories"], kw["gender"]))
+        calls.append((Path(character).name, Path(garment).name, kw["head_accessories"], kw["gender"], kw["body_parts"]))
         return fake_outcome(kw["directory"])
     monkeypatch.setattr(outfit_edit_pipeline, "run_outfit_pipeline", pipeline)
     monkeypatch.setattr(ui, "confirm_result", lambda *a: dict(character=True, garment=True, exposure=True, appendages=True))
@@ -86,8 +89,9 @@ def test_gui_outfit_edit_runs_pipeline_and_saves_approved_result(tmp_path, monke
     try:
         window.generate_button.click()
         wait_for(app, lambda: window.studio.task is None and window.studio.results is not None)
-        assert calls == [("character.png", "garment.png", "keep", "male")]  # 머리 장식은 항상 유지(D-105), 확인한 성별 전달(D-106)
-        assert asked == [None] and list(saved.values()) == ["male"]          # 처음 보는 캐릭터는 고른 성별을 저장한다
+        assert calls == [("character.png", "garment.png", "keep", "male", ("tail",))]  # 머리 장식 항상 유지(D-105), 성별(D-106)·부위(D-111) 전달
+        assert asked == [(None, None)] and list(saved.values()) == ["male"]   # 처음 보는 캐릭터는 고른 성별·부위를 저장한다
+        assert list(saved_parts.values()) == [("tail",)]
         assert loaded == ["qwen_edit_settings.json"]                         # 사용자가 고르지 않고 작업실 기본 설정을 쓴다(D-101)
         results = window.studio.results
         assert isinstance(results, OutfitEditResults) and results.composited
@@ -111,6 +115,7 @@ def test_cancelled_confirmation_never_runs_qwen(tmp_path, monkeypatch):
     window.studio.outfit_edit_enabled = True
     monkeypatch.setattr(ui, "confirm_outfit_edit", lambda *a, **k: None)
     monkeypatch.setattr(ui, "load_character_gender", lambda source: None)
+    monkeypatch.setattr(ui, "load_character_body_parts", lambda source: None)
     from genai_lab import qwen_outfit_edit
     monkeypatch.setattr(qwen_outfit_edit, "load_qwen_settings", lambda path: object())
     window.studio.runtime = ui.StudioRuntime()
@@ -149,7 +154,7 @@ def test_confirmation_needs_only_the_check_no_settings_file(tmp_path, monkeypatc
         start = [b for b in dialog.findChildren(QPushButton) if b.text() == "옷 바꾸기 시작"][0]
         seen["buttons"] = [b.text() for b in dialog.findChildren(QPushButton)]
         seen["before"] = start.isEnabled()
-        dialog.findChildren(QCheckBox)[0].setChecked(True)
+        dialog.findChild(QCheckBox, "outfit_edit_confirm").setChecked(True)
         seen["after"] = (start.isEnabled(), dialog.findChild(QLabel, "outfit_edit_hint").text())
         return QDialog.DialogCode.Rejected
     monkeypatch.setattr(QDialog, "exec", inspect)
@@ -204,10 +209,26 @@ def test_gender_is_prefilled_from_saved_value_or_guess(tmp_path, monkeypatch):
     chosen = {}
     def accept(dialog):
         chosen["value"] = dialog.findChild(QComboBox, "outfit_edit_gender").currentData()
-        dialog.findChildren(QCheckBox)[0].setChecked(True)
+        dialog.findChild(QCheckBox, "outfit_edit_confirm").setChecked(True)
         return QDialog.DialogCode.Accepted
     monkeypatch.setattr(QDialog, "exec", accept)
-    assert ui.confirm_outfit_edit(None, analysis, "keep", saved_gender="male") == "male"
-    assert ui.confirm_outfit_edit(None, analysis, "keep") == "female" and chosen["value"] == "female"
+    assert ui.confirm_outfit_edit(None, analysis, "keep", saved_gender="male")["gender"] == "male"
+    assert ui.confirm_outfit_edit(None, analysis, "keep")["gender"] == "female" and chosen["value"] == "female"
     analysis["character_scores"] = {}
-    assert ui.confirm_outfit_edit(None, analysis, "keep") == "unspecified"
+    assert ui.confirm_outfit_edit(None, analysis, "keep")["gender"] == "unspecified"
+
+
+def test_body_parts_are_prefilled_from_saved_value_or_tags(tmp_path, monkeypatch):
+    # D-111: 귀·꼬리·날개는 저장값이 있으면 그대로, 없으면 태그 점수(0.5 이상)로 채우고 사용자가 확인한다
+    from PySide6.QtWidgets import QCheckBox, QDialog
+    app = QApplication.instance() or QApplication([])
+    analysis = analysis_at(tmp_path / "inputs")
+    analysis["character_scores"] = {"1girl": 0.9, "cat_ears": 0.8, "tail": 0.3, "cat_tail": 0.6, "wing_collar": 0.9, "ponytail": 0.9}
+    def accept(dialog):
+        dialog.findChild(QCheckBox, "outfit_edit_confirm").setChecked(True)
+        return QDialog.DialogCode.Accepted
+    monkeypatch.setattr(QDialog, "exec", accept)
+    assert ui.guessed_body_parts(analysis) == ("ears", "tail")                  # wing_collar·ponytail은 날개·꼬리가 아니다
+    assert ui.confirm_outfit_edit(None, analysis, "keep")["body_parts"] == ("ears", "tail")
+    assert ui.confirm_outfit_edit(None, analysis, "keep", saved_body_parts=())["body_parts"] == ()
+    assert ui.confirm_outfit_edit(None, analysis, "keep", saved_body_parts=("wings",))["body_parts"] == ("wings",)

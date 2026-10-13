@@ -6,6 +6,7 @@ from PySide6.QtCore import QSettings
 from genai_lab.reference_tag_policy import validate_character_gender
 
 SKIN_TONE_VALUES = ("dark", "tan", "unspecified")
+BODY_PART_VALUES = ("ears", "tail", "wings")
 
 
 def preference_key(source_path, kind="character_gender"):
@@ -26,6 +27,27 @@ def save_character_gender(source_path, gender, settings=None):
     store.sync()
     if store.status() != QSettings.Status.NoError:
         raise OSError("캐릭터 성별 선택을 저장하지 못했습니다.")
+
+
+def load_character_body_parts(source_path, settings=None):
+    """사용자가 확인한 동물 귀·꼬리·날개(D-111). 확인한 적이 없으면 None, 없다고 확인했으면 ()."""
+    store = settings if settings is not None else QSettings("GenAILab", "CharacterPreferences")
+    value = store.value(preference_key(source_path, "character_body_parts"))
+    if not isinstance(value, str):
+        return None
+    parts = tuple(p for p in value.split(",") if p)
+    return parts if all(p in BODY_PART_VALUES for p in parts) else None
+
+
+def save_character_body_parts(source_path, parts, settings=None):
+    parts = tuple(parts)
+    if any(p not in BODY_PART_VALUES for p in parts) or len(set(parts)) != len(parts):
+        raise ValueError("캐릭터 부위 선택값 오류")
+    store = settings if settings is not None else QSettings("GenAILab", "CharacterPreferences")
+    store.setValue(preference_key(source_path, "character_body_parts"), ",".join(p for p in BODY_PART_VALUES if p in parts))
+    store.sync()
+    if store.status() != QSettings.Status.NoError:
+        raise OSError("캐릭터 부위 선택을 저장하지 못했습니다.")
 
 
 def load_character_skin_tone(source_path, settings=None):

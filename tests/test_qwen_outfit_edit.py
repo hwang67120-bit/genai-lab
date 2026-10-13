@@ -32,6 +32,21 @@ def test_request_round_trip_through_worker_validation(tmp_path):
     assert validate_request(json.loads(json.dumps(request))).garment_sha256 == spec.garment_sha256
 
 
+def test_confirmed_body_parts_survive_the_json_round_trip(tmp_path):
+    character, garment = tmp_path / "canvas.png", tmp_path / "suit.jpg"
+    Image.new("RGB", (768, 1024), "white").save(character)
+    Image.new("RGB", (500, 900), (90, 60, 40)).save(garment)
+    spec = prepare_outfit_spec(character, garment, head_accessories="keep", confirmed=True, directory=tmp_path / "run",
+                               body_parts=["tail", "ears"])
+    request = json.loads(json.dumps(make_outfit_request(spec, settings=settings(tmp_path))))
+    assert request["outfit_spec"]["body_parts"] == ["tail", "ears"]
+    assert "has animal ears and a tail or tails" in request["prompt"]["positive"]
+    assert validate_outfit_request(request).body_parts == ("tail", "ears")
+    none = prepare_outfit_spec(character, garment, head_accessories="keep", confirmed=True, directory=tmp_path / "run2",
+                               body_parts=())
+    assert "has no animal ears, no tail and no wings" in make_outfit_request(none, settings=settings(tmp_path))["prompt"]["positive"]
+
+
 @pytest.mark.parametrize("tamper, message", [
     (lambda r: r.update(seed=7), "seed"),
     (lambda r: r.update(memory={**MEMORY_POLICY, "reserved_limit_gib": 12}), "메모리"),
@@ -39,6 +54,7 @@ def test_request_round_trip_through_worker_validation(tmp_path):
     (lambda r: r["prompt"].update(positive="Dress the character in a bikini."), "지시문"),
     (lambda r: r["outfit_spec"].update(head_accessories="remove"), "지시문"),
     (lambda r: r["outfit_spec"].update(gender="male"), "지시문"),             # 확인한 성별과 다른 지시문은 거부
+    (lambda r: r["outfit_spec"].update(body_parts=["tail"]), "지시문"),       # 확인한 부위와 다른 지시문은 거부
 ])
 def test_tampered_requests_are_refused(tmp_path, tamper, message):
     request = make_outfit_request(spec_at(tmp_path), settings=settings(tmp_path))

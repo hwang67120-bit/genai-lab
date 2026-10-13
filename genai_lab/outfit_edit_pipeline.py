@@ -154,8 +154,8 @@ def compose(canvas_path, parts_path, raw_path, head_accessories, directory, limb
 
 
 def run_outfit_pipeline(character_path, garment_path, *, settings, head_accessories, runtime, directory,
-                        garment_terms=(), remove_props=True, gender="unspecified", cancelled=lambda: False,
-                        progress=lambda _: None, popen=subprocess.Popen):
+                        garment_terms=(), remove_props=True, gender="unspecified", body_parts=None,
+                        cancelled=lambda: False, progress=lambda _: None, popen=subprocess.Popen):
     """GUI·확인 스크립트 공통 진입점. 반환값은 compose()의 결과에 실행 폴더를 더한 것이다."""
     from genai_lab.qwen_outfit_edit import (OutfitEditWorkflow, make_outfit_request, prepare_outfit_spec,
                                             run_outfit_edit)
@@ -166,7 +166,7 @@ def run_outfit_pipeline(character_path, garment_path, *, settings, head_accessor
     segmented = segment_canvas(prepared, directory / "parts", runtime, cancelled=cancelled, popen=popen)
     spec = prepare_outfit_spec(prepared["canvas"], garment_path, head_accessories=head_accessories, confirmed=True,
                                directory=directory / "qwen-inputs", garment_terms=garment_terms,
-                               remove_props=remove_props, gender=gender)
+                               remove_props=remove_props, gender=gender, body_parts=body_parts)
     from genai_lab.qwen_outfit_edit import OUTFIT_SEEDS
     attempts = []
     for number, seed in enumerate(OUTFIT_SEEDS, 1):  # D-105: 검사에 걸리면 다른 seed로 한 번만 더 그린다

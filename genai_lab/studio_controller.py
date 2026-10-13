@@ -30,7 +30,8 @@ from genai_lab.studio_finishing_gui import choose_finished, NOTICE as FINISHING_
 from genai_lab.studio_proportion import prepare_studio_pose, prepare_studio_head, confirmed_options
 from genai_lab.studio_proportion_gui import select_head_region, review_head_outline
 from genai_lab.studio_garment_warnings import garment_warnings, garment_review
-from genai_lab.character_preferences import load_character_gender, save_character_gender
+from genai_lab.character_preferences import (load_character_body_parts, load_character_gender, save_character_body_parts,
+                                             save_character_gender)
 from genai_lab.onepass_prompt import AppearanceOverrides, PartAppearance, appendage_tags
 
 class StudioController(QObject):
@@ -225,20 +226,25 @@ class StudioController(QObject):
             return
         source = character_source(analysis)
         saved = load_character_gender(source) if source else None
+        saved_parts = load_character_body_parts(source) if source else None
         self.confirming = True
         self.controls()
         try:
-            gender = confirm_outfit_edit(self.window, analysis, self.head_accessories, saved_gender=saved)
+            confirmed = confirm_outfit_edit(self.window, analysis, self.head_accessories, saved_gender=saved,
+                                            saved_body_parts=saved_parts)
         finally:
             self.confirming = False
-        if not gender:
+        if not confirmed:
             self.window.status_label.setText("상태: 옷 바꾸기를 취소했습니다. 다른 이미지를 선택할 수 있습니다.")
             self.window.candidate_preview.clear()
             self.window.candidate_preview.setText("아직 생성하지 않았습니다.")
             self.controls()
             return
+        gender, body_parts = confirmed["gender"], confirmed["body_parts"]
         if source and gender != saved:
             save_character_gender(source, gender)  # 한 번 고른 성별은 다음부터 자동으로 쓴다
+        if source and body_parts != saved_parts:
+            save_character_body_parts(source, body_parts)
         self.release_tail_predecessor()
         directory = self.run_directory / "outfit-edit"
         inputs = Path(analysis["directory"])
@@ -247,7 +253,7 @@ class StudioController(QObject):
             from genai_lab.outfit_edit_pipeline import run_outfit_pipeline
             return run_outfit_pipeline(inputs / "character.png", inputs / "garment.png", settings=settings,
                                        head_accessories=accessories, runtime=runtime, directory=directory,
-                                       gender=gender, cancelled=cancel, progress=progress)
+                                       gender=gender, body_parts=body_parts, cancelled=cancel, progress=progress)
         self.window.status_label.setText("상태: 옷 바꾸기 준비 중 · 약 30분 걸릴 수 있습니다.")
         self.launch(operation, self.outfit_edited)
 
@@ -939,10 +945,25 @@ def guessed_gender(analysis):
     return "male" if boy > girl else "female"
 
 
-def confirm_outfit_edit(window, analysis, head_accessories, saved_gender=None):
+def guessed_body_parts(analysis):
+    """자동 분석(태그 점수)으로 미리 채울 동물 귀·꼬리·날개. 틀릴 수 있어 사용자가 확인한다(D-111)."""
+    scores = analysis.get("character_scores", {})
+    def hit(exact, suffix):
+        return any(v >= 0.5 and (k == exact or k.endswith(suffix)) for k, v in scores.items())
+    found = []
+    if hit("animal_ears", "_ears"):
+        found.append("ears")
+    if hit("tail", "_tail"):
+        found.append("tail")
+    if hit("wings", "_wings"):
+        found.append("wings")
+    return tuple(found)
+
+
+def confirm_outfit_edit(window, analysis, head_accessories, saved_gender=None, saved_body_parts=None):
     """옷 바꾸기 시작 전 확인. 실행 환경은 작업실 기본 설정을 쓰므로 고르지 않는다.
-    성별은 저장된 값이 있으면 그대로 쓰고(표시만), 없으면 자동 분석 값을 미리 채워 한 번 고르게 한다.
-    시작하면 확인한 성별(male/female/unspecified), 취소하면 None."""
+    성별과 동물 귀·꼬리·날개는 저장된 값이 있으면 그대로 쓰고(표시만), 없으면 자동 분석 값을 미리 채워 한 번 고르게 한다.
+    시작하면 dict(gender=male/female/unspecified, body_parts=확인한 부위 튜플), 취소하면 None."""
     from genai_lab.qwen_outfit_edit import LIMITATIONS
     dialog = QDialog(window)
     dialog.setWindowTitle("원본 그림에서 옷 바꾸기")
@@ -973,7 +994,19 @@ def confirm_outfit_edit(window, analysis, head_accessories, saved_gender=None):
                          else "자동 분석으로 채운 값입니다. 틀릴 수 있으니 확인해 주세요. 한 번 고르면 다음부터 자동으로 씁니다.")
     gender_note.setWordWrap(True)
     layout.addWidget(gender_note)
+    parts_row = QHBoxLayout()
+    parts_row.addWidget(QLabel("캐릭터에 있는 것(있는 것만 유지하고, 없는 것은 그리지 않습니다)"))
+    initial_parts = guessed_body_parts(analysis) if saved_body_parts is None else saved_body_parts
+    part_boxes = {}
+    for value, label in (("ears", "동물 귀"), ("tail", "꼬리"), ("wings", "날개")):
+        box = QCheckBox(label)
+        box.setObjectName(f"outfit_edit_part_{value}")
+        box.setChecked(value in initial_parts)
+        parts_row.addWidget(box)
+        part_boxes[value] = box
+    layout.addLayout(parts_row)
     confirm = QCheckBox("캐릭터와 옷을 확인했고, 약 30분 걸리는 것을 이해했습니다.")
+    confirm.setObjectName("outfit_edit_confirm")
     layout.addWidget(confirm)
     run = QPushButton("옷 바꾸기 시작")
     back = QPushButton("취소")
@@ -990,7 +1023,10 @@ def confirm_outfit_edit(window, analysis, head_accessories, saved_gender=None):
     layout.addWidget(hint)
     layout.addWidget(run)
     layout.addWidget(back)
-    return gender_combo.currentData() if dialog.exec() == QDialog.DialogCode.Accepted else None
+    if dialog.exec() != QDialog.DialogCode.Accepted:
+        return None
+    return dict(gender=gender_combo.currentData(),
+                body_parts=tuple(value for value, box in part_boxes.items() if box.isChecked()))
 
 
 def confirm_result(window, candidate, analysis):

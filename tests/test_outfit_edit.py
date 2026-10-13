@@ -89,6 +89,20 @@ def test_white_sleeves_inside_outline_count_as_arms():
     assert report["status"] == "ok", report
 
 
+def test_cream_sleeves_open_to_an_off_white_background_are_still_arms():
+    # 요청 15 S04: Qwen 배경은 253 근처인데 "235 이상 = 배경" 규칙이 크림색 소매(227~231)를 배경으로 읽어 양팔 소실로 오판했다
+    import cv2
+    image = np.full((1024, 768, 3), 253, np.uint8)
+    image[250:700, 320:450] = (230, 150, 200)
+    for (a, b) in (((320, 270), (250, 420)), ((250, 420), (240, 560)), ((450, 270), (520, 420)), ((520, 420), (530, 560))):
+        cv2.line(image, a, b, (231, 227, 223), 18)       # 윤곽선 없는 크림색 소매, 배경과 바로 닿음
+    report = outfit_edit.limb_check(joints(), figure(True), joints(), image)
+    assert report["status"] == "ok", report
+    assert outfit_edit.background_color(image).tolist() == [253, 253, 253]
+    gone = outfit_edit.limb_check(joints(), figure(True), joints(), np.full((1024, 768, 3), 253, np.uint8))
+    assert gone["status"] == "rejected"                   # 배경이 순백이 아니어도 팔이 없으면 거부
+
+
 def test_single_missed_sample_is_a_reading_error_not_a_vanished_arm():
     # 요청 14 G19/S07 첫 시도: 12개 표본 중 1개가 흰 소매 픽셀을 배경으로 읽혀 0.917로 거부됐다(팔은 멀쩡함)
     import cv2
@@ -120,9 +134,23 @@ def test_prompt_names_remaining_garments_body_parts_and_pose():
     # 요청 14(D-108): 걸친 코트·넥타이·장갑 잔존, 기계 꼬리·여러 꼬리 소실, 앉은 자세가 선 자세로 바뀜
     for prompt in (outfit_edit.outfit_prompt("keep"), outfit_edit.outfit_prompt("remove")):
         assert "coat draped over the shoulders, tie, gloves, choker" in prompt and "Nothing from the original outfit may remain" in prompt
-        assert "tail or tails and wings exactly as in image 1" in prompt and "not props" in prompt
+        assert "If the character has animal ears, a tail or wings" in prompt and "not props" in prompt   # 확인 안 함: 조건문
         assert "Keep the character's pose exactly as in image 1" in prompt
     assert outfit_edit.outfit_prompt("keep").endswith(outfit_edit.OUTFIT_FRAMING)
+
+
+def test_body_parts_sentence_names_only_confirmed_parts_and_forbids_the_rest():
+    # 요청 15(D-111): 모든 캐릭터에 "꼬리를 유지하라"고 하자 귀·꼬리·날개가 없는 K에 셋 다 생겼다
+    none = outfit_edit.outfit_prompt("keep", body_parts=())
+    assert "has no animal ears, no tail and no wings; do not add any" in none and "If the character has" not in none
+    tail = outfit_edit.outfit_prompt("keep", body_parts=("tail",))
+    assert "The character has a tail or tails; keep them" in tail and "has no animal ears and no wings; do not add any" in tail
+    both = outfit_edit.outfit_prompt("keep", body_parts=("tail", "ears"))
+    assert "has animal ears and a tail or tails;" in both and "has no wings; do not add any" in both
+    assert outfit_edit.outfit_prompt("keep", body_parts=("ears", "tail", "wings")).count("do not add") == 0
+    for bad in (("horns",), ("tail", "tail")):
+        with pytest.raises(ValueError):
+            outfit_edit.outfit_prompt("keep", body_parts=bad)
 
 
 def test_prop_removal_sentence_can_be_left_out_only_explicitly():

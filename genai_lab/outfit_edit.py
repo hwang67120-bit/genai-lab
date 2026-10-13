@@ -333,15 +333,40 @@ OUTFIT_REPLACE = ("Replace all of the character's current clothing in image 1, i
 OUTFIT_PROPS = "Remove any weapon and every carried or held prop. "
 OUTFIT_BACKGROUND = "Place the character alone on a plain pure white background with nothing else. "
 OUTFIT_BASE = OUTFIT_REPLACE + OUTFIT_PROPS + OUTFIT_BACKGROUND
-# D-108(요청 14): S06 기계 꼬리·S08 여러 꼬리가 사라짐 → 꼬리·귀·날개는 몸의 일부이지 소품이 아님을 명시
-OUTFIT_BODY_PARTS = ("Keep the character's animal ears, tail or tails and wings exactly as in image 1, with the same number, "
-                     "shape, color and position; they are part of the body, not props or clothing. ")
+# D-108(요청 14): S06 기계 꼬리·S08 여러 꼬리가 사라짐 → 꼬리·귀·날개는 몸의 일부이지 소품이 아님을 명시.
+# D-111(요청 15): 모든 캐릭터에 "꼬리를 유지하라"고 하자 K(귀·꼬리·날개 없음)에 셋 다 생겼다 → 확인된 부위만 적고 없으면 추가 금지.
+BODY_PARTS = ("ears", "tail", "wings")
+BODY_PART_WORDS = {"ears": "animal ears", "tail": "a tail or tails", "wings": "wings"}
+BODY_PARTS_UNKNOWN = ("If the character has animal ears, a tail or wings in image 1, keep them exactly as in image 1 with the "
+                      "same number, shape, color and position; they are part of the body, not props or clothing. "
+                      "Do not add any animal ears, tail or wings that are not in image 1. ")
+BODY_PARTS_NONE = "The character has no animal ears, no tail and no wings; do not add any. "
+
+
+def body_parts_sentence(body_parts):
+    """확인된 부위 목록(튜플)에 맞는 문장. None은 확인하지 않음(조건문), 빈 튜플은 없음(추가 금지)."""
+    if body_parts is None:
+        return BODY_PARTS_UNKNOWN
+    parts = tuple(body_parts)
+    if any(p not in BODY_PARTS for p in parts) or len(set(parts)) != len(parts):
+        raise ValueError("캐릭터 부위는 ears / tail / wings 중에서 골라야 합니다.")
+    if not parts:
+        return BODY_PARTS_NONE
+    present = [BODY_PART_WORDS[p] for p in BODY_PARTS if p in parts]
+    absent = [BODY_PART_WORDS[p] for p in BODY_PARTS if p not in parts]
+    text = (f"The character has {' and '.join(present)}; keep them exactly as in image 1 with the same number, shape, "
+            "color and position; they are part of the body, not props or clothing. ")
+    if absent:
+        text += f"The character has no {' and no '.join(absent)}; do not add any. "
+    return text
+
+
 OUTFIT_KEEP = ("Keep the character's face, hairstyle, hair color, head accessories and body proportions exactly the same as "
-               "in image 1. " + OUTFIT_BODY_PARTS)
+               "in image 1. ")
 OUTFIT_REMOVE = ("The character must stay the same person as in image 1: same gender, age, face, hair color and hairstyle. "
                  "Only take off the head accessories: remove every head accessory (headphones, headbands, hair ornaments, "
                  "hats, earrings and glasses) and show the character's own hair where they were. Keep body proportions "
-                 "exactly the same as in image 1. " + OUTFIT_BODY_PARTS)
+                 "exactly the same as in image 1. ")
 # D-108(요청 14): 앉은 S08이 선 자세로 바뀌어 머리가 0.58배로 작아짐 → 자세 유지를 명시(머리 크기를 맞추기 위함)
 OUTFIT_FRAMING = ("Keep the character's pose exactly as in image 1, whether standing, sitting or crouching. "
                   "Do not change the camera angle, framing or the character's size or position.")
@@ -374,7 +399,7 @@ def clean_garment_terms(terms):
     return tuple(kept[:MAX_GARMENT_TERMS])
 
 
-def outfit_prompt(head_accessories, garment_terms=(), remove_props=True, gender="unspecified"):
+def outfit_prompt(head_accessories, garment_terms=(), remove_props=True, gender="unspecified", body_parts=None):
     """제품용 고정 지시문. 머리 장식 선택(keep/remove)과, 있으면 의상 그림에서 자동으로 읽은 옷 이름 목록만 바뀐다.
     remove_props=False는 원인 확인 시험 전용이다(요청 12 W3: 소품 제거 지시와 함께 팔까지 지워졌는지 확인, D-096)."""
     if head_accessories not in ("keep", "remove"):
@@ -387,7 +412,7 @@ def outfit_prompt(head_accessories, garment_terms=(), remove_props=True, gender=
     listed = f"The outfit in image 2 consists of: {', '.join(terms)}. " if terms else ""
     body = OUTFIT_KEEP if head_accessories == "keep" else OUTFIT_REMOVE
     base = OUTFIT_BASE if remove_props else OUTFIT_REPLACE + OUTFIT_BACKGROUND
-    return base + listed + OUTFIT_GENDER[gender] + body + OUTFIT_FRAMING
+    return base + listed + OUTFIT_GENDER[gender] + body + body_parts_sentence(body_parts) + OUTFIT_FRAMING
 
 
 ARM_SEGMENTS = (("shoulder", "elbow"), ("elbow", "wrist"))
@@ -395,15 +420,25 @@ ARM_LINE_MIN = 0.95     # 원본에서 팔 구간이 인물 영역 위에 있어
 ARM_GAP_MIN = 2         # 결과에서 연속으로 이만큼 빗나가야 사라진 것으로 본다(요청 12 W3 팔 없음: 5연속, 요청 14 S07 흰 소매 오탐: 1개)
 ARM_JOINT_CONF = 0.4    # 이보다 낮은 관절이 낀 구간은 판정하지 않는다(가려짐·잘못 찍힘)
 ARM_SAMPLES = 12
-NEAR_WHITE = 235
+BACKGROUND_TOLERANCE = 8   # 테두리 색(중앙값)과 채널 차이가 이 안이고 테두리와 이어지면 배경(요청 15 S04: 235 기준은 크림색 소매를 배경으로 읽음)
+BORDER_RING = 8
+
+
+def background_color(image):
+    """그림 테두리 띠의 중앙값. Qwen 흰 배경은 253 근처이고 순백이 아니다."""
+    ring = np.concatenate([image[:BORDER_RING].reshape(-1, 3), image[-BORDER_RING:].reshape(-1, 3),
+                           image[:, :BORDER_RING].reshape(-1, 3), image[:, -BORDER_RING:].reshape(-1, 3)])
+    return np.median(ring, axis=0)
 
 
 def figure_mask(image):
-    """테두리와 이어진 거의 흰색만 배경이다. 윤곽선 안의 흰 소매·셔츠는 인물로 남는다(요청 13 B-W4: 흰 소매를 배경으로 오판)."""
-    near_white = (image.min(axis=2) >= NEAR_WHITE).astype(np.uint8)
-    _, labels = cv2.connectedComponents(near_white, connectivity=4)
+    """테두리 색과 거의 같고 테두리와 이어진 픽셀만 배경이다. 윤곽선 안의 흰 소매·셔츠는 인물로 남고(요청 13 B-W4),
+    배경보다 어두운 크림색 소매·손도 인물이다(요청 15 S04: 고정값 235 기준이 소매를 배경으로 읽어 팔 소실로 오판)."""
+    near = (np.abs(image.astype(np.int16) - background_color(image).astype(np.int16)).max(axis=2)
+            <= BACKGROUND_TOLERANCE).astype(np.uint8)
+    _, labels = cv2.connectedComponents(near, connectivity=4)
     border = np.unique(np.concatenate([labels[0], labels[-1], labels[:, 0], labels[:, -1]]))
-    background = np.isin(labels, border[border > 0]) & (near_white > 0)
+    background = np.isin(labels, border[border > 0]) & (near > 0)
     return ~background
 
 

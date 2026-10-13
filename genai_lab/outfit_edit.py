@@ -326,18 +326,25 @@ def canvas(image):
 
 # 제품 지시문: 캐릭터별 의상 묘사를 손으로 쓰지 않는다(시험 지시문의 "long dark brown coat"가 의상을 바꾼 정황, D-092).
 # 요청 12: "그림 2의 옷을 입혀라"만으로는 W3의 몸에 붙는 원래 옷이 그대로 남았다 → 지금 옷 전체를 바꾸라고 명시한다(D-095).
-OUTFIT_REPLACE = ("Replace all of the character's current clothing in image 1, including any bodysuit, jacket, socks and shoes, "
-                  "with the complete outfit shown in image 2, matching its shape, length, colors and details. ")
+# D-108(요청 14): K의 걸친 코트·넥타이·장갑이 남고 S04의 검은 바디수트가 그대로였다 → 원래 옷의 종류를 짚어 "하나도 남기지 않음"을 명시
+OUTFIT_REPLACE = ("Replace all of the character's current clothing in image 1, including any bodysuit, jacket, coat draped over "
+                  "the shoulders, tie, gloves, choker, stockings, socks and shoes, with the complete outfit shown in image 2, "
+                  "matching its shape, length, colors and details. Nothing from the original outfit may remain. ")
 OUTFIT_PROPS = "Remove any weapon and every carried or held prop. "
 OUTFIT_BACKGROUND = "Place the character alone on a plain pure white background with nothing else. "
 OUTFIT_BASE = OUTFIT_REPLACE + OUTFIT_PROPS + OUTFIT_BACKGROUND
+# D-108(요청 14): S06 기계 꼬리·S08 여러 꼬리가 사라짐 → 꼬리·귀·날개는 몸의 일부이지 소품이 아님을 명시
+OUTFIT_BODY_PARTS = ("Keep the character's animal ears, tail or tails and wings exactly as in image 1, with the same number, "
+                     "shape, color and position; they are part of the body, not props or clothing. ")
 OUTFIT_KEEP = ("Keep the character's face, hairstyle, hair color, head accessories and body proportions exactly the same as "
-               "in image 1. ")
+               "in image 1. " + OUTFIT_BODY_PARTS)
 OUTFIT_REMOVE = ("The character must stay the same person as in image 1: same gender, age, face, hair color and hairstyle. "
                  "Only take off the head accessories: remove every head accessory (headphones, headbands, hair ornaments, "
                  "hats, earrings and glasses) and show the character's own hair where they were. Keep body proportions "
-                 "exactly the same as in image 1. ")
-OUTFIT_FRAMING = "Do not change the camera angle, framing or the character's size or position."
+                 "exactly the same as in image 1. " + OUTFIT_BODY_PARTS)
+# D-108(요청 14): 앉은 S08이 선 자세로 바뀌어 머리가 0.58배로 작아짐 → 자세 유지를 명시(머리 크기를 맞추기 위함)
+OUTFIT_FRAMING = ("Keep the character's pose exactly as in image 1, whether standing, sitting or crouching. "
+                  "Do not change the camera angle, framing or the character's size or position.")
 # D-106: 사용자 GUI 확인 — 남성 캐릭터에 여성복(크롭탑·치마)을 입히자 몸이 여성 체형으로 바뀌었다. 확인된 성별을 지시문에 넣는다.
 OUTFIT_GENDER = {
     "male": ("The character is male. Keep a male body with a flat chest and male proportions, even if the outfit in "

@@ -8,7 +8,7 @@ from genai_lab import outfit_edit
 
 def test_product_prompt_has_no_garment_description_and_only_accessory_choice_differs():
     keep, remove = outfit_edit.outfit_prompt("keep"), outfit_edit.outfit_prompt("remove")
-    assert "coat" not in keep and "coat" not in remove          # 의상은 그림 2를 따른다(시험 지시문의 의상 묘사 제거)
+    assert "consists of" not in keep and "consists of" not in remove   # 의상은 그림 2를 따른다(시험 지시문의 의상 묘사 제거)
     assert "head accessories" in keep and "same person" in remove
     assert keep.startswith(outfit_edit.OUTFIT_BASE) and remove.startswith(outfit_edit.OUTFIT_BASE)
     with pytest.raises(ValueError):
@@ -114,6 +114,15 @@ def test_low_confidence_joint_segments_are_skipped():
     wrong = [dict(j, x=700, y=900, confidence_score=0.2) if j["joint_name"].endswith("wrist") else j for j in joints()]
     report = outfit_edit.limb_check(joints(), figure(True), wrong, figure(True))
     assert report["status"] == "ok"
+
+
+def test_prompt_names_remaining_garments_body_parts_and_pose():
+    # 요청 14(D-108): 걸친 코트·넥타이·장갑 잔존, 기계 꼬리·여러 꼬리 소실, 앉은 자세가 선 자세로 바뀜
+    for prompt in (outfit_edit.outfit_prompt("keep"), outfit_edit.outfit_prompt("remove")):
+        assert "coat draped over the shoulders, tie, gloves, choker" in prompt and "Nothing from the original outfit may remain" in prompt
+        assert "tail or tails and wings exactly as in image 1" in prompt and "not props" in prompt
+        assert "Keep the character's pose exactly as in image 1" in prompt
+    assert outfit_edit.outfit_prompt("keep").endswith(outfit_edit.OUTFIT_FRAMING)
 
 
 def test_prop_removal_sentence_can_be_left_out_only_explicitly():

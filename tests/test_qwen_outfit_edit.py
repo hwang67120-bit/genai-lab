@@ -28,7 +28,7 @@ def test_request_round_trip_through_worker_validation(tmp_path):
     request = make_outfit_request(spec, settings=settings(tmp_path))
     assert request["seed"] == OUTFIT_SEED and request["memory"] == MEMORY_POLICY
     assert request["output_size"] == [896, 1184]                      # 시험 08~11과 같은 생성 크기
-    assert "coat" not in request["prompt"]["positive"]                # 의상 묘사 없음(그림 2를 따름)
+    assert "consists of" not in request["prompt"]["positive"]         # 의상 묘사 없음(그림 2를 따름)
     assert validate_request(json.loads(json.dumps(request))).garment_sha256 == spec.garment_sha256
 
 

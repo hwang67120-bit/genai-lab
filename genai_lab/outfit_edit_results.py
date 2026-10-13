@@ -46,9 +46,14 @@ class OutfitEditResults:
     def head_notice(self):
         retried = len(self.outcome.get("attempts", ())) > 1
         if self.composited:
-            return "머리(얼굴·머리카락·장식)는 원본 그대로 붙였습니다." + (" 첫 결과가 검사에 걸려 한 번 더 그렸습니다." if retried else "")
-        return ("머리를 원본으로 붙이지 못했습니다" + (" (두 번 그렸지만 모두 검사에 걸림)" if retried else "") + ": "
-                + self.outcome.get("reason", "") + " Qwen이 그린 그대로입니다.")
+            text = "머리(얼굴·머리카락·장식)는 원본 그대로 붙였습니다." + (" 첫 결과가 검사에 걸려 한 번 더 그렸습니다." if retried else "")
+        else:
+            text = ("머리를 원본으로 붙이지 못했습니다" + (" (두 번 그렸지만 모두 검사에 걸림)" if retried else "") + ": "
+                    + self.outcome.get("reason", "") + " Qwen이 그린 그대로입니다.")
+        outside = [w for w in (self.outcome.get("support") or {}).get("warnings", []) if w.get("level") == "outside"]
+        if outside:  # D-113: 시작 전 경고가 있던 그림은 결과에서도 그 사실을 다시 알린다
+            text += " 시작 전 경고(지원 범위 밖 " + str(len(outside)) + "개)가 있던 그림입니다 — 옷·자세·꼬리를 꼭 확인해 주세요."
+        return text
 
     def verify_current(self):
         data = self.current_path.read_bytes()
@@ -96,6 +101,7 @@ class OutfitEditResults:
                     "hair_shape": self.outcome.get("hair_shape"), "limbs": self.outcome.get("limbs"),
                     "raw_sha256": self.outcome.get("raw_sha256"), "attempts": self.outcome.get("attempts"),
                     "trace": self.outcome.get("trace"), "conditions": self.outcome.get("conditions"),
+                    "support": self.outcome.get("support"),
                     "approval_record": str(self.directory / "user-review.json"),
                     "reviewer": "user", "checks": self.checks}
         created = []

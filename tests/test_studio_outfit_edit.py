@@ -232,3 +232,25 @@ def test_body_parts_are_prefilled_from_saved_value_or_tags(tmp_path, monkeypatch
     assert ui.confirm_outfit_edit(None, analysis, "keep")["body_parts"] == ("ears", "tail")
     assert ui.confirm_outfit_edit(None, analysis, "keep", saved_body_parts=())["body_parts"] == ()
     assert ui.confirm_outfit_edit(None, analysis, "keep", saved_body_parts=("wings",))["body_parts"] == ("wings",)
+
+
+def test_confirmation_shows_support_warnings_and_records_them(tmp_path, monkeypatch):
+    # D-113: 알려진 실패 유형(앉은 자세·걸친 겉옷·기계 몸)은 시작 전에 알리고, 출처 기록에 남긴다. 조건은 바꾸지 않는다
+    from PySide6.QtWidgets import QCheckBox, QDialog, QLabel
+    app = QApplication.instance() or QApplication([])
+    analysis = analysis_at(tmp_path / "inputs")
+    analysis["character_scores"] = {"1boy": 0.99, "fox_ears": 0.93, "tail": 0.97, "sitting": 0.69, "multiple_tails": 0.91}
+    seen = {}
+    def accept(dialog):
+        seen["text"] = dialog.findChild(QLabel, "outfit_edit_support").text()
+        dialog.findChild(QCheckBox, "outfit_edit_confirm").setChecked(True)
+        return QDialog.DialogCode.Accepted
+    monkeypatch.setattr(QDialog, "exec", accept)
+    confirmed = ui.confirm_outfit_edit(None, analysis, "keep")
+    assert confirmed == dict(gender="male", body_parts=("ears", "tail"))        # 경고가 조건을 바꾸지 않는다
+    assert "앉거나 웅크린 자세" in seen["text"] and "꼬리가 여럿" in seen["text"]
+    record = ui.confirmation_provenance(analysis, None, None, confirmed["body_parts"])
+    assert [w["key"] for w in record["support"]["warnings"]] == ["pose_not_standing", "multiple_tails"]
+    analysis["character_scores"] = {"1girl": 1.0, "standing": 0.7}
+    ui.confirm_outfit_edit(None, analysis, "keep")
+    assert "보이지 않습니다" in seen["text"]

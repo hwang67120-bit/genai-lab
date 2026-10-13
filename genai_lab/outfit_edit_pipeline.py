@@ -198,7 +198,8 @@ def run_outfit_pipeline(character_path, garment_path, *, settings, head_accessor
     outcome["attempts"] = attempts
     trace = write_trace(directory, facts, assembled, attempts, outcome)
     return dict(outcome, directory=str(directory), source=prepared["source"], source_sha256=prepared["source_sha256"],
-                conditions=str(directory / "qwen-inputs" / "conditions.json"), trace=str(trace))
+                conditions=str(directory / "qwen-inputs" / "conditions.json"), trace=str(trace),
+                support=facts["support"])
 
 
 def write_trace(directory, facts, assembled, attempts, outcome):

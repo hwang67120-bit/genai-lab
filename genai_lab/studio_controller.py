@@ -32,6 +32,7 @@ from genai_lab.studio_proportion_gui import select_head_region, review_head_outl
 from genai_lab.studio_garment_warnings import garment_warnings, garment_review
 from genai_lab.character_preferences import (load_character_body_parts, load_character_gender, save_character_body_parts,
                                              save_character_gender)
+from genai_lab.outfit_support import support_summary, support_warnings
 from genai_lab.onepass_prompt import AppearanceOverrides, PartAppearance, appendage_tags
 
 class StudioController(QObject):
@@ -241,7 +242,7 @@ class StudioController(QObject):
             self.controls()
             return
         gender, body_parts = confirmed["gender"], confirmed["body_parts"]
-        provenance = confirmation_provenance(analysis, saved, saved_parts)
+        provenance = confirmation_provenance(analysis, saved, saved_parts, body_parts)
         if source and gender != saved:
             save_character_gender(source, gender)  # 한 번 고른 성별은 다음부터 자동으로 쓴다
         if source and body_parts != saved_parts:
@@ -962,8 +963,9 @@ def guessed_body_parts(analysis):
     return tuple(found)
 
 
-def confirmation_provenance(analysis, saved_gender, saved_body_parts):
-    """확인 창 값의 출처(D-112): 사용자가 확인했고, 미리 채운 값은 저장값인지 태그 점수인지. 태그 점수는 근거로 함께 남긴다."""
+def confirmation_provenance(analysis, saved_gender, saved_body_parts, body_parts=None):
+    """확인 창 값의 출처(D-112): 사용자가 확인했고, 미리 채운 값은 저장값인지 태그 점수인지. 태그 점수는 근거로 함께 남긴다.
+    지원 범위 경고(D-113)도 입력 사실의 일부로 기록한다."""
     scores = analysis.get("character_scores", {})
     part_scores = {k: round(v, 3) for k, v in scores.items()
                    if v >= 0.3 and (k in ("animal_ears", "tail", "wings") or k.endswith(("_ears", "_tail", "_wings")))}
@@ -971,7 +973,8 @@ def confirmation_provenance(analysis, saved_gender, saved_body_parts):
                             tag_guess=guessed_gender(analysis),
                             scores={k: round(scores.get(k, 0.0), 3) for k in ("1boy", "1girl")}),
                 body_parts=dict(source="user_confirmed", prefill="saved" if saved_body_parts is not None else "tags",
-                                tag_guess=list(guessed_body_parts(analysis)), scores=part_scores))
+                                tag_guess=list(guessed_body_parts(analysis)), scores=part_scores),
+                support=dict(status="measured", source="tags", warnings=support_warnings(scores, body_parts)))
 
 
 def confirm_outfit_edit(window, analysis, head_accessories, saved_gender=None, saved_body_parts=None):
@@ -1008,6 +1011,10 @@ def confirm_outfit_edit(window, analysis, head_accessories, saved_gender=None, s
                          else "자동 분석으로 채운 값입니다. 틀릴 수 있으니 확인해 주세요. 한 번 고르면 다음부터 자동으로 씁니다.")
     gender_note.setWordWrap(True)
     layout.addWidget(gender_note)
+    support = QLabel()
+    support.setObjectName("outfit_edit_support")
+    support.setWordWrap(True)
+    layout.addWidget(support)
     parts_row = QHBoxLayout()
     parts_row.addWidget(QLabel("캐릭터에 있는 것(있는 것만 유지하고, 없는 것은 그리지 않습니다)"))
     initial_parts = guessed_body_parts(analysis) if saved_body_parts is None else saved_body_parts
@@ -1019,6 +1026,14 @@ def confirm_outfit_edit(window, analysis, head_accessories, saved_gender=None, s
         parts_row.addWidget(box)
         part_boxes[value] = box
     layout.addLayout(parts_row)
+    def refresh_support():  # D-113: 알려진 실패 유형의 특징이 보이면 시작 전에 알린다(조건은 바꾸지 않는다)
+        chosen = tuple(v for v, b in part_boxes.items() if b.isChecked())
+        text = support_summary(support_warnings(analysis.get("character_scores", {}), chosen))
+        support.setText(text or "알려진 실패 유형의 특징은 보이지 않습니다.")
+        support.setStyleSheet("color: #b00020;" if "지원 범위 밖" in text else "")
+    for box in part_boxes.values():
+        box.toggled.connect(refresh_support)
+    refresh_support()
     confirm = QCheckBox("캐릭터와 옷을 확인했고, 약 30분 걸리는 것을 이해했습니다.")
     confirm.setObjectName("outfit_edit_confirm")
     layout.addWidget(confirm)

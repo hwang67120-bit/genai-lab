@@ -20,6 +20,19 @@ from genai_lab.qwen_pose_settings import QwenPoseSettings
 from genai_lab.studio_generation import StudioRuntime
 
 
+def measure_support(image, body_parts, runtime):
+    """시작 전 지원 범위 경고(D-113). 태그 분석기를 CPU로 돌린다. 모델이 없으면 unmeasured로 남긴다."""
+    from genai_lab.outfit_support import support_warnings
+    try:
+        from genai_lab.clothing_analysis import ClothingDesignAnalysisSettings, WdTagSession
+        settings = ClothingDesignAnalysisSettings(cache_dir=str(runtime.model_cache), local_files_only=True)
+        with WdTagSession(settings) as tagger, Image.open(image) as source:
+            scores = dict(tagger.analyze(source.convert("RGB")).raw_general_scores)
+    except Exception as error:
+        return dict(status="unmeasured", source="tags", error=str(error)[:200], warnings=[])
+    return dict(status="measured", source="tags", warnings=support_warnings(scores, body_parts))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--case", nargs=2, action="append", metavar=("NAME", "IMAGE"), required=True)
@@ -48,7 +61,8 @@ def main():
         else:
             body_parts = saved_parts
         provenance = dict(gender=dict(source="flag" if name in given else ("saved" if saved_gender else "default")),
-                          body_parts=dict(source="flag" if name in given_parts else ("saved" if saved_parts is not None else "default")))
+                          body_parts=dict(source="flag" if name in given_parts else ("saved" if saved_parts is not None else "default")),
+                          support=measure_support(image, body_parts, runtime))
         start = time.perf_counter()
         try:
             outcome = run_outfit_pipeline(image, args.garment, settings=settings, head_accessories=args.head_accessories,
@@ -61,6 +75,7 @@ def main():
             record = dict(case=name, gender=gender, body_parts=None if body_parts is None else list(body_parts), status="completed", composited=outcome["composited"], reason=outcome.get("reason"),
                           decision=outcome["alignment"]["decision"], hair_shape=outcome.get("hair_shape"),
                           limbs=outcome.get("limbs"), attempts=outcome.get("attempts"), trace=outcome.get("trace"),
+                          support=outcome.get("support"),
                           canvas_pad=outcome["alignment"].get("canvas_pad"), memory_stopped=memory.get("stopped"),
                           max_stage_peak_reserved_gib=max(s.get("stage_peak_reserved_gib", 0) for s in memory["stages"]))
             rows.append(np.asarray(Image.open(Path(outcome["qwen_view"]).parent / "review.png").convert("RGB").resize((1152, 512))))

@@ -460,6 +460,8 @@ def input_facts(gender, body_parts, provenance=None):
     parts_origin = provenance.get("body_parts", {"source": "default"})
     facts["body_parts"] = {part: dict(state="unknown" if body_parts is None else ("present" if part in body_parts else "absent"),
                                       **parts_origin) for part in BODY_PARTS}
+    # D-113: 시작 전 지원 범위 경고(태그 근거). 없으면 "unmeasured"(태그를 안 돌린 실행기)와 빈 목록(돌렸는데 없음)을 구분한다.
+    facts["support"] = provenance.get("support", {"status": "unmeasured", "warnings": []})
     return facts
 
 

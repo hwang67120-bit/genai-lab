@@ -146,7 +146,8 @@ def test_pipeline_retries_once_with_second_seed_when_checks_fail(tmp_path, monke
     settings = qwen_outfit_edit.QwenPoseSettings(sys.executable, str(tmp_path), str(tmp_path / "m.gguf"), str(tmp_path / "m.json"), "a" * 64)
     outcome = pipeline.run_outfit_pipeline(character, garment, settings=settings, head_accessories="keep", runtime=None,
                                            directory=tmp_path / "run", gender="female", body_parts=(),
-                                           provenance={"body_parts": {"source": "user_confirmed", "prefill": "tags"}})
+                                           provenance={"body_parts": {"source": "user_confirmed", "prefill": "tags"},
+                                                       "support": {"status": "measured", "warnings": [{"key": "pose_not_standing", "level": "outside"}]}})
     assert seeds == [42, 43] and outcome["composited"]
     assert [a["composited"] for a in outcome["attempts"]] == [False, True]
     assert (tmp_path / "run" / "qwen-2" / "raw.png").is_file()
@@ -156,6 +157,7 @@ def test_pipeline_retries_once_with_second_seed_when_checks_fail(tmp_path, monke
     assert {c["key"]: c["source"] for c in trace["conditions"]}["body_parts"] == "user"
     assert [a["seed"] for a in trace["attempts"]] == [42, 43] and trace["attempts"][0]["checks"]["limbs"] == {"status": "ok"}
     assert trace["judgement"]["composited"] and "body_parts" in trace["output_observation"]["manual"][0]
+    assert trace["input_facts"]["support"]["warnings"][0]["key"] == "pose_not_standing" and outcome["support"]["status"] == "measured"
     conditions = json.loads(Path(outcome["conditions"]).read_text(encoding="utf-8"))
     assert conditions["input_facts"] == trace["input_facts"] and conditions["intent"] == trace["intent"]
 
@@ -176,3 +178,4 @@ def test_pipeline_does_not_retry_when_first_result_passes(tmp_path, monkeypatch)
     outcome = pipeline.run_outfit_pipeline(character, garment, settings=settings, head_accessories="keep", runtime=None,
                                            directory=tmp_path / "run")
     assert seeds == [42] and len(outcome["attempts"]) == 1
+    assert outcome["support"] == {"status": "unmeasured", "warnings": []}      # 경고를 재지 않은 실행은 "없음"이 아니라 "안 잼"

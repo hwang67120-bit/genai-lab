@@ -34,6 +34,7 @@ def test_quality_pass_needs_every_core_item_and_fails_on_remaining_garment():
     assert outfit_judgement.quality_pass(good, composited=False) is False          # 머리 합성 없는 장은 통과로 세지 않는다
     assert outfit_judgement.quality_pass(dict(good, original_garment_remaining="some"), True) is False   # 완성 기준(D-109)
     assert outfit_judgement.quality_pass(dict(good, severe_defect="not_judged"), True) is None            # 불완전 판정
+    assert outfit_judgement.quality_pass(dict(original_garment_remaining="some"), True) is False           # 하나만 봐도 실패는 실패
     assert outfit_judgement.quality_pass(dict(good, outfit="accepted"), True) is True
 
 

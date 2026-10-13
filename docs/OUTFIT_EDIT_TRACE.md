@@ -50,6 +50,16 @@
 
 이 기록 덕분에 D-111의 수정(확인된 부위만, 없으면 추가 금지)이 어느 조건을 왜 바꿨는지 추적된다.
 
+## 사람 판정 (`judgement.json`, D-114)
+- 항목: `same_character`(yes/no), `outfit`(same/partial/different/accepted), `body_parts`(kept/changed/missing/added/not_applicable),
+  `original_garment_remaining`(none/some), `pose`(kept/changed), `severe_defect`(none/present + `defect_note`). 묻지 않은 항목은 `not_judged` — 추측해서 채우지 않는다.
+- 판정자 `judge`(user/codex/claude)와 기록자 `recorded_by`, 근거 `source`(보고서·비교 그림·줄 번호)를 함께 적는다.
+- `quality_pass`: 머리 합성 + 같은 캐릭터 + 옷 same/partial/accepted + 기존 의상 잔존 none + 심한 이상 none. 핵심 항목에 not_judged가 있으면 `null`(불완전).
+- 같은 실행에 여러 판정이 있으면 사용자 판정이 우선이고, `trace.json`의 `judgement.quality`에 최신 판정이 요약된다.
+- 작업실: 결과 승인 체크(캐릭터·옷·노출·원래 옷 잔존 없음·꼬리/귀)가 `gui_approval` 판정으로, 거절은 `gui_reject`(항목 not_judged)로 기록된다.
+- 시험 판정: `python -B scripts/record_judgement.py record RUN_DIR --judge user --same-character yes --outfit partial --garment-remaining some ...`,
+  집계는 `summary RUN_DIR...`(합성 수·판정 수·품질 통과 수·불완전 수).
+
 ## 보관
 - 결과 저장 시 `.review.json`에 `trace`·`conditions` 경로를 함께 적는다.
 - 확인 실행기(`scripts/outfit_edit_gpu_check.py`)의 `summary.json`에도 `trace` 경로가 들어간다.

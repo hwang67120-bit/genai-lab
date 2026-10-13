@@ -303,7 +303,7 @@ class StudioController(QObject):
     def approve(self):
         if self.results is None:
             return
-        candidate = (SimpleNamespace(path=self.results.current_path) if getattr(self.results, "edit_mode", False)
+        candidate = (SimpleNamespace(path=self.results.current_path, edit_mode=True) if getattr(self.results, "edit_mode", False)
                      else replace(self.results.candidate, path=self.results.current_path))
         checks = confirm_result(self.window, candidate, self.analysis)
         if checks is not None:
@@ -1076,6 +1076,9 @@ def confirm_result(window, candidate, analysis):
     if any(appendage_tags(analysis["groups"]["fixed"]).values()):
         checks["appendages"] = QCheckBox("꼬리·귀의 개수·종류·색이 원래 캐릭터와 같습니다.")
         layout.addWidget(checks["appendages"])
+    if getattr(candidate, "edit_mode", False):  # D-114: 완성 기준(D-109)의 "기존 의상 잔존 = 실패"를 사람이 확인한다
+        checks["original_outfit_gone"] = QCheckBox("원래 입고 있던 옷(걸친 코트·넥타이·장갑 등)이 남아 있지 않습니다.")
+        layout.addWidget(checks["original_outfit_gone"])
     accept = QPushButton("이 결과 사용")
     accept.setEnabled(False)
     for check in checks.values():

@@ -83,7 +83,8 @@ def test_gui_outfit_edit_runs_pipeline_and_saves_approved_result(tmp_path, monke
         calls.append((Path(character).name, Path(garment).name, kw["head_accessories"], kw["gender"], kw["body_parts"]))
         return fake_outcome(kw["directory"])
     monkeypatch.setattr(outfit_edit_pipeline, "run_outfit_pipeline", pipeline)
-    monkeypatch.setattr(ui, "confirm_result", lambda *a: dict(character=True, garment=True, exposure=True, appendages=True))
+    monkeypatch.setattr(ui, "confirm_result", lambda *a: dict(character=True, garment=True, exposure=True, appendages=True,
+                                                               original_outfit_gone=True))
     destination = tmp_path / "saved.png"
     monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *a: (str(destination), ""))
     try:
@@ -133,15 +134,17 @@ def test_result_without_head_paste_is_shown_with_reason_and_can_still_be_judged(
     assert results.current_path.name == "qwen_view.png" and "붙이지 못했습니다" in results.head_notice
     with pytest.raises(ValueError):
         results.export(tmp_path / "x.png")                                 # 승인 전 저장 불가
-    results.approve(dict(character=True, garment=True, exposure=True))
+    results.approve(dict(character=True, garment=True, exposure=True, original_outfit_gone=True))
     assert results.export(tmp_path / "x.png").read_bytes() == results.current_path.read_bytes()
+    record = json.loads((results.directory / "judgement.json").read_text(encoding="utf-8"))[-1]   # D-114
+    assert record["judge"] == "user" and record["source"] == "gui_approval" and record["original_garment_remaining"] == "none"
 
 
 def test_changed_result_blocks_approval(tmp_path):
     results = OutfitEditResults(fake_outcome(tmp_path / "run"))
     Image.new("RGB", (768, 1024), "white").save(results.current_path)
     with pytest.raises(ValueError):
-        results.approve(dict(character=True, garment=True, exposure=True))
+        results.approve(dict(character=True, garment=True, exposure=True, original_outfit_gone=True))
 
 
 def test_confirmation_needs_only_the_check_no_settings_file(tmp_path, monkeypatch):

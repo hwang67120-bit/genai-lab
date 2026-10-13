@@ -8,6 +8,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from genai_lab.outfit_edit import sha, write_json
+from genai_lab.outfit_judgement import record_judgement
 
 
 class OutfitEditResults:
@@ -69,19 +70,26 @@ class OutfitEditResults:
     def reject_and_next(self):
         self.status = "rejected_by_user"
         self.persist()
+        # 거절 이유는 묻지 않으므로 항목은 not_judged로 둔다(추측해서 채우지 않음, D-114)
+        record_judgement(self.directory, dict(judge="user", source="gui_reject", note="사용자가 결과를 쓰지 않음"))
         return 0
 
     def toggle_head_view(self):
         return None
 
     def approve(self, checks):
-        required = {"character", "garment", "exposure"} | ({"appendages"} if self.appendage_review_required else set())
+        required = ({"character", "garment", "exposure", "original_outfit_gone"}
+                    | ({"appendages"} if self.appendage_review_required else set()))
         if set(checks) != required or not all(checks.values()):
-            raise ValueError("캐릭터·의상·노출 및 해당하는 꼬리·귀 확인을 완료해 주세요.")
+            raise ValueError("캐릭터·의상·노출·원래 옷 잔존 및 해당하는 꼬리·귀 확인을 완료해 주세요.")
         self.approved_sha = self.verify_current()
         self.checks = dict(checks)
         self.status = "user_approved"
         self.persist()
+        # D-114: 확인 체크를 항목별 판정으로 기록한다. 체크로 묻지 않은 항목(자세)은 not_judged
+        record_judgement(self.directory, dict(
+            judge="user", source="gui_approval", same_character="yes", outfit="accepted", original_garment_remaining="none",
+            severe_defect="none", body_parts="kept" if self.appendage_review_required else "not_applicable"))
 
     def export(self, destination):
         if self.status != "user_approved" or self.verify_current() != self.approved_sha:
@@ -101,7 +109,7 @@ class OutfitEditResults:
                     "hair_shape": self.outcome.get("hair_shape"), "limbs": self.outcome.get("limbs"),
                     "raw_sha256": self.outcome.get("raw_sha256"), "attempts": self.outcome.get("attempts"),
                     "trace": self.outcome.get("trace"), "conditions": self.outcome.get("conditions"),
-                    "support": self.outcome.get("support"),
+                    "support": self.outcome.get("support"), "judgement": str(self.directory / "judgement.json"),
                     "approval_record": str(self.directory / "user-review.json"),
                     "reviewer": "user", "checks": self.checks}
         created = []

@@ -2,6 +2,17 @@
 
 > 이 문서는 과거 판단과 실험 근거를 보존하는 기록이다. 현재 제품 계약은 docs/FLOW.md만 따른다. 아래 결정이 FLOW.md와 충돌하면 과거 결정으로 취급하며 새 구현의 근거로 사용하지 않는다.
 
+## D-114 사람 판정을 항목별로 기록해 추적 기록에 연결 (2026-10-14)
+
+- 사용자 요청: "사람 판정 항목별 JSON 연결 진행해줘"(RAG 검토의 1번 권고).
+- `genai_lab/outfit_judgement.py`: 항목 same_character / outfit(same·partial·different·accepted) / body_parts / original_garment_remaining / pose / severe_defect(+defect_note). 묻지 않은 항목은 `not_judged`로 두고 추측해 채우지 않는다. 판정자(user/codex/claude)·기록자·근거(source)를 적는다.
+  - `quality_pass` = 머리 합성 + 같은 캐릭터 + 옷 same/partial/accepted + 기존 의상 잔존 없음 + 심한 이상 없음(D-109). 핵심 항목에 not_judged가 있으면 null(불완전).
+  - 실행 폴더 `judgement.json`(추가만)에 쓰고, `trace.json`의 `human_judgements`와 `judgement.quality`(사용자 판정 우선)에 잇는다. trace가 없는 과거 실행도 `compose/outcome.json`으로 합성 여부를 읽어 기록할 수 있다.
+  - `scripts/record_judgement.py record RUN --judge user --same-character yes ...` / `summary RUN...`(합성 수·판정 수·품질 통과 수·불완전 수).
+- 작업실: 결과 확인 창에 **"원래 입고 있던 옷이 남아 있지 않습니다"** 체크를 추가(편집 결과에만, 완성 기준의 기존 의상 잔존 = 실패). 승인은 `gui_approval` 판정(옷은 accepted, 자세는 not_judged), 거절은 `gui_reject`(항목 not_judged)로 기록된다. 저장 기록(.review.json)에 judgement 경로.
+- 기존 판정 중 사례가 특정된 것 1건(요청 15 G11/S08 사용자 허용)을 기록했다. 요청 14의 일괄 판정은 사례 번호가 없어 기록하지 않았다(Codex 보고서와 같은 원칙).
+- 문서: [OUTFIT_EDIT_TRACE.md](OUTFIT_EDIT_TRACE.md) "사람 판정" 절.
+
 ## D-113 요청 16 결과와 지원 범위 경고 (2026-10-13)
 
 - 요청 16(실패 7장 재생성, 4시간 51분): 머리 합성 5/7, 관문 미달 유지.

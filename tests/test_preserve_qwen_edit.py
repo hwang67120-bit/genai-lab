@@ -233,10 +233,10 @@ def hair_scene(tails=True):
 def test_hair_shape_accepts_same_hair_and_rejects_short_hair():
     person, hair, face = hair_scene(True)
     pasted = hair | face
-    same = script.hair_shape(person, person.copy(), hair, face, pasted)
-    assert same["status"] == "ok" and same["support"] == 1.0 and same["floating"] == 0.0
+    same, detached = script.hair_shape(person, person.copy(), hair, face, pasted)
+    assert same["status"] == "ok" and same["support"] == 1.0 and same["floating"] == 0.0 and not detached.any()
     short, _, _ = hair_scene(False)                       # Qwen이 양갈래를 짧은 머리로 바꿈
-    changed = script.hair_shape(person, short, hair, face, pasted)
+    changed, _ = script.hair_shape(person, short, hair, face, pasted)
     assert changed["status"] == "rejected" and changed["support"] < 0.5
 
 

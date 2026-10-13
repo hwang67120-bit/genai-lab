@@ -135,12 +135,13 @@ def compose(canvas_path, parts_path, raw_path, head_accessories, directory, limb
     else:
         pad = alignment["canvas_pad"]
         person_c, protect_c = pad_image(person, pad, 255), pad_image(protect, pad, False)
-        shape = hair_shape(person_c, aligned, pad_image(parts["hair"], pad, False), pad_image(face, pad, False), protect_c)
+        shape, detached = hair_shape(person_c, aligned, pad_image(parts["hair"], pad, False), pad_image(face, pad, False),
+                                     protect_c)
         outcome["hair_shape"] = shape
         if shape["status"] != "ok":
             outcome.update(reason=REASONS["shape"])
         else:
-            result, core = head_composite(person_c, aligned, protect_c)
+            result, core = head_composite(person_c, aligned, protect_c & ~detached)   # 떠 있는 섬은 붙이지 않는다(D-107)
             require(np.array_equal(result[core], person_c[core]), "원본 머리 픽셀이 바뀌었습니다.")
             Image.fromarray(aligned).save(directory / "aligned.png")
             Image.fromarray(result).save(directory / "result.png")

@@ -53,6 +53,19 @@ def test_compose_realigns_and_pastes_head_when_checks_pass(tmp_path):
     assert (tmp_path / "out" / "result.png").is_file() and json.loads((tmp_path / "out" / "outcome.json").read_text(encoding="utf-8"))["composited"]
 
 
+def test_compose_does_not_paste_hair_island_that_qwen_result_does_not_continue(tmp_path):
+    # 요청 14 G19/S04: 꼬리 끝이 머리카락으로 분할돼, Qwen이 꼬리를 지운 자리에 보라색 조각으로 붙었다
+    image, parts = scene()
+    raw = moved(image, 1.1, -60)
+    image[600:660, 600:680] = (230, 150, 200)      # 얼굴과 이어지지 않은 "머리카락" 섬(실제로는 꼬리)
+    parts["hair"][600:660, 600:680] = True
+    outcome = pipeline.compose(*save_case(tmp_path, image, parts, raw), "keep", tmp_path / "out")
+    assert outcome["composited"] and outcome["hair_shape"]["detached_px"] == 60 * 80
+    result = np.asarray(Image.open(tmp_path / "out" / "result.png").convert("RGB"))
+    assert (result[600:660, 600:680] == 255).all()                    # 섬 자리는 Qwen 결과(흰 배경) 그대로
+    assert (result[150:230, 260:330] == image[150:230, 260:330]).all()  # 머리 본체는 원본 그대로
+
+
 def test_compose_refuses_unrelated_result_and_explains(tmp_path):
     image, parts = scene(1)
     other, _ = scene(2)

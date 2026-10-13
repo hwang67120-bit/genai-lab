@@ -164,25 +164,40 @@ def lab(image):
     return cv2.cvtColor(image, cv2.COLOR_RGB2LAB).astype(np.float32) * np.float32([100 / 255, 1, 1])
 
 
-def hair_shape(person, aligned, hair, face, pasted):
-    """위치가 맞은 뒤 머리 형태·연결 검사. 모두 같은 (넓힌) 화면 좌표여야 한다."""
-    if not hair.any() or not face.any():
-        return dict(status="unmeasured", reason="머리 또는 얼굴 분할 없음")
+def qwen_hair_mask(person, aligned, hair):
+    """Qwen 결과에서 원본 머리색(Lab k-means 4개 중심)과 가까운 그림 내용."""
     samples = lab(person)[hair]
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 20, 0.5)
     cv2.setRNGSeed(0)
     _, _, centers = cv2.kmeans(samples, min(4, len(samples)), None, criteria, 3, cv2.KMEANS_PP_CENTERS)
     distance = np.min(np.linalg.norm(lab(aligned)[..., None, :] - centers[None, None], axis=-1), axis=-1)
-    qwen_hair = (distance < HAIR_COLOR_DE) & content_mask(aligned)
+    return (distance < HAIR_COLOR_DE) & content_mask(aligned)
+
+
+def unattached(mask, face):
+    """mask 중 얼굴이 든 덩어리와 이어지지 않은 픽셀."""
+    _, labels = cv2.connectedComponents(mask.astype(np.uint8), connectivity=8)
+    attached = np.setdiff1d(np.unique(labels[face & mask]), [0])
+    return mask & ~np.isin(labels, attached)
+
+
+def hair_shape(person, aligned, hair, face, pasted):
+    """위치가 맞은 뒤 머리 형태·연결 검사. 모두 같은 (넓힌) 화면 좌표여야 한다.
+    반환: (기록, detached). detached는 붙이지 않을 픽셀 — 원본 분할에서도 얼굴과 이어지지 않은 조각(섬)이 Qwen 결과의 머리와도
+    이어지지 않는 경우(D-107: 요청 14 S04, 꼬리가 머리카락으로 분할돼 몸 옆에 떠 있는 조각으로 붙었다).
+    얼굴과 이어진 머리 본체는 어떤 경우에도 빠지지 않는다."""
+    if not hair.any() or not face.any():
+        return dict(status="unmeasured", reason="머리 또는 얼굴 분할 없음"), np.zeros_like(pasted)
+    qwen_hair = qwen_hair_mask(person, aligned, hair)
     far = hair & (cv2.distanceTransform((~face).astype(np.uint8), cv2.DIST_L2, 5) > HAIR_FAR)
     near_qwen = cv2.dilate(qwen_hair.astype(np.uint8), np.ones((7, 7), np.uint8)) > 0
     support = float((far & near_qwen).sum() / far.sum()) if far.any() else 1.0
-    _, labels = cv2.connectedComponents((pasted | qwen_hair).astype(np.uint8), connectivity=8)
-    attached = np.setdiff1d(np.unique(labels[face & (pasted | qwen_hair)]), [0])
-    floating = float((pasted & ~np.isin(labels, attached)).sum() / max(1, pasted.sum()))
-    ok = support >= MIN_HAIR_SUPPORT and floating <= MAX_FLOATING_HAIR
+    floating = unattached(pasted | qwen_hair, face) & pasted
+    detached = floating & unattached(pasted, face)
+    ratio = float(floating.sum() / max(1, pasted.sum()))
+    ok = support >= MIN_HAIR_SUPPORT and ratio <= MAX_FLOATING_HAIR
     return dict(status="ok" if ok else "rejected", far_hair_px=int(far.sum()), support=round(support, 3),
-                floating=round(floating, 3))
+                floating=round(ratio, 3), detached_px=int(detached.sum())), detached
 
 
 def composite(person, edited, change):
@@ -369,7 +384,8 @@ def outfit_prompt(head_accessories, garment_terms=(), remove_props=True, gender=
 
 
 ARM_SEGMENTS = (("shoulder", "elbow"), ("elbow", "wrist"))
-ARM_LINE_MIN = 0.95     # 팔 구간 위가 인물 영역이어야 하는 비율(요청 12 W3 팔 없음: 0.58, 팔 있는 13장: 모두 1.00)
+ARM_LINE_MIN = 0.95     # 원본에서 팔 구간이 인물 영역 위에 있어야 하는 비율(이 구간만 검사 대상이 된다)
+ARM_GAP_MIN = 2         # 결과에서 연속으로 이만큼 빗나가야 사라진 것으로 본다(요청 12 W3 팔 없음: 5연속, 요청 14 S07 흰 소매 오탐: 1개)
 ARM_JOINT_CONF = 0.4    # 이보다 낮은 관절이 낀 구간은 판정하지 않는다(가려짐·잘못 찍힘)
 ARM_SAMPLES = 12
 NEAR_WHITE = 235
@@ -391,9 +407,9 @@ def arm_lines(joints, image):
     named = {j["joint_name"]: j for j in joints}
     figure = figure_mask(image)
     height, width = figure.shape
-    lines = {}
+    lines, gaps = {}, {}
     for side in ("left", "right"):
-        segments = []
+        segments, runs = [], []
         for first, second in ARM_SEGMENTS:
             a, b = named.get(f"{side}_{first}"), named.get(f"{side}_{second}")
             if not (a and b and a.get("detected") and b.get("detected")
@@ -405,19 +421,32 @@ def arm_lines(joints, image):
                 y = int(np.clip(a["y"] + (b["y"] - a["y"]) * t, 0, height - 1))
                 hits.append(bool(figure[max(0, y - 2):y + 3, max(0, x - 2):x + 3].any()))
             segments.append(round(float(np.mean(hits)), 3))
-        lines[side] = segments
-    return lines
+            runs.append(longest_gap(hits))
+        lines[side], gaps[side] = segments, runs
+    return lines, gaps
+
+
+def longest_gap(hits):
+    """연속으로 빗나간 표본의 최대 개수."""
+    best = run = 0
+    for hit in hits:
+        run = 0 if hit else run + 1
+        best = max(best, run)
+    return best
 
 
 def limb_check(original_joints, original_image, result_joints, result_image):
     """원본에 있던 팔이 Qwen 결과에서 사라졌으면 거부한다.
     - 원본에서 그 팔의 구간을 하나도 확인하지 못했으면 판정하지 않는다.
-    - 결과에서 잰 구간 중 하나라도 인물 영역 밖(ARM_LINE_MIN 미만)이면 그 팔은 사라진 것으로 본다.
+    - 결과에서 잰 구간 중 하나라도 ARM_GAP_MIN개 이상 연속으로 인물 영역 밖이면 그 팔은 사라진 것으로 본다.
+      표본 1개만 빗나간 것은 흰 소매·윤곽선 틈 같은 읽기 오차로 본다(요청 14 S07).
     - 결과에서 그 팔의 구간을 하나도 재지 못했으면(가려짐) 사라짐으로 단정하지 않고 확인 불가로 남긴다."""
-    before, after = arm_lines(original_joints, original_image), arm_lines(result_joints, result_image)
+    before, _ = arm_lines(original_joints, original_image)
+    after, gaps = arm_lines(result_joints, result_image)
     checked = [side for side in ("left", "right") if any(v >= ARM_LINE_MIN for v in before[side])]
-    missing = [side for side in checked if after[side] and min(after[side]) < ARM_LINE_MIN]
+    missing = [side for side in checked if after[side] and max(gaps[side]) >= ARM_GAP_MIN]
     unverified = [side for side in checked if not after[side]]
     measured = [side for side in checked if after[side]]
     status = "rejected" if missing else ("ok" if measured else "unmeasured")
-    return dict(status=status, original=before, result=after, checked=checked, missing=missing, unverified=unverified)
+    return dict(status=status, original=before, result=after, gaps=gaps, checked=checked, missing=missing,
+                unverified=unverified)

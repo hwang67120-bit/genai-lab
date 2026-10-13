@@ -89,6 +89,16 @@ def test_white_sleeves_inside_outline_count_as_arms():
     assert report["status"] == "ok", report
 
 
+def test_single_missed_sample_is_a_reading_error_not_a_vanished_arm():
+    # 요청 14 G19/S07 첫 시도: 12개 표본 중 1개가 흰 소매 픽셀을 배경으로 읽혀 0.917로 거부됐다(팔은 멀쩡함)
+    import cv2
+    image = figure(True)
+    cv2.line(image, (519, 491), (767, 491), (255, 255, 255), 9)     # 왼쪽 아래팔을 가로지르는 흰 틈(테두리까지 이어짐)
+    report = outfit_edit.limb_check(joints(), figure(True), joints(), image)
+    assert report["status"] == "ok" and report["result"]["left"][1] < 1.0 and report["gaps"]["left"] == [0, 1]
+    assert outfit_edit.longest_gap([True, False, False, True, False]) == 2
+
+
 def test_hidden_hand_is_unverified_not_missing():
     # 요청 13 A-W4·B-W3: 손이 주머니에 가려 손목을 못 찾으면 사라짐으로 단정하지 않는다
     pocket = [dict(j, detected=False) if j["joint_name"].endswith("wrist") else j for j in joints()]

@@ -139,6 +139,25 @@ def test_prompt_names_remaining_garments_body_parts_and_pose():
     assert outfit_edit.outfit_prompt("keep").endswith(outfit_edit.OUTFIT_FRAMING)
 
 
+def test_conditions_carry_source_and_reason_and_rebuild_the_same_prompt():
+    # D-112: 조건마다 출처(policy/analysis/user)와 채택 이유, 제외한 조건의 이유가 남아야 "왜 그 문장을 넣었나"에 근거로 답할 수 있다
+    assembled = outfit_edit.outfit_conditions("keep", gender="male", body_parts=())
+    assert "".join(c["text"] for c in assembled["conditions"]) == outfit_edit.outfit_prompt("keep", gender="male", body_parts=())
+    by_key = {c["key"]: c for c in assembled["conditions"]}
+    assert by_key["gender"]["source"] == "user" and by_key["gender"]["basis"] == "male"
+    assert by_key["body_parts"]["source"] == "user" and by_key["body_parts"]["basis"] == []
+    assert by_key["replace_outfit"]["source"] == "policy" and all(c["reason"] for c in assembled["conditions"])
+    assert [e["key"] for e in assembled["excluded"]] == ["garment_terms"]
+    unknown = outfit_edit.outfit_conditions("keep", remove_props=False)
+    keys = {c["key"]: c for c in unknown["conditions"]}
+    assert keys["body_parts"]["source"] == "policy" and keys["body_parts"]["basis"] is None   # 확인 안 함 → 조건문
+    assert {e["key"] for e in unknown["excluded"]} == {"remove_props", "garment_terms", "gender"}
+    facts = outfit_edit.input_facts("female", ("tail",), {"body_parts": {"source": "user_confirmed", "prefill": "tags"}})
+    assert facts["body_parts"]["tail"]["state"] == "present" and facts["body_parts"]["wings"]["state"] == "absent"
+    assert facts["body_parts"]["ears"]["prefill"] == "tags" and facts["gender"]["source"] == "default"
+    assert outfit_edit.input_facts("unspecified", None)["body_parts"]["tail"]["state"] == "unknown"   # 검출 못 함 ≠ 없음
+
+
 def test_body_parts_sentence_names_only_confirmed_parts_and_forbids_the_rest():
     # 요청 15(D-111): 모든 캐릭터에 "꼬리를 유지하라"고 하자 귀·꼬리·날개가 없는 K에 셋 다 생겼다
     none = outfit_edit.outfit_prompt("keep", body_parts=())

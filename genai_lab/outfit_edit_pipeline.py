@@ -2,6 +2,7 @@
 → 머리 정렬·형태 검사·머리 합성(CPU). 메인 GUI 프로세스는 CUDA를 쓰지 않는다. 자동 승인·재시도는 없다.
 검사를 통과하지 못하면 머리를 붙이지 않고 그 이유와 Qwen 결과만 돌려준다.
 """
+import hashlib
 import os
 from pathlib import Path
 import subprocess
@@ -10,8 +11,9 @@ import time
 import numpy as np
 from PIL import Image
 
-from genai_lab.outfit_edit import (HEAD_ACCESSORIES, HEAD_KEEP, SIZE, canvas, fit_white, hair_shape, head_composite,
-                                   head_protect, head_window, limb_check, pad_image, realign, require, sha, write_json)
+from genai_lab.outfit_edit import (EDIT_INTENT, HEAD_ACCESSORIES, HEAD_KEEP, SIZE, canvas, fit_white, hair_shape,
+                                   head_composite, head_protect, head_window, input_facts, limb_check, outfit_conditions,
+                                   pad_image, realign, require, sha, write_json)
 
 FACE_PARTS = ("face", "eyes", "nose", "mouth")
 SEGMENT_TIMEOUT = 600
@@ -154,9 +156,10 @@ def compose(canvas_path, parts_path, raw_path, head_accessories, directory, limb
 
 
 def run_outfit_pipeline(character_path, garment_path, *, settings, head_accessories, runtime, directory,
-                        garment_terms=(), remove_props=True, gender="unspecified", body_parts=None,
+                        garment_terms=(), remove_props=True, gender="unspecified", body_parts=None, provenance=None,
                         cancelled=lambda: False, progress=lambda _: None, popen=subprocess.Popen):
-    """GUI·확인 스크립트 공통 진입점. 반환값은 compose()의 결과에 실행 폴더를 더한 것이다."""
+    """GUI·확인 스크립트 공통 진입점. 반환값은 compose()의 결과에 실행 폴더를 더한 것이다.
+    provenance는 성별·부위 값이 어디서 왔는지(사용자 확인·저장값·명령 인자·기본값)의 기록이며 실행에는 영향을 주지 않는다(D-112)."""
     from genai_lab.qwen_outfit_edit import (OutfitEditWorkflow, make_outfit_request, prepare_outfit_spec,
                                             run_outfit_edit)
     directory = Path(directory)
@@ -167,6 +170,9 @@ def run_outfit_pipeline(character_path, garment_path, *, settings, head_accessor
     spec = prepare_outfit_spec(prepared["canvas"], garment_path, head_accessories=head_accessories, confirmed=True,
                                directory=directory / "qwen-inputs", garment_terms=garment_terms,
                                remove_props=remove_props, gender=gender, body_parts=body_parts)
+    assembled = outfit_conditions(head_accessories, spec.garment_terms, remove_props, gender, body_parts)
+    facts = input_facts(gender, body_parts, provenance)
+    write_json(directory / "qwen-inputs" / "conditions.json", dict(intent=EDIT_INTENT, input_facts=facts, **assembled))
     from genai_lab.qwen_outfit_edit import OUTFIT_SEEDS
     attempts = []
     for number, seed in enumerate(OUTFIT_SEEDS, 1):  # D-105: 검사에 걸리면 다른 seed로 한 번만 더 그린다
@@ -184,8 +190,32 @@ def run_outfit_pipeline(character_path, garment_path, *, settings, head_accessor
         outcome = compose(prepared["canvas"], segmented["parts"], raw, head_accessories, directory / f"compose{suffix}",
                           limbs=limbs)
         attempts.append(dict(seed=seed, composited=outcome["composited"], reason=outcome.get("reason"),
-                             directory=str(directory / f"compose{suffix}")))
+                             directory=str(directory / f"compose{suffix}"), raw=str(raw),
+                             checks=dict(limbs=limbs, alignment=outcome.get("alignment", {}).get("decision"),
+                                         hair_shape=outcome.get("hair_shape"))))
         if outcome["composited"]:
             break
     outcome["attempts"] = attempts
-    return dict(outcome, directory=str(directory), source=prepared["source"], source_sha256=prepared["source_sha256"])
+    trace = write_trace(directory, facts, assembled, attempts, outcome)
+    return dict(outcome, directory=str(directory), source=prepared["source"], source_sha256=prepared["source_sha256"],
+                conditions=str(directory / "qwen-inputs" / "conditions.json"), trace=str(trace))
+
+
+def write_trace(directory, facts, assembled, attempts, outcome):
+    """입력 근거 → 편집 의도 → 전달 조건 → 출력 관찰 → 판정을 한 기록으로 잇는다(D-112).
+    출력 관찰 중 자동 검사(팔·머리 위치·머리 형태)만 확정이고, 귀·꼬리·날개·의상 잔존은 자동 검출이 없어 사람 확인 항목으로 남긴다.
+    생성 모델이 왜 그렇게 그렸는지는 기록하지 않는다 — 가설은 보고서에서 관찰 근거와 함께 적는다."""
+    prompt = "".join(c["text"] for c in assembled["conditions"])
+    trace = dict(schema="outfit_edit_trace/1", intent=EDIT_INTENT, input_facts=facts,
+                 conditions=assembled["conditions"], excluded=assembled["excluded"],
+                 prompt_sha256=hashlib.sha256(prompt.encode("utf-8")).hexdigest(), attempts=attempts,
+                 output_observation=dict(
+                     automatic=["limbs", "alignment", "hair_shape"],
+                     manual=["body_parts(귀·꼬리·날개 유무·개수)", "original_garment_remaining(기존 의상 잔존)", "pose"],
+                     note="manual 항목은 자동 검출이 없다. 사용자 승인(appendages·garment 확인) 또는 검토 보고서가 판단 주체다."),
+                 judgement=dict(automatic="composited" if outcome["composited"] else outcome.get("reason"),
+                                composited=bool(outcome["composited"]),
+                                certainty="자동 검사 결과는 확정. 생성 원인은 미확정(관찰 근거로 가설만)."))
+    path = directory / "trace.json"
+    write_json(path, trace)
+    return path

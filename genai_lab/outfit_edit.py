@@ -399,8 +399,12 @@ def clean_garment_terms(terms):
     return tuple(kept[:MAX_GARMENT_TERMS])
 
 
-def outfit_prompt(head_accessories, garment_terms=(), remove_props=True, gender="unspecified", body_parts=None):
-    """제품용 고정 지시문. 머리 장식 선택(keep/remove)과, 있으면 의상 그림에서 자동으로 읽은 옷 이름 목록만 바뀐다.
+EDIT_INTENT = "의상 교체 + 캐릭터 고유 특징(얼굴·머리·체형·확인된 귀·꼬리·날개) 유지. 기존 의상 잔존과 없는 부위 추가는 동일성 위반."
+
+
+def outfit_conditions(head_accessories, garment_terms=(), remove_props=True, gender="unspecified", body_parts=None):
+    """지시문을 조건 목록으로 조립한다(D-112). 조건마다 출처(policy 공통 규칙 / analysis 자동 분석 / user 사용자 확인)와
+    채택 이유를 붙이고, 문장을 넣지 않은 조건은 excluded에 이유와 함께 남긴다. 조건 문장을 이어 붙이면 outfit_prompt와 같다.
     remove_props=False는 원인 확인 시험 전용이다(요청 12 W3: 소품 제거 지시와 함께 팔까지 지워졌는지 확인, D-096)."""
     if head_accessories not in ("keep", "remove"):
         raise ValueError("머리 장식은 keep 또는 remove만 고를 수 있습니다.")
@@ -409,10 +413,54 @@ def outfit_prompt(head_accessories, garment_terms=(), remove_props=True, gender=
         raise ValueError("옷 이름 목록은 정리된 의상 용어만 쓸 수 있습니다.")
     if gender not in OUTFIT_GENDER:
         raise ValueError("캐릭터 성별은 unspecified / male / female 중 하나여야 합니다.")
-    listed = f"The outfit in image 2 consists of: {', '.join(terms)}. " if terms else ""
-    body = OUTFIT_KEEP if head_accessories == "keep" else OUTFIT_REMOVE
-    base = OUTFIT_BASE if remove_props else OUTFIT_REPLACE + OUTFIT_BACKGROUND
-    return base + listed + OUTFIT_GENDER[gender] + body + body_parts_sentence(body_parts) + OUTFIT_FRAMING
+    parts_text = body_parts_sentence(body_parts)
+    conditions, excluded = [], []
+    def add(key, text, source, reason, basis=None):
+        conditions.append(dict(key=key, text=text, source=source, reason=reason, basis=basis))
+    def skip(key, source, reason, basis=None):
+        excluded.append(dict(key=key, source=source, reason=reason, basis=basis))
+    add("replace_outfit", OUTFIT_REPLACE, "policy", "편집 목적. 걸친 코트·넥타이·장갑까지 원래 옷은 하나도 남기지 않는다(D-097·D-108).")
+    if remove_props:
+        add("remove_props", OUTFIT_PROPS, "policy", "들고 있는 소품·무기는 캐릭터 고유 특징이 아니다.")
+    else:
+        skip("remove_props", "test_override", "원인 확인 시험: 소품 제거 문장을 뺐다(D-096).")
+    add("background", OUTFIT_BACKGROUND, "policy", "제품 범위: 배경 없음.")
+    if terms:
+        add("garment_terms", f"The outfit in image 2 consists of: {', '.join(terms)}. ", "analysis",
+            "의상 그림 자동 분석에서 사용자가 확인한 옷 이름.", list(terms))
+    else:
+        skip("garment_terms", "policy", "제품은 옷 이름 목록 없이 그림 2만 따른다.")
+    if gender == "unspecified":
+        skip("gender", "user", "성별을 지정하지 않아 체형 문장을 넣지 않았다(여성복이면 체형이 바뀔 수 있음, D-106).", gender)
+    else:
+        add("gender", OUTFIT_GENDER[gender], "user", "확인된 성별의 체형을 유지한다(D-106: 남성에 여성복을 입히자 여성 체형이 됨).", gender)
+    if head_accessories == "keep":
+        add("head", OUTFIT_KEEP, "policy", "머리 장식은 항상 유지한다(D-105). 머리는 원본 픽셀로 붙이므로 얼굴·머리 유지 지시는 보조.")
+    else:
+        add("head", OUTFIT_REMOVE, "user", "사용자 선택: 머리 장식 제거(제품 화면에서는 쓰지 않음).")
+    if body_parts is None:
+        add("body_parts", parts_text, "policy", "귀·꼬리·날개를 확인하지 않아 조건문(있으면 유지, 없으면 추가 금지)을 쓴다(D-111).", None)
+    else:
+        add("body_parts", parts_text, "user", "확인된 부위만 유지하고 없는 부위는 추가를 금지한다(D-111: 모든 입력에 유지 문장을 넣자 K에 없는 부위가 생김).",
+            list(body_parts))
+    add("framing", OUTFIT_FRAMING, "policy", "자세·구도·크기를 유지해야 원본 머리를 같은 자리에 붙일 수 있다(D-108: 앉은 S08이 서자 머리 0.58배).")
+    return dict(conditions=conditions, excluded=excluded)
+
+
+def outfit_prompt(head_accessories, garment_terms=(), remove_props=True, gender="unspecified", body_parts=None):
+    """제품용 고정 지시문 = outfit_conditions의 문장을 순서대로 이어 붙인 것."""
+    return "".join(c["text"] for c in outfit_conditions(head_accessories, garment_terms, remove_props, gender, body_parts)["conditions"])
+
+
+def input_facts(gender, body_parts, provenance=None):
+    """입력 사실과 출처(D-112). 부위는 present / absent / unknown을 구분한다 — 검출하지 못한 것을 '없음'으로 적지 않는다."""
+    provenance = provenance or {}
+    facts = dict(gender=dict(value=gender, state="unspecified" if gender == "unspecified" else "confirmed",
+                             **provenance.get("gender", {"source": "default"})))
+    parts_origin = provenance.get("body_parts", {"source": "default"})
+    facts["body_parts"] = {part: dict(state="unknown" if body_parts is None else ("present" if part in body_parts else "absent"),
+                                      **parts_origin) for part in BODY_PARTS}
+    return facts
 
 
 ARM_SEGMENTS = (("shoulder", "elbow"), ("elbow", "wrist"))

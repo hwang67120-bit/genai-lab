@@ -95,6 +95,7 @@ class OutfitEditResults:
                     "head_accessories": self.outcome.get("head_accessories"), "alignment": self.outcome.get("alignment"),
                     "hair_shape": self.outcome.get("hair_shape"), "limbs": self.outcome.get("limbs"),
                     "raw_sha256": self.outcome.get("raw_sha256"), "attempts": self.outcome.get("attempts"),
+                    "trace": self.outcome.get("trace"), "conditions": self.outcome.get("conditions"),
                     "approval_record": str(self.directory / "user-review.json"),
                     "reviewer": "user", "checks": self.checks}
         created = []

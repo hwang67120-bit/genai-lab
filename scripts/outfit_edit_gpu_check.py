@@ -41,22 +41,26 @@ def main():
     given, given_parts = dict(args.gender), dict(args.parts)
     from genai_lab.character_preferences import load_character_body_parts, load_character_gender
     for name, image in args.case:
-        gender = given.get(name) or load_character_gender(str(Path(image))) or "unspecified"
+        saved_gender, saved_parts = load_character_gender(str(Path(image))), load_character_body_parts(str(Path(image)))
+        gender = given.get(name) or saved_gender or "unspecified"
         if name in given_parts:
             body_parts = tuple(p for p in given_parts[name].split(",") if p and p != "none")
         else:
-            body_parts = load_character_body_parts(str(Path(image)))
+            body_parts = saved_parts
+        provenance = dict(gender=dict(source="flag" if name in given else ("saved" if saved_gender else "default")),
+                          body_parts=dict(source="flag" if name in given_parts else ("saved" if saved_parts is not None else "default")))
         start = time.perf_counter()
         try:
             outcome = run_outfit_pipeline(image, args.garment, settings=settings, head_accessories=args.head_accessories,
                                           runtime=runtime, directory=args.output / name,
                                           garment_terms=[t for t in args.garment_terms.split(",") if t.strip()],
                                           remove_props=not args.no_prop_removal, gender=gender, body_parts=body_parts,
+                                          provenance=provenance,
                                           progress=lambda text: print(f"[{name}] {text}", flush=True))
             memory = json.loads((Path(outcome["raw"]).parent / "memory.json").read_text(encoding="utf-8"))
             record = dict(case=name, gender=gender, body_parts=None if body_parts is None else list(body_parts), status="completed", composited=outcome["composited"], reason=outcome.get("reason"),
                           decision=outcome["alignment"]["decision"], hair_shape=outcome.get("hair_shape"),
-                          limbs=outcome.get("limbs"), attempts=outcome.get("attempts"),
+                          limbs=outcome.get("limbs"), attempts=outcome.get("attempts"), trace=outcome.get("trace"),
                           canvas_pad=outcome["alignment"].get("canvas_pad"), memory_stopped=memory.get("stopped"),
                           max_stage_peak_reserved_gib=max(s.get("stage_peak_reserved_gib", 0) for s in memory["stages"]))
             rows.append(np.asarray(Image.open(Path(outcome["qwen_view"]).parent / "review.png").convert("RGB").resize((1152, 512))))

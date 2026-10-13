@@ -241,6 +241,7 @@ class StudioController(QObject):
             self.controls()
             return
         gender, body_parts = confirmed["gender"], confirmed["body_parts"]
+        provenance = confirmation_provenance(analysis, saved, saved_parts)
         if source and gender != saved:
             save_character_gender(source, gender)  # 한 번 고른 성별은 다음부터 자동으로 쓴다
         if source and body_parts != saved_parts:
@@ -253,7 +254,8 @@ class StudioController(QObject):
             from genai_lab.outfit_edit_pipeline import run_outfit_pipeline
             return run_outfit_pipeline(inputs / "character.png", inputs / "garment.png", settings=settings,
                                        head_accessories=accessories, runtime=runtime, directory=directory,
-                                       gender=gender, body_parts=body_parts, cancelled=cancel, progress=progress)
+                                       gender=gender, body_parts=body_parts, provenance=provenance,
+                                       cancelled=cancel, progress=progress)
         self.window.status_label.setText("상태: 옷 바꾸기 준비 중 · 약 30분 걸릴 수 있습니다.")
         self.launch(operation, self.outfit_edited)
 
@@ -958,6 +960,18 @@ def guessed_body_parts(analysis):
     if hit("wings", "_wings"):
         found.append("wings")
     return tuple(found)
+
+
+def confirmation_provenance(analysis, saved_gender, saved_body_parts):
+    """확인 창 값의 출처(D-112): 사용자가 확인했고, 미리 채운 값은 저장값인지 태그 점수인지. 태그 점수는 근거로 함께 남긴다."""
+    scores = analysis.get("character_scores", {})
+    part_scores = {k: round(v, 3) for k, v in scores.items()
+                   if v >= 0.3 and (k in ("animal_ears", "tail", "wings") or k.endswith(("_ears", "_tail", "_wings")))}
+    return dict(gender=dict(source="user_confirmed", prefill="saved" if saved_gender else "tags",
+                            tag_guess=guessed_gender(analysis),
+                            scores={k: round(scores.get(k, 0.0), 3) for k in ("1boy", "1girl")}),
+                body_parts=dict(source="user_confirmed", prefill="saved" if saved_body_parts is not None else "tags",
+                                tag_guess=list(guessed_body_parts(analysis)), scores=part_scores))
 
 
 def confirm_outfit_edit(window, analysis, head_accessories, saved_gender=None, saved_body_parts=None):

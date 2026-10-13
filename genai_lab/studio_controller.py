@@ -951,8 +951,9 @@ def guessed_gender(analysis):
 def guessed_body_parts(analysis):
     """자동 분석(태그 점수)으로 미리 채울 동물 귀·꼬리·날개. 틀릴 수 있어 사용자가 확인한다(D-111)."""
     scores = analysis.get("character_scores", {})
+    not_animal = ("pointy_ears", "long_pointy_ears", "fake_animal_ears")   # 엘프 귀·가짜 귀는 동물 귀가 아니다(머리는 원본 픽셀로 붙는다)
     def hit(exact, suffix):
-        return any(v >= 0.5 and (k == exact or k.endswith(suffix)) for k, v in scores.items())
+        return any(v >= 0.5 and (k == exact or k.endswith(suffix)) and k not in not_animal for k, v in scores.items())
     found = []
     if hit("animal_ears", "_ears"):
         found.append("ears")

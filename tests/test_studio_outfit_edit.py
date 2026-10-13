@@ -232,6 +232,7 @@ def test_body_parts_are_prefilled_from_saved_value_or_tags(tmp_path, monkeypatch
         return QDialog.DialogCode.Accepted
     monkeypatch.setattr(QDialog, "exec", accept)
     assert ui.guessed_body_parts(analysis) == ("ears", "tail")                  # wing_collar·ponytail은 날개·꼬리가 아니다
+    assert ui.guessed_body_parts({"character_scores": {"pointy_ears": 0.9, "tail": 0.8}}) == ("tail",)   # 엘프 귀는 동물 귀가 아니다
     assert ui.confirm_outfit_edit(None, analysis, "keep")["body_parts"] == ("ears", "tail")
     assert ui.confirm_outfit_edit(None, analysis, "keep", saved_body_parts=())["body_parts"] == ()
     assert ui.confirm_outfit_edit(None, analysis, "keep", saved_body_parts=("wings",))["body_parts"] == ("wings",)

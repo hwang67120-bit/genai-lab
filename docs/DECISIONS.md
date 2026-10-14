@@ -2,6 +2,12 @@
 
 > 이 문서는 과거 판단과 실험 근거를 보존하는 기록이다. 현재 제품 계약은 docs/FLOW.md만 따른다. 아래 결정이 FLOW.md와 충돌하면 과거 결정으로 취급하며 새 구현의 근거로 사용하지 않는다.
 
+## D-122 자유 생성 계약 초안 작성, ④ 평가 세트 보류 (2026-10-14)
+
+- 사용자: "④는 보류하고 자유 생성 계약 갱신으로 넘어가". 평가 세트(같은 캐릭터 다른 의상·자세 그림)는 자료가 생기면 재개.
+- 계약 변경은 코드보다 문서가 먼저(FLOW 변경 규칙 7). 초안 [FREE_GENERATION_CONTRACT.md](FREE_GENERATION_CONTRACT.md): 기준 이미지 + 확정 특징표 + 요청(자세·구도·시점·배경·상황, 없으면 코드 고정 목록의 무작위 전신 자세) → Qwen-Image-Edit(권고) → 결과 분할 → 특징 검증(결과 마스크, 꼬리·날개 개수 포함) → 사람 판정(+request_followed). 머리 픽셀 붙이기는 쓰지 않는다. 외부 API는 검토 대기 반환(D-110). LLM·RAG 없음.
+- 사용자 결정 대기 5개: ① 모델 Qwen 유지 ② 배경 요청 허용(제품 경계 갱신) ③ 요청 문장 범위(외형·의상 변경 거부) ④ 기준 이미지(편집 결과/원본) ⑤ 무작위 자세 고정 목록. 결정 뒤 FLOW.md 갱신 → 공통 함수 `run_free_generation` → 요청 20(6장 안팎) 첫 측정.
+
 ## D-121 2단계 ③: 결과 검증기 — 특징표 유지 여부 자동 기록 (2026-10-14)
 
 - 사용자: "③ 진행해". `genai_lab/character_verification.py`: 결과 그림에 같은 추출(태그 + 픽셀)을 돌려 기준 특징표와 항목별로 비교 → kept / changed / missing / added / unknown. 실행마다 시도별 `character-features[-2]/verification.json`, `trace.json`의 `attempts[].checks.character_features`와 `output_observation.character_verification`에 남는다. 실패해도 편집을 막지 않는다(unmeasured). 사람 판정(same_character)이 최종이며 자동 결과는 근거다.

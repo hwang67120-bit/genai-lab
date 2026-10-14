@@ -32,3 +32,18 @@ def test_new_dialog_requires_choice_and_restores_explicit_choice():
     assert restored.character_gender == "male"
     assert restored.buttons.button(QDialogButtonBox.StandardButton.Ok).isEnabled()
     restored.close()
+
+
+def test_character_features_persist_per_source_and_reject_bad_shapes(tmp_path):
+    from genai_lab.character_preferences import load_character_features, save_character_features
+    import pytest
+    settings = QSettings(str(tmp_path / "settings.ini"), QSettings.Format.IniFormat)
+    a, b = tmp_path / "a.png", tmp_path / "b.png"
+    items = dict(hair_length=["long_hair"], hair_style=["twintails"], hair_color=["aqua_hair"], eye_color=["blue_eyes"],
+                 head_accessories=[], skin=[])
+    assert load_character_features(a, settings) is None
+    save_character_features(a, items, settings)
+    reopened = QSettings(str(tmp_path / "settings.ini"), QSettings.Format.IniFormat)
+    assert load_character_features(a, reopened) == items and load_character_features(b, reopened) is None
+    with pytest.raises(ValueError):
+        save_character_features(a, dict(hair_length=["x"]), settings)

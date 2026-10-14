@@ -29,8 +29,8 @@ def measure_support(image, body_parts, runtime):
         with WdTagSession(settings) as tagger, Image.open(image) as source:
             scores = dict(tagger.analyze(source.convert("RGB")).raw_general_scores)
     except Exception as error:
-        return dict(status="unmeasured", source="tags", error=str(error)[:200], warnings=[])
-    return dict(status="measured", source="tags", warnings=support_warnings(scores, body_parts))
+        return dict(status="unmeasured", source="tags", error=str(error)[:200], warnings=[]), {}
+    return dict(status="measured", source="tags", warnings=support_warnings(scores, body_parts)), scores
 
 
 def main():
@@ -62,9 +62,10 @@ def main():
             body_parts = tuple(p for p in given_parts[name].split(",") if p and p != "none")
         else:
             body_parts = saved_parts
+        support, scores = measure_support(image, body_parts, runtime)
         provenance = dict(gender=dict(source="flag" if name in given else ("saved" if saved_gender else "default")),
                           body_parts=dict(source="flag" if name in given_parts else ("saved" if saved_parts is not None else "default")),
-                          support=measure_support(image, body_parts, runtime))
+                          support=support)
         start = time.perf_counter()
         try:
             outcome = run_outfit_pipeline(image, args.garment, settings=settings, head_accessories=args.head_accessories,
@@ -72,6 +73,7 @@ def main():
                                           garment_terms=[t for t in args.garment_terms.split(",") if t.strip()],
                                           remove_props=not args.no_prop_removal, gender=gender, body_parts=body_parts,
                                           provenance=provenance, clean_garment=not args.no_clean_garment,
+                                          character_scores=scores,
                                           progress=lambda text: print(f"[{name}] {text}", flush=True))
             memory = json.loads((Path(outcome["raw"]).parent / "memory.json").read_text(encoding="utf-8"))
             record = dict(case=name, gender=gender, body_parts=None if body_parts is None else list(body_parts), status="completed", composited=outcome["composited"], reason=outcome.get("reason"),

@@ -2,6 +2,7 @@
 import json
 
 import numpy as np
+import pytest
 
 from genai_lab import character_features as cf
 
@@ -77,3 +78,24 @@ def test_weak_candidates_are_recorded_but_not_promoted_to_measured():
     assert it["hair_length"]["value"] == "long_hair" and it["hair_length"]["weak"] == []        # 0.33은 약한 후보도 아님
     assert it["hair_style"]["state"] == "weak" and it["hair_style"]["values"] == [] and it["hair_style"]["weak"] == [("ahoge", 0.36)]
     assert it["hair_color"]["state"] == "measured" and it["hair_color"]["tags"] == [] and it["hair_color"]["weak"] == [("white_hair", 0.36)]
+
+
+def test_tag_features_text_round_trip_and_confirmed_values_override_tags():
+    scores = dict(long_hair=0.8, very_long_hair=0.55, twintails=0.7, aqua_hair=0.6, blue_eyes=0.9, headphones=0.55, ahoge=0.4)
+    items = cf.tag_features(scores)
+    assert items["hair_length"]["values"] == ["long_hair"] and items["hair_style"] == dict(values=["twintails"], weak=["ahoge"])
+    text = cf.features_text(items)
+    assert text.splitlines()[0] == "머리 길이: long_hair" and "피부: 없음" in text and "ahoge" in cf.weak_note(items)
+    parsed = cf.parse_features_text(text.replace("머리 장식: headphones", "머리 장식: headphones, black ribbon"))
+    assert parsed["head_accessories"] == ["headphones", "black_ribbon"] and parsed["skin"] == []
+    with pytest.raises(ValueError):
+        cf.parse_features_text("머리 길이: long_hair")                    # 빠진 항목
+    with pytest.raises(ValueError):
+        cf.parse_features_text(text + "\n모자: x")                       # 모르는 라벨
+    image, parts = scene()
+    features = cf.extract_features(image, parts, {}, confirmed=parsed)
+    it = features["items"]
+    assert it["hair_length"] == dict(it["hair_length"], value="long_hair", source="user", confirmed=True, state="measured")
+    assert it["head_accessories"]["values"] == ["headphones", "black_ribbon"] and it["hair_color"]["tags"] == ["aqua_hair"]
+    assert it["hair_color"]["colors"]                                       # 픽셀 측정은 그대로
+    assert it["skin"]["tags"] == [] and it["skin"]["confirmed"] is True     # '없음'으로 확정

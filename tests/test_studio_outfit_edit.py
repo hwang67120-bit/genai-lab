@@ -68,8 +68,10 @@ def test_gui_outfit_edit_runs_pipeline_and_saves_approved_result(tmp_path, monke
     monkeypatch.setattr(ui, "confirm_inputs", lambda *a: pytest.fail("SDXL 입력 확인 화면을 띄우지 않는다"))
     monkeypatch.setattr(ui, "generate_onepass_request", lambda *a, **k: pytest.fail("SDXL 생성을 하지 않는다"))
     asked = []
-    monkeypatch.setattr(ui, "confirm_outfit_edit", lambda window, a, accessories, saved_gender=None, saved_body_parts=None:
+    monkeypatch.setattr(ui, "confirm_outfit_edit", lambda window, a, accessories, saved_gender=None, saved_body_parts=None, **k:
                         asked.append((saved_gender, saved_body_parts)) or dict(gender="male", body_parts=("tail",)))
+    monkeypatch.setattr(ui, "load_character_features", lambda source: None)
+    monkeypatch.setattr(ui, "save_character_features", lambda source, items: None)
     saved, saved_parts = {}, {}
     monkeypatch.setattr(ui, "load_character_gender", lambda source: None)
     monkeypatch.setattr(ui, "load_character_body_parts", lambda source: None)
@@ -251,10 +253,42 @@ def test_confirmation_shows_support_warnings_and_records_them(tmp_path, monkeypa
         return QDialog.DialogCode.Accepted
     monkeypatch.setattr(QDialog, "exec", accept)
     confirmed = ui.confirm_outfit_edit(None, analysis, "keep")
-    assert confirmed == dict(gender="male", body_parts=("ears", "tail"))        # 경고가 조건을 바꾸지 않는다
+    assert (confirmed["gender"], confirmed["body_parts"]) == ("male", ("ears", "tail"))   # 경고가 조건을 바꾸지 않는다
     assert "앉거나 웅크린 자세" in seen["text"] and "꼬리가 여럿" in seen["text"]
     record = ui.confirmation_provenance(analysis, None, None, confirmed["body_parts"])
     assert [w["key"] for w in record["support"]["warnings"]] == ["pose_not_standing", "multiple_tails"]
     analysis["character_scores"] = {"1girl": 1.0, "standing": 0.7}
     ui.confirm_outfit_edit(None, analysis, "keep")
     assert "보이지 않습니다" in seen["text"]
+
+
+def test_character_features_are_prefilled_from_tags_or_saved_and_bad_text_blocks_start(tmp_path, monkeypatch):
+    # D-120: 특징표 글 상자는 저장값 또는 태그 값으로 미리 채우고, 사람이 고친 값이 결과로 나간다. 형식이 틀리면 시작할 수 없다
+    from PySide6.QtWidgets import QCheckBox, QDialog, QLabel, QPlainTextEdit, QPushButton
+    app = QApplication.instance() or QApplication([])
+    analysis = analysis_at(tmp_path / "inputs")
+    analysis["character_scores"] = {"1girl": 0.9, "long_hair": 0.8, "twintails": 0.7, "aqua_hair": 0.6, "blue_eyes": 0.9,
+                                    "headphones": 0.55, "ahoge": 0.4}
+    seen = {}
+    def accept(dialog):
+        edit = dialog.findChild(QPlainTextEdit, "outfit_edit_features")
+        seen["text"] = edit.toPlainText()
+        seen["note"] = dialog.findChild(QLabel, "outfit_edit_features_note").text()
+        edit.setPlainText(edit.toPlainText().replace("머리 장식: headphones", "머리 장식: headphones, black_ribbon"))
+        dialog.findChild(QCheckBox, "outfit_edit_confirm").setChecked(True)
+        return QDialog.DialogCode.Accepted
+    monkeypatch.setattr(QDialog, "exec", accept)
+    result = ui.confirm_outfit_edit(None, analysis, "keep")
+    assert "머리 길이: long_hair" in seen["text"] and "머리 모양: twintails" in seen["text"] and "피부: 없음" in seen["text"]
+    assert "ahoge" in seen["note"]                                          # 약한 후보는 안내문에만
+    assert result["features"]["head_accessories"] == ["headphones", "black_ribbon"] and result["features"]["eye_color"] == ["blue_eyes"]
+    saved = dict(hair_length=["short_hair"], hair_style=[], hair_color=["black_hair"], eye_color=["red_eyes"], head_accessories=[], skin=[])
+    result = ui.confirm_outfit_edit(None, analysis, "keep", saved_features=saved)
+    assert "머리 길이: short_hair" in seen["text"] and result["features"]["hair_length"] == ["short_hair"]
+    def break_text(dialog):
+        dialog.findChild(QPlainTextEdit, "outfit_edit_features").setPlainText("머리 길이: long_hair\n이상한 줄")
+        dialog.findChild(QCheckBox, "outfit_edit_confirm").setChecked(True)
+        seen["enabled"] = dialog.findChild(QPushButton, None).isEnabled() if False else dialog.findChild(QLabel, "outfit_edit_hint").text()
+        return QDialog.DialogCode.Accepted
+    monkeypatch.setattr(QDialog, "exec", break_text)
+    assert ui.confirm_outfit_edit(None, analysis, "keep") is None and "특징표" in seen["enabled"]

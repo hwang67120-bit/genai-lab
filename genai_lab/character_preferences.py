@@ -50,6 +50,35 @@ def save_character_body_parts(source_path, parts, settings=None):
         raise OSError("캐릭터 부위 선택을 저장하지 못했습니다.")
 
 
+def load_character_features(source_path, settings=None):
+    """사용자가 확정한 캐릭터 특징표(태그 항목, D-120). 확인한 적이 없으면 None."""
+    import json
+    from genai_lab.character_features import TAG_ITEMS
+    store = settings if settings is not None else QSettings("GenAILab", "CharacterPreferences")
+    value = store.value(preference_key(source_path, "character_features"))
+    if not isinstance(value, str):
+        return None
+    try:
+        items = json.loads(value)
+    except ValueError:
+        return None
+    if not isinstance(items, dict) or set(items) != set(TAG_ITEMS) or not all(isinstance(v, list) for v in items.values()):
+        return None
+    return {k: [str(x) for x in items[k]] for k in TAG_ITEMS}
+
+
+def save_character_features(source_path, items, settings=None):
+    import json
+    from genai_lab.character_features import TAG_ITEMS
+    if set(items) != set(TAG_ITEMS) or not all(isinstance(v, (list, tuple)) and all(isinstance(x, str) for x in v) for v in items.values()):
+        raise ValueError("캐릭터 특징표 값 오류")
+    store = settings if settings is not None else QSettings("GenAILab", "CharacterPreferences")
+    store.setValue(preference_key(source_path, "character_features"), json.dumps({k: list(items[k]) for k in TAG_ITEMS}, ensure_ascii=False))
+    store.sync()
+    if store.status() != QSettings.Status.NoError:
+        raise OSError("캐릭터 특징표를 저장하지 못했습니다.")
+
+
 def load_character_skin_tone(source_path, settings=None):
     """사용자가 이전에 확인한 값만 불러온다. 측정 추천값은 불러오지 않는다."""
     store = settings if settings is not None else QSettings("GenAILab", "CharacterPreferences")

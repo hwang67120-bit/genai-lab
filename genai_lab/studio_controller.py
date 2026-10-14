@@ -30,7 +30,9 @@ from genai_lab.studio_finishing_gui import choose_finished, NOTICE as FINISHING_
 from genai_lab.studio_proportion import prepare_studio_pose, prepare_studio_head, confirmed_options
 from genai_lab.studio_proportion_gui import select_head_region, review_head_outline
 from genai_lab.studio_garment_warnings import garment_warnings, garment_review
-from genai_lab.character_preferences import (load_character_body_parts, load_character_gender, save_character_body_parts,
+from genai_lab.character_features import features_text, parse_features_text, tag_features, weak_note
+from genai_lab.character_preferences import (load_character_features, save_character_features,
+                                             load_character_body_parts, load_character_gender, save_character_body_parts,
                                              save_character_gender)
 from genai_lab.outfit_support import support_summary, support_warnings
 from genai_lab.onepass_prompt import AppearanceOverrides, PartAppearance, appendage_tags
@@ -228,11 +230,12 @@ class StudioController(QObject):
         source = character_source(analysis)
         saved = load_character_gender(source) if source else None
         saved_parts = load_character_body_parts(source) if source else None
+        saved_features = load_character_features(source) if source else None
         self.confirming = True
         self.controls()
         try:
             confirmed = confirm_outfit_edit(self.window, analysis, self.head_accessories, saved_gender=saved,
-                                            saved_body_parts=saved_parts)
+                                            saved_body_parts=saved_parts, saved_features=saved_features)
         finally:
             self.confirming = False
         if not confirmed:
@@ -242,11 +245,15 @@ class StudioController(QObject):
             self.controls()
             return
         gender, body_parts = confirmed["gender"], confirmed["body_parts"]
+        features = confirmed.get("features")
         provenance = confirmation_provenance(analysis, saved, saved_parts, body_parts)
+        provenance["character_features"] = dict(source="user_confirmed", prefill="saved" if saved_features else "tags")
         if source and gender != saved:
             save_character_gender(source, gender)  # 한 번 고른 성별은 다음부터 자동으로 쓴다
         if source and body_parts != saved_parts:
             save_character_body_parts(source, body_parts)
+        if source and features is not None and features != saved_features:
+            save_character_features(source, features)   # 한 번 확정한 특징표는 다음부터 미리 채운다(D-120)
         self.release_tail_predecessor()
         directory = self.run_directory / "outfit-edit"
         inputs = Path(analysis["directory"])
@@ -256,7 +263,7 @@ class StudioController(QObject):
             return run_outfit_pipeline(inputs / "character.png", inputs / "garment.png", settings=settings,
                                        head_accessories=accessories, runtime=runtime, directory=directory,
                                        gender=gender, body_parts=body_parts, provenance=provenance,
-                                       cancelled=cancel, progress=progress)
+                                       character_features=features, cancelled=cancel, progress=progress)
         self.window.status_label.setText("상태: 옷 바꾸기 준비 중 · 약 30분 걸릴 수 있습니다.")
         self.launch(operation, self.outfit_edited)
 
@@ -978,14 +985,16 @@ def confirmation_provenance(analysis, saved_gender, saved_body_parts, body_parts
                 support=dict(status="measured", source="tags", warnings=support_warnings(scores, body_parts)))
 
 
-def confirm_outfit_edit(window, analysis, head_accessories, saved_gender=None, saved_body_parts=None):
+def confirm_outfit_edit(window, analysis, head_accessories, saved_gender=None, saved_body_parts=None, saved_features=None):
     """옷 바꾸기 시작 전 확인. 실행 환경은 작업실 기본 설정을 쓰므로 고르지 않는다.
     성별과 동물 귀·꼬리·날개는 저장된 값이 있으면 그대로 쓰고(표시만), 없으면 자동 분석 값을 미리 채워 한 번 고르게 한다.
-    시작하면 dict(gender=male/female/unspecified, body_parts=확인한 부위 튜플), 취소하면 None."""
+    캐릭터 특징표(머리 길이·모양·색, 눈 색, 머리 장식, 피부; D-120)도 같은 방식 — 저장값 또는 태그 값으로 미리 채운 글 상자를 사람이 고친다.
+    시작하면 dict(gender=..., body_parts=확인한 부위 튜플, features={항목: [값]}), 취소하면 None."""
     from genai_lab.qwen_outfit_edit import LIMITATIONS
+    from PySide6.QtWidgets import QPlainTextEdit
     dialog = QDialog(window)
     dialog.setWindowTitle("원본 그림에서 옷 바꾸기")
-    dialog.resize(640, 580)
+    dialog.resize(640, 760)
     layout = QVBoxLayout(dialog)
     row = QHBoxLayout()
     for name, label in (("character.png", "원래 캐릭터"), ("garment.png", "입힐 옷")):
@@ -1035,6 +1044,20 @@ def confirm_outfit_edit(window, analysis, head_accessories, saved_gender=None, s
     for box in part_boxes.values():
         box.toggled.connect(refresh_support)
     refresh_support()
+    guessed = tag_features(analysis.get("character_scores", {}))
+    features_label = QLabel("이 캐릭터의 특징(" + ("저장된 값입니다. 다르면 고쳐 주세요." if saved_features
+                                           else "자동 분석으로 채웠습니다. 틀리면 고쳐 주세요. 한 번 확정하면 다음부터 미리 채웁니다.") + ")")
+    features_label.setWordWrap(True)
+    layout.addWidget(features_label)
+    features_edit = QPlainTextEdit()
+    features_edit.setObjectName("outfit_edit_features")
+    features_edit.setPlainText(features_text({k: dict(values=v) for k, v in saved_features.items()} if saved_features else guessed))
+    features_edit.setFixedHeight(130)
+    layout.addWidget(features_edit)
+    features_note = QLabel(weak_note(guessed))
+    features_note.setObjectName("outfit_edit_features_note")
+    features_note.setWordWrap(True)
+    layout.addWidget(features_note)
     confirm = QCheckBox("캐릭터와 옷을 확인했고, 약 30분 걸리는 것을 이해했습니다.")
     confirm.setObjectName("outfit_edit_confirm")
     layout.addWidget(confirm)
@@ -1043,10 +1066,18 @@ def confirm_outfit_edit(window, analysis, head_accessories, saved_gender=None, s
     hint = QLabel()
     hint.setWordWrap(True)
     hint.setObjectName("outfit_edit_hint")
+    parsed = {}
     def refresh():
-        hint.setText("준비됐습니다. 시작하면 약 30분 걸립니다." if confirm.isChecked() else "확인 체크를 해 주세요.")
-        run.setEnabled(confirm.isChecked())
+        try:
+            parsed["features"] = parse_features_text(features_edit.toPlainText())
+            problem = ""
+        except ValueError as error:
+            parsed.pop("features", None)
+            problem = "특징표: " + str(error)
+        hint.setText(problem or ("준비됐습니다. 시작하면 약 30분 걸립니다." if confirm.isChecked() else "확인 체크를 해 주세요."))
+        run.setEnabled(confirm.isChecked() and not problem)
     confirm.toggled.connect(refresh)
+    features_edit.textChanged.connect(refresh)
     refresh()
     run.clicked.connect(dialog.accept)
     back.clicked.connect(dialog.reject)
@@ -1055,8 +1086,12 @@ def confirm_outfit_edit(window, analysis, head_accessories, saved_gender=None, s
     layout.addWidget(back)
     if dialog.exec() != QDialog.DialogCode.Accepted:
         return None
+    refresh()
+    if "features" not in parsed:
+        return None
     return dict(gender=gender_combo.currentData(),
-                body_parts=tuple(value for value, box in part_boxes.items() if box.isChecked()))
+                body_parts=tuple(value for value, box in part_boxes.items() if box.isChecked()),
+                features=parsed["features"])
 
 
 def confirm_result(window, candidate, analysis):

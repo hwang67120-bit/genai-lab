@@ -11,6 +11,7 @@ import time
 import numpy as np
 from PIL import Image
 
+from genai_lab.character_features import extract_features, write_features
 from genai_lab.garment_reference import prepare_garment_reference
 from genai_lab.outfit_edit import (EDIT_INTENT, HEAD_ACCESSORIES, HEAD_KEEP, SIZE, canvas, fit_white, hair_shape,
                                    head_composite, head_protect, head_window, input_facts, limb_check, original_background,
@@ -160,10 +161,13 @@ def compose(canvas_path, parts_path, raw_path, head_accessories, directory, limb
 
 def run_outfit_pipeline(character_path, garment_path, *, settings, head_accessories, runtime, directory,
                         garment_terms=(), remove_props=True, gender="unspecified", body_parts=None, provenance=None,
-                        clean_garment=True, cancelled=lambda: False, progress=lambda _: None, popen=subprocess.Popen):
+                        clean_garment=True, character_features=None, character_scores=None,
+                        cancelled=lambda: False, progress=lambda _: None, popen=subprocess.Popen):
     """GUI·확인 스크립트 공통 진입점. 반환값은 compose()의 결과에 실행 폴더를 더한 것이다.
     provenance는 성별·부위 값이 어디서 왔는지(사용자 확인·저장값·명령 인자·기본값)의 기록이며 실행에는 영향을 주지 않는다(D-112).
-    clean_garment: 옷 참조의 배경·머리를 공통 규칙으로 뺀 정리본을 쓴다(D-117). 아무것도 적용되지 않으면 원래 파일 그대로."""
+    clean_garment: 옷 참조의 배경·머리를 공통 규칙으로 뺀 정리본을 쓴다(D-117). 아무것도 적용되지 않으면 원래 파일 그대로.
+    character_features: 확인 창에서 사람이 확정한 특징표 태그 항목({항목: [값]}), character_scores: 확정값이 없을 때 쓸 태그 점수.
+    둘 다 없으면 태그 항목은 unknown이고 픽셀 항목(머리색·눈 색·피부색)만 잰다(D-120)."""
     from genai_lab.qwen_outfit_edit import (OutfitEditWorkflow, make_outfit_request, prepare_outfit_spec,
                                             run_outfit_edit)
     directory = Path(directory)
@@ -177,12 +181,15 @@ def run_outfit_pipeline(character_path, garment_path, *, settings, head_accessor
         garment_report = dict(status="disabled", changed=False, source=str(garment_path), path=str(garment_path))
     progress("상태: 얼굴·머리 영역 분석 중")
     segmented = segment_canvas(prepared, directory / "parts", runtime, cancelled=cancelled, popen=popen)
+    features = character_sheet(prepared["canvas"], segmented["parts"], directory / "character-features", gender, body_parts,
+                               provenance, character_features, character_scores)
     spec = prepare_outfit_spec(prepared["canvas"], garment_path, head_accessories=head_accessories, confirmed=True,
                                directory=directory / "qwen-inputs", garment_terms=garment_terms,
                                remove_props=remove_props, gender=gender, body_parts=body_parts)
     assembled = outfit_conditions(head_accessories, spec.garment_terms, remove_props, gender, body_parts)
     facts = input_facts(gender, body_parts, provenance)
     facts["garment_reference"] = garment_report          # 옷 입력에 무엇을 했는지(입력 근거, D-117)
+    facts["character_features"] = features                # 기준 캐릭터 특징표(입력 근거, D-120)
     write_json(directory / "qwen-inputs" / "conditions.json", dict(intent=EDIT_INTENT, input_facts=facts, **assembled))
     from genai_lab.qwen_outfit_edit import OUTFIT_SEEDS
     attempts = []
@@ -210,7 +217,24 @@ def run_outfit_pipeline(character_path, garment_path, *, settings, head_accessor
     trace = write_trace(directory, facts, assembled, attempts, outcome)
     return dict(outcome, directory=str(directory), source=prepared["source"], source_sha256=prepared["source_sha256"],
                 conditions=str(directory / "qwen-inputs" / "conditions.json"), trace=str(trace),
-                support=facts["support"], garment_reference=garment_report)
+                support=facts["support"], garment_reference=garment_report,
+                character_features=str(directory / "character-features" / "features.json"))
+
+
+def character_sheet(canvas_path, parts_path, directory, gender, body_parts, provenance, confirmed, scores):
+    """분할 결과와 태그로 특징표를 뽑아 실행 폴더에 쓴다(D-120). 분할 파일을 읽지 못하면 unavailable로 남기고 편집은 막지 않는다."""
+    sources = dict(gender=(provenance or {}).get("gender", {}).get("source", "user") if isinstance((provenance or {}).get("gender"), dict) else "user",
+                   body_parts=(provenance or {}).get("body_parts", {}).get("source", "user") if isinstance((provenance or {}).get("body_parts"), dict) else "user")
+    try:
+        with Image.open(canvas_path) as image:
+            rgb = np.asarray(image.convert("RGB"))
+        parts = {k: v.astype(bool) for k, v in np.load(parts_path).items()}
+    except (OSError, ValueError) as error:
+        features = dict(schema="character_features/1", status="unavailable", error=str(error)[:200], items={}, unknown=[])
+    else:
+        features = extract_features(rgb, parts, scores or {}, gender=gender, body_parts=body_parts, provenance=sources, confirmed=confirmed)
+    write_features(directory, features)
+    return features
 
 
 def write_trace(directory, facts, assembled, attempts, outcome):

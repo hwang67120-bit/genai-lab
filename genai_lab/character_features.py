@@ -36,6 +36,60 @@ HEAD_ACCESSORY_TAGS = ("hair_ornament", "hairclip", "hair_ribbon", "hair_bow", "
                        "eyepatch", "goggles", "headgear", "helmet", "flower")
 SKIN_TAGS = ("dark_skin", "very_dark_skin", "pale_skin", "tan", "colored_skin", "blue_skin", "grey_skin", "green_skin")
 BODY_PARTS = ("ears", "tail", "wings")
+TAG_GROUPS = {"hair_length": HAIR_LENGTH_TAGS, "hair_style": HAIR_STYLE_TAGS, "hair_color": HAIR_COLOR_TAGS,
+              "eye_color": EYE_COLOR_TAGS, "head_accessories": HEAD_ACCESSORY_TAGS, "skin": SKIN_TAGS}
+TAG_ITEMS = tuple(TAG_GROUPS)
+LABELS = {"hair_length": "머리 길이", "hair_style": "머리 모양", "hair_color": "머리색", "eye_color": "눈 색",
+          "head_accessories": "머리 장식", "skin": "피부"}
+
+
+def tag_features(scores):
+    """확인 창 미리 채움용: 태그만으로 뽑은 항목(값 목록 + 약한 후보). 분할이 없는 시점(시작 전)에 쓴다."""
+    items = {}
+    for key, names in TAG_GROUPS.items():
+        strong = [n for n, _ in tag_values(scores, names)]
+        if key == "hair_length":
+            strong = strong[:1]
+        items[key] = dict(values=strong, weak=[n for n, _ in weak_values(scores, names)])
+    return items
+
+
+def features_text(items):
+    """사람이 고치는 글 상자 내용: 한 줄에 한 항목, '라벨: 값, 값'. 값이 없으면 '없음'."""
+    lines = []
+    for key in TAG_ITEMS:
+        values = (items.get(key) or {}).get("values") or []
+        lines.append(f"{LABELS[key]}: {', '.join(values) if values else '없음'}")
+    return "\n".join(lines)
+
+
+def parse_features_text(text):
+    """글 상자 → {항목: [값]}. 모르는 라벨이나 빠진 항목은 오류. '없음'·빈 값은 [] (사용자가 없다고 확정한 것)."""
+    by_label = {v: k for k, v in LABELS.items()}
+    items = {}
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        if ":" not in line:
+            raise ValueError(f"'라벨: 값' 형식이 아닙니다: {line}")
+        label, _, rest = line.partition(":")
+        key = by_label.get(label.strip())
+        if key is None:
+            raise ValueError(f"모르는 항목입니다: {label.strip()}")
+        values = [v.strip().replace(" ", "_") for v in rest.replace("，", ",").split(",")]
+        values = [v for v in values if v and v not in ("없음", "none", "-")]
+        items[key] = values
+    missing = [LABELS[k] for k in TAG_ITEMS if k not in items]
+    if missing:
+        raise ValueError("빠진 항목: " + ", ".join(missing))
+    return items
+
+
+def weak_note(items):
+    """확실하지 않은 후보를 한 줄로(없으면 빈 문자열)."""
+    parts = [f"{LABELS[k]} {', '.join(v['weak'])}" for k, v in items.items() if v.get("weak")]
+    return ("확실하지 않은 후보(맞으면 위에 적어 주세요): " + " · ".join(parts)) if parts else ""
 
 
 def tag_values(scores, names, threshold=TAG_THRESHOLD):
@@ -107,8 +161,9 @@ def _item(state, source, **values):
     return dict(state=state, source=source, confirmed=False, **values)
 
 
-def extract_features(image, parts, scores, *, gender="unknown", body_parts=None, provenance=None):
-    """특징표. image: RGB uint8, parts: {이름: bool 마스크}, scores: 태그 점수. gender·body_parts는 이미 확정된 값(없으면 unknown)."""
+def extract_features(image, parts, scores, *, gender="unknown", body_parts=None, provenance=None, confirmed=None):
+    """특징표. image: RGB uint8, parts: {이름: bool 마스크}, scores: 태그 점수. gender·body_parts는 이미 확정된 값(없으면 unknown).
+    confirmed: 확인 창에서 사람이 확정한 태그 항목({항목: [값]}) — 있으면 태그 측정값 대신 그 값을 쓴다(출처 user, confirmed True)."""
     provenance = provenance or {}
     items = {}
     weak = {name: weak_values(scores, names) for name, names in
@@ -138,6 +193,17 @@ def extract_features(image, parts, scores, *, gender="unknown", body_parts=None,
         items[key]["weak"] = candidates
         if items[key]["state"] == "unknown" and candidates:
             items[key]["state"] = "weak"
+    for key, values in (confirmed or {}).items():  # 사람이 확정한 값이 태그 측정값을 대신한다(픽셀 측정은 그대로 둔다)
+        if key not in items:
+            continue
+        item = items[key]
+        if key == "hair_length":
+            item.update(value=values[0] if values else None, candidates=[])
+        elif key in ("hair_color", "eye_color", "skin"):
+            item["tags"] = list(values)
+        else:
+            item.update(values=list(values), scores={})
+        item.update(state="measured", source="user", confirmed=True, weak=[])
     if body_parts is None:
         items["body_parts"] = _item("unknown", "user", values=None)
     else:

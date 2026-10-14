@@ -12,6 +12,7 @@ import numpy as np
 from PIL import Image
 
 from genai_lab.character_features import extract_features, write_features
+from genai_lab.character_verification import verify_result
 from genai_lab.garment_reference import prepare_garment_reference
 from genai_lab.outfit_edit import (EDIT_INTENT, HEAD_ACCESSORIES, HEAD_KEEP, SIZE, canvas, fit_white, hair_shape,
                                    head_composite, head_protect, head_window, input_facts, limb_check, original_background,
@@ -207,13 +208,17 @@ def run_outfit_pipeline(character_path, garment_path, *, settings, head_accessor
         progress("상태: 원본 머리 맞추는 중" + label)
         outcome = compose(prepared["canvas"], segmented["parts"], raw, head_accessories, directory / f"compose{suffix}",
                           limbs=limbs)
+        progress("상태: 캐릭터 특징 확인 중" + label)
+        verification = verify_attempt(features, outcome, raw, segmented["parts"], directory / f"character-features{suffix}", runtime)
         attempts.append(dict(seed=seed, composited=outcome["composited"], reason=outcome.get("reason"),
                              directory=str(directory / f"compose{suffix}"), raw=str(raw),
                              checks=dict(limbs=limbs, alignment=outcome.get("alignment", {}).get("decision"),
-                                         hair_shape=outcome.get("hair_shape"))))
+                                         hair_shape=outcome.get("hair_shape"),
+                                         character_features=verification.get("summary"))))
         if outcome["composited"]:
             break
     outcome["attempts"] = attempts
+    outcome["character_verification"] = verification
     trace = write_trace(directory, facts, assembled, attempts, outcome)
     return dict(outcome, directory=str(directory), source=prepared["source"], source_sha256=prepared["source_sha256"],
                 conditions=str(directory / "qwen-inputs" / "conditions.json"), trace=str(trace),
@@ -237,6 +242,27 @@ def character_sheet(canvas_path, parts_path, directory, gender, body_parts, prov
     return features
 
 
+def verify_attempt(features, outcome, raw, parts_path, directory, runtime):
+    """시도 하나의 결과에서 기준 특징표 유지 여부(D-121). Qwen 결과를 원본 좌표로 되돌린 그림(aligned.png)이 있으면 그것,
+    없으면 raw를 캔버스 크기로. 실패해도 편집은 막지 않는다(unmeasured)."""
+    directory = Path(directory)
+    directory.mkdir(parents=True, exist_ok=True)
+    try:
+        aligned = Path(outcome.get("directory", "")) / "aligned.png" if outcome.get("directory") else None
+        image_path = aligned if aligned and aligned.exists() else Path(raw)
+        if image_path == Path(raw):
+            with Image.open(raw) as source:
+                resized = directory / "result-canvas.png"
+                source.convert("RGB").resize(SIZE, Image.LANCZOS).save(resized)
+            image_path = resized
+        report = verify_result(features, image_path, parts_path, runtime)
+        report["result_image"] = str(image_path)
+    except Exception as error:                       # 검증은 보조 정보: 실패는 기록만
+        report = dict(schema="character_verification/1", status="unmeasured", reason=str(error)[:200], items={}, summary={})
+    write_json(directory / "verification.json", report)
+    return report
+
+
 def write_trace(directory, facts, assembled, attempts, outcome):
     """입력 근거 → 편집 의도 → 전달 조건 → 출력 관찰 → 판정을 한 기록으로 잇는다(D-112).
     출력 관찰 중 자동 검사(팔·머리 위치·머리 형태)만 확정이고, 귀·꼬리·날개·의상 잔존은 자동 검출이 없어 사람 확인 항목으로 남긴다.
@@ -246,9 +272,10 @@ def write_trace(directory, facts, assembled, attempts, outcome):
                  conditions=assembled["conditions"], excluded=assembled["excluded"],
                  prompt_sha256=hashlib.sha256(prompt.encode("utf-8")).hexdigest(), attempts=attempts,
                  output_observation=dict(
-                     automatic=["limbs", "alignment", "hair_shape"],
-                     manual=["body_parts(귀·꼬리·날개 유무·개수)", "original_garment_remaining(기존 의상 잔존)", "pose"],
-                     note="manual 항목은 자동 검출이 없다. 사용자 승인(appendages·garment 확인) 또는 검토 보고서가 판단 주체다."),
+                     automatic=["limbs", "alignment", "hair_shape", "character_features(특징표 유지: kept/changed/missing/added/unknown)"],
+                     manual=["body_parts(귀·꼬리·날개 개수·모양)", "original_garment_remaining(기존 의상 잔존)", "pose", "same_character(최종)"],
+                     character_verification=outcome.get("character_verification"),
+                     note="manual 항목은 자동 검출이 없거나 자동 결과가 근거일 뿐이다. 사용자 승인(appendages·garment 확인) 또는 검토 보고서가 판단 주체다."),
                  judgement=dict(automatic="composited" if outcome["composited"] else outcome.get("reason"),
                                 composited=bool(outcome["composited"]),
                                 certainty="자동 검사 결과는 확정. 생성 원인은 미확정(관찰 근거로 가설만)."))

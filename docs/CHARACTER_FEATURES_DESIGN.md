@@ -57,6 +57,6 @@
 
 ## 8. 다음 순서(2026-10-14 승인)
 1. CPU 추출기 `character_features.py` — **완료(D-119·D-120)**: 추출·파일 저장·실행 스크립트, 확인 창 미리 채움(글 상자)·캐릭터별 저장·실행 기록(`character-features/features.json`, trace).
-2. 결과 검증기(같은 추출을 결과에 적용, 항목별 비교) + trace·judgement 연결.
-3. 평가 세트로 추출 일관성·구별력 측정(CPU).
+2. 결과 검증기 — **완료(D-121)**: `character_verification.py`, 시도마다 verification.json·trace 기록, `scripts/verify_character_features.py`로 저장 실행 대조. 한계: 부위 개수·모양은 태그로 못 봄(사람 판정 유지), 픽셀 비교는 원본 마스크 기준이라 같은 구도에서만.
+3. 평가 세트로 추출 일관성·구별력 측정(CPU) — 같은 캐릭터 다른 의상·자세 그림 필요(사용자 제공 대기). 결과 쪽 분할(꼬리 개수 등)은 이때 함께 설계.
 4. 자유 생성 계약 갱신 때 조건 연결(GPU 시험은 그때 설계).

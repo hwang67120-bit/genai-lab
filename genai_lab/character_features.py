@@ -110,6 +110,15 @@ def to_lab(rgb):
     return lab
 
 
+def hair_mask_without_background(image, hair):
+    """분할기가 머리카락에 넣은 원본 배경(그림 테두리 색, D-115와 같은 규칙)을 뺀 머리 마스크."""
+    from genai_lab.outfit_edit import original_background
+    try:
+        return hair & ~original_background(np.ascontiguousarray(image))
+    except Exception:
+        return hair
+
+
 def dominant_colors(image, mask, k=3):
     """마스크 안 픽셀의 Lab k-means 군집(비율 내림차순). 픽셀이 적으면 []."""
     import cv2
@@ -177,7 +186,7 @@ def extract_features(image, parts, scores, *, gender="unknown", body_parts=None,
     style = tag_values(scores, HAIR_STYLE_TAGS)
     items["hair_style"] = _item(state(style), "tags", values=[n for n, _ in style], scores=dict(style))
     hair_tags = tag_values(scores, HAIR_COLOR_TAGS)
-    hair_colors = dominant_colors(image, parts["hair"]) if "hair" in parts else []
+    hair_colors = dominant_colors(image, hair_mask_without_background(image, parts["hair"])) if "hair" in parts else []
     items["hair_color"] = _item(state(hair_tags, hair_colors), "tags+pixels", tags=[n for n, _ in hair_tags], colors=hair_colors)
     eye_tags = tag_values(scores, EYE_COLOR_TAGS)
     eye = eye_color(image, parts["eyes"]) if "eyes" in parts else None

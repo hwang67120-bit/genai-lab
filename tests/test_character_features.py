@@ -99,3 +99,14 @@ def test_tag_features_text_round_trip_and_confirmed_values_override_tags():
     assert it["head_accessories"]["values"] == ["headphones", "black_ribbon"] and it["hair_color"]["tags"] == ["aqua_hair"]
     assert it["hair_color"]["colors"]                                       # 픽셀 측정은 그대로
     assert it["skin"]["tags"] == [] and it["skin"]["confirmed"] is True     # '없음'으로 확정
+
+
+def test_hair_colour_ignores_original_background_mixed_into_the_hair_mask():
+    # N4 사례(D-115): 회색 배경 그림에서 분할기가 배경을 머리카락에 넣으면 머리색이 배경색으로 치우친다
+    image, parts = scene()
+    image[(image == 255).all(2)] = (200, 205, 215)                            # 흰 배경 → 회색 배경
+    image[:8], image[-8:], image[:, :8], image[:, -8:] = 255, 255, 255, 255   # 캔버스 흰 여백(실제 입력과 같은 구조)
+    leaky = parts["hair"].copy(); leaky[8:18, 8:-8] = True; leaky[70:110, 8:30] = True   # 배경을 머리 마스크에 섞음
+    colors = cf.dominant_colors(image, cf.hair_mask_without_background(image, leaky))
+    r, g, b = colors[0]["rgb"]
+    assert colors[0]["fraction"] > 0.9 and r < 100 and g > 170               # 청록이 주색, 회색 배경은 제외

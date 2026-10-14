@@ -170,6 +170,11 @@ def test_pipeline_retries_once_with_second_seed_when_checks_fail(tmp_path, monke
                     report=dict(changed=True, background=dict(status="applied"), head=dict(status="applied", line=100),
                                 trim=dict(status="applied"), source=str(garment_path), path=str(Path(directory) / "garment-clean.png")))
     monkeypatch.setattr(pipeline, "prepare_garment_reference", fake_reference)
+    verified = []
+    def fake_verify(reference, image_path, parts_path, runtime):
+        verified.append(Path(image_path).name)
+        return dict(schema="character_verification/1", status="measured", items={}, summary=dict(kept=["hair_color"], changed=[], missing=[], added=[], unknown=[]))
+    monkeypatch.setattr(pipeline, "verify_result", fake_verify)
     settings = qwen_outfit_edit.QwenPoseSettings(sys.executable, str(tmp_path), str(tmp_path / "m.gguf"), str(tmp_path / "m.json"), "a" * 64)
     outcome = pipeline.run_outfit_pipeline(character, garment, settings=settings, head_accessories="keep", runtime=None,
                                            directory=tmp_path / "run", gender="female", body_parts=(),
@@ -191,6 +196,11 @@ def test_pipeline_retries_once_with_second_seed_when_checks_fail(tmp_path, monke
     # D-120: 특징표가 실행 폴더와 입력 근거에 남는다(여기서는 확정 태그 없이 픽셀 항목만)
     sheet = json.loads(Path(outcome["character_features"]).read_text(encoding="utf-8"))
     assert sheet["schema"] == "character_features/1" and sheet["items"]["gender"]["value"] == "female"
+    # D-121: 시도마다 결과 검증이 돌고(aligned.png가 없으면 raw를 캔버스 크기로), 추적 기록의 출력 관찰에 남는다
+    assert verified == ["result-canvas.png", "result-canvas.png"]
+    assert trace["attempts"][1]["checks"]["character_features"]["kept"] == ["hair_color"]
+    assert trace["output_observation"]["character_verification"]["status"] == "measured"
+    assert (tmp_path / "run" / "character-features-2" / "verification.json").is_file()
     assert sheet["items"]["hair_color"]["colors"] and trace["input_facts"]["character_features"]["items"]["body_parts"]["values"] == []
     with Image.open(tmp_path / "run" / "qwen-inputs" / "garment.png") as used:
         assert used.size == (300, 400)                   # 정리본(300×400)이 쓰였다. 원래 옷은 300×500
@@ -210,10 +220,12 @@ def test_pipeline_does_not_retry_when_first_result_passes(tmp_path, monkeypatch)
     monkeypatch.setattr(pipeline, "compose", lambda *a, **k: dict(composited=True, alignment={}))
     settings = qwen_outfit_edit.QwenPoseSettings(sys.executable, str(tmp_path), str(tmp_path / "m.gguf"), str(tmp_path / "m.json"), "a" * 64)
     monkeypatch.setattr(pipeline, "prepare_garment_reference", lambda *a, **k: (_ for _ in ()).throw(AssertionError("꺼져 있어야 함")))
+    monkeypatch.setattr(pipeline, "verify_result", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("tagger down")))
     outcome = pipeline.run_outfit_pipeline(character, garment, settings=settings, head_accessories="keep", runtime=None,
                                            directory=tmp_path / "run", clean_garment=False)
     assert seeds == [42] and len(outcome["attempts"]) == 1
     assert outcome["garment_reference"] == dict(status="disabled", changed=False, source=str(garment), path=str(garment))
     sheet = json.loads(Path(outcome["character_features"]).read_text(encoding="utf-8"))
     assert sheet["status"] == "unavailable"                                   # 분할 파일 "p"가 없어도 편집은 막지 않는다
+    assert outcome["character_verification"]["status"] == "unmeasured"       # 검증 실패도 편집을 막지 않는다
     assert outcome["support"] == {"status": "unmeasured", "warnings": []}      # 경고를 재지 않은 실행은 "없음"이 아니라 "안 잼"

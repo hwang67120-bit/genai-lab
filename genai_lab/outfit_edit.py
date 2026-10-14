@@ -98,6 +98,25 @@ def near_identity(match):
             and abs(match["rotate_deg"]) <= RESIDUAL_ROTATE and max(map(abs, match["head_shift_px"])) <= RESIDUAL_SHIFT)
 
 
+def original_background(image, tolerance=8):
+    """캔버스 안 원본 그림의 배경: 그림 내용 상자 테두리 색(중앙값)과 거의 같고 그 테두리와 이어진 픽셀.
+    D-115(요청 17 N4): 회색 배경 위의 흰 머리에서 분할기가 배경을 머리카락으로 넣어, 붙일 때 Qwen 소매 위에 회색 배경이 덮였다.
+    흰 바탕 캔버스 여백은 원본 배경과 색이 달라 여기 포함되지 않는다."""
+    content = content_mask(image)
+    if not content.any():
+        return np.zeros(image.shape[:2], bool)
+    ys, xs = np.nonzero(content)
+    y0, y1, x0, x1 = ys.min(), ys.max(), xs.min(), xs.max()
+    box = np.zeros(image.shape[:2], bool)
+    box[y0:y1 + 1, x0:x1 + 1] = True
+    ring = box & ~cv2.erode(box.astype(np.uint8), np.ones((13, 13), np.uint8)).astype(bool)
+    colour = np.median(image[ring], axis=0)
+    near = (np.abs(image.astype(np.int16) - colour.astype(np.int16)).max(axis=2) <= tolerance) & box
+    _, labels = cv2.connectedComponents(near.astype(np.uint8), connectivity=4)
+    seeds = np.unique(labels[ring & near])
+    return np.isin(labels, seeds[seeds > 0]) & near
+
+
 def content_mask(image):
     """흰 바탕이 아닌 그림 내용. 점 잡음은 3×3 열림으로 지운다."""
     content = (np.abs(255 - image.astype(np.int16)).max(axis=2) > CONTENT_DIFF).astype(np.uint8)
@@ -189,12 +208,14 @@ def hair_shape(person, aligned, hair, face, pasted):
     if not hair.any() or not face.any():
         return dict(status="unmeasured", reason="머리 또는 얼굴 분할 없음"), np.zeros_like(pasted)
     qwen_hair = qwen_hair_mask(person, aligned, hair)
-    far = hair & (cv2.distanceTransform((~face).astype(np.uint8), cv2.DIST_L2, 5) > HAIR_FAR)
+    island = unattached(pasted, face)   # 원본 분할에서 얼굴과 안 이어진 조각(다리·꼬리가 머리카락으로 분할된 경우 등)
+    # D-115(요청 17 N2): 섬은 머리가 아니므로 지지율·떠 있는 비율 어디에도 넣지 않는다. 붙이지도 않는다(D-107).
+    far = hair & ~island & (cv2.distanceTransform((~face).astype(np.uint8), cv2.DIST_L2, 5) > HAIR_FAR)
     near_qwen = cv2.dilate(qwen_hair.astype(np.uint8), np.ones((7, 7), np.uint8)) > 0
     support = float((far & near_qwen).sum() / far.sum()) if far.any() else 1.0
     floating = unattached(pasted | qwen_hair, face) & pasted
-    detached = floating & unattached(pasted, face)
-    ratio = float(floating.sum() / max(1, pasted.sum()))
+    detached = floating & island
+    ratio = float((floating & ~island).sum() / max(1, pasted.sum()))
     ok = support >= MIN_HAIR_SUPPORT and ratio <= MAX_FLOATING_HAIR
     return dict(status="ok" if ok else "rejected", far_hair_px=int(far.sum()), support=round(support, 3),
                 floating=round(ratio, 3), detached_px=int(detached.sum())), detached

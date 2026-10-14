@@ -66,6 +66,25 @@ def test_compose_does_not_paste_hair_island_that_qwen_result_does_not_continue(t
     assert (result[150:230, 260:330] == image[150:230, 260:330]).all()  # 머리 본체는 원본 그대로
 
 
+def test_large_detached_island_is_dropped_not_rejected_and_original_background_is_not_pasted(tmp_path):
+    # 요청 17 N2: 다리·꼬리가 머리카락으로 분할된 섬(붙이지 않는 영역)이 거부 비율에 들어가 머리 합성이 거부됐다
+    # 요청 17 N4: 회색 배경 위의 흰 머리 — 분할기가 배경을 머리카락에 넣어 Qwen 소매 위에 회색이 덮였다
+    image, parts = scene()
+    raw = moved(image, 1.1, -60)
+    image[0:1024, 60:708][image[0:1024, 60:708].min(axis=2) == 255] = (218, 223, 229)   # 원본 그림의 회색 배경
+    image[520:900, 560:700] = (230, 150, 200)                                            # 큰 "머리카락" 섬(다리·꼬리)
+    parts["hair"][520:900, 560:700] = True
+    parts["hair"][100:140, 250:520] = True                                               # 머리 위 회색 배경 띠가 머리카락으로 분할됨
+    outcome = pipeline.compose(*save_case(tmp_path, image, parts, raw), "keep", tmp_path / "out")
+    assert outcome["composited"], outcome
+    shape = outcome["hair_shape"]
+    assert shape["detached_px"] == 380 * 140 and shape["floating"] < 0.2 and shape["background_px"] >= 40 * 270 * 0.9
+    result = np.asarray(Image.open(tmp_path / "out" / "result.png").convert("RGB"))
+    assert (result[520:900, 560:700] == 255).all()                       # 섬은 Qwen 결과(흰 배경) 그대로
+    assert not (result[100:140, 250:520] == (218, 223, 229)).all(axis=2).any()   # 원본 회색 배경은 붙지 않음
+    assert (result[150:230, 260:330] == image[150:230, 260:330]).all()  # 머리 본체는 원본 그대로
+
+
 def test_compose_refuses_unrelated_result_and_explains(tmp_path):
     image, parts = scene(1)
     other, _ = scene(2)

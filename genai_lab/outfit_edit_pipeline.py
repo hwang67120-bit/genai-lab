@@ -12,8 +12,8 @@ import numpy as np
 from PIL import Image
 
 from genai_lab.outfit_edit import (EDIT_INTENT, HEAD_ACCESSORIES, HEAD_KEEP, SIZE, canvas, fit_white, hair_shape,
-                                   head_composite, head_protect, head_window, input_facts, limb_check, outfit_conditions,
-                                   pad_image, realign, require, sha, write_json)
+                                   head_composite, head_protect, head_window, input_facts, limb_check, original_background,
+                                   outfit_conditions, pad_image, realign, require, sha, write_json)
 
 FACE_PARTS = ("face", "eyes", "nose", "mouth")
 SEGMENT_TIMEOUT = 600
@@ -143,7 +143,9 @@ def compose(canvas_path, parts_path, raw_path, head_accessories, directory, limb
         if shape["status"] != "ok":
             outcome.update(reason=REASONS["shape"])
         else:
-            result, core = head_composite(person_c, aligned, protect_c & ~detached)   # 떠 있는 섬은 붙이지 않는다(D-107)
+            background = original_background(person_c) & protect_c   # 머리로 분할된 원본 배경은 붙이지 않는다(D-115)
+            outcome["hair_shape"]["background_px"] = int(background.sum())
+            result, core = head_composite(person_c, aligned, protect_c & ~detached & ~background)   # 떠 있는 섬도 안 붙임(D-107)
             require(np.array_equal(result[core], person_c[core]), "원본 머리 픽셀이 바뀌었습니다.")
             Image.fromarray(aligned).save(directory / "aligned.png")
             Image.fromarray(result).save(directory / "result.png")

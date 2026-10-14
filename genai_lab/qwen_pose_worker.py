@@ -47,6 +47,9 @@ def validate_request(request):
     if kind == "outfit_edit":
         from genai_lab.qwen_outfit_edit import validate_outfit_request
         return validate_outfit_request(request)
+    if kind == "free_generation":          # D-123: 기준 이미지 + 머리 크롭, 편집과 같은 메모리 정책
+        from genai_lab.qwen_free_generation import validate_free_request
+        return validate_free_request(request)
     if kind != "pose_edit":
         raise ValueError("지원하지 않는 편집 종류")
     if request.get("schema_version") != 1 or request.get("images") != 2:
@@ -85,7 +88,7 @@ def generate(request, directory, record):
     if not torch.cuda.is_available():
         raise RuntimeError("Qwen CUDA 장치가 없습니다.")
     images, p1, te, pipe, tr = [], None, None, None, None
-    outfit = request.get("task_kind") == "outfit_edit"
+    outfit = request.get("task_kind") in ("outfit_edit", "free_generation")
     guard = None
     if outfit:  # D-094: 6.5GiB 할당 상한과 단계별 기록(시험 09~11 구성). 자세·꼬리 경로는 바꾸지 않는다.
         from genai_lab.outfit_edit import MemoryGuard
@@ -107,6 +110,7 @@ def generate(request, directory, record):
             raise WorkerCancelled("사용자 취소")
     try:
         reference = ((spec.crop_path, spec.crop_sha256) if request.get("task_kind") == "tail_edit"
+                     else (spec.reference_path, spec.reference_sha256) if request.get("task_kind") == "free_generation"
                      else (spec.garment_path, spec.garment_sha256) if outfit
                      else (request["skeleton_path"], request["skeleton_sha256"]))
         record["task_kind"] = request.get("task_kind", "pose_edit")

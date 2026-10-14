@@ -3146,13 +3146,13 @@ class GenAILabWindow(QMainWindow):
             self.workflow_context = None
             self.update_input_ready_status()
 
-    def can_start_registered_generation(self) -> bool:
+    def can_start_registered_generation(self, *, require_outfit=True) -> bool:
         if hasattr(self, "studio") and self.studio.occupied:
             return False
         """Registration permits starting; approvals happen inside the workflow."""
         if not self.style_path or self.pending_character_candidate is not None:
             return False
-        if CLOTHING_REFERENCE_GENERATION_MODE and self.selected_outfit_path is None:
+        if require_outfit and CLOTHING_REFERENCE_GENERATION_MODE and self.selected_outfit_path is None:
             return False
         if self.approval_dialog_open:
             return False
@@ -3181,6 +3181,8 @@ class GenAILabWindow(QMainWindow):
             + (() if CLOTHING_REFERENCE_GENERATION_MODE else (self.selected_pose_path is not None,))
         )
         ready = self.can_start_registered_generation()
+        if hasattr(self, "free_generation_button"):
+            self.free_generation_button.setEnabled(self.can_start_registered_generation(require_outfit=False))
         self.generate_button.setEnabled(ready)
         missing_required_outfit = (
             CLOTHING_REFERENCE_GENERATION_MODE

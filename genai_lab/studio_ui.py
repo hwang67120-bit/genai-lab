@@ -244,6 +244,9 @@ def build_studio(window, framing_options, clothing_mode):
     window.studio_method_combo.currentIndexChanged.connect(update_method)
     window.studio_proportion_checkbox.toggled.connect(update_method)
     update_method()
+    window.free_generation_button = _button("기준 이미지로 자유 생성", lambda: window.studio.start_free_generation(), enabled=False)
+    box.addWidget(window.free_generation_button)
+    box.addWidget(_label("선택한 캐릭터 이미지를 기준으로 의상을 유지하고 연출을 바꿉니다. 별도 옷 참조는 쓰지 않습니다.", "muted"))
     input_layout.addWidget(card)
 
     window.qwen_pose_button = _button("저장한 이미지 자세 바꾸기", window.open_qwen_pose_editor)

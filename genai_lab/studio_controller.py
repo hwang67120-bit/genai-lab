@@ -110,6 +110,58 @@ class StudioController(QObject):
             self.fail(error, traceback.format_exc())
             self.controls()
 
+    def start_free_generation(self):
+        from genai_lab.studio_free_generation import analyze_base
+        if self.occupied or not self.window.can_start_registered_generation(require_outfit=False):
+            return
+        try:
+            self.runtime = StudioRuntime.from_environment()
+            self.run_directory = self.output_root / uuid.uuid4().hex
+            self.run_directory.mkdir(parents=True)
+            source = Path(self.window.style_path)
+            self.launch(lambda cancel, progress: analyze_base(source, self.runtime), self.free_inputs_ready)
+        except Exception as error:
+            self.fail(error, traceback.format_exc())
+            self.controls()
+
+    def free_inputs_ready(self, analysis):
+        from genai_lab.studio_free_generation import confirm_free_inputs
+        from genai_lab.qwen_outfit_edit import load_qwen_settings
+        self.analysis = analysis
+        settings = load_qwen_settings(self.runtime.qwen_settings)
+        self.confirming = True
+        self.controls()
+        try:
+            decision = confirm_free_inputs(self.window, analysis)
+        finally:
+            self.confirming = False
+        if decision is None:
+            self.window.status_label.setText("상태: 자유 생성 입력 확인 취소 · 생성하지 않았습니다.")
+            self.controls()
+            return
+        source = Path(analysis["source"])
+        save_character_features(source, decision["character_features"])
+        save_character_gender(source, decision["gender"])
+        save_character_body_parts(source, decision["body_parts"])
+        def operation(cancel, progress):
+            from genai_lab.free_generation_pipeline import run_free_generation
+            return run_free_generation(source, settings=settings, runtime=self.runtime,
+                                       directory=self.run_directory / "free-generation", cancelled=cancel,
+                                       progress=progress, **decision)
+        self.launch(operation, self.free_generated)
+
+    def free_generated(self, outcome):
+        from genai_lab.free_generation_results import FreeGenerationResults
+        self.results = FreeGenerationResults(outcome)
+        combo = self.window.studio_candidate_combo
+        combo.blockSignals(True)
+        combo.clear()
+        combo.addItem("자유 생성 결과")
+        combo.blockSignals(False)
+        self.select(0)
+        self.window.status_label.setText("상태: 자유 생성 완료 · 사람 품질 검토 대기 · 머리 픽셀 합성 없음")
+        self.controls()
+
     # 2. 사용자 확인: 승인한 조건만 생성 요청으로 만들고, 완료 후 generated로 이어진다.
 
     def inputs_ready(self, analysis):
@@ -312,7 +364,11 @@ class StudioController(QObject):
             return
         candidate = (SimpleNamespace(path=self.results.current_path, edit_mode=True) if getattr(self.results, "edit_mode", False)
                      else replace(self.results.candidate, path=self.results.current_path))
-        checks = confirm_result(self.window, candidate, self.analysis)
+        if getattr(self.results, "free_mode", False):
+            from genai_lab.studio_free_generation import confirm_free_result
+            checks = confirm_free_result(self.window, self.results)
+        else:
+            checks = confirm_result(self.window, candidate, self.analysis)
         if checks is not None:
             try:
                 self.results.approve(checks)
@@ -620,6 +676,7 @@ class StudioController(QObject):
         edit_result = bool(getattr(self.results, "edit_mode", False))
         w.studio_shoulder_checkbox.setEnabled(not self.occupied and w.studio_proportion_checkbox.isChecked())
         w.generate_button.setEnabled(not self.occupied and bool(w.style_path and w.selected_outfit_path))
+        w.free_generation_button.setEnabled(not self.occupied and w.can_start_registered_generation(require_outfit=False))
         w.studio_cancel_button.setVisible(self.task is not None)
         w.studio_candidate_combo.setVisible(self.results is not None)
         w.studio_candidate_combo.setEnabled(not active)

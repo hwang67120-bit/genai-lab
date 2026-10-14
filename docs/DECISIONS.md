@@ -2,6 +2,13 @@
 
 > 이 문서는 과거 판단과 실험 근거를 보존하는 기록이다. 현재 제품 계약은 docs/FLOW.md만 따른다. 아래 결정이 FLOW.md와 충돌하면 과거 결정으로 취급하며 새 구현의 근거로 사용하지 않는다.
 
+## D-119 2단계 1번: 기준 캐릭터 특징표 CPU 추출기 (2026-10-14, 설계 승인 후)
+
+- 사용자: "설계 승인, CPU 추출기부터 진행해". `genai_lab/character_features.py` — 입력은 캔버스·부위 분할(`parts.npz`)·태그 점수·이미 확정된 성별·부위. 항목: 머리 길이·모양(태그), 머리색(태그 + 머리 마스크 Lab 군집 3개), 눈 색(태그 + 흰자·동공을 뺀 홍채 중앙값), 머리 장식(태그 + headwear/eyewear/earwear 마스크 크기), 피부색(태그 + 얼굴에서 눈·코·입을 뺀 밝은 픽셀 군집), 부위·성별(확정값만). 항목마다 state(measured/weak/unknown)·source·confirmed(지금은 모두 False).
+- 문턱(공통, 캐릭터별 조정 없음): 태그 0.5 = measured, 0.35~0.5 = weak(후보로만 기록, 조건에 안 씀). 근거: 10명 CPU 측정(`rules18-cpu/character-tag-tops.json`)에서 맞는 값(N2 ahoge 0.35, S07 white_hair 0.36, N4 very_long_hair 0.39)이 그 구간에 있었고, 틀린 값을 measured로 올리는 것보다 unknown/weak이 안전하다.
+- 10명 결과(`rules18-cpu/character-features-sheet.png`): 머리색 견본·이색 눈(N3·K)·뿔·메이드 머리띠 등 대체로 맞음. 약한 곳: 눈 픽셀 색은 마스크가 작아 회갈색으로 치우침(태그가 주, 픽셀은 보조), S07(눈 감김·흰 머리) 눈 unknown, 머리 모양 태그는 자주 weak.
+- 실행: `scripts/extract_character_features.py RUN_DIR... --sheet PATH`(CPU, 태거). 확정 저장(확인 창)·결과 검증·조건 연결은 다음 단계. 설계: [CHARACTER_FEATURES_DESIGN.md](CHARACTER_FEATURES_DESIGN.md).
+
 ## D-118 편집 단계 잠금 → 운영 전환, 2단계(특징 유지) 설계 시작 (2026-10-14, 사용자 결정 (가))
 
 - 사용자 문제 제기: "그림이 들어올 때마다 시험할 양이 늘고 반복 조정밖에 안 된다. 이대로면 최소 6개월". 저장된 작업실 실행에는 거부가 없고(스크린샷 캐릭터 2회 모두 합성), 병목은 머리 합성 규칙(CPU 몇 분 회귀)이 아니라 Qwen 옷 교체(장당 32분, 옷 그림·seed에 따라 흔들림)다. 그림을 더 시험해도 "안 본 그림의 성공"은 보장되지 않는다.

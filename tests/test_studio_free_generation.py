@@ -2,6 +2,7 @@
 import json
 import os
 from pathlib import Path
+from types import SimpleNamespace
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 import pytest
 from PySide6.QtWidgets import QApplication, QFileDialog, QDialog, QCheckBox, QPlainTextEdit, QPushButton
@@ -109,3 +110,21 @@ def test_input_confirmation_rechecks_staging_and_adult_checkbox(tmp_path, fake_m
     result=free_ui.confirm_free_inputs(None,dict(source=str(base),character_scores={}))
     assert seen==dict(allowed=True,blocked=True)
     assert result["adult_confirmed"] and result["request_text"]=="눈 내리는 거리"
+
+
+def test_missing_qwen_settings_are_reported_instead_of_stopping(tmp_path, fake_models, monkeypatch):
+    # 검토 6번: 설정 파일 문제는 편집 경로와 같이 작업실 오류 안내로 보인다
+    app = QApplication.instance() or QApplication([])
+    base,_ = fake_models
+    window = GenAILabWindow()
+    patch_preferences(monkeypatch)
+    window.studio.output_root = tmp_path/"studio"
+    window.studio.runtime = SimpleNamespace(qwen_settings=tmp_path/"missing.json")
+    failures = []
+    monkeypatch.setattr(window.studio, "fail", lambda error, detail: failures.append(str(error)))
+    monkeypatch.setattr(free_ui, "confirm_free_inputs", lambda *a: pytest.fail("설정이 없으면 확인 창을 띄우지 않는다"))
+    try:
+        window.studio.free_inputs_ready(dict(source=str(base), character_scores={}, groups=dict(fixed=[], appearance=[], body=[])))
+        assert failures and "설정 파일" in failures[0]
+    finally:
+        window.close()

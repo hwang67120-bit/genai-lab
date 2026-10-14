@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 from genai_lab.outfit_edit import sha, write_json
 from genai_lab.outfit_edit_results import OutfitEditResults
+from genai_lab.outfit_judgement import validate_judgement
 
 
 class FreeGenerationResults(OutfitEditResults):
@@ -33,8 +34,10 @@ class FreeGenerationResults(OutfitEditResults):
                                quality_pass=True), "gui_approval")
 
     def record_human(self, values, source):
-        target = dict(image=str(self.current_path), sha256=self.verify_current(), attempt=len(self.outcome["attempts"]))
-        entry = dict(judge="user", source=source, target=target, **values)
+        target = dict(image=str(self.current_path), sha256=self.verify_current(),
+                      attempt=self.outcome.get("selected_attempt", len(self.outcome["attempts"])))
+        # 편집 단계와 같은 판정 형식(D-114: 항목 검증·recorded_at)으로 남겨 운영 집계(D-118)에 들어가게 한다(검토 4번)
+        entry = validate_judgement(dict(judge="user", source=source, target=target, mode="free_generation", **values))
         path = self.directory / "judgement.json"
         previous = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
         previous.append(entry)
@@ -53,8 +56,8 @@ class FreeGenerationResults(OutfitEditResults):
         self.status = "rejected_by_user"
         self.approved_sha = None
         self.persist()
-        self.record_human(dict(quality_pass=False, same_character="not_reviewed", outfit="not_reviewed",
-                              request_followed="not_reviewed", severe_defect="not_reviewed"), "gui_reject")
+        self.record_human(dict(quality_pass=False, same_character="not_judged", outfit="not_judged",
+                              request_followed="not_judged", severe_defect="not_judged"), "gui_reject")
         return 0
 
     def export(self, destination):

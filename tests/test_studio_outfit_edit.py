@@ -279,7 +279,7 @@ def test_character_features_are_prefilled_from_tags_or_saved_and_bad_text_blocks
         return QDialog.DialogCode.Accepted
     monkeypatch.setattr(QDialog, "exec", accept)
     result = ui.confirm_outfit_edit(None, analysis, "keep")
-    assert "머리 길이: long_hair" in seen["text"] and "머리 모양: twintails" in seen["text"] and "피부: 없음" in seen["text"]
+    assert "머리 길이: long_hair" in seen["text"] and "머리 모양: twintails" in seen["text"] and "피부: 모름" in seen["text"]   # 태그가 못 찾은 항목은 '모름'(검토 5번)
     assert "ahoge" in seen["note"]                                          # 약한 후보는 안내문에만
     assert result["features"]["head_accessories"] == ["headphones", "black_ribbon"] and result["features"]["eye_color"] == ["blue_eyes"]
     saved = dict(hair_length=["short_hair"], hair_style=[], hair_color=["black_hair"], eye_color=["red_eyes"], head_accessories=[], skin=[])

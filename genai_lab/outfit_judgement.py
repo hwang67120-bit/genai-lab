@@ -16,6 +16,7 @@ ITEMS = {
     "original_garment_remaining": ("none", "some", "not_judged"),         # 기존 의상 잔존(완성 기준: 남으면 실패)
     "pose": ("kept", "changed", "not_judged"),
     "severe_defect": ("none", "present", "not_judged"),                   # 얼굴 소실·중복, 일그러짐, 잘못된 팔다리, 잘림
+    "request_followed": ("yes", "partial", "no", "not_judged"),           # 자유 생성(D-123): 요청·선택된 연출 반영
 }
 
 

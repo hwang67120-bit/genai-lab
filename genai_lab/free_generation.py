@@ -20,14 +20,27 @@ POSES = (                              # 코드 고정 목록. seed로 하나를
 )
 # 명백한 변경 지시만 차단한다. 단어 출현은 의미 판정이 아니다.
 # 이 검사에 걸리지 않았다는 사실도 허용 의미를 증명하지 않는다(사람이 연출 범위를 확인).
-APPEARANCE_TARGET = r"(?:hair(?:style| color)?|eye color|skin(?: color)?|tail|ears|wings|horns?|outfit|clothes|clothing|dress|shirt|skirt|pants|jacket|coat|gender|머리카락|머리색|머리 모양|눈 색|눈색|눈동자|피부|꼬리|귀|날개|뿔|옷|의상|치마|바지|성별)"
-CHANGE = r"(?:change|replace|remove|add|recolor|dye|shorten|lengthen|바꾸|바꿔|변경|제거|없애|추가|염색|잘라|짧게|길게|입혀|갈아입)"
+ACCESSORY = r"(?:hat|cap|beret|glasses|sunglasses|crown|tiara|ribbon|headband|hairband|hair ornament|earrings|mask|모자|안경|선글라스|왕관|티아라|리본|머리띠|귀걸이|가면)"
+APPEARANCE_TARGET = r"(?:hair(?:style| color)?|eye color|skin(?: color)?|tail|ears|wings|horns?|outfit|clothes|clothing|dress|shirt|skirt|pants|jacket|coat|gender|" + ACCESSORY[3:-1] + r"|머리카락|머리색|머리 모양|눈 색|눈색|눈동자|피부|꼬리|귀|날개|뿔|옷|의상|치마|바지|성별)"
+# 연출 대상(자세·각도·배경 등)을 바꾸는 change는 외형 변경이 아니다(검토 3번 오거부).
+STAGING_OBJECT = r"(?:\s+(?:the|her|his|their|its)?\s*(?:pose|posture|angle|view|camera|composition|background|scene|position|expression|lighting|framing|direction))"
+CHANGE = (r"(?:\b(?:change|replace|remove|add|recolor|dye|shorten|lengthen)\b(?!" + STAGING_OBJECT + r")"
+          r"|바꾸|바꿔|변경|제거|없애|추가|염색|입혀|갈아입)")
+# 길게·짧게·잘라는 풍경 묘사("노을이 길게 드리운")에도 쓰이므로 외형 대상 바로 뒤에 붙을 때만 변경으로 본다.
+ATTACHED_LENGTH = r"(?:머리카락|머리|꼬리|귀|날개|뿔)[을를이가은는도]?\s{0,2}(?:더\s*)?(?:길게|짧게|잘라)"
 SAFETY_PATTERNS = (
     r"\b(?:nude|naked|topless|undress|nsfw|erotic|genitals|nipples|loli|shota|childlike|toddler)\b",
     r"(?:알몸|누드|벗겨|벗은|노출시키|야한|어린이처럼|아동처럼|아동 외형|어린 외형|미성년)",
     r"\b(?:make|turn|change).{0,25}\b(?:child|kid|baby|young girl|young boy)\b",
 )
 BACKGROUND_PATTERN = r"\b(?:background|scene|room|street|city|forest|beach|sky|night|indoor|outdoor|park|cafe|office|sunset|rain|snow)\b|(?:배경|거리|도시|숲|해변|하늘|실내|야외|공원|카페|노을|눈(?:이)?\s*내리|비(?:가)?\s*내리)"
+# 결과·기준 그림의 자동 차단 태그(태거 어휘에 실제로 있는 이름만, 검토 2번). 노출은 성인 캐릭터에도 차단한다.
+EXPOSURE_TAGS = ("nude", "completely_nude", "topless", "bottomless", "nipples", "nipple_slip", "breasts_out", "pussy", "penis",
+                 "anus", "pubic_hair", "sex", "cum", "pussy_juice")
+AGE_BLOCK_TAGS = ("loli", "shota")
+# 나이 관련 태그는 차단하지 않고 근거로만 남긴다. SD·4등신 같은 그림체가 있어(사용자 결정 2026-10-14) child·chibi만으로 막지 않는다.
+AGE_REVIEW_TAGS = ("child", "aged_down", "chibi")
+SAFETY_THRESHOLD = 0.5
 NO_PROPS = "Do not add weapons or held props unless the request asks for them. "
 KEEP_OUTFIT = "Keep the character's outfit exactly as in image 1: the same garments, colors, patterns and details. "
 KEEP_FACE = "Keep the face, hairstyle, hair color and head accessories the same as in image 1 and as in the head close-up in image 2. "
@@ -47,12 +60,22 @@ def check_request(text):
                 r"\b(?:two|three|multiple)\s+(?:people|characters|persons)\b|(?:두|세)\s*(?:명|사람|캐릭터)",
                 CHANGE + r"[^.;!?\n]{0,35}" + APPEARANCE_TARGET,
                 APPEARANCE_TARGET + r"[^.;!?\n]{0,35}" + CHANGE,
+                ATTACHED_LENGTH,
+                r"\b(?:give|put|wear|wearing|put on)\b[^.;!?\n]{0,25}\b" + ACCESSORY + r"\b",
                 r"\b(?:wear|wearing|put on)\b[^.;!?\n]{0,25}\b(?:dress|shirt|skirt|pants|jacket|coat|uniform|costume)\b",
                 r"(?:옷|의상|치마|바지|수영복|속옷)[^.;!?\n]{0,20}(?:입고|입은|입기)")
     matches = [m.group(0) for pattern in patterns for m in re.finditer(pattern, text, re.I)]
     return dict(ok=not matches, reason="외형·의상 변경 또는 금지된 외형 요청은 자유 생성 범위 밖입니다." if matches else "",
                 matched=matches, empty=not text, semantic_status="not_reviewed", judge="rule",
                 note="문장 패턴 검사는 보조 정보이며 사용자가 연출 범위를 확인해야 합니다.")
+
+
+def safety_observation(scores):
+    """태그 점수에서 차단 근거와 사람 확인용 근거를 나눈다. 통과는 안전 보장이 아니다(사람 체크가 최종)."""
+    scores = scores or {}
+    blocked = sorted(k for k in (*EXPOSURE_TAGS, *AGE_BLOCK_TAGS) if float(scores.get(k, 0.0)) >= SAFETY_THRESHOLD)
+    review = {k: round(float(scores[k]), 3) for k in AGE_REVIEW_TAGS if float(scores.get(k, 0.0)) >= SAFETY_THRESHOLD}
+    return dict(blocked=blocked, review=review)
 
 
 def mentions_background(text):

@@ -12,10 +12,10 @@ from PIL import Image
 
 from genai_lab.character_features import TAG_ITEMS, extract_features, write_features
 from genai_lab.character_verification import measure_result_scores, verify_features
-from genai_lab.free_generation import INTENT, SEEDS, check_request, features_sentence, free_conditions, part_counts
+from genai_lab.free_generation import (INTENT, SEEDS, check_request, features_sentence, free_conditions, part_counts,
+                                       safety_observation)
 from genai_lab.outfit_edit import SIZE, canvas, sha, write_json
 from genai_lab.outfit_edit_pipeline import segment_canvas, detect_joints
-SAFETY_TAGS = ("nude", "nipples", "genitals", "loli", "shota")
 
 from genai_lab.qwen_free_generation import (FreeGenerationWorkflow, make_free_request, prepare_free_spec,
                                            run_free_generation_edit)
@@ -34,12 +34,12 @@ def validate_inputs(base_path, base_kind, features, gender, body_parts, request_
     if not isinstance(features, dict) or set(features) != set(TAG_ITEMS):
         raise ValueError("확정 특징표의 모든 태그 항목이 필요합니다(모르면 빈 목록).")
     from genai_lab.character_features import features_text, parse_features_text
-    if any(not isinstance(v, (list, tuple)) or any(not isinstance(x, str) for x in v) for v in features.values()):
-        raise ValueError("특징표 값은 태그 문자열 목록이어야 합니다.")
+    if any(v is not None and (not isinstance(v, (list, tuple)) or any(not isinstance(x, str) for x in v)) for v in features.values()):
+        raise ValueError("특징표 값은 태그 문자열 목록(없음은 빈 목록, 모름은 None)이어야 합니다.")
     normalized = parse_features_text(features_text({k: dict(values=v) for k, v in features.items()}))
     import re
     for values in normalized.values():
-        for tag in values:
+        for tag in values or ():
             if not re.fullmatch(r"[a-zA-Z0-9_-]{1,80}", tag) or not check_request(tag.replace("_", " "))["ok"]:
                 raise ValueError("특징표에는 외형 태그만 쓸 수 있습니다.")
     checked = check_request(request_text)
@@ -112,11 +112,11 @@ def observe_result(reference, raw, directory, runtime, *, cancelled, popen):
     scores = measure_result_scores(rgb, runtime)
     verification = (verify_features(reference, scores, rgb, parts) if scores is not None
                     else dict(items={}, summary={}, status="unmeasured", reason="tagger unavailable"))
-    safety = dict(status="not_reviewed", judge="user", reason="자동 안전 검사 통과를 보장하지 않는다")
-    # 기존 금지 외형/노출 태그가 강하게 관찰되면 승인할 수 없는 결과로 둔다. 약한 값은 사람 확인.
-    blocked = [k for k, v in (scores or {}).items() if k in SAFETY_TAGS and v >= .5]
-    if blocked:
-        safety = dict(status="violated", judge="automatic_analysis", evidence=blocked)
+    observed = safety_observation(scores)
+    safety = dict(status="not_reviewed", judge="user", reason="자동 안전 검사 통과를 보장하지 않는다", review=observed["review"])
+    # 노출·금지 외형 태그가 강하게 관찰되면 승인할 수 없는 결과로 둔다. 나이 관련 태그는 사람 확인 근거로만 남긴다.
+    if observed["blocked"]:
+        safety = dict(status="violated", judge="automatic_analysis", evidence=observed["blocked"], review=observed["review"])
     try:
         joints = detect_joints(rgb, directory / "joints", runtime, cancelled=cancelled)
         limbs = dict(status="unmeasurable", joints=joints,
@@ -162,8 +162,9 @@ def prepare_generation_inputs(base_path, character_features, request_text, *, ba
     persist()
     progress("상태: 기준 이미지 특징 측정 중")
     scores = measure_result_scores(np.asarray(image), runtime) or {}
-    blocked = [k for k, v in scores.items() if k in SAFETY_TAGS and v >= .5]
-    trace["input_facts"]["automatic_tags"] = dict(source="automatic_analysis", scores=scores, blocked=blocked)
+    observed = safety_observation(scores)
+    blocked = observed["blocked"]
+    trace["input_facts"]["automatic_tags"] = dict(source="automatic_analysis", scores=scores, blocked=blocked, review=observed["review"])
     persist()
     if blocked:
         raise ValueError("기준 이미지에서 금지된 외형·노출 태그가 관찰됐습니다: " + ", ".join(blocked))
@@ -175,8 +176,8 @@ def prepare_generation_inputs(base_path, character_features, request_text, *, ba
     features = extract_features(np.asarray(image), parts, scores, gender=gender, body_parts=body_parts,
                                 confirmed=character_features)
     for key, values in character_features.items():
-        if not values:
-            features["items"][key].update(state="unknown", reason="빈 특징값은 없음/가림을 구분할 수 없다")
+        if values is None:          # 모름(확인 불가). '없음'(빈 목록)은 사용자가 확정한 값이므로 그대로 둔다(검토 5번)
+            features["items"][key].update(state="unknown", reason="사용자가 '모름'으로 둔 항목")
     features["unknown"] = [k for k, v in features["items"].items() if v["state"] in ("unknown", "weak")]
     write_features(directory / "character-features", features)
     reference, crop_record = prepare_reference(image, parts, inputs)
@@ -251,14 +252,21 @@ def run_free_generation(base_path, character_features, request_text="", *, base_
             violations = observation["verification"].get("summary", {})
             retry = bool(violations.get("changed") or violations.get("added") or observation["safety"]["status"] == "violated")
             attempt["retry_reason"] = "자동 특징 위반 관찰" if retry else None
+            attempt["violation_score"] = (1000 if observation["safety"]["status"] == "violated"
+                                          else len(violations.get("changed") or ()) + len(violations.get("added") or ()))
             if not retry:
                 break
+        # 두 시도 모두 위반이면 위반이 적은 시도를 보여 준다(같으면 앞 시도). 모든 시도는 trace에 그대로 남는다(검토 7번).
+        chosen = min(trace["attempts"], key=lambda a: a["violation_score"]) if attempt["retry_reason"] else attempt
+        raw, observation, judgement = Path(chosen["raw"]), chosen["observation"], chosen["judgements"]
+        trace["selected_attempt"] = chosen["number"]
         blocked = observation["safety"]["status"] == "violated"
         trace["status"] = "blocked" if blocked else "awaiting_user_review"
         outcome = dict(status=trace["status"], directory=str(directory), raw=str(raw), result=str(raw), result_sha256=sha(raw),
                        composited=False, base_kind=base_kind, attempts=trace["attempts"],
                        conditions=str(directory / "inputs" / "conditions.json"), trace=str(directory / "trace.json"),
                        condition_judgements=judgement, automatic_features=observation["verification"], quality_pass=None,
+                       selected_attempt=chosen["number"],
                        note="자동 검사는 동일성·최종 품질 승인이 아니다. 원본 기준 성공은 의상 교체 해결 증거가 아니다.")
         write_json(directory / "outcome.json", outcome)
         persist()

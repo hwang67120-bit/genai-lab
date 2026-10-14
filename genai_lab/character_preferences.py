@@ -62,18 +62,20 @@ def load_character_features(source_path, settings=None):
         items = json.loads(value)
     except ValueError:
         return None
-    if not isinstance(items, dict) or set(items) != set(TAG_ITEMS) or not all(isinstance(v, list) for v in items.values()):
+    if not isinstance(items, dict) or set(items) != set(TAG_ITEMS) or not all(v is None or isinstance(v, list) for v in items.values()):
         return None
-    return {k: [str(x) for x in items[k]] for k in TAG_ITEMS}
+    return {k: None if items[k] is None else [str(x) for x in items[k]] for k in TAG_ITEMS}   # None = 모름
 
 
 def save_character_features(source_path, items, settings=None):
     import json
     from genai_lab.character_features import TAG_ITEMS
-    if set(items) != set(TAG_ITEMS) or not all(isinstance(v, (list, tuple)) and all(isinstance(x, str) for x in v) for v in items.values()):
+    if set(items) != set(TAG_ITEMS) or not all(v is None or (isinstance(v, (list, tuple)) and all(isinstance(x, str) for x in v))
+                                               for v in items.values()):
         raise ValueError("캐릭터 특징표 값 오류")
     store = settings if settings is not None else QSettings("GenAILab", "CharacterPreferences")
-    store.setValue(preference_key(source_path, "character_features"), json.dumps({k: list(items[k]) for k in TAG_ITEMS}, ensure_ascii=False))
+    store.setValue(preference_key(source_path, "character_features"),
+                   json.dumps({k: None if items[k] is None else list(items[k]) for k in TAG_ITEMS}, ensure_ascii=False))
     store.sync()
     if store.status() != QSettings.Status.NoError:
         raise OSError("캐릭터 특징표를 저장하지 못했습니다.")

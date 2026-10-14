@@ -43,28 +43,35 @@ LABELS = {"hair_length": "머리 길이", "hair_style": "머리 모양", "hair_c
           "head_accessories": "머리 장식", "skin": "피부"}
 
 
+UNKNOWN_WORDS = ("모름", "확인 불가", "?", "unknown")
+NONE_WORDS = ("없음", "none", "-")
+
+
 def tag_features(scores):
-    """확인 창 미리 채움용: 태그만으로 뽑은 항목(값 목록 + 약한 후보). 분할이 없는 시점(시작 전)에 쓴다."""
+    """확인 창 미리 채움용: 태그만으로 뽑은 항목(값 목록 + 약한 후보). 분할이 없는 시점(시작 전)에 쓴다.
+    태그가 아무것도 못 찾은 항목은 None(모름)이다 — 자동 분석이 '없다'고 확정하지 않는다(검토 5번)."""
     items = {}
     for key, names in TAG_GROUPS.items():
         strong = [n for n, _ in tag_values(scores, names)]
         if key == "hair_length":
             strong = strong[:1]
-        items[key] = dict(values=strong, weak=[n for n, _ in weak_values(scores, names)])
+        items[key] = dict(values=strong or None, weak=[n for n, _ in weak_values(scores, names)])
     return items
 
 
 def features_text(items):
-    """사람이 고치는 글 상자 내용: 한 줄에 한 항목, '라벨: 값, 값'. 값이 없으면 '없음'."""
+    """사람이 고치는 글 상자 내용: 한 줄에 한 항목, '라벨: 값, 값'. 확정 없음은 '없음', 확인 불가는 '모름'."""
     lines = []
     for key in TAG_ITEMS:
-        values = (items.get(key) or {}).get("values") or []
-        lines.append(f"{LABELS[key]}: {', '.join(values) if values else '없음'}")
+        values = (items.get(key) or {}).get("values")
+        text = "모름" if values is None else (", ".join(values) if values else "없음")
+        lines.append(f"{LABELS[key]}: {text}")
     return "\n".join(lines)
 
 
 def parse_features_text(text):
-    """글 상자 → {항목: [값]}. 모르는 라벨이나 빠진 항목은 오류. '없음'·빈 값은 [] (사용자가 없다고 확정한 것)."""
+    """글 상자 → {항목: [값] | None}. 모르는 라벨이나 빠진 항목은 오류.
+    '없음' = [] (사용자가 없다고 확정), '모름'·빈 칸 = None (확인 불가, 비교·조건에 쓰지 않음). 두 창(편집·자유 생성)이 같은 뜻으로 쓴다."""
     by_label = {v: k for k, v in LABELS.items()}
     items = {}
     for raw in text.splitlines():
@@ -77,8 +84,13 @@ def parse_features_text(text):
         key = by_label.get(label.strip())
         if key is None:
             raise ValueError(f"모르는 항목입니다: {label.strip()}")
-        values = [v.strip().replace(" ", "_") for v in rest.replace("，", ",").split(",")]
-        values = [v for v in values if v and v not in ("없음", "none", "-")]
+        raw_values = [v.strip() for v in rest.replace("，", ",").split(",") if v.strip()]
+        if not raw_values or all(v in UNKNOWN_WORDS for v in raw_values):
+            items[key] = None
+            continue
+        if any(v in UNKNOWN_WORDS for v in raw_values):
+            raise ValueError(f"'{LABELS[key]}'에 '모름'과 값을 함께 쓸 수 없습니다.")
+        values = [v.replace(" ", "_") for v in raw_values if v not in NONE_WORDS]
         items[key] = values
     missing = [LABELS[k] for k in TAG_ITEMS if k not in items]
     if missing:
@@ -203,7 +215,7 @@ def extract_features(image, parts, scores, *, gender="unknown", body_parts=None,
         if items[key]["state"] == "unknown" and candidates:
             items[key]["state"] = "weak"
     for key, values in (confirmed or {}).items():  # 사람이 확정한 값이 태그 측정값을 대신한다(픽셀 측정은 그대로 둔다)
-        if key not in items:
+        if key not in items or values is None:   # 모름: 자동 측정값을 그대로 두고 확정 표시하지 않는다
             continue
         item = items[key]
         if key == "hair_length":

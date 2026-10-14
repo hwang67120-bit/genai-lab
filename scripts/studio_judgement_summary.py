@@ -15,11 +15,13 @@ if hasattr(sys.stdout, "reconfigure"):          # 한글 출력을 호출자 인
 from genai_lab.outfit_judgement import ITEMS, summarize  # noqa: E402
 
 FAILING = {"same_character": ("no",), "outfit": ("different",), "original_garment_remaining": ("some",),
-           "body_parts": ("changed", "missing", "added"), "pose": ("changed",), "severe_defect": ("present",)}
+           "body_parts": ("changed", "missing", "added"), "pose": ("changed",), "severe_defect": ("present",),
+           "request_followed": ("no",)}
+MODES = {"outfit_edit": "outfit-edit", "free_generation": "free-generation"}
 
 
-def outfit_runs(root):
-    return sorted(p for p in Path(root).glob("*/outfit-edit") if p.is_dir())
+def outfit_runs(root, folder="outfit-edit"):
+    return sorted(p for p in Path(root).glob(f"*/{folder}") if p.is_dir())
 
 
 def failure_counts(run_directories):
@@ -40,30 +42,39 @@ def failure_counts(run_directories):
     return dict(counts), notes
 
 
+def mode_summary(root, folder):
+    runs = outfit_runs(root, folder)
+    summary = summarize(runs)
+    counts, notes = failure_counts(runs)
+    return dict(total=summary["total"], composited=summary["composited"], judged=summary["judged"],
+                quality_pass=summary["quality_pass"], incomplete=summary["incomplete"], failures=counts, defect_notes=notes)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", default="outputs/studio-runs")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
-    runs = outfit_runs(args.root)
-    summary = summarize(runs)
-    counts, notes = failure_counts(runs)
-    result = dict(root=args.root, total=summary["total"], composited=summary["composited"], judged=summary["judged"],
-                  quality_pass=summary["quality_pass"], incomplete=summary["incomplete"], failures=counts, defect_notes=notes)
+    edit = mode_summary(args.root, MODES["outfit_edit"])
+    free = mode_summary(args.root, MODES["free_generation"])
+    # 위쪽 키는 편집 단계(기존 형식 유지), 자유 생성은 따로 센다 — 머리 합성 수는 자유 생성에 해당 없다.
+    result = dict(root=args.root, **edit, free_generation={k: v for k, v in free.items() if k != "composited"})
     if args.json:
         print(json.dumps(result, ensure_ascii=False, indent=1))
         return
-    print(f"실행 {result['total']}건 · 머리 합성 {result['composited']} · 판정 있음 {result['judged']} · 품질 통과 {result['quality_pass']} · 불완전 {result['incomplete']}")
-    if counts:
-        print("반복 실패 유형(판정 있는 실행 기준):")
-        for item, n in sorted(counts.items(), key=lambda kv: -kv[1]):
-            print(f"  {item}: {n}")
-    else:
-        print("판정된 실패 없음")
-    for note in notes:
-        print("  심한 이상:", note)
-    if result["judged"] < 20:
-        print(f"판정이 {result['judged']}건이라 규칙 변경 근거로는 이릅니다(20건 기준, D-118).")
+    for title, data, composited in (("옷 바꾸기", edit, True), ("자유 생성", free, False)):
+        head = f"[{title}] 실행 {data['total']}건 · " + (f"머리 합성 {data['composited']} · " if composited else "")
+        print(head + f"판정 있음 {data['judged']} · 품질 통과 {data['quality_pass']} · 불완전 {data['incomplete']}")
+        if data["failures"]:
+            print("  반복 실패 유형(판정 있는 실행 기준):")
+            for item, n in sorted(data["failures"].items(), key=lambda kv: -kv[1]):
+                print(f"    {item}: {n}")
+        else:
+            print("  판정된 실패 없음")
+        for note in data["defect_notes"]:
+            print("    심한 이상:", note)
+        if data["judged"] < 20:
+            print(f"  판정이 {data['judged']}건이라 규칙 변경 근거로는 이릅니다(20건 기준, D-118).")
 
 
 if __name__ == "__main__":

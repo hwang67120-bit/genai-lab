@@ -85,8 +85,8 @@ def test_tag_features_text_round_trip_and_confirmed_values_override_tags():
     items = cf.tag_features(scores)
     assert items["hair_length"]["values"] == ["long_hair"] and items["hair_style"] == dict(values=["twintails"], weak=["ahoge"])
     text = cf.features_text(items)
-    assert text.splitlines()[0] == "머리 길이: long_hair" and "피부: 없음" in text and "ahoge" in cf.weak_note(items)
-    parsed = cf.parse_features_text(text.replace("머리 장식: headphones", "머리 장식: headphones, black ribbon"))
+    assert text.splitlines()[0] == "머리 길이: long_hair" and "피부: 모름" in text and "ahoge" in cf.weak_note(items)
+    parsed = cf.parse_features_text(text.replace("머리 장식: headphones", "머리 장식: headphones, black ribbon").replace("피부: 모름", "피부: 없음"))
     assert parsed["head_accessories"] == ["headphones", "black_ribbon"] and parsed["skin"] == []
     with pytest.raises(ValueError):
         cf.parse_features_text("머리 길이: long_hair")                    # 빠진 항목
@@ -110,3 +110,18 @@ def test_hair_colour_ignores_original_background_mixed_into_the_hair_mask():
     colors = cf.dominant_colors(image, cf.hair_mask_without_background(image, leaky))
     r, g, b = colors[0]["rgb"]
     assert colors[0]["fraction"] > 0.9 and r < 100 and g > 170               # 청록이 주색, 회색 배경은 제외
+
+
+def test_unknown_and_none_are_different_in_the_feature_text():
+    # 검토 5번: '없음' = 사람이 없다고 확정([]), '모름'·빈 칸 = 확인 불가(None). 두 확인 창이 같은 뜻으로 쓴다
+    base = cf.features_text({k: dict(values=None) for k in cf.TAG_ITEMS})
+    assert all(line.endswith(": 모름") for line in base.splitlines())
+    text = base.replace("머리 장식: 모름", "머리 장식: 없음").replace("피부: 모름", "피부:")
+    parsed = cf.parse_features_text(text)
+    assert parsed["head_accessories"] == [] and parsed["skin"] is None and parsed["hair_length"] is None
+    with pytest.raises(ValueError):
+        cf.parse_features_text(base.replace("머리 장식: 모름", "머리 장식: 모름, hat"))
+    image, parts = scene()
+    it = cf.extract_features(image, parts, dict(headphones=0.9), confirmed=parsed)["items"]
+    assert it["head_accessories"]["values"] == [] and it["head_accessories"]["confirmed"] is True     # 확정 없음
+    assert it["skin"]["confirmed"] is False                                                           # 모름은 확정하지 않음

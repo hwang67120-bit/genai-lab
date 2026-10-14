@@ -51,7 +51,7 @@ def confirm_free_inputs(window, analysis):
     layout.addLayout(row)
     prefill = load_character_features(source)
     guessed = tag_features(analysis["character_scores"])
-    layout.addWidget(QLabel("특징표: 자동 분석/저장값을 확인하고 수정해 주세요. 빈 항목은 확인 불가로 기록합니다."))
+    layout.addWidget(QLabel("특징표: 자동 분석/저장값을 확인하고 수정해 주세요. '없음'은 없다고 확정, '모름'은 확인 불가로 기록합니다."))
     features = QPlainTextEdit()
     features.setObjectName("free_features")
     features.setPlainText(features_text({k: dict(values=v) for k, v in prefill.items()} if prefill else guessed))

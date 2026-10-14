@@ -25,13 +25,18 @@ def settings(tmp):
     return QwenPoseSettings(sys.executable, str(tmp), str(tmp/"m.gguf"), str(tmp/"m.json"), "a"*64)
 
 
-@pytest.mark.parametrize("text", ["", "눈 내리는 거리", "눈을 감은 표정", "머리를 기울여 서기", "close the eyes in a snowy street", "walking at sunset", "귀를 기울이는 자세"])
+@pytest.mark.parametrize("text", ["", "눈 내리는 거리", "눈을 감은 표정", "머리를 기울여 서기", "close the eyes in a snowy street", "walking at sunset", "귀를 기울이는 자세",
+                                  # 검토 3번 오거부였던 문장, SD·4등신 그림체(사용자 결정 2026-10-14)
+                                  "change the pose so her hair flows in the wind", "노을이 길게 드리운 거리에서 꼬리를 흔들며 걷기",
+                                  "change the background to a beach while her hair blows", "holding her hat in one hand", "chibi style, sitting"])
 def test_staging_words_do_not_imply_appearance_change(text):
     assert check_request(text)["ok"]
     assert check_request(text)["semantic_status"] == "not_reviewed"
 
 
-@pytest.mark.parametrize("text", ["머리색을 바꿔", "remove the tail", "change eye color to blue", "wear a new dress", "누드", "make the character childlike"])
+@pytest.mark.parametrize("text", ["머리색을 바꿔", "remove the tail", "change eye color to blue", "wear a new dress", "누드", "make the character childlike",
+                                  # 검토 3번: 머리 장식 추가·길이 변경도 외형 변경이다
+                                  "give her a hat", "put glasses on her", "add a crown", "머리를 짧게 잘라", "꼬리를 없애고"])
 def test_explicit_appearance_and_safety_conflicts_are_rejected(text):
     assert not check_request(text)["ok"]
 
@@ -252,3 +257,64 @@ def test_requested_composition_is_not_overridden_with_full_body():
     conditions=free_conditions("","female",(),"close-up portrait, eyes closed",42)
     assert not any(c["key"]=="framing" for c in conditions["conditions"])
     assert any(c["key"]=="framing" for c in conditions["excluded"])
+
+
+def test_safety_observation_blocks_exposure_but_only_records_age_style_tags():
+    # 검토 2번: 태거 어휘에 있는 노출 태그로 차단한다. child·chibi는 SD·4등신 그림체가 있어 차단하지 않고 근거로만 남긴다
+    from genai_lab.free_generation import safety_observation
+    assert safety_observation({"completely_nude": .9, "topless": .6})["blocked"] == ["completely_nude", "topless"]
+    observed = safety_observation({"child": .8, "chibi": .7, "1girl": .9})
+    assert observed["blocked"] == [] and observed["review"] == {"child": .8, "chibi": .7}
+    assert safety_observation({"loli": .6})["blocked"] == ["loli"]
+
+
+def test_result_with_completely_nude_is_blocked(tmp_path,fake_models,monkeypatch):
+    base,_ = fake_models
+    readings = iter([{"long_hair":.9}, {"completely_nude":.9}, {"completely_nude":.9}])
+    monkeypatch.setattr(pipeline,"measure_result_scores",lambda *a:next(readings))
+    result = run(tmp_path,base)
+    assert result["status"] == "blocked"
+    with pytest.raises(ValueError,match="차단"):
+        FreeGenerationResults(result)
+
+
+def test_when_both_attempts_violate_the_one_with_fewer_violations_is_shown(tmp_path,fake_models,monkeypatch):
+    # 검토 7번: 두 시도 모두 자동 위반이면 위반이 적은 시도를 보여 준다. 두 시도 모두 trace에 남는다
+    base,_ = fake_models
+    reports = iter([dict(items={}, summary=dict(changed=["hair_length"], added=[])),
+                    dict(items={}, summary=dict(changed=["hair_length", "eye_color"], added=["head_accessories"]))])
+    monkeypatch.setattr(pipeline,"verify_features",lambda *a:next(reports))
+    result = run(tmp_path,base)
+    assert result["selected_attempt"] == 1 and result["result"].endswith(str(Path("qwen") / "raw.png"))
+    assert [a["violation_score"] for a in result["attempts"]] == [1, 3]
+    trace = json.loads(Path(result["trace"]).read_text(encoding="utf-8"))
+    assert trace["selected_attempt"] == 1 and len(trace["attempts"]) == 2
+
+
+def test_free_judgement_uses_the_common_format_and_is_counted_by_the_summary(tmp_path,fake_models):
+    # 검토 4번: 자유 생성 판정도 D-114 형식(recorded_at·항목 검증)으로 남고 운영 집계(D-118)에 따로 잡힌다
+    import subprocess
+    base,_ = fake_models
+    root = tmp_path/"studio"
+    result = pipeline.run_free_generation(base,features(),base_kind="original",gender="female",body_parts=(),
+        confirmed=True,adult_confirmed=True,settings=settings(tmp_path),runtime=SimpleNamespace(),directory=root/"r1"/"free-generation")
+    results = FreeGenerationResults(result)
+    results.approve(dict(character=True,garment=True,request=True,exposure=True))
+    entry = json.loads((root/"r1"/"free-generation"/"judgement.json").read_text(encoding="utf-8"))[-1]
+    assert entry["recorded_at"] and entry["request_followed"] == "yes" and entry["mode"] == "free_generation"
+    assert entry["quality_pass"] is True and entry["target"]["attempt"] == 1
+    script = Path(__file__).resolve().parents[1]/"scripts"/"studio_judgement_summary.py"
+    out = subprocess.run([sys.executable,"-B",str(script),"--root",str(root),"--json"],capture_output=True,text=True,check=True,encoding="utf-8")
+    summary = json.loads(out.stdout)
+    assert summary["total"] == 0 and summary["free_generation"]["judged"] == 1 and summary["free_generation"]["quality_pass"] == 1
+
+
+def test_unknown_features_are_kept_apart_from_confirmed_none(tmp_path,fake_models):
+    # 검토 5번: 모름(None)은 unknown, 없음([])은 사용자가 확정한 값으로 남는다
+    base,_ = fake_models
+    confirmed = dict(features(), skin=None)
+    result = pipeline.run_free_generation(base,confirmed,base_kind="original",gender="female",body_parts=(),
+        confirmed=True,adult_confirmed=True,settings=settings(tmp_path),runtime=SimpleNamespace(),directory=tmp_path/"run")
+    sheet = json.loads((Path(result["directory"])/"character-features"/"features.json").read_text(encoding="utf-8"))
+    assert sheet["items"]["skin"]["state"] == "unknown" and "skin" in sheet["unknown"]
+    assert sheet["items"]["head_accessories"]["confirmed"] is True and sheet["items"]["head_accessories"]["values"] == []

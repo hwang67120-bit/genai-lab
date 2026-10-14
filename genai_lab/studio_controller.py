@@ -128,7 +128,12 @@ class StudioController(QObject):
         from genai_lab.studio_free_generation import confirm_free_inputs
         from genai_lab.qwen_outfit_edit import load_qwen_settings
         self.analysis = analysis
-        settings = load_qwen_settings(self.runtime.qwen_settings)
+        try:  # 편집 경로와 같이 설정 문제는 작업실 오류 안내로 보여 준다(검토 6번)
+            settings = load_qwen_settings(self.runtime.qwen_settings)
+        except (ValueError, OSError, TypeError) as error:
+            self.fail(error, traceback.format_exc())
+            self.controls()
+            return
         self.confirming = True
         self.controls()
         try:

@@ -132,12 +132,19 @@ def prepare_garment_reference(garment_path, directory, runtime, *, cancelled=lam
     directory.mkdir(parents=True, exist_ok=False)
     with Image.open(garment_path) as source:
         image = np.asarray(source.convert("RGB"))
-    settings = ClothingDesignAnalysisSettings(cache_dir=str(runtime.model_cache), local_files_only=True)
-    with WdTagSession(settings) as tagger:
-        scores = dict(tagger.analyze(Image.fromarray(image)).raw_general_scores)
-    joints = detect_joints(image, directory / "pose", runtime, cancelled=cancelled) if head_present(scores) else ()
-    cleaned, report = clean_garment_reference(image, scores, joints)
     path = Path(garment_path)
+    try:
+        settings = ClothingDesignAnalysisSettings(cache_dir=str(runtime.model_cache), local_files_only=True)
+        with WdTagSession(settings) as tagger:
+            scores = dict(tagger.analyze(Image.fromarray(image)).raw_general_scores)
+        joints = detect_joints(image, directory / "pose", runtime, cancelled=cancelled) if head_present(scores) else ()
+    except Exception as error:          # 분석기가 없거나 실패해도 편집은 막지 않는다: 원래 옷 그대로, 사실만 기록
+        if "취소" in str(error):
+            raise
+        report = dict(status="failed", error=str(error)[:200], changed=False, source=str(garment_path), path=str(path))
+        write_json(directory / "garment_reference.json", report)
+        return dict(path=str(path), report=report)
+    cleaned, report = clean_garment_reference(image, scores, joints)
     if report["changed"]:
         path = directory / "garment-clean.png"
         Image.fromarray(cleaned).save(path)

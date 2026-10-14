@@ -162,6 +162,14 @@ def test_pipeline_retries_once_with_second_seed_when_checks_fail(tmp_path, monke
     monkeypatch.setattr(pipeline, "check_limbs", lambda *a, **k: {"status": "ok"})
     results = iter([dict(composited=False, reason="머리 위치", alignment={}), dict(composited=True, alignment={})])
     monkeypatch.setattr(pipeline, "compose", lambda *a, **k: dict(next(results)))
+    # D-117: 옷 참조 공통 전처리는 파이프라인 시작에서 돌고, 정리본 경로가 Qwen 입력이 된다
+    def fake_reference(garment_path, directory, runtime, **k):
+        Path(directory).mkdir(parents=True)
+        Image.new("RGB", (300, 400), (40, 40, 40)).save(Path(directory) / "garment-clean.png")
+        return dict(path=str(Path(directory) / "garment-clean.png"),
+                    report=dict(changed=True, background=dict(status="applied"), head=dict(status="applied", line=100),
+                                trim=dict(status="applied"), source=str(garment_path), path=str(Path(directory) / "garment-clean.png")))
+    monkeypatch.setattr(pipeline, "prepare_garment_reference", fake_reference)
     settings = qwen_outfit_edit.QwenPoseSettings(sys.executable, str(tmp_path), str(tmp_path / "m.gguf"), str(tmp_path / "m.json"), "a" * 64)
     outcome = pipeline.run_outfit_pipeline(character, garment, settings=settings, head_accessories="keep", runtime=None,
                                            directory=tmp_path / "run", gender="female", body_parts=(),
@@ -179,6 +187,9 @@ def test_pipeline_retries_once_with_second_seed_when_checks_fail(tmp_path, monke
     assert trace["input_facts"]["support"]["warnings"][0]["key"] == "pose_not_standing" and outcome["support"]["status"] == "measured"
     conditions = json.loads(Path(outcome["conditions"]).read_text(encoding="utf-8"))
     assert conditions["input_facts"] == trace["input_facts"] and conditions["intent"] == trace["intent"]
+    assert outcome["garment_reference"]["changed"] and trace["input_facts"]["garment_reference"]["head"]["line"] == 100
+    with Image.open(tmp_path / "run" / "qwen-inputs" / "garment.png") as used:
+        assert used.size == (300, 400)                   # 정리본(300×400)이 쓰였다. 원래 옷은 300×500
 
 
 def test_pipeline_does_not_retry_when_first_result_passes(tmp_path, monkeypatch):
@@ -194,7 +205,9 @@ def test_pipeline_does_not_retry_when_first_result_passes(tmp_path, monkeypatch)
     monkeypatch.setattr(pipeline, "check_limbs", lambda *a, **k: {"status": "ok"})
     monkeypatch.setattr(pipeline, "compose", lambda *a, **k: dict(composited=True, alignment={}))
     settings = qwen_outfit_edit.QwenPoseSettings(sys.executable, str(tmp_path), str(tmp_path / "m.gguf"), str(tmp_path / "m.json"), "a" * 64)
+    monkeypatch.setattr(pipeline, "prepare_garment_reference", lambda *a, **k: (_ for _ in ()).throw(AssertionError("꺼져 있어야 함")))
     outcome = pipeline.run_outfit_pipeline(character, garment, settings=settings, head_accessories="keep", runtime=None,
-                                           directory=tmp_path / "run")
+                                           directory=tmp_path / "run", clean_garment=False)
     assert seeds == [42] and len(outcome["attempts"]) == 1
+    assert outcome["garment_reference"] == dict(status="disabled", changed=False, source=str(garment), path=str(garment))
     assert outcome["support"] == {"status": "unmeasured", "warnings": []}      # 경고를 재지 않은 실행은 "없음"이 아니라 "안 잼"

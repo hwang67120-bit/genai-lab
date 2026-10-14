@@ -11,6 +11,7 @@ import time
 import numpy as np
 from PIL import Image
 
+from genai_lab.garment_reference import prepare_garment_reference
 from genai_lab.outfit_edit import (EDIT_INTENT, HEAD_ACCESSORIES, HEAD_KEEP, SIZE, canvas, fit_white, hair_shape,
                                    head_composite, head_protect, head_window, input_facts, limb_check, original_background,
                                    outfit_conditions, pad_image, realign, require, sha, write_json)
@@ -159,14 +160,21 @@ def compose(canvas_path, parts_path, raw_path, head_accessories, directory, limb
 
 def run_outfit_pipeline(character_path, garment_path, *, settings, head_accessories, runtime, directory,
                         garment_terms=(), remove_props=True, gender="unspecified", body_parts=None, provenance=None,
-                        cancelled=lambda: False, progress=lambda _: None, popen=subprocess.Popen):
+                        clean_garment=True, cancelled=lambda: False, progress=lambda _: None, popen=subprocess.Popen):
     """GUI·확인 스크립트 공통 진입점. 반환값은 compose()의 결과에 실행 폴더를 더한 것이다.
-    provenance는 성별·부위 값이 어디서 왔는지(사용자 확인·저장값·명령 인자·기본값)의 기록이며 실행에는 영향을 주지 않는다(D-112)."""
+    provenance는 성별·부위 값이 어디서 왔는지(사용자 확인·저장값·명령 인자·기본값)의 기록이며 실행에는 영향을 주지 않는다(D-112).
+    clean_garment: 옷 참조의 배경·머리를 공통 규칙으로 뺀 정리본을 쓴다(D-117). 아무것도 적용되지 않으면 원래 파일 그대로."""
     from genai_lab.qwen_outfit_edit import (OutfitEditWorkflow, make_outfit_request, prepare_outfit_spec,
                                             run_outfit_edit)
     directory = Path(directory)
     progress("상태: 캐릭터 그림 준비 중")
     prepared = prepare_canvas(character_path, directory / "inputs")
+    if clean_garment:
+        progress("상태: 옷 참조 정리 중(배경·머리)")
+        reference = prepare_garment_reference(garment_path, directory / "garment-reference", runtime, cancelled=cancelled)
+        garment_path, garment_report = reference["path"], reference["report"]
+    else:
+        garment_report = dict(status="disabled", changed=False, source=str(garment_path), path=str(garment_path))
     progress("상태: 얼굴·머리 영역 분석 중")
     segmented = segment_canvas(prepared, directory / "parts", runtime, cancelled=cancelled, popen=popen)
     spec = prepare_outfit_spec(prepared["canvas"], garment_path, head_accessories=head_accessories, confirmed=True,
@@ -174,6 +182,7 @@ def run_outfit_pipeline(character_path, garment_path, *, settings, head_accessor
                                remove_props=remove_props, gender=gender, body_parts=body_parts)
     assembled = outfit_conditions(head_accessories, spec.garment_terms, remove_props, gender, body_parts)
     facts = input_facts(gender, body_parts, provenance)
+    facts["garment_reference"] = garment_report          # 옷 입력에 무엇을 했는지(입력 근거, D-117)
     write_json(directory / "qwen-inputs" / "conditions.json", dict(intent=EDIT_INTENT, input_facts=facts, **assembled))
     from genai_lab.qwen_outfit_edit import OUTFIT_SEEDS
     attempts = []
@@ -201,7 +210,7 @@ def run_outfit_pipeline(character_path, garment_path, *, settings, head_accessor
     trace = write_trace(directory, facts, assembled, attempts, outcome)
     return dict(outcome, directory=str(directory), source=prepared["source"], source_sha256=prepared["source_sha256"],
                 conditions=str(directory / "qwen-inputs" / "conditions.json"), trace=str(trace),
-                support=facts["support"])
+                support=facts["support"], garment_reference=garment_report)
 
 
 def write_trace(directory, facts, assembled, attempts, outcome):

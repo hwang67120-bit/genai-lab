@@ -54,6 +54,7 @@ class OutfitEditResults:
         outside = [w for w in (self.outcome.get("support") or {}).get("warnings", []) if w.get("level") == "outside"]
         if outside:  # D-113: 시작 전 경고가 있던 그림은 결과에서도 그 사실을 다시 알린다
             text += " 시작 전 경고(지원 범위 밖 " + str(len(outside)) + "개)가 있던 그림입니다 — 옷·자세·꼬리를 꼭 확인해 주세요."
+        text += garment_reference_notice(self.outcome.get("garment_reference"))
         return text
 
     def verify_current(self):
@@ -110,6 +111,7 @@ class OutfitEditResults:
                     "raw_sha256": self.outcome.get("raw_sha256"), "attempts": self.outcome.get("attempts"),
                     "trace": self.outcome.get("trace"), "conditions": self.outcome.get("conditions"),
                     "support": self.outcome.get("support"), "judgement": str(self.directory / "judgement.json"),
+                    "garment_reference": self.outcome.get("garment_reference"),
                     "approval_record": str(self.directory / "user-review.json"),
                     "reviewer": "user", "checks": self.checks}
         created = []
@@ -132,3 +134,12 @@ class OutfitEditResults:
         write_json(self.directory / "user-review.json", dict(status=self.status, checks=self.checks,
                    approved_sha256=self.approved_sha, composited=self.composited, result=str(self.result_path),
                    updated=datetime.now().isoformat(timespec="seconds"), **extra))
+
+
+def garment_reference_notice(report):
+    """옷 참조에 공통 전처리(D-117)가 적용됐으면 무엇을 뺐는지 알린다. 옷 자체는 바뀌지 않는다."""
+    if not report or not report.get("changed"):
+        return ""
+    done = [name for key, name in (("background", "배경을 흰색으로"), ("head", "머리 부분을"))
+            if (report.get(key) or {}).get("status") == "applied"]
+    return " 옷 참조의 " + "·".join(done) + " 자동으로 뺐습니다(옷 자체는 그대로)."

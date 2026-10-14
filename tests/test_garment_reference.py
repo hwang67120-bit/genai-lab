@@ -82,3 +82,26 @@ def test_trim_keeps_garment_pixels_and_skips_when_no_margin():
     full = np.zeros((50, 40, 3), np.uint8)
     out, report = gr.trim_white(full)
     assert report["status"] == "skipped" and out is full
+
+
+def test_result_notice_names_what_was_removed_and_stays_silent_otherwise():
+    from genai_lab.outfit_edit_results import garment_reference_notice
+    assert garment_reference_notice(None) == "" and garment_reference_notice(dict(changed=False)) == ""
+    both = dict(changed=True, background=dict(status="applied"), head=dict(status="applied"))
+    assert garment_reference_notice(both) == " 옷 참조의 배경을 흰색으로·머리 부분을 자동으로 뺐습니다(옷 자체는 그대로)."
+    only_bg = dict(changed=True, background=dict(status="applied"), head=dict(status="skipped"))
+    assert "머리" not in garment_reference_notice(only_bg)
+
+
+def test_prepare_falls_back_to_the_original_file_when_analysis_fails(tmp_path, monkeypatch):
+    from PIL import Image
+    from genai_lab import clothing_analysis
+    garment = tmp_path / "g.jpg"
+    Image.fromarray(scene()).save(garment)
+    class Broken:
+        def __init__(self, settings): raise RuntimeError("tagger model missing")
+    monkeypatch.setattr(clothing_analysis, "WdTagSession", Broken)
+    runtime = type("R", (), dict(model_cache=tmp_path))()
+    result = gr.prepare_garment_reference(garment, tmp_path / "ref", runtime)
+    assert result["path"] == str(garment) and result["report"]["status"] == "failed" and "tagger" in result["report"]["error"]
+    assert (tmp_path / "ref" / "garment_reference.json").is_file()

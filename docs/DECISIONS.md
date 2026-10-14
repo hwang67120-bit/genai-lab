@@ -13,6 +13,7 @@
   - 다루지 않는 것: 받침대, 글자, 마네킹 팔·손(일반 규칙 없음). G11 자동 정리본은 받침대만 손 정리본과 다르다.
 - 제품 파이프라인은 바꾸지 않았다. 실행기 `scripts/outfit_edit_gpu_check.py --clean-garment`로만 켜지고 `garment-reference/garment_reference.json`에 단계별 적용 여부를 남긴다. 채택은 요청 19(`codex_gpu_request_19.md`: A 자동 정리본 재현 3장 + B 다른 옷 원본/정리본 2장) 결과를 보고 사용자가 정한다.
 - 참조 폴더에서 확인한 것: `7988c863…`(교실의 안경 쓴 실제 인물 사진)은 아이처럼 보일 수 있어 시험에 쓰지 않았다. 사용자 확인 필요.
+- **사용자 결정(같은 날, "GUI 테스트 먼저")**: 요청 19 전에 작업실에서 써 보기로 해 전처리를 공통 파이프라인(`run_outfit_pipeline`, 작업실·실행기·외부 API 공용) **기본 동작**으로 연결했다. 끄는 길은 `clean_garment=False`(실행기 `--no-clean-garment`, 원인 확인 전용). 분석기가 없거나 실패하면 편집을 막지 않고 원래 옷을 그대로 쓰며 `garment_reference.json`에 `failed`로 남긴다. 적용 내용은 `trace.json`의 `input_facts.garment_reference`와 결과 안내문("옷 참조의 배경을 흰색으로·머리 부분을 자동으로 뺐습니다")에 보인다.
 
 ## D-116 잔존 의상은 Qwen 출력 단계에서 생긴다 → 참조 표현 최소 비교(요청 18) (2026-10-14)
 

@@ -92,6 +92,8 @@ def summarize(run_directories):
         composited = None
         if trace_path.exists():
             composited = bool(json.loads(trace_path.read_text(encoding="utf-8")).get("judgement", {}).get("composited"))
+        elif (directory / "compose" / "outcome.json").exists():        # trace 이전(D-112 전) 실행도 같은 기준으로
+            composited = bool(json.loads((directory / "compose" / "outcome.json").read_text(encoding="utf-8")).get("composited"))
         judgements = json.loads(judgement_path.read_text(encoding="utf-8")) if judgement_path.exists() else []
         latest = latest_quality(judgements) if judgements else None
         rows.append(dict(run=str(directory), composited=composited, judged=bool(judgements),

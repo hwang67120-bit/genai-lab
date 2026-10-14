@@ -85,3 +85,5 @@ def test_run_without_trace_still_gets_a_judgement_file(tmp_path):
     outfit_judgement.record_judgement(run, dict(judge="user", same_character="yes", outfit="same", original_garment_remaining="none",
                                                 severe_defect="none"))
     assert json.loads((run / "judgement.json").read_text(encoding="utf-8"))[0]["quality_pass"] is True
+    summary = outfit_judgement.summarize([run])
+    assert summary["composited"] == 1 and summary["runs"][0]["composited"] is True     # 집계도 outcome.json을 본다

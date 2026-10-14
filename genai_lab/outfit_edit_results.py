@@ -141,5 +141,5 @@ def garment_reference_notice(report):
     if not report or not report.get("changed"):
         return ""
     done = [name for key, name in (("background", "배경을 흰색으로"), ("head", "머리 부분을"))
-            if (report.get(key) or {}).get("status") == "applied"]
+            if str((report.get(key) or {}).get("status", "")).startswith("applied")]
     return " 옷 참조의 " + "·".join(done) + " 자동으로 뺐습니다(옷 자체는 그대로)."

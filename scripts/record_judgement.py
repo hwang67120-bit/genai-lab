@@ -11,6 +11,8 @@ import argparse
 import json
 from pathlib import Path
 import sys
+if hasattr(sys.stdout, "reconfigure"):          # 한글 출력을 호출자 인코딩과 무관하게 utf-8로
+    sys.stdout.reconfigure(encoding="utf-8")
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from genai_lab.outfit_judgement import ITEMS, JUDGES, record_judgement, summarize

@@ -46,8 +46,11 @@ def whiten_background(image):
         return image, dict(status="skipped", reason="no content", border=[int(v) for v in bg])
     x0, x1 = max(0, int(xs.min()) - 10), min(w, int(xs.max()) + 10)
     y0, y1 = max(0, int(ys.min()) - 10), min(h, int(ys.max()) + 10)
+    inset = ""
     if (x1 - x0) * (y1 - y0) >= 0.97 * h * w:
-        return image, dict(status="skipped", reason="content touches every border", border=[int(v) for v in bg])
+        # 배경이 고르지 않아(비네트·그라데이션) 내용 상자가 그림 전체일 때: 테두리 3% 안쪽 상자로 다시 시도(D-118)
+        x0, y0, x1, y1 = int(0.03 * w), int(0.03 * h), int(0.97 * w), int(0.97 * h)
+        inset = " (inset rect)"
     mask = np.zeros((h, w), np.uint8)
     models = np.zeros((1, 65), np.float64), np.zeros((1, 65), np.float64)
     try:
@@ -61,7 +64,7 @@ def whiten_background(image):
         return image, dict(status="skipped", reason=f"foreground fraction {fraction:.2f}", border=[int(v) for v in bg])
     out = image.copy()
     out[background] = 255
-    return out, dict(status="applied", border=[int(v) for v in bg], foreground_fraction=round(fraction, 3),
+    return out, dict(status="applied" + inset, border=[int(v) for v in bg], foreground_fraction=round(fraction, 3),
                      changed_px=int(background.sum()))
 
 
@@ -114,7 +117,7 @@ def clean_garment_reference(image, tag_scores, joints=()):
     """세 단계를 차례로. 반환: (그림, 보고{background, head, trim, changed}). 아무것도 적용되지 않으면 원본 배열 그대로."""
     step1, background = whiten_background(image)
     step2, head = remove_head(step1, tag_scores, joints)
-    changed = background["status"] == "applied" or head["status"] == "applied"
+    changed = background["status"].startswith("applied") or head["status"] == "applied"
     if not changed:
         return image, dict(background=background, head=head, trim=dict(status="skipped", reason="nothing applied"), changed=False)
     step3, trim = trim_white(step2)

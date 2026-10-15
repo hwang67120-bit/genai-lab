@@ -117,7 +117,8 @@ def prepare_reference(image, parts, directory):
                       note="기준과 같은 이미지에서 파생한 시각 참조. 동일성을 보장하지 않는다.")
 
 
-def observe_result(reference, raw, directory, runtime, *, cancelled, popen, skip=None, base_scores=None, request_text=""):
+def observe_result(reference, raw, directory, runtime, *, cancelled, popen, skip=None, base_scores=None, request_text="",
+                   skeleton=None):
     """Qwen 종료 후 생성 결과 자체를 분할한다. 기준 마스크를 결과에 적용하지 않는다.
     skip: 요청과 충돌해 재지 않는 특징(request_conflicts), base_scores: 의상 태그 차이 관찰용 기준 태그."""
     directory = Path(directory)
@@ -150,15 +151,19 @@ def observe_result(reference, raw, directory, runtime, *, cancelled, popen, skip
     # 노출·금지 외형 태그가 강하게 관찰되면 승인할 수 없는 결과로 둔다. 나이 관련 태그는 사람 확인 근거로만 남긴다.
     if observed["blocked"]:
         safety = dict(status="violated", judge="automatic_analysis", evidence=observed["blocked"], review=observed["review"])
+    pose_match = dict(status="unmeasurable", reason="결과 관절 인식 실패") if skeleton else None
     try:
         joints = detect_joints(rgb, directory / "joints", runtime, cancelled=cancelled)
+        if skeleton:      # D-131: 결과 관절의 팔·다리 각도를 골격과 비교(관찰, 재시도 근거 아님)
+            from genai_lab.pose_guidance import compare_pose
+            pose_match = compare_pose(skeleton, joints)
         limbs = dict(status="unmeasurable", joints=joints,
                      reason="출력 좌표에서만 인식. 미검출은 가림·인식 오류와 소실을 구분하지 못하므로 사람 검토")
     except Exception as error:
         if cancelled():
             raise
         limbs = dict(status="unmeasurable", reason=str(error))
-    result = dict(image=str(path), image_sha256=sha(path), coordinate_basis="generated_output",
+    result = dict(image=str(path), image_sha256=sha(path), coordinate_basis="generated_output", pose_match=pose_match,
                   segmentation=seg, verification=verification, body_part_counts=part_counts(parts), limbs=limbs, safety=safety,
                   garment_tags=garment_tag_changes(base_scores, scores), request_tags=request_observations(request_text, scores),
                   errors=errors)
@@ -205,6 +210,11 @@ def condition_judgements(conditions, observation, number, raw):
         status = "needs_review" if value.get("status") == "kept" and value.get("review") else status_map.get(value.get("status"), "unmeasurable")
         rows.append(dict(key="feature."+key, status=status, judge="automatic_analysis", target=target, evidence=value,
                          note="태그·색 관찰은 최종 동일성 판정이 아니다. 부위 개수/연결은 확인 불가"))
+    match = observation.get("pose_match")
+    if match:
+        rows.append(dict(key="pose.skeleton_match", judge="automatic_analysis", target=target, evidence=match,
+                         status={"match": "not_violated", "mismatch": "needs_review"}.get(match["status"], "unmeasurable"),
+                         note="골격 대비 팔·다리 각도 관찰. 다리·팔 개수 이상은 사람 확인"))
     for item in observation.get("request_tags") or ():
         rows.append(dict(key="request."+item["key"], judge="automatic_analysis", target=target, evidence=item,
                          status={"observed": "not_violated", "not_observed": "needs_review"}.get(item["status"], "unmeasurable"),
@@ -213,8 +223,30 @@ def condition_judgements(conditions, observation, number, raw):
     return rows
 
 
+def prepare_skeleton(image, staging, directory, runtime, cancelled):
+    """지원 자세면 기준 그림 관절로 비율을 맞춘 골격을 그려 저장(D-131). 반환 (경로, 관절 기록, 기록) 또는 (None, None, 기록)."""
+    from genai_lab.pose_guidance import classify_pose, draw_skeleton, retarget
+    pose_key = classify_pose(staging)
+    if pose_key is None:
+        return None, None, dict(status="unsupported", reason="지원 자세 목록 밖 — 글 지시만(결과 보장 없음)", staging=staging)
+    canvas = np.asarray(image)
+    try:
+        joints = detect_joints(canvas, directory / "base-joints", runtime, cancelled=cancelled)
+        joint_error = None
+    except Exception as error:
+        if cancelled():
+            raise
+        joints, joint_error = [], str(error)[:200]
+    records, info = retarget(pose_key, joints, image.size)
+    path = directory / "inputs" / "pose-skeleton.png"
+    Image.fromarray(draw_skeleton(records, image.size)).save(path)
+    return path, records, dict(status="guided", pose_key=pose_key, path=str(path), sha256=sha(path), retarget=info,
+                                base_joint_error=joint_error, source="code_template+automatic_analysis")
+
+
 def prepare_generation_inputs(base_path, character_features, request_text, *, base_kind, gender, body_parts,
-                              confirmed, adult_confirmed, directory, runtime, cancelled, progress, popen, trace, persist, selection_seed):
+                              confirmed, adult_confirmed, directory, runtime, cancelled, progress, popen, trace, persist, selection_seed,
+                              pose_guidance=False):
     """확인된 입력의 같은 바이트·특징·조건·파생 참조를 실행 폴더에 고정하고 Qwen 명세를 반환한다."""
     inputs = directory / "inputs"
     inputs.mkdir()
@@ -253,8 +285,14 @@ def prepare_generation_inputs(base_path, character_features, request_text, *, ba
     staging = staging_text(request_text, selection_seed)        # 빈 요청이면 고른 고정 자세로 가림을 판단(D-128)
     conflicts = request_conflicts(staging)
     sentence = features_sentence(features, hidden=conflicts)
+    skeleton_path, skeleton_records, skeleton_record = (prepare_skeleton(image, staging, directory, runtime, cancelled) if pose_guidance
+                                                        else (None, None, dict(status="off")))
+    trace["input_facts"]["pose_guidance"] = skeleton_record
     assembled = free_conditions(sentence, gender, body_parts, request_text, selection_seed, base_kind,
-                                reference_scope=crop_record["scope"])
+                                reference_scope=crop_record["scope"], skeleton=skeleton_path is not None)
+    assembled["skeleton"] = skeleton_records
+    if pose_guidance and skeleton_path is None:
+        assembled["excluded"].append(dict(key="pose_skeleton", reason=skeleton_record["reason"]))
     assembled["request_conflicts"] = conflicts
     assembled["staging_text"] = staging
     if conflicts:
@@ -274,13 +312,14 @@ def prepare_generation_inputs(base_path, character_features, request_text, *, ba
     write_json(inputs / "conditions.json", dict(input_facts=trace["input_facts"], **recorded))
     spec = prepare_free_spec(prepared["canvas"], reference, directory=directory / "qwen-inputs", request_text=request_text,
                              gender=gender, body_parts=body_parts, features_text=sentence, base_kind=base_kind, reference_box=crop_record["box"], selection_seed=selection_seed,
-                             reference_scope=crop_record["scope"])
+                             reference_scope=crop_record["scope"], skeleton_path=skeleton_path, skeleton_joints=skeleton_records or (),
+                             pose_key=skeleton_record.get("pose_key", ""))
     return features, assembled, spec
 
 
 def run_free_generation(base_path, character_features, request_text="", *, base_kind, gender, body_parts,
                         confirmed, adult_confirmed, settings, runtime, directory, cancelled=lambda: False,
-                        progress=lambda _: None, popen=subprocess.Popen, selection_seed=None):
+                        progress=lambda _: None, popen=subprocess.Popen, selection_seed=None, pose_guidance=False):
     """GUI와 향후 API가 사용할 함수. 실패는 trace를 보존하고 예외, 성공은 사람 검토 대기 결과 반환."""
     directory = Path(directory).resolve()
     directory.mkdir(parents=True, exist_ok=False)
@@ -294,7 +333,7 @@ def run_free_generation(base_path, character_features, request_text="", *, base_
     try:
         from genai_lab.qwen_preservation import json_sha
         source_root = Path(__file__).resolve().parents[1]
-        code_files = ("free_generation", "qwen_free_generation", "free_generation_pipeline", "qwen_pose_worker", "qwen_pose_edit", "qwen_pose_settings", "qwen_outfit_edit", "outfit_edit", "outfit_edit_pipeline", "character_features", "character_verification")
+        code_files = ("free_generation", "qwen_free_generation", "free_generation_pipeline", "qwen_pose_worker", "qwen_pose_edit", "qwen_pose_settings", "qwen_outfit_edit", "outfit_edit", "outfit_edit_pipeline", "character_features", "character_verification", "pose_guidance", "hair_color_restore")
         trace["execution_contract"] = dict(settings=settings.record(), settings_sha256=json_sha(settings.record()),
             code_sha256={name: sha(source_root / "genai_lab" / (name+".py")) for name in code_files},
             contract_sha256=sha(source_root / "docs/FREE_GENERATION_CONTRACT.md"),
@@ -309,7 +348,8 @@ def run_free_generation(base_path, character_features, request_text="", *, base_
             raise ValueError("연출 선택 seed 형식 오류")
         features, assembled, spec = prepare_generation_inputs(base_path, character_features, request_text,
             base_kind=base_kind, gender=gender, body_parts=body_parts, confirmed=confirmed, adult_confirmed=adult_confirmed,
-            directory=directory, runtime=runtime, cancelled=cancelled, progress=progress, popen=popen, trace=trace, persist=persist, selection_seed=selection_seed)
+            directory=directory, runtime=runtime, cancelled=cancelled, progress=progress, popen=popen, trace=trace, persist=persist, selection_seed=selection_seed,
+            pose_guidance=pose_guidance)
         for number, seed in enumerate(SEEDS, 1):
             if cancelled():
                 raise RuntimeError("사용자 취소")
@@ -318,7 +358,8 @@ def run_free_generation(base_path, character_features, request_text="", *, base_
             request = make_free_request(spec, settings=settings, seed=seed)
             attempt = dict(number=number, seed=seed, selection_seed=spec.selection_seed, status="generating",
                            request=request, actual_images=[dict(path=spec.image_path, sha256=spec.image_sha256),
-                                                         dict(path=spec.reference_path, sha256=spec.reference_sha256)])
+                                                         dict(path=spec.reference_path, sha256=spec.reference_sha256),
+                                                         *([dict(path=spec.skeleton_path, sha256=spec.skeleton_sha256)] if spec.skeleton_path else [])])
             trace["attempts"].append(attempt)
             trace["status"] = "generating"
             persist()
@@ -333,7 +374,8 @@ def run_free_generation(base_path, character_features, request_text="", *, base_
             persist()
             observation = observe_result(features, raw, directory / f"result-analysis{suffix}", runtime,
                                          cancelled=cancelled, popen=popen, skip=assembled["request_conflicts"],
-                                         base_scores=assembled["base_scores"], request_text=assembled["staging_text"])
+                                         base_scores=assembled["base_scores"], request_text=assembled["staging_text"],
+                                         skeleton=assembled["skeleton"])
             judgement = condition_judgements(assembled["conditions"], observation, number, raw)
             restore = hair_restore_candidate(features, raw, directory / f"result-analysis{suffix}", observation)
             attempt.update(status="completed", raw=str(raw), raw_sha256=sha(raw), observation=observation, judgements=judgement,

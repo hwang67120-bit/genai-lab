@@ -114,7 +114,10 @@ def generate(request, directory, record):
                      else (spec.garment_path, spec.garment_sha256) if outfit
                      else (request["skeleton_path"], request["skeleton_sha256"]))
         record["task_kind"] = request.get("task_kind", "pose_edit")
-        for path, expected in ((spec.image_path, spec.image_sha256), reference):
+        sources = [(spec.image_path, spec.image_sha256), reference]
+        if request.get("task_kind") == "free_generation" and getattr(spec, "skeleton_path", ""):   # D-131 자세 골격(image 3)
+            sources.append((spec.skeleton_path, spec.skeleton_sha256))
+        for path, expected in sources:
             data = Path(path).read_bytes()
             import hashlib
             if hashlib.sha256(data).hexdigest() != expected:
@@ -228,7 +231,7 @@ def generate(request, directory, record):
         record["call_arguments"] = {"height": height, "width": width, "true_cfg_scale": settings.true_cfg_scale,
             "guidance_scale": settings.guidance_scale, "num_inference_steps": settings.steps,
             "num_images_per_prompt": 1, "seed": request["seed"], "generator_device": "cpu",
-            "positive": request["prompt"]["positive"], "negative": " ", "images": 2}
+            "positive": request["prompt"]["positive"], "negative": " ", "images": len(images)}
         save()
         if guard is None:
             torch.cuda.reset_peak_memory_stats()
@@ -245,7 +248,7 @@ def generate(request, directory, record):
             record["memory_stages"] = guard.stages
         record["generation_memory"] = {"allocated_bytes": torch.cuda.max_memory_allocated(),
                                       "reserved_bytes": torch.cuda.max_memory_reserved()}
-        if len(result.images) != 1 or len(record["steps"]) != settings.steps or count[0] != 2:
+        if len(result.images) != 1 or len(record["steps"]) != settings.steps or count[0] != len(images):
             raise RuntimeError("이미지/호출/입력 관측 수 불일치")
         if result.images[0].size != (width, height):
             raise RuntimeError("실제 출력 크기 불일치")

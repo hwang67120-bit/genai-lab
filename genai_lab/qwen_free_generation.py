@@ -29,6 +29,14 @@ class FreeGenerationSpec:
     selection_seed: int = 42  # 연출 선택 seed. 생성 재시도 seed와 독립
     reference_box: tuple = (0, 0, 768, 1024)
     reference_scope: str = "head"   # head | wide — 넓은 크롭이면 지시문이 head close-up이라고 부르지 않는다(D-126 ③)
+    skeleton_path: str = ""         # D-131 자세 골격 그림(image 3). 비면 그림 2장(기존과 같음)
+    skeleton_sha256: str = ""
+    skeleton_joints: tuple = ()     # 골격을 그린 관절 기록 — 작업 프로세스가 다시 그려 대조한다
+    pose_key: str = ""
+
+    @property
+    def images(self):
+        return 3 if self.skeleton_path else 2
 
     def record(self):
         return dict(asdict(self), body_parts=None if self.body_parts is None else list(self.body_parts))
@@ -64,15 +72,28 @@ class FreeGenerationSpec:
             with Image.open(self.reference_path) as reference:
                 if reference.mode != "RGB" or reference.size != (box[2]-box[0], box[3]-box[1]) or reference.tobytes() != im.crop(box).tobytes():
                     raise ValueError("추가 참조는 같은 기준 이미지의 크롭이어야 합니다.")
+        if self.skeleton_path:
+            import numpy as np
+            from genai_lab.pose_guidance import POSE_TEMPLATES, draw_skeleton
+            if self.pose_key not in POSE_TEMPLATES or len(self.skeleton_joints) != 18:
+                raise ValueError("지원 자세 골격 계약 오류")
+            if file_sha(self.skeleton_path) != self.skeleton_sha256:
+                raise ValueError("자세 골격 그림이 변경됐습니다.")
+            records = [dict(joint_name=r[0], x=float(r[1]), y=float(r[2]), detected=bool(r[3])) for r in self.skeleton_joints]
+            with Image.open(self.skeleton_path) as skeleton:
+                if skeleton.mode != "RGB" or skeleton.size != SIZE or not np.array_equal(np.asarray(skeleton), draw_skeleton(records, SIZE)):
+                    raise ValueError("골격 그림은 기록된 관절로 코드가 그린 그림이어야 합니다.")
+        elif self.skeleton_sha256 or self.skeleton_joints or self.pose_key:
+            raise ValueError("골격 없이 골격 기록만 있습니다.")
 
     def prompt(self, seed):
         return free_prompt(self.features_text, self.gender, self.body_parts, self.request_text, self.selection_seed,
-                           reference_scope=self.reference_scope)
+                           reference_scope=self.reference_scope, skeleton=bool(self.skeleton_path))
 
 
 def prepare_free_spec(canvas_path, reference_path, *, directory, request_text, gender="unspecified", body_parts=None,
                       features_text="", base_kind="edited", confirmed=True, reference_box=(0, 0, 768, 1024), selection_seed=42,
-                      reference_scope="head"):
+                      reference_scope="head", skeleton_path=None, skeleton_joints=(), pose_key=""):
     """두 입력을 실행 폴더로 복사해 고정한다."""
     if confirmed is not True:
         raise ValueError("기준 그림과 요청을 확인해 주세요.")
@@ -81,11 +102,18 @@ def prepare_free_spec(canvas_path, reference_path, *, directory, request_text, g
     base, reference = Path(canvas_path).read_bytes(), Path(reference_path).read_bytes()
     (directory / "base.png").write_bytes(base)
     (directory / "reference.png").write_bytes(reference)
+    skeleton = dict()
+    if skeleton_path:
+        data = Path(skeleton_path).read_bytes()
+        (directory / "skeleton.png").write_bytes(data)
+        skeleton = dict(skeleton_path=str(directory / "skeleton.png"), skeleton_sha256=hashlib.sha256(data).hexdigest(),
+                        skeleton_joints=tuple((r["joint_name"], r["x"], r["y"], bool(r["detected"])) for r in skeleton_joints),
+                        pose_key=pose_key)
     spec = FreeGenerationSpec(str(directory / "base.png"), hashlib.sha256(base).hexdigest(),
                               str(directory / "reference.png"), hashlib.sha256(reference).hexdigest(),
                               (request_text or "").strip(), gender, None if body_parts is None else tuple(body_parts),
                               features_text or "", base_kind, confirmed, selection_seed=selection_seed, reference_box=tuple(reference_box),
-                              reference_scope=reference_scope)
+                              reference_scope=reference_scope, **skeleton)
     spec.verify_image()
     spec.prompt(SEEDS[0])          # 요청 문장 검사(외형·의상·안전) — 여기서 걸리면 ValueError
     return spec
@@ -94,7 +122,7 @@ def prepare_free_spec(canvas_path, reference_path, *, directory, request_text, g
 def make_free_request(spec, *, settings, seed=SEEDS[0]):
     spec.verify_image()
     positive = spec.prompt(seed)
-    return {"schema_version": 1, "task_kind": "free_generation", "images": 2, "free_spec": spec.record(),
+    return {"schema_version": 1, "task_kind": "free_generation", "images": spec.images, "free_spec": spec.record(),
             "prompt": {"positive": positive, "negative": " ",
                        "positive_sha256": hashlib.sha256(positive.encode("utf-8")).hexdigest()},
             "settings": settings.record(), "seed": seed, "memory": dict(MEMORY_POLICY),
@@ -102,11 +130,14 @@ def make_free_request(spec, *, settings, seed=SEEDS[0]):
 
 
 def validate_free_request(request):
-    if request.get("task_kind") != "free_generation" or request.get("schema_version") != 1 or request.get("images") != 2:
+    if request.get("task_kind") != "free_generation" or request.get("schema_version") != 1:
         raise ValueError("자유 생성 요청 형식 오류")
     record = dict(request["free_spec"])
     parts = record.get("body_parts")
-    spec = FreeGenerationSpec(**dict(record, body_parts=None if parts is None else tuple(parts)))
+    spec = FreeGenerationSpec(**dict(record, body_parts=None if parts is None else tuple(parts),
+                                     skeleton_joints=tuple(tuple(r) for r in record.get("skeleton_joints") or ())))
+    if request.get("images") != spec.images:
+        raise ValueError("자유 생성 그림 수 계약 오류")
     spec.verify_image()
     QwenPoseSettings(**request["settings"])
     if request.get("seed") not in SEEDS or type(request.get("seed")) is not int:

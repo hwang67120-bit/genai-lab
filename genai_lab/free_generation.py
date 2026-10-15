@@ -220,7 +220,7 @@ def features_sentence(features, hidden=()):
     return text
 
 
-def free_conditions(features_text, gender, body_parts, request_text, seed, base_kind="edited", reference_scope="head"):
+def free_conditions(features_text, gender, body_parts, request_text, seed, base_kind="edited", reference_scope="head", skeleton=False):
     """조건 목록(D-112 구조). features_text는 features_sentence()의 결과(확정 특징표에서 온 문장)."""
     conditions, excluded = [], []
     checked = check_request(request_text)
@@ -257,6 +257,10 @@ def free_conditions(features_text, gender, body_parts, request_text, seed, base_
     else:
         pose = None
         conditions.append(dict(key="request", text=request_text.strip().rstrip(".") + ". ", source="user", reason="사용자 요청(연출)", basis=request_text.strip()))
+    if skeleton:      # D-131: 지원 자세의 골격 그림(image 3)으로 구조를 정한다(글보다 그림, 요청 25 시험)
+        from genai_lab.pose_guidance import SKELETON_PROMPT
+        conditions.append(dict(key="pose_skeleton", text=SKELETON_PROMPT, source="policy",
+                               reason="지원 자세 목록의 골격을 캐릭터 비율로 맞춰 image 3으로 전달", basis="D-131"))
     if checked["empty"] or not mentions_background(request_text):
         conditions.append(dict(key="background", text=WHITE_BACKGROUND, source="policy", reason="배경 요청 없음 → 흰 배경(결정 ②)", basis=None))
     else:
@@ -276,9 +280,9 @@ def free_conditions(features_text, gender, body_parts, request_text, seed, base_
     return dict(conditions=conditions, excluded=excluded, pose=pose, base_kind=base_kind)
 
 
-def free_prompt(features_text, gender, body_parts, request_text, seed, reference_scope="head"):
+def free_prompt(features_text, gender, body_parts, request_text, seed, reference_scope="head", skeleton=False):
     return "".join(c["text"] for c in free_conditions(features_text, gender, body_parts, request_text, seed,
-                                                       reference_scope=reference_scope)["conditions"])
+                                                       reference_scope=reference_scope, skeleton=skeleton)["conditions"])
 
 
 def part_counts(parts, min_px=200):

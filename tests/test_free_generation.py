@@ -130,7 +130,7 @@ def test_completed_output_is_pending_and_segmented_in_its_own_coordinates(tmp_pa
     results = FreeGenerationResults(result)
     with pytest.raises(ValueError):
         results.export(tmp_path/"saved.png")
-    results.approve(dict(character=True,garment=True,request=True,exposure=True))
+    results.approve(dict(character=True,garment=True,request=True,exposure=True,finish=True))
     results.export(tmp_path/"saved.png")
     human = json.loads(Path(result["trace"]).read_text(encoding="utf-8"))["human_judgements"][-1]
     assert human["judge"] == "user" and human["target"]["sha256"] == sha(tmp_path/"saved.png")
@@ -220,7 +220,7 @@ def test_source_snapshot_survives_changes_to_original(tmp_path,fake_models):
     results=FreeGenerationResults(result)
     Image.new("RGB",(896,1184),"red").save(results.current_path)
     with pytest.raises(ValueError,match="변경"):
-        results.approve(dict(character=True,garment=True,request=True,exposure=True))
+        results.approve(dict(character=True,garment=True,request=True,exposure=True,finish=True))
 
 
 def test_confirmed_adult_still_rejects_forbidden_input_observation(tmp_path,fake_models,monkeypatch):
@@ -299,7 +299,7 @@ def test_free_judgement_uses_the_common_format_and_is_counted_by_the_summary(tmp
     result = pipeline.run_free_generation(base,features(),base_kind="original",gender="female",body_parts=(),
         confirmed=True,adult_confirmed=True,settings=settings(tmp_path),runtime=SimpleNamespace(),directory=root/"r1"/"free-generation")
     results = FreeGenerationResults(result)
-    results.approve(dict(character=True,garment=True,request=True,exposure=True))
+    results.approve(dict(character=True,garment=True,request=True,exposure=True,finish=True))
     entry = json.loads((root/"r1"/"free-generation"/"judgement.json").read_text(encoding="utf-8"))[-1]
     assert entry["recorded_at"] and entry["request_followed"] == "yes" and entry["mode"] == "free_generation"
     assert entry["quality_pass"] is True and entry["target"]["attempt"] == 1
@@ -385,7 +385,7 @@ def test_both_attempts_are_candidates_and_the_user_choice_is_recorded(tmp_path,f
     assert results.current_path.parent.name == "qwen"
     with pytest.raises(ValueError):
         results.select(2)
-    results.approve(dict(character=True,garment=True,request=True,exposure=True))
+    results.approve(dict(character=True,garment=True,request=True,exposure=True,finish=True))
     entry = json.loads((Path(result["directory"])/"judgement.json").read_text(encoding="utf-8"))[-1]
     assert entry["target"]["attempt"] == 1 and entry["target"]["sha256"] == sha(Path(result["directory"])/"qwen"/"raw.png")
 
@@ -400,8 +400,8 @@ def test_distinctive_notes_must_be_confirmed_at_approval(tmp_path,fake_models):
     assert "heart-shaped tail tip" in request["prompt"]["positive"]
     results = FreeGenerationResults(result)
     with pytest.raises(ValueError):
-        results.approve(dict(character=True,garment=True,request=True,exposure=True))
-    results.approve(dict(character=True,garment=True,request=True,exposure=True,distinctive=True))
+        results.approve(dict(character=True,garment=True,request=True,exposure=True,finish=True))
+    results.approve(dict(character=True,garment=True,request=True,exposure=True,finish=True,distinctive=True))
 
 
 def test_manual_free_judgement_does_not_use_the_head_paste_rule(tmp_path,fake_models):
@@ -412,7 +412,8 @@ def test_manual_free_judgement_does_not_use_the_head_paste_rule(tmp_path,fake_mo
     directory = Path(result["directory"])
     record_judgement(directory, dict(judge="user", note="눈 색만 봄"))
     assert json.loads((directory/"judgement.json").read_text(encoding="utf-8"))[-1]["quality_pass"] is None
-    record_judgement(directory, dict(judge="user", same_character="yes", outfit="same", request_followed="yes", severe_defect="none"))
+    record_judgement(directory, dict(judge="user", same_character="yes", outfit="same", request_followed="yes", severe_defect="none",
+                                     finish_quality="good"))                    # 완성도까지 판정해야 통과(D-133)
     trace = json.loads((directory/"trace.json").read_text(encoding="utf-8"))
     assert trace["human_judgements"][-1]["quality_pass"] is True and trace["judgement"]["quality"]["quality_pass"] is True
     record_judgement(directory, dict(judge="user", same_character="no"))
@@ -534,9 +535,54 @@ def test_hair_restored_candidate_is_offered_but_not_selected(tmp_path,fake_model
     assert results.candidate["variant"] == "raw"                              # 처음엔 원 결과
     results.select(1)
     assert "머리색 보정본" in results.head_notice
-    results.approve(dict(character=True,garment=True,request=True,exposure=True))
+    results.approve(dict(character=True,garment=True,request=True,exposure=True,finish=True))
     entry = json.loads((Path(result["directory"])/"judgement.json").read_text(encoding="utf-8"))[-1]
     assert entry["target"]["variant"] == "hair_restored" and entry["target"]["sha256"] == restored["sha256"]
     saved = results.export(tmp_path/"out.png")
     assert json.loads(saved.with_suffix(".review.json").read_text(encoding="utf-8"))["variant"] == "hair_restored"
+
+
+@pytest.mark.parametrize("text,code", [("nude", "unsafe"), ("two characters standing together", "multiple_characters"),
+                                       ("wear a new dress", "outfit_change"), ("머리색을 바꿔", "appearance_change"),
+                                       ("give her a hat", "appearance_change"), ("make the character childlike", "unsafe")])
+def test_rejections_carry_a_fixed_code_for_external_callers(text, code):
+    # D-133 호환성: 외부 프롬프트 작성기가 처리할 수 있게 고정 거부 코드를 준다(사람용 문장은 그대로)
+    from genai_lab.free_generation import FreeGenerationRejected, REJECTION_CODES
+    checked = check_request(text)
+    assert not checked["ok"] and checked["code"] == code and code in REJECTION_CODES
+    with pytest.raises(FreeGenerationRejected) as error:
+        free_conditions("", "female", (), text, 42)
+    assert error.value.code == code and isinstance(error.value, ValueError)
+    with pytest.raises(FreeGenerationRejected) as too_long:
+        check_request("a" * 2001)
+    assert too_long.value.code == "request_too_long"
+
+
+def test_headless_call_returns_versioned_outcome_and_coded_rejection(tmp_path,fake_models):
+    # GUI 없이 공통 함수를 부른다(향후 API와 같은 길). 성공은 버전 있는 결과, 거부는 코드가 trace에 남는다
+    from genai_lab.free_generation import FreeGenerationRejected
+    base,_ = fake_models
+    result = run(tmp_path,base)
+    assert result["schema"] == pipeline.OUTCOME_SCHEMA and result["status"] == "awaiting_user_review"
+    assert {"candidates","selected_attempt","condition_judgements","automatic_features","trace","quality_pass"} <= set(result)
+    with pytest.raises(FreeGenerationRejected) as error:
+        pipeline.run_free_generation(base,features(),"wear a new dress",base_kind="original",gender="female",body_parts=(),
+            confirmed=True,adult_confirmed=True,settings=settings(tmp_path),runtime=SimpleNamespace(),directory=tmp_path/"rejected")
+    trace = json.loads((tmp_path/"rejected"/"trace.json").read_text(encoding="utf-8"))
+    assert trace["status"] == "rejected" and trace["rejection"]["code"] == error.value.code == "outfit_change"
+    with pytest.raises(FreeGenerationRejected) as unconfirmed:
+        pipeline.run_free_generation(base,features(),"",base_kind="original",gender="female",body_parts=(),
+            confirmed=True,adult_confirmed=False,settings=settings(tmp_path),runtime=SimpleNamespace(),directory=tmp_path/"unconfirmed")
+    assert unconfirmed.value.code == "confirmation_required"
+
+
+def test_approval_requires_finish_quality_and_records_it(tmp_path,fake_models):
+    # D-133 완료 기준: 완성도(배경·선·마무리)도 사람이 확인한다
+    base,_ = fake_models
+    results = FreeGenerationResults(run(tmp_path,base))
+    with pytest.raises(ValueError):
+        results.approve(dict(character=True,garment=True,request=True,exposure=True))
+    results.approve(dict(character=True,garment=True,request=True,exposure=True,finish=True))
+    entry = json.loads((results.directory/"judgement.json").read_text(encoding="utf-8"))[-1]
+    assert entry["finish_quality"] == "good" and entry["quality_pass"] is True
 

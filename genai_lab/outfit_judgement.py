@@ -17,6 +17,7 @@ ITEMS = {
     "pose": ("kept", "changed", "not_judged"),
     "severe_defect": ("none", "present", "not_judged"),                   # 얼굴 소실·중복, 일그러짐, 잘못된 팔다리, 잘림
     "request_followed": ("yes", "partial", "no", "not_judged"),           # 자유 생성(D-123): 요청·선택된 연출 반영
+    "finish_quality": ("good", "lacking", "not_judged"),                  # 자유 생성 완성도(D-133): 배경·선·마무리가 기준 수준인가
 }
 
 
@@ -54,7 +55,8 @@ def quality_pass(judgement, composited):
 def free_quality_pass(judgement):
     """자유 생성 품질 통과(D-123): 같은 캐릭터 + 의상 같음 + 요청 반영 + 심한 이상 없음. 머리 합성 기준은 쓰지 않는다.
     판정된 핵심 항목 중 하나라도 실패면 False, 전부 통과면 True, 실패 없이 미판정이 남으면 None."""
-    passes = {"same_character": ("yes",), "outfit": ("same",), "request_followed": ("yes",), "severe_defect": ("none",)}
+    passes = {"same_character": ("yes",), "outfit": ("same",), "request_followed": ("yes",), "severe_defect": ("none",),
+              "finish_quality": ("good",)}
     judged = {k: judgement.get(k, "not_judged") for k in passes}
     if any(v != "not_judged" and v not in passes[k] for k, v in judged.items()):
         return False

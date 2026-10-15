@@ -16,7 +16,7 @@ from genai_lab.outfit_judgement import ITEMS, summarize  # noqa: E402
 
 FAILING = {"same_character": ("no",), "outfit": ("different",), "original_garment_remaining": ("some",),
            "body_parts": ("changed", "missing", "added"), "pose": ("changed",), "severe_defect": ("present",),
-           "request_followed": ("no",)}
+           "request_followed": ("no",), "finish_quality": ("lacking",)}
 MODES = {"outfit_edit": "outfit-edit", "free_generation": "free-generation"}
 
 

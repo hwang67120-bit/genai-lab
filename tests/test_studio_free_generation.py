@@ -49,7 +49,7 @@ def test_gui_uses_common_function_and_separate_four_check_approval(tmp_path, fak
     decision = dict(base_kind="original",gender="female",body_parts=(),character_features=features(),request_text="눈 내리는 거리",
                     confirmed=True,adult_confirmed=True)
     monkeypatch.setattr(free_ui,"confirm_free_inputs",lambda *a:decision)
-    monkeypatch.setattr(free_ui,"confirm_free_result",lambda *a:dict(character=True,garment=True,request=True,exposure=True))
+    monkeypatch.setattr(free_ui,"confirm_free_result",lambda *a:dict(character=True,garment=True,request=True,exposure=True,finish=True))
     monkeypatch.setattr(qwen_outfit_edit,"load_qwen_settings",lambda *a:settings(tmp_path))
     monkeypatch.setattr(ui,"analyze_inputs",lambda *a,**kw:pytest.fail("옷 편집 입력 경로 사용"))
     monkeypatch.setattr(ui,"validate_local_models",lambda *a:pytest.fail("SDXL 모델 접근"))

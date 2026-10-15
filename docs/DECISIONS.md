@@ -2,6 +2,12 @@
 
 > 이 문서는 과거 판단과 실험 근거를 보존하는 기록이다. 현재 제품 계약은 docs/FLOW.md만 따른다. 아래 결정이 FLOW.md와 충돌하면 과거 결정으로 취급하며 새 구현의 근거로 사용하지 않는다.
 
+## D-133 자유 생성 1차 완료 기준과 호환성(B) 구현 (2026-10-16)
+
+- 사용자 "권고대로 진행하고 푸쉬 해줘": 완료 기준 A(고정 평가 세트 약 20줄, 선택 통과율 70%, 완성도 판정 추가, 1장/선택 통과율 따로)·B(호환성)·C(개선 최대 2번 → 지원 범위 밖 경고 → 운영 모드)를 `docs/FREE_GENERATION_CONTRACT.md` 10절에 확정.
+- B 구현: 고정 거부 코드 `FreeGenerationRejected`(unsafe·multiple_characters·outfit_change·appearance_change·request_too_long·invalid_input·invalid_features·confirmation_required·approval_required·unsafe_input; `ValueError` 하위라 기존 호출 그대로), 거부는 trace에 `status: rejected`·`rejection`. 결과 형식 `free_generation_outcome/1`. 호출 규칙 문서 `docs/FREE_GENERATION_API.md`. GUI 없는 호출 시험.
+- 판정 항목 `finish_quality`(good/lacking) 추가 — 자유 생성 품질 통과에 포함, 결과 확인 창에 "그림 완성도(배경·선·마무리)가 기준 수준" 체크. 이미 기록된 판정(요청 22·23·25)은 그대로 둔다(완성도 미판정).
+
 ## D-132 요청 25 결과: 골격 유도는 기본 꺼짐 유지 (2026-10-16)
 
 - 요청 25(Codex, `codex-preflight-25-rerun1`·`free-r25-rerun1`, 6장 모두 재시도 없음): 사용자 "골격이 있든 없든 잘 나온 상태야" → 여섯 장 모두 정상(품질 통과)으로 기록. Codex 의견: N1·N2는 골격 쪽이 구조가 조금 더 분명, K 걷기는 골격 쪽이 서 있는 모습에 가까움(약해짐). 자동 `pose.skeleton_match`는 세 장 모두 match.

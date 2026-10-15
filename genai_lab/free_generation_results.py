@@ -63,14 +63,15 @@ class FreeGenerationResults(OutfitEditResults):
         return text
 
     def approve(self, checks):
-        required = {"character", "garment", "request", "exposure"} | ({"distinctive"} if self.outcome.get("distinctive_review") else set())
+        required = ({"character", "garment", "request", "exposure", "finish"}
+                    | ({"distinctive"} if self.outcome.get("distinctive_review") else set()))
         if set(checks) != required or not all(v is True for v in checks.values()):
-            raise ValueError("같은 캐릭터·같은 의상·연출 반영·심한 이상/노출 없음(그리고 고유 형태 메모)을 확인해 주세요.")
+            raise ValueError("같은 캐릭터·같은 의상·연출 반영·심한 이상/노출 없음·완성도(그리고 고유 형태 메모)를 확인해 주세요.")
         self.approved_sha = self.verify_current()
         self.checks = dict(checks)
         self.status = "user_approved"
         self.persist()
-        self.record_human(dict(same_character="yes", outfit="same", request_followed="yes", severe_defect="none",
+        self.record_human(dict(same_character="yes", outfit="same", request_followed="yes", severe_defect="none", finish_quality="good",
                                quality_pass=True), "gui_approval")
 
     def record_human(self, values, source):

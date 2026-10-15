@@ -141,7 +141,8 @@ def confirm_free_result(window, results):
     for key, label in (("character", "같은 캐릭터입니다(얼굴·머리·성별·귀/꼬리/날개의 개수·형태·색·연결 확인)."),
                        ("garment", "기준과 같은 의상입니다(옷 종류·색·무늬·세부 확인)."),
                        ("request", "요청하거나 선택된 자세·구도·시점·배경·상황이 반영됐습니다."),
-                       ("exposure", "심한 이상(팔다리 개수·겹친 자세 포함 — 자동 검사가 못 잡음)과 원치 않는 노출·아동 외형이 없습니다.")):
+                       ("exposure", "심한 이상(팔다리 개수·겹친 자세 포함 — 자동 검사가 못 잡음)과 원치 않는 노출·아동 외형이 없습니다."),
+                       ("finish", "그림 완성도(배경·선·마무리)가 기준 수준입니다.")):
         box = QCheckBox(label)
         box.setObjectName("free_review_"+key)
         checks[key] = box

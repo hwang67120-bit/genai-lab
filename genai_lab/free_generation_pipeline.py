@@ -12,7 +12,7 @@ from PIL import Image
 
 from genai_lab.character_features import DISTINCTIVE, TAG_ITEMS, extract_features, write_features
 from genai_lab.character_verification import measure_result_scores, retry_reasons, verify_features
-from genai_lab.free_generation import (HIDDEN_NOTES, INTENT, SEEDS, check_request, distinctive_notes, features_sentence, free_conditions,
+from genai_lab.free_generation import (HIDDEN_NOTES, INTENT, SEEDS, FreeGenerationRejected, check_request, distinctive_notes, features_sentence, free_conditions,
                                        garment_tag_changes, part_counts, request_conflicts, request_observations, safety_observation,
                                        staging_text)
 from genai_lab.outfit_edit import SIZE, canvas, sha, write_json
@@ -22,22 +22,25 @@ from genai_lab.qwen_free_generation import (FreeGenerationWorkflow, make_free_re
                                            run_free_generation_edit)
 
 
+OUTCOME_SCHEMA = "free_generation_outcome/1"     # 반환 형식(D-133, docs/FREE_GENERATION_API.md). 키를 바꾸면 버전을 올린다
+
+
 def validate_inputs(base_path, base_kind, features, gender, body_parts, request_text, confirmed, adult_confirmed, *, snapshot_directory=None):
     """원본과 승인 편집본을 구분하고 이미지 바이트·승인 근거를 확인한다."""
     if confirmed is not True or adult_confirmed is not True:
-        raise ValueError("성인 캐릭터와 특징표·연출 범위를 확인해 주세요.")
+        raise FreeGenerationRejected("confirmation_required", "성인 캐릭터와 특징표·연출 범위를 확인해 주세요.")
     if base_kind not in ("original", "edited"):
-        raise ValueError("기준은 original 또는 edited여야 합니다.")
+        raise FreeGenerationRejected("invalid_input", "기준은 original 또는 edited여야 합니다.")
     if gender not in ("male", "female", "unspecified") or body_parts is None:
-        raise ValueError("성별과 부위를 확인해 주세요(부위 없음은 빈 목록).")
+        raise FreeGenerationRejected("invalid_input", "성별과 부위를 확인해 주세요(부위 없음은 빈 목록).")
     if len(set(body_parts)) != len(body_parts) or not set(body_parts) <= {"ears", "tail", "wings"}:
-        raise ValueError("부위 값 오류")
+        raise FreeGenerationRejected("invalid_input", "부위 값 오류")
     if not isinstance(features, dict) or set(features) - {DISTINCTIVE} != set(TAG_ITEMS):
-        raise ValueError("확정 특징표의 모든 태그 항목이 필요합니다(모르면 빈 목록).")
+        raise FreeGenerationRejected("invalid_features", "확정 특징표의 모든 태그 항목이 필요합니다(모르면 빈 목록).")
     distinctive_notes(features.get(DISTINCTIVE))      # 고유 형태 메모 검사(D-126 ④)
     from genai_lab.character_features import features_text, parse_features_text
     if any(v is not None and (not isinstance(v, (list, tuple)) or any(not isinstance(x, str) for x in v)) for v in features.values()):
-        raise ValueError("특징표 값은 태그 문자열 목록(없음은 빈 목록, 모름은 None)이어야 합니다.")
+        raise FreeGenerationRejected("invalid_features", "특징표 값은 태그 문자열 목록(없음은 빈 목록, 모름은 None)이어야 합니다.")
     normalized = parse_features_text(features_text({k: dict(values=v) for k, v in features.items()}))
     import re
     for key, values in normalized.items():
@@ -45,10 +48,11 @@ def validate_inputs(base_path, base_kind, features, gender, body_parts, request_
             continue
         for tag in values or ():
             if not re.fullmatch(r"[a-zA-Z0-9_-]{1,80}", tag) or not check_request(tag.replace("_", " "))["ok"]:
-                raise ValueError("특징표에는 외형 태그만 쓸 수 있습니다.")
+                raise FreeGenerationRejected("invalid_features", "특징표에는 외형 태그만 쓸 수 있습니다.")
     checked = check_request(request_text)
     if not checked["ok"]:
-        raise ValueError(checked["reason"] + " " + ", ".join(checked["matched"]))
+        raise FreeGenerationRejected(checked["code"], checked["reason"] + " " + ", ".join(checked["matched"]),
+                                     detail=dict(codes=checked["codes"], matched=checked["matched"]))
     path = Path(base_path).resolve()
     data = path.read_bytes()
     import hashlib
@@ -61,7 +65,7 @@ def validate_inputs(base_path, base_kind, features, gender, body_parts, request_
         if (approval.get("mode") != "outfit_edit" or approval.get("reviewer") != "user"
                 or approval.get("sha256") != digest
                 or not all(checks.get(k) is True for k in ("character", "garment", "exposure", "original_outfit_gone"))):
-            raise ValueError("같은 이미지에 대한 사용자 의상 편집 승인이 필요합니다.")
+            raise FreeGenerationRejected("approval_required", "같은 이미지에 대한 사용자 의상 편집 승인이 필요합니다.")
         approval = dict(path=str(sidecar), sha256=sha(sidecar), record=approval)
     with Image.open(io.BytesIO(data)) as image:
         prepared = canvas(image)
@@ -267,7 +271,8 @@ def prepare_generation_inputs(base_path, character_features, request_text, *, ba
     trace["input_facts"]["automatic_tags"] = dict(source="automatic_analysis", scores=scores, blocked=blocked, review=observed["review"])
     persist()
     if blocked:
-        raise ValueError("기준 이미지에서 금지된 외형·노출 태그가 관찰됐습니다: " + ", ".join(blocked))
+        raise FreeGenerationRejected("unsafe_input", "기준 이미지에서 금지된 외형·노출 태그가 관찰됐습니다: " + ", ".join(blocked),
+                                     detail=dict(tags=blocked))
     segmented = segment_canvas(prepared, directory / "base-parts", runtime, cancelled=cancelled, popen=popen)
     with np.load(segmented["parts"], allow_pickle=False) as data:
         parts = {k: data[k].astype(bool) for k in data.files}
@@ -345,7 +350,7 @@ def run_free_generation(base_path, character_features, request_text="", *, base_
             import secrets
             selection_seed = secrets.randbelow(2**31) if not request_text.strip() else SEEDS[0]
         if type(selection_seed) is not int or not 0 <= selection_seed < 2**63:
-            raise ValueError("연출 선택 seed 형식 오류")
+            raise FreeGenerationRejected("invalid_input", "연출 선택 seed 형식 오류")
         features, assembled, spec = prepare_generation_inputs(base_path, character_features, request_text,
             base_kind=base_kind, gender=gender, body_parts=body_parts, confirmed=confirmed, adult_confirmed=adult_confirmed,
             directory=directory, runtime=runtime, cancelled=cancelled, progress=progress, popen=popen, trace=trace, persist=persist, selection_seed=selection_seed,
@@ -395,7 +400,7 @@ def run_free_generation(base_path, character_features, request_text="", *, base_
         trace["selected_attempt"] = chosen["number"]
         blocked = observation["safety"]["status"] == "violated"
         trace["status"] = "blocked" if blocked else "awaiting_user_review"
-        outcome = dict(status=trace["status"], directory=str(directory), raw=str(raw), result=str(raw), result_sha256=sha(raw),
+        outcome = dict(schema=OUTCOME_SCHEMA, status=trace["status"], directory=str(directory), raw=str(raw), result=str(raw), result_sha256=sha(raw),
                        composited=False, base_kind=base_kind, attempts=trace["attempts"],
                        conditions=str(directory / "inputs" / "conditions.json"), trace=str(directory / "trace.json"),
                        condition_judgements=judgement, automatic_features=observation["verification"], quality_pass=None,
@@ -418,7 +423,8 @@ def run_free_generation(base_path, character_features, request_text="", *, base_
         persist()
         return outcome
     except Exception as error:
-        trace.update(status="cancelled" if cancelled() else "failed", error=str(error))
+        trace.update(status="cancelled" if cancelled() else ("rejected" if isinstance(error, FreeGenerationRejected) else "failed"),
+                     error=str(error), rejection=error.record() if isinstance(error, FreeGenerationRejected) else None)
         if trace["attempts"]:
             trace["attempts"][-1].update(status=trace["status"], error=str(error))
             run_record = qwen / "run.json"

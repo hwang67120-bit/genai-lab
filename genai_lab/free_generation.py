@@ -74,25 +74,58 @@ SCENE_COLORS = "Keep the character's own {} colors exactly as in image 1; the sc
 INTENT = "free_generation: keep the same character and outfit, change only the requested staging"
 
 
+# 외부 호출자(사람·LLM 프롬프트 작성기)가 처리할 수 있는 고정 거부 코드(D-133, docs/FREE_GENERATION_API.md).
+REJECTION_CODES = {
+    "unsafe": "노출·아동 외형 등 금지된 요청",
+    "multiple_characters": "여러 캐릭터 요청(한 캐릭터만 지원)",
+    "outfit_change": "의상을 바꾸거나 입히는 요청(의상 교체는 편집 단계)",
+    "appearance_change": "머리·눈·피부·부위·장식 등 외형을 바꾸는 요청",
+    "request_too_long": "요청 문장 2000자 초과",
+    "invalid_input": "형식이 맞지 않는 입력(기준 종류·성별·부위·seed·문자열 아님)",
+    "invalid_features": "특징표 형식 오류(태그 항목·외형 태그·고유 형태 메모)",
+    "confirmation_required": "성인 캐릭터·특징표·연출 범위 확인이 없음",
+    "approval_required": "편집본 기준인데 같은 이미지의 사용자 의상 편집 승인이 없음",
+    "unsafe_input": "기준 이미지에서 금지 태그가 관찰됨",
+}
+
+
+class FreeGenerationRejected(ValueError):
+    """입력·요청 거부. code는 REJECTION_CODES의 키(고정), 문장은 사람용 설명."""
+
+    def __init__(self, code, message, detail=None):
+        if code not in REJECTION_CODES:
+            raise KeyError(code)
+        super().__init__(message)
+        self.code, self.detail = code, detail
+
+    def record(self):
+        return dict(code=self.code, message=str(self), detail=self.detail)
+
+
+REQUEST_RULES = (     # (코드, 패턴) — 앞의 코드가 우선
+    ("unsafe", SAFETY_PATTERNS),
+    ("multiple_characters", (r"\b(?:two|three|multiple)\s+(?:people|characters|persons)\b|(?:두|세)\s*(?:명|사람|캐릭터)",)),
+    ("outfit_change", (r"\b(?:wear|wearing|put on)\b[^.;!?\n]{0,25}\b(?:dress|shirt|skirt|pants|jacket|coat|uniform|costume)\b",
+                       r"(?:옷|의상|치마|바지|수영복|속옷)[^.;!?\n]{0,20}(?:입고|입은|입기)")),
+    ("appearance_change", (CHANGE + r"[^.;!?\n]{0,35}" + APPEARANCE_TARGET, APPEARANCE_TARGET + r"[^.;!?\n]{0,35}" + CHANGE,
+                           ATTACHED_LENGTH, r"\b(?:give|put|wear|wearing|put on)\b[^.;!?\n]{0,25}\b" + ACCESSORY + r"\b")),
+)
+
+
 def check_request(text):
-    """명백한 계약 충돌의 문장 근거를 반환. 통과는 의미 승인이나 안전 보장이 아니다."""
+    """명백한 계약 충돌의 문장 근거를 반환. 통과는 의미 승인이나 안전 보장이 아니다.
+    거부면 code(고정 거부 코드)·codes(걸린 코드 전부)를 함께 준다."""
     if not isinstance(text, str):
-        raise ValueError("연출 요청은 문자열이어야 합니다.")
+        raise FreeGenerationRejected("invalid_input", "연출 요청은 문자열이어야 합니다.")
     text = text.strip()
     if len(text) > 2000:
-        raise ValueError("연출 요청은 2000자 이내로 써 주세요.")
-    patterns = (*SAFETY_PATTERNS,
-                r"\b(?:two|three|multiple)\s+(?:people|characters|persons)\b|(?:두|세)\s*(?:명|사람|캐릭터)",
-                CHANGE + r"[^.;!?\n]{0,35}" + APPEARANCE_TARGET,
-                APPEARANCE_TARGET + r"[^.;!?\n]{0,35}" + CHANGE,
-                ATTACHED_LENGTH,
-                r"\b(?:give|put|wear|wearing|put on)\b[^.;!?\n]{0,25}\b" + ACCESSORY + r"\b",
-                r"\b(?:wear|wearing|put on)\b[^.;!?\n]{0,25}\b(?:dress|shirt|skirt|pants|jacket|coat|uniform|costume)\b",
-                r"(?:옷|의상|치마|바지|수영복|속옷)[^.;!?\n]{0,20}(?:입고|입은|입기)")
-    matches = [m.group(0) for pattern in patterns for m in re.finditer(pattern, text, re.I)]
+        raise FreeGenerationRejected("request_too_long", "연출 요청은 2000자 이내로 써 주세요.")
+    found = [(code, m.group(0)) for code, patterns in REQUEST_RULES for pattern in patterns for m in re.finditer(pattern, text, re.I)]
+    matches = [m for _, m in found]
+    codes = list(dict.fromkeys(code for code, _ in found))
     return dict(ok=not matches, reason="외형·의상 변경 또는 금지된 외형 요청은 자유 생성 범위 밖입니다." if matches else "",
-                matched=matches, empty=not text, semantic_status="not_reviewed", judge="rule",
-                note="문장 패턴 검사는 보조 정보이며 사용자가 연출 범위를 확인해야 합니다.")
+                matched=matches, code=codes[0] if codes else None, codes=codes, empty=not text, semantic_status="not_reviewed",
+                judge="rule", note="문장 패턴 검사는 보조 정보이며 사용자가 연출 범위를 확인해야 합니다.")
 
 
 def safety_observation(scores):
@@ -121,11 +154,12 @@ def distinctive_notes(notes):
     notes = list(notes or ())
     from genai_lab.character_features import MAX_DISTINCTIVE
     if len(notes) > MAX_DISTINCTIVE or any(not isinstance(n, str) or not n.strip() or len(n) > 60 for n in notes):
-        raise ValueError(f"고유 형태 메모는 {MAX_DISTINCTIVE}개까지, 하나에 60자 이내로 써 주세요.")
+        raise FreeGenerationRejected("invalid_features", f"고유 형태 메모는 {MAX_DISTINCTIVE}개까지, 하나에 60자 이내로 써 주세요.")
     for note in notes:
         checked = check_request(note)
         if not checked["ok"]:
-            raise ValueError("고유 형태 메모에는 지금 모습만 적어 주세요(바꾸는 말·금지 표현 불가): " + ", ".join(checked["matched"]))
+            raise FreeGenerationRejected("invalid_features", "고유 형태 메모에는 지금 모습만 적어 주세요(바꾸는 말·금지 표현 불가): "
+                                         + ", ".join(checked["matched"]), detail=dict(codes=checked["codes"]))
     english = [n.strip() for n in notes if re.fullmatch(r"[A-Za-z0-9 ,'()/+-]+", n.strip())]
     return dict(prompt=english, review=[n.strip() for n in notes])
 
@@ -225,7 +259,8 @@ def free_conditions(features_text, gender, body_parts, request_text, seed, base_
     conditions, excluded = [], []
     checked = check_request(request_text)
     if not checked["ok"]:
-        raise ValueError(checked["reason"] + " (" + ", ".join(checked["matched"]) + ")")
+        raise FreeGenerationRejected(checked["code"], checked["reason"] + " (" + ", ".join(checked["matched"]) + ")",
+                                     detail=dict(codes=checked["codes"], matched=checked["matched"]))
     conditions.append(dict(key="keep_character", text="Keep the same character as in image 1. " + (features_text or ""),
                            source="user_confirmed" if features_text else "policy",
                            reason="특징 유지 요청이며 동일성 보장은 아니다", basis="확정 특징표" if features_text else "특징표 없음(일반문만)"))

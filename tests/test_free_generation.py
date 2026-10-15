@@ -489,3 +489,13 @@ def test_pose_and_head_accessory_tags_are_not_garment_changes():
     changes = garment_tag_changes(dict(shorts=0.8, hair_bow=0.9), dict(shorts=0.8, hands_in_pockets=0.7, holding_hat=0.6, hat=0.8, pants=0.6))
     assert changes["lost"] == [] and changes["added"] == ["pants"]
 
+
+def test_scene_requests_ask_to_keep_own_colours_but_white_background_does_not():
+    # D-129: 요청 21 N2-2 눈길에서 분홍 머리가 회색으로(흰 배경 요청 23 N2-hands는 유지) → 장면 요청일 때만 고유 색 유지 문장
+    scene = {c["key"]: c for c in free_conditions("", "male", ("ears", "tail"), "walking in a snowy street", 42)["conditions"]}
+    assert scene["scene_colors"]["text"].startswith("Keep the character's own hair, eye, skin and outfit colors")
+    white = {c["key"] for c in free_conditions("", "male", ("ears", "tail"), "", 42)["conditions"]}
+    assert "scene_colors" not in white
+    closed = {c["key"]: c for c in free_conditions("", "female", (), "standing with eyes closed in a snowy street", 42)["conditions"]}
+    assert "eye" not in closed["scene_colors"]["basis"]["items"]          # 가린 특징은 보이게 요구하지 않는다(D-127)
+

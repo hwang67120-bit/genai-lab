@@ -70,6 +70,7 @@ REQUEST_TAGS = ((EYES_CLOSED_REQUEST, "eyes_closed", ("closed_eyes",)),
                 (HANDS_HIDDEN_REQUEST, "hands_hidden", ("arms_behind_back", "hands_in_pockets", "hand_in_pocket")))
 WHOLE_FIGURE = "Show the whole character inside the frame. "
 WHITE_BACKGROUND = "Place the character alone on a plain pure white background with nothing else. "
+SCENE_COLORS = "Keep the character's own {} colors exactly as in image 1; the scene lighting must not change or wash out these colors. "
 INTENT = "free_generation: keep the same character and outfit, change only the requested staging"
 
 
@@ -261,6 +262,12 @@ def free_conditions(features_text, gender, body_parts, request_text, seed, base_
     else:
         conditions.append(dict(key="background", text="", source="user", reason="배경 표현 후보가 있어 흰 배경 강제를 제외(실제 반영은 사람 검토)", basis=request_text))
         excluded.append(dict(key="white_background", reason="배경 요청 후보; 사용자 확인"))
+        # 장면 조명이 캐릭터 고유 색을 덮지 않게 한다(D-129, 요청 21 N2-2 눈길에서 분홍 머리가 회색으로; 흰 배경 요청 23 N2-hands는 유지).
+        # 요청이 가리는 특징(눈 감기 → 눈, 뒷모습 → 피부)은 보이게 요구하지 않는다(D-127).
+        hidden = request_conflicts(request_text)
+        own = [w for w, key in (("hair", None), ("eye", "eye_color"), ("skin", "skin"), ("outfit", None)) if key not in hidden]
+        conditions.append(dict(key="scene_colors", text=SCENE_COLORS.format(", ".join(own[:-1]) + " and " + own[-1]), source="policy",
+                               reason="배경·장면 요청이 있을 때만: 장면 조명과 관계없이 고유 색 유지", basis=dict(decision="D-129", items=own)))
     conditions.append(dict(key="no_props", text=NO_PROPS, source="policy", reason="요청에 없는 소품 금지", basis=None))
     if checked["empty"]:
         conditions.append(dict(key="framing", text=WHOLE_FIGURE, source="policy", reason="기본 무작위 자세는 전신", basis=None))

@@ -482,3 +482,10 @@ def test_hands_hidden_request_is_observed_with_tags():
                          note="태그 관찰. 요청 반영 판정은 사람이 한다")]
     assert request_observations("hands in pockets", {})[0]["status"] == "not_observed"
 
+
+def test_pose_and_head_accessory_tags_are_not_garment_changes():
+    # 요청 23 N2-hands: 뒷짐이 hands_in_pockets(의상 분류)로 잡혀 '의상 생김'에 섞였다. 머리 장식은 특징표가 따로 본다
+    from genai_lab.free_generation import garment_tag_changes
+    changes = garment_tag_changes(dict(shorts=0.8, hair_bow=0.9), dict(shorts=0.8, hands_in_pockets=0.7, holding_hat=0.6, hat=0.8, pants=0.6))
+    assert changes["lost"] == [] and changes["added"] == ["pants"]
+

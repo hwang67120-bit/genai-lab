@@ -165,11 +165,18 @@ def request_observations(text, scores, threshold=SAFETY_THRESHOLD):
     return found
 
 
+# 의상으로 분류되지만 의상이 아닌 태그(요청 23 N2-hands: 뒷짐이 hands_in_pockets로 잡혀 '의상 생김'에 섞임).
+# 자세·드는 동작 태그와, 특징표가 따로 검사하는 머리 장식(hair_bow·hat 등)은 의상 차이에서 뺀다.
+POSE_TAG = r"^(?:holding|hands?_|arms?_|own_|crossed_)|_in_pockets?$|_behind_back$"
+
+
 def garment_tag_changes(base_scores, result_scores, threshold=SAFETY_THRESHOLD):
     """기준·결과 의상 태그(tag_scope garment)의 잃음·생김. 관찰만 — 자세 변화로 가려지기 쉬워 재시도 근거가 아니다(D-126 ④)."""
+    from genai_lab.character_features import HEAD_ACCESSORY_TAGS
     from genai_lab.reference_features import tag_scope
     def garments(scores):
-        return {k for k, v in (scores or {}).items() if float(v) >= threshold and tag_scope(k) == "garment"}
+        return {k for k, v in (scores or {}).items() if float(v) >= threshold and tag_scope(k) == "garment"
+                and not re.search(POSE_TAG, k) and k not in HEAD_ACCESSORY_TAGS}
     if base_scores is None or result_scores is None:
         return dict(status="unmeasurable", reason="tagger unavailable", lost=[], added=[])
     base, result = garments(base_scores), garments(result_scores)

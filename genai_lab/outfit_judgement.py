@@ -51,6 +51,16 @@ def quality_pass(judgement, composited):
     return None if any(v == "not_judged" for v in judged.values()) else True
 
 
+def free_quality_pass(judgement):
+    """자유 생성 품질 통과(D-123): 같은 캐릭터 + 의상 같음 + 요청 반영 + 심한 이상 없음. 머리 합성 기준은 쓰지 않는다.
+    판정된 핵심 항목 중 하나라도 실패면 False, 전부 통과면 True, 실패 없이 미판정이 남으면 None."""
+    passes = {"same_character": ("yes",), "outfit": ("same",), "request_followed": ("yes",), "severe_defect": ("none",)}
+    judged = {k: judgement.get(k, "not_judged") for k in passes}
+    if any(v != "not_judged" and v not in passes[k] for k, v in judged.items()):
+        return False
+    return None if any(v == "not_judged" for v in judged.values()) else True
+
+
 def record_judgement(run_directory, judgement):
     """실행 폴더에 judgement.json(목록, 추가만)을 쓰고 trace.json이 있으면 human_judgements에 잇는다. 반환: 기록 경로."""
     run_directory = Path(run_directory)
@@ -59,19 +69,24 @@ def record_judgement(run_directory, judgement):
     existing = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
     composited = None
     trace_path = run_directory / "trace.json"
-    if trace_path.exists():
-        trace = json.loads(trace_path.read_text(encoding="utf-8"))
+    trace = json.loads(trace_path.read_text(encoding="utf-8")) if trace_path.exists() else None
+    if data.get("mode") == "free_generation" or (trace or {}).get("schema", "").startswith("free_generation"):
+        # 자유 생성은 머리 합성이 없으므로 편집 단계 기준(합성 안 됨 = 실패)을 쓰지 않는다
+        data["mode"] = "free_generation"
+        data["quality_pass"] = free_quality_pass(data)
+    elif trace is not None:
         composited = bool(trace.get("judgement", {}).get("composited"))
     else:
         outcome = run_directory / "compose" / "outcome.json"
         if outcome.exists():
             composited = bool(json.loads(outcome.read_text(encoding="utf-8")).get("composited"))
-    data["quality_pass"] = quality_pass(data, composited) if composited is not None else None
+    if data.get("mode") != "free_generation":
+        data["quality_pass"] = quality_pass(data, composited) if composited is not None else None
     existing.append(data)
     write_json(path, existing)
-    if trace_path.exists():
+    if trace is not None:
         trace["human_judgements"] = existing
-        trace["judgement"]["quality"] = latest_quality(existing)
+        trace.setdefault("judgement", {})["quality"] = latest_quality(existing)
         write_json(trace_path, trace)
     return path
 

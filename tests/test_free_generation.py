@@ -402,3 +402,19 @@ def test_distinctive_notes_must_be_confirmed_at_approval(tmp_path,fake_models):
     with pytest.raises(ValueError):
         results.approve(dict(character=True,garment=True,request=True,exposure=True))
     results.approve(dict(character=True,garment=True,request=True,exposure=True,distinctive=True))
+
+
+def test_manual_free_judgement_does_not_use_the_head_paste_rule(tmp_path,fake_models):
+    # 편집 단계 기준(머리 합성 안 됨 = 실패)이 자유 생성 수동 기록에 쓰이지 않는다(2026-10-15 K-1 기록에서 발견)
+    from genai_lab.outfit_judgement import record_judgement
+    base,_ = fake_models
+    result = run(tmp_path,base)
+    directory = Path(result["directory"])
+    record_judgement(directory, dict(judge="user", note="눈 색만 봄"))
+    assert json.loads((directory/"judgement.json").read_text(encoding="utf-8"))[-1]["quality_pass"] is None
+    record_judgement(directory, dict(judge="user", same_character="yes", outfit="same", request_followed="yes", severe_defect="none"))
+    trace = json.loads((directory/"trace.json").read_text(encoding="utf-8"))
+    assert trace["human_judgements"][-1]["quality_pass"] is True and trace["judgement"]["quality"]["quality_pass"] is True
+    record_judgement(directory, dict(judge="user", same_character="no"))
+    assert json.loads((directory/"judgement.json").read_text(encoding="utf-8"))[-1]["quality_pass"] is False
+

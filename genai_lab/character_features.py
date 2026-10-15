@@ -265,8 +265,10 @@ def extract_features(image, parts, scores, *, gender="unknown", body_parts=None,
     hair_colors = dominant_colors(image, hair_mask_without_background(image, parts["hair"])) if "hair" in parts else []
     hair_mask = hair_mask_without_background(image, parts["hair"]) if "hair" in parts else None
     palette = dominant_colors(image, hair_mask, k=5) if hair_mask is not None else []
+    from genai_lab.hair_color_restore import hair_ab_quantiles
     items["hair_color"] = _item(state(hair_tags, hair_colors), "tags+pixels", tags=[n for n, _ in hair_tags], colors=hair_colors,
-                                palette=palette, colored=colored_hair(image, hair_mask, palette) if hair_mask is not None else [])
+                                palette=palette, colored=colored_hair(image, hair_mask, palette) if hair_mask is not None else [],
+                                ab_quantiles=hair_ab_quantiles(image, hair_mask) if hair_mask is not None else None)
     eye_tags = tag_values(scores, EYE_COLOR_TAGS)
     eye = eye_color(image, parts["eyes"]) if "eyes" in parts else None
     eyes = eye_colors(image, parts["eyes"]) if "eyes" in parts else []

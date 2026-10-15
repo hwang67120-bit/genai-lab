@@ -166,6 +166,34 @@ def observe_result(reference, raw, directory, runtime, *, cancelled, popen, skip
     return result
 
 
+def hair_restore_candidate(features, raw, analysis_directory, observation):
+    """머리색이 바뀌었거나 확인 필요로 관찰되면 색감만 기준 분포로 되돌린 보정 후보를 따로 만든다(D-130, 선택 마무리).
+    원 결과는 그대로 두고, 사용자가 결과 목록에서 고를 때만 쓴다. 만들지 않으면 None."""
+    import cv2
+    from genai_lab.character_features import hair_mask_without_background
+    from genai_lab.hair_color_restore import restore_hair_color
+    hair = (observation["verification"].get("items") or {}).get("hair_color") or {}
+    if not (hair.get("status") in ("changed", "added") or hair.get("review")):
+        return None
+    reference = ((features.get("items") or {}).get("hair_color") or {}).get("ab_quantiles")
+    parts_path = (observation.get("segmentation") or {}).get("parts")
+    if not reference or not parts_path:
+        return dict(status="unmeasurable", reason="기준 분포 또는 결과 분할 없음")
+    with Image.open(raw) as source:
+        image = np.asarray(source.convert("RGB"))
+    with np.load(parts_path, allow_pickle=False) as data:
+        if "hair" not in data.files:
+            return dict(status="unmeasurable", reason="결과 머리 영역 없음")
+        mask = cv2.resize(data["hair"].astype(np.uint8), (image.shape[1], image.shape[0]), interpolation=cv2.INTER_NEAREST).astype(bool)
+    restored, report = restore_hair_color(image, hair_mask_without_background(image, mask), reference)
+    if restored is None:
+        return report
+    path = Path(analysis_directory) / "hair-restored.png"
+    Image.fromarray(restored).save(path)
+    return dict(report, path=str(path), sha256=sha(path), source=str(raw), source_sha256=sha(raw),
+                trigger=dict(status=hair.get("status"), review=hair.get("review")))
+
+
 def condition_judgements(conditions, observation, number, raw):
     """자동 판정은 특징별 관찰에 한정. 의상·동일성·연출 전체를 추정하지 않는다."""
     target = dict(attempt=number, image=str(raw), sha256=sha(raw))
@@ -307,7 +335,9 @@ def run_free_generation(base_path, character_features, request_text="", *, base_
                                          cancelled=cancelled, popen=popen, skip=assembled["request_conflicts"],
                                          base_scores=assembled["base_scores"], request_text=assembled["staging_text"])
             judgement = condition_judgements(assembled["conditions"], observation, number, raw)
-            attempt.update(status="completed", raw=str(raw), raw_sha256=sha(raw), observation=observation, judgements=judgement)
+            restore = hair_restore_candidate(features, raw, directory / f"result-analysis{suffix}", observation)
+            attempt.update(status="completed", raw=str(raw), raw_sha256=sha(raw), observation=observation, judgements=judgement,
+                           hair_restore=restore)
             persist()
             # 확신 있는 위반만 재시도한다(D-126 ⑤). 경계값·엇갈림·가림·요청 충돌·의상 태그 차이는 사람 확인으로 남긴다.
             reasons = retry_reasons(observation["verification"])
@@ -328,12 +358,18 @@ def run_free_generation(base_path, character_features, request_text="", *, base_
                        conditions=str(directory / "inputs" / "conditions.json"), trace=str(directory / "trace.json"),
                        condition_judgements=judgement, automatic_features=observation["verification"], quality_pass=None,
                        selected_attempt=chosen["number"],
-                       candidates=[dict(attempt=a["number"], seed=a["seed"], raw=a["raw"], sha256=a["raw_sha256"],
-                                        violation_score=a["violation_score"], retry_items=a["retry_items"],
-                                        blocked=a["observation"]["safety"]["status"] == "violated",
-                                        automatic_features=a["observation"]["verification"].get("summary", {}),
-                                        garment_tags=a["observation"]["garment_tags"])
-                                   for a in trace["attempts"] if a.get("status") == "completed"],
+                       candidates=[c for a in trace["attempts"] if a.get("status") == "completed" for c in (
+                                       dict(attempt=a["number"], variant="raw", seed=a["seed"], raw=a["raw"], sha256=a["raw_sha256"],
+                                            violation_score=a["violation_score"], retry_items=a["retry_items"],
+                                            blocked=a["observation"]["safety"]["status"] == "violated",
+                                            automatic_features=a["observation"]["verification"].get("summary", {}),
+                                            garment_tags=a["observation"]["garment_tags"]),
+                                       *([dict(attempt=a["number"], variant="hair_restored", seed=a["seed"], raw=a["hair_restore"]["path"],
+                                               sha256=a["hair_restore"]["sha256"], violation_score=a["violation_score"],
+                                               retry_items=a["retry_items"], blocked=a["observation"]["safety"]["status"] == "violated",
+                                               automatic_features=a["observation"]["verification"].get("summary", {}),
+                                               garment_tags=a["observation"]["garment_tags"], hair_restore=a["hair_restore"])]
+                                         if (a.get("hair_restore") or {}).get("status") == "restored" else []))],
                        distinctive_review=assembled["distinctive_review"],
                        note="자동 검사는 동일성·최종 품질 승인이 아니다. 원본 기준 성공은 의상 교체 해결 증거가 아니다.")
         write_json(directory / "outcome.json", outcome)

@@ -499,3 +499,44 @@ def test_scene_requests_ask_to_keep_own_colours_but_white_background_does_not():
     closed = {c["key"]: c for c in free_conditions("", "female", (), "standing with eyes closed in a snowy street", 42)["conditions"]}
     assert "eye" not in closed["scene_colors"]["basis"]["items"]          # 가린 특징은 보이게 요구하지 않는다(D-127)
 
+
+def test_hair_restore_moves_only_hair_colour_toward_the_reference():
+    # D-130: 눈길에서 회색이 된 분홍 머리(요청 21·24 N2-2) — 머리 색감만 기준 분포로, 명암·머리 밖은 그대로
+    from genai_lab.character_features import to_lab
+    from genai_lab.hair_color_restore import hair_ab_quantiles, restore_hair_color
+    reference = np.full((60, 60, 3), (230, 170, 195), np.uint8)
+    reference[:, 30:] = (200, 190, 196)                                       # 분홍 반, 회분홍 반
+    quantiles = hair_ab_quantiles(reference, np.ones((60, 60), bool))
+    result = np.full((80, 80, 3), (190, 205, 225), np.uint8)                 # 푸른 배경
+    result[10:50, 10:50] = (185, 185, 190)                                    # 회색 머리
+    result[10:50, 10:30] = (150, 150, 155)                                    # 그늘
+    mask = np.zeros((80, 80), bool)
+    mask[10:50, 10:50] = True
+    restored, report = restore_hair_color(result, mask, quantiles)
+    assert report["status"] == "restored" and report["chroma_after"] > report["chroma_before"] + 5
+    assert report["lightness_change"] < 3
+    assert (restored[70:, 70:] == result[70:, 70:]).all()                    # 머리 밖은 그대로
+    lab = to_lab(restored)
+    assert lab[30, 20, 0] < lab[30, 40, 0]                                    # 그늘은 그늘대로(명암 유지)
+    assert restore_hair_color(result, np.zeros((80, 80), bool), quantiles)[0] is None
+
+
+def test_hair_restored_candidate_is_offered_but_not_selected(tmp_path,fake_models,monkeypatch):
+    base,_ = fake_models
+    monkeypatch.setattr(pipeline,"verify_features",lambda *a:dict(items=dict(hair_color=dict(status="kept",review=["색 있는 머리 비중 감소"])),
+                                                                  summary=dict(review=["hair_color"]),retry=[]))
+    result = run(tmp_path,base)
+    variants = [(c["attempt"], c["variant"]) for c in result["candidates"]]
+    assert variants == [(1, "raw"), (1, "hair_restored")]
+    restored = result["candidates"][1]
+    assert restored["raw"].endswith("hair-restored.png") and restored["hair_restore"]["status"] == "restored"
+    results = FreeGenerationResults(result)
+    assert results.candidate["variant"] == "raw"                              # 처음엔 원 결과
+    results.select(1)
+    assert "머리색 보정본" in results.head_notice
+    results.approve(dict(character=True,garment=True,request=True,exposure=True))
+    entry = json.loads((Path(result["directory"])/"judgement.json").read_text(encoding="utf-8"))[-1]
+    assert entry["target"]["variant"] == "hair_restored" and entry["target"]["sha256"] == restored["sha256"]
+    saved = results.export(tmp_path/"out.png")
+    assert json.loads(saved.with_suffix(".review.json").read_text(encoding="utf-8"))["variant"] == "hair_restored"
+

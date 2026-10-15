@@ -21,7 +21,8 @@ class FreeGenerationResults(OutfitEditResults):
                                              raw=outcome["result"], sha256=outcome["result_sha256"])]) if not c.get("blocked")]
         if not self.candidates:
             raise ValueError("사용할 수 있는 시도가 없습니다.")
-        first = next((i for i, c in enumerate(self.candidates) if c["attempt"] == outcome.get("selected_attempt")), 0)
+        first = next((i for i, c in enumerate(self.candidates)                 # 처음엔 보정 전 원 결과(보정은 사용자가 고를 때만, D-130)
+                      if c["attempt"] == outcome.get("selected_attempt") and c.get("variant", "raw") == "raw"), 0)
         self.selected = first
         super().__init__(dict(outcome, qwen_view=outcome["result"]))
         self.verify_current()
@@ -56,7 +57,9 @@ class FreeGenerationResults(OutfitEditResults):
     def head_notice(self):
         text = "Qwen 생성 결과입니다. 원본 머리 합성 없음 · 자동 특징 관찰과 사람 품질 판정은 별도입니다."
         if len(self.candidates) > 1:
-            text += f" 시도 {len(self.candidates)}개 중 {self.candidate['attempt']}번째를 보고 있습니다 — 결과 목록에서 바꿔 보고 골라 주세요(자동 관찰 기준 순서, 품질 보장 아님)."
+            text += f" 결과 {len(self.candidates)}개 중 시도 {self.candidate['attempt']}을 보고 있습니다 — 결과 목록에서 바꿔 보고 골라 주세요(자동 관찰 기준 순서, 품질 보장 아님)."
+        if self.candidate.get("variant") == "hair_restored":
+            text += " 머리색 보정본입니다: 생성 결과의 머리 색감만 기준 머리색 분포로 맞췄습니다(명암 유지, 원본 픽셀 합성 아님)."
         return text
 
     def approve(self, checks):
@@ -71,7 +74,8 @@ class FreeGenerationResults(OutfitEditResults):
                                quality_pass=True), "gui_approval")
 
     def record_human(self, values, source):
-        target = dict(image=str(self.current_path), sha256=self.verify_current(), attempt=self.candidate["attempt"])
+        target = dict(image=str(self.current_path), sha256=self.verify_current(), attempt=self.candidate["attempt"],
+                      variant=self.candidate.get("variant", "raw"))
         # 편집 단계와 같은 판정 형식(D-114: 항목 검증·recorded_at)으로 남겨 운영 집계(D-118)에 들어가게 한다(검토 4번)
         entry = validate_judgement(dict(judge="user", source=source, target=target, mode="free_generation", **values))
         path = self.directory / "judgement.json"
@@ -111,6 +115,7 @@ class FreeGenerationResults(OutfitEditResults):
             raise ValueError("승인 이미지 변경")
         metadata = dict(mode="free_generation", sha256=self.approved_sha, reviewer="user", checks=self.checks,
                         source_run=str(self.directory), base_kind=self.outcome["base_kind"], attempt=self.candidate["attempt"],
+                        variant=self.candidate.get("variant", "raw"), hair_restore=self.candidate.get("hair_restore"),
                         head_composited=False, trace=self.outcome["trace"], approval_record=str(self.directory / "user-review.json"))
         created = []
         try:

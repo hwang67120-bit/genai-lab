@@ -44,6 +44,15 @@ SAFETY_THRESHOLD = 0.5
 NO_PROPS = "Do not add weapons or held props unless the request asks for them. "
 KEEP_OUTFIT = "Keep the character's outfit exactly as in image 1: the same garments, colors, patterns and details. "
 KEEP_FACE = "Keep the face, hairstyle, hair color and head accessories the same as in image 1 and as in the head close-up in image 2. "
+# 참조 크롭이 머리보다 넓으면(D-126 ③) "head close-up"이라고 부르지 않는다.
+KEEP_FACE_WIDE = "Keep the face, hairstyle, hair color and head accessories the same as in image 1 and as in the cropped reference in image 2. "
+# 어디에 무슨 색인지 말하지 않는 다색 태그는 문장에서 뺀다(N2-2 원색 추가 가설, D-126 ②). 특징표·검증에는 남는다.
+PLACEMENT_FREE_HAIR = ("multicolored_hair", "gradient_hair", "streaked_hair", "two-tone_hair")
+HAIR_PLACEMENT = "Keep the exact hair colors and where each color appears as in image 1; do not add new hair colors. "
+# 요청과 충돌하는 자동 검사(D-126 ⑤): 눈 감기면 눈 색, 뒷모습이면 얼굴 항목을 재지 않는다.
+EYES_CLOSED_REQUEST = (r"\b(?:eyes?\s+(?:are\s+)?closed|closed\s+eyes|clos(?:e|es|ing)\s+(?:her|his|their|the)\s+eyes|wink(?:s|ing)?)\b"
+                       r"|눈(?:을|은)?\s*감|윙크")
+BACK_VIEW_REQUEST = r"\b(?:from behind|back view|facing away|back to the viewer|seen from the back)\b|뒷모습|뒤돌아|등을\s*보"
 WHOLE_FIGURE = "Show the whole character inside the frame. "
 WHITE_BACKGROUND = "Place the character alone on a plain pure white background with nothing else. "
 INTENT = "free_generation: keep the same character and outfit, change only the requested staging"
@@ -90,6 +99,44 @@ def _plain(tag):
     return tag.replace("_", " ")
 
 
+def distinctive_notes(notes):
+    """고유 형태 메모 검사(D-126 ④). 반환: prompt(영어 메모만 — Qwen 전달), review(모두 — 결과 확인 창 체크 줄).
+    외형·의상 변경 문장, 금지 표현은 거부한다. None(모름)은 빈 목록."""
+    notes = list(notes or ())
+    from genai_lab.character_features import MAX_DISTINCTIVE
+    if len(notes) > MAX_DISTINCTIVE or any(not isinstance(n, str) or not n.strip() or len(n) > 60 for n in notes):
+        raise ValueError(f"고유 형태 메모는 {MAX_DISTINCTIVE}개까지, 하나에 60자 이내로 써 주세요.")
+    for note in notes:
+        checked = check_request(note)
+        if not checked["ok"]:
+            raise ValueError("고유 형태 메모에는 지금 모습만 적어 주세요(바꾸는 말·금지 표현 불가): " + ", ".join(checked["matched"]))
+    english = [n.strip() for n in notes if re.fullmatch(r"[A-Za-z0-9 ,'()/+-]+", n.strip())]
+    return dict(prompt=english, review=[n.strip() for n in notes])
+
+
+def request_conflicts(text):
+    """요청 문장이 일부러 가리는 특징 → {항목: 이유}. 그 항목은 자동 검사에서 빼고 사람이 본다."""
+    text = text or ""
+    skip = {}
+    if re.search(EYES_CLOSED_REQUEST, text, re.I):
+        skip["eye_color"] = "요청과 충돌: 눈 감기"
+    if re.search(BACK_VIEW_REQUEST, text, re.I):
+        skip.update(eye_color="요청과 충돌: 뒷모습", skin="요청과 충돌: 뒷모습")
+    return skip
+
+
+def garment_tag_changes(base_scores, result_scores, threshold=SAFETY_THRESHOLD):
+    """기준·결과 의상 태그(tag_scope garment)의 잃음·생김. 관찰만 — 자세 변화로 가려지기 쉬워 재시도 근거가 아니다(D-126 ④)."""
+    from genai_lab.reference_features import tag_scope
+    def garments(scores):
+        return {k for k, v in (scores or {}).items() if float(v) >= threshold and tag_scope(k) == "garment"}
+    if base_scores is None or result_scores is None:
+        return dict(status="unmeasurable", reason="tagger unavailable", lost=[], added=[])
+    base, result = garments(base_scores), garments(result_scores)
+    return dict(status="observed", lost=sorted(base - result), added=sorted(result - base), judge="automatic_analysis",
+                note="태그 차이는 관찰 근거다. 가림·태그 노이즈가 많아 재시도·판정에 쓰지 않는다(사람이 의상 확인)")
+
+
 def features_sentence(features):
     """확정·측정된 특징표 값으로 한 문장. unknown/weak 항목은 뺀다. 아무것도 없으면 빈 문자열."""
     items = (features or {}).get("items", {})
@@ -100,7 +147,7 @@ def features_sentence(features):
         if item.get("state") != "measured":
             continue
         values = [item["value"]] if key == "hair_length" and item.get("value") else (item.get("tags") if key == "hair_color" else item.get("values")) or []
-        hair.extend(_plain(v) for v in values)
+        hair.extend(_plain(v) for v in values if v not in PLACEMENT_FREE_HAIR)
     if hair:
         parts.append(" ".join(hair) + " hair" if not any(h.endswith("hair") for h in hair) else " ".join(hair))
     eyes = (items.get("eye_color") or {})
@@ -112,10 +159,17 @@ def features_sentence(features):
     skin = items.get("skin") or {}
     if skin.get("state") == "measured" and skin.get("tags"):
         parts.append(", ".join(_plain(v) for v in skin["tags"]))
-    return ("The character has " + "; ".join(parts) + "; keep these exactly. ") if parts else ""
+    text = ("The character has " + "; ".join(parts) + "; keep these exactly. ") if parts else ""
+    if (items.get("hair_color") or {}).get("state") == "measured":
+        text += HAIR_PLACEMENT
+    notes = (items.get("distinctive") or {})
+    english = distinctive_notes(notes.get("values"))["prompt"] if notes.get("state") == "measured" else []
+    if english:
+        text += "Keep these distinctive details exactly as in image 1: " + "; ".join(english) + ". "
+    return text
 
 
-def free_conditions(features_text, gender, body_parts, request_text, seed, base_kind="edited"):
+def free_conditions(features_text, gender, body_parts, request_text, seed, base_kind="edited", reference_scope="head"):
     """조건 목록(D-112 구조). features_text는 features_sentence()의 결과(확정 특징표에서 온 문장)."""
     conditions, excluded = [], []
     checked = check_request(request_text)
@@ -124,7 +178,11 @@ def free_conditions(features_text, gender, body_parts, request_text, seed, base_
     conditions.append(dict(key="keep_character", text="Keep the same character as in image 1. " + (features_text or ""),
                            source="user_confirmed" if features_text else "policy",
                            reason="특징 유지 요청이며 동일성 보장은 아니다", basis="확정 특징표" if features_text else "특징표 없음(일반문만)"))
-    conditions.append(dict(key="keep_face", text=KEEP_FACE, source="policy", reason="같은 기준 그림의 머리 크롭을 추가 시각 참조로 전달(동일성 보장 없음)", basis="D-123"))
+    if reference_scope not in ("head", "wide"):
+        raise ValueError("참조 범위 오류")
+    conditions.append(dict(key="keep_face", text=KEEP_FACE if reference_scope == "head" else KEEP_FACE_WIDE, source="policy",
+                           reason="같은 기준 그림의 머리 크롭을 추가 시각 참조로 전달(동일성 보장 없음)" if reference_scope == "head"
+                           else "머리보다 넓은 크롭이라 head close-up이라고 부르지 않는다(D-126 ③)", basis=dict(contract="D-123", scope=reference_scope)))
     conditions.append(dict(key="keep_outfit", text=KEEP_OUTFIT, source="policy", reason="자유 생성은 연출만 바꾼다", basis="D-098"))
     if gender in ("male", "female"):
         word = "male" if gender == "male" else "female"
@@ -155,8 +213,9 @@ def free_conditions(features_text, gender, body_parts, request_text, seed, base_
     return dict(conditions=conditions, excluded=excluded, pose=pose, base_kind=base_kind)
 
 
-def free_prompt(features_text, gender, body_parts, request_text, seed):
-    return "".join(c["text"] for c in free_conditions(features_text, gender, body_parts, request_text, seed)["conditions"])
+def free_prompt(features_text, gender, body_parts, request_text, seed, reference_scope="head"):
+    return "".join(c["text"] for c in free_conditions(features_text, gender, body_parts, request_text, seed,
+                                                       reference_scope=reference_scope)["conditions"])
 
 
 def part_counts(parts, min_px=200):

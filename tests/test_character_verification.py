@@ -84,4 +84,80 @@ def test_hair_colour_matches_the_nearest_reference_cluster():
     assert cv.compare_color(reference, white, cv.HAIR_DE)["status"] == "kept"          # N4: 흰 하이라이트 군집과 맞음
     dark = dict(lab=[36.0, 0.0, -2.0], rgb=[80, 84, 90])
     assert cv.compare_color(reference, dark, cv.HAIR_DE)["status"] == "changed"        # 10% 군집은 후보가 아니다
-    assert cv.compare_color(reference[0], white, cv.HAIR_DE)["status"] == "changed"    # 단일 색 비교는 그대로
+    single = cv.compare_color(reference[0], white, cv.HAIR_DE)                          # 단일 색 비교는 그대로, ΔE 15.9
+    assert single["status"] == "unknown" and single["reason"] == "borderline"            # 문턱~1.25배는 경계값(D-126)
+
+
+def two_eyes(left, right, hair=(60, 200, 200), streak=None):
+    """두 눈이 따로 있는 합성 그림(D-126). left/right: 홍채 RGB. streak: 머리에 섞을 색(새 머리색 검사)."""
+    image, parts = scene()
+    parts["eyes"][:] = False
+    for x0, colour in ((56, left), (88, right)):
+        image[95:105, x0:x0 + 16] = (250, 250, 250)
+        image[96:104, x0 + 3:x0 + 13] = colour
+        parts["eyes"][95:105, x0:x0 + 16] = True
+    if streak is not None:
+        image[10:20, 30:130] = streak
+    return image, parts
+
+
+def eye_reference(left, right, tags):
+    image, parts = two_eyes(left, right)
+    return cf.extract_features(image, parts, {t: 0.8 for t in tags}, gender="female", body_parts=())
+
+
+def test_heterochromia_lost_is_a_confident_change_even_when_tags_only_lose_a_colour():
+    # K-1: 청/적 오드아이 → 양쪽 파랑. 태그는 red_eyes·heterochromia만 잃어 missing, 두 눈 픽셀이 바뀜을 잡는다
+    reference = eye_reference((40, 90, 220), (220, 40, 50), ("blue_eyes", "red_eyes", "heterochromia"))
+    sample, sample_parts = two_eyes((40, 90, 220), (220, 40, 50))
+    measured = cf.eye_colors(sample, sample_parts["eyes"])
+    assert measured[0]["hue"] < -60 and cv.heterochromia(measured)
+    image, parts = two_eyes((40, 90, 220), (50, 100, 230))
+    report = cv.verify_features(reference, dict(blue_eyes=0.9), image, parts)
+    eye = report["items"]["eye_color"]
+    assert eye["tags_status"] == "missing" and eye["pixels"]["reason"] == "heterochromia_lost"
+    assert eye["status"] == "changed" and report["retry"] == ["eye_color"]
+    image, parts = two_eyes((220, 40, 50), (40, 90, 220))                       # 좌우가 바뀐 시점은 유지
+    assert cv.verify_features(reference, dict(blue_eyes=0.9, red_eyes=0.8, heterochromia=0.7), image, parts)["items"]["eye_color"]["status"] == "kept"
+
+
+def test_closed_eyes_and_tag_pixel_disagreement_are_unknown_not_retry():
+    reference = eye_reference((40, 90, 220), (40, 90, 220), ("blue_eyes",))
+    image, parts = two_eyes((200, 40, 60), (200, 40, 60))
+    closed = cv.verify_features(reference, dict(closed_eyes=0.9), image, parts)       # K-2: 감은 눈을 색 변화로 세지 않는다
+    assert closed["items"]["eye_color"]["status"] == "unknown" and "eyes hidden" in closed["items"]["eye_color"]["reason"]
+    disagree = cv.verify_features(reference, dict(blue_eyes=0.9), image, parts)       # 태그는 유지, 픽셀은 바뀜 → 사람 확인
+    assert disagree["items"]["eye_color"]["status"] == "unknown" and disagree["retry"] == []
+    skipped = cv.verify_features(reference, dict(red_eyes=0.9), image, parts, {"eye_color": "요청과 충돌: 눈 감기"})
+    assert skipped["items"]["eye_color"]["status"] == "unknown" and skipped["items"]["eye_color"]["skipped"] and skipped["retry"] == []
+
+
+def test_saturation_shift_of_the_same_hue_is_kept():
+    # N1·N2: Qwen이 분홍 눈을 더 진하게 그린다. 같은 색조면 유지(밝기·채도는 그림체로 바뀐다)
+    reference = eye_reference((205, 150, 160), (205, 150, 160), ("pink_eyes",))
+    image, parts = two_eyes((230, 110, 175), (230, 110, 175))
+    assert cv.verify_features(reference, dict(pink_eyes=0.8), image, parts)["items"]["eye_color"]["status"] == "kept"
+
+
+def test_new_saturated_hair_colour_is_added_and_retried():
+    # N2-2: 기준에 없던 원색 줄무늬. 가장 큰 색은 그대로라 예전 비교는 kept였다
+    image, parts = scene()
+    reference = cf.extract_features(image, parts, dict(aqua_hair=0.8), gender="female", body_parts=())
+    streaked, parts2 = two_eyes((40, 90, 220), (40, 90, 220), streak=(240, 220, 30))
+    report = cv.verify_features(reference, dict(aqua_hair=0.8), streaked, parts2)
+    hair = report["items"]["hair_color"]
+    assert hair["pixels"]["status"] == "kept" and hair["status"] == "added" and hair["new_colors"]
+    assert "hair_color" in report["retry"]
+    same = cv.verify_features(reference, dict(aqua_hair=0.8), image, parts)
+    assert same["items"]["hair_color"]["status"] == "kept" and same["items"]["hair_color"]["new_colors"] == []
+
+
+def test_generic_tag_is_not_a_change_and_weak_replacement_is_not_retried():
+    image, parts = scene()
+    reference = cf.extract_features(image, parts, dict(x_hair_ornament=0.8, long_hair=0.9), gender="female", body_parts=())
+    generic = cv.verify_features(reference, dict(hair_ornament=0.8, long_hair=0.9))       # N2-1: X 장식 → 일반 장식 태그
+    assert generic["items"]["head_accessories"]["status"] == "unknown" and generic["items"]["head_accessories"]["reason"] == "kept_generic"
+    weak = cv.verify_features(reference, dict(x_hair_ornament=0.8, very_long_hair=0.6))
+    assert weak["items"]["hair_length"]["status"] == "changed" and "hair_length" not in weak["retry"]
+    strong = cv.verify_features(reference, dict(x_hair_ornament=0.8, short_hair=0.9))
+    assert "hair_length" in strong["retry"]

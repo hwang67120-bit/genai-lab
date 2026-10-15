@@ -42,12 +42,30 @@ def failure_counts(run_directories):
     return dict(counts), notes
 
 
+def retry_counts(run_directories):
+    """자유 생성 재시도 횟수와 근거 항목(D-126 ⑤). 재시도 근거가 사람 판정과 맞는지 20건마다 함께 본다."""
+    retried, items = 0, Counter()
+    for directory in run_directories:
+        path = Path(directory) / "trace.json"
+        if not path.exists():
+            continue
+        attempts = json.loads(path.read_text(encoding="utf-8")).get("attempts") or []
+        if len(attempts) > 1:
+            retried += 1
+        for attempt in attempts:
+            if attempt.get("retry_reason"):
+                items.update(attempt.get("retry_items") or ["(이전 규칙)"])
+    return retried, dict(items)
+
+
 def mode_summary(root, folder):
     runs = outfit_runs(root, folder)
     summary = summarize(runs)
     counts, notes = failure_counts(runs)
+    retried, retry_items = retry_counts(runs)
     return dict(total=summary["total"], composited=summary["composited"], judged=summary["judged"],
-                quality_pass=summary["quality_pass"], incomplete=summary["incomplete"], failures=counts, defect_notes=notes)
+                quality_pass=summary["quality_pass"], incomplete=summary["incomplete"], failures=counts, defect_notes=notes,
+                retried=retried, retry_items=retry_items)
 
 
 def main():
@@ -58,7 +76,8 @@ def main():
     edit = mode_summary(args.root, MODES["outfit_edit"])
     free = mode_summary(args.root, MODES["free_generation"])
     # 위쪽 키는 편집 단계(기존 형식 유지), 자유 생성은 따로 센다 — 머리 합성 수는 자유 생성에 해당 없다.
-    result = dict(root=args.root, **edit, free_generation={k: v for k, v in free.items() if k != "composited"})
+    result = dict(root=args.root, **{k: v for k, v in edit.items() if k not in ("retried", "retry_items")},
+                  free_generation={k: v for k, v in free.items() if k != "composited"})
     if args.json:
         print(json.dumps(result, ensure_ascii=False, indent=1))
         return
@@ -73,6 +92,9 @@ def main():
             print("  판정된 실패 없음")
         for note in data["defect_notes"]:
             print("    심한 이상:", note)
+        if not composited:
+            print(f"  재시도한 실행 {data['retried']}건" + (" · 근거 " + ", ".join(f"{k} {n}" for k, n in sorted(data["retry_items"].items()))
+                                                       if data["retry_items"] else ""))
         if data["judged"] < 20:
             print(f"  판정이 {data['judged']}건이라 규칙 변경 근거로는 이릅니다(20건 기준, D-118).")
 

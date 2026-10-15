@@ -161,9 +161,12 @@ class StudioController(QObject):
         combo = self.window.studio_candidate_combo
         combo.blockSignals(True)
         combo.clear()
-        combo.addItem("자유 생성 결과")
+        for candidate in self.results.candidates:      # 두 시도가 있으면 사람이 바꿔 보고 고른다(D-126 ⑤)
+            score = candidate.get("violation_score")
+            combo.addItem(f"자유 생성 시도 {candidate['attempt']}" + ("" if score is None else f" · 자동 위반 관찰 {score}"))
+        combo.setCurrentIndex(self.results.selected)
         combo.blockSignals(False)
-        self.select(0)
+        self.select(self.results.selected)
         self.window.status_label.setText("상태: 자유 생성 완료 · 사람 품질 검토 대기 · 머리 픽셀 합성 없음")
         self.controls()
 

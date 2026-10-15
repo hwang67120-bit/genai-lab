@@ -10,10 +10,10 @@ import time
 import numpy as np
 from PIL import Image
 
-from genai_lab.character_features import TAG_ITEMS, extract_features, write_features
-from genai_lab.character_verification import measure_result_scores, verify_features
-from genai_lab.free_generation import (INTENT, SEEDS, check_request, features_sentence, free_conditions, part_counts,
-                                       safety_observation)
+from genai_lab.character_features import DISTINCTIVE, TAG_ITEMS, extract_features, write_features
+from genai_lab.character_verification import measure_result_scores, retry_reasons, verify_features
+from genai_lab.free_generation import (INTENT, SEEDS, check_request, distinctive_notes, features_sentence, free_conditions,
+                                       garment_tag_changes, part_counts, request_conflicts, safety_observation)
 from genai_lab.outfit_edit import SIZE, canvas, sha, write_json
 from genai_lab.outfit_edit_pipeline import segment_canvas, detect_joints
 
@@ -31,14 +31,17 @@ def validate_inputs(base_path, base_kind, features, gender, body_parts, request_
         raise ValueError("성별과 부위를 확인해 주세요(부위 없음은 빈 목록).")
     if len(set(body_parts)) != len(body_parts) or not set(body_parts) <= {"ears", "tail", "wings"}:
         raise ValueError("부위 값 오류")
-    if not isinstance(features, dict) or set(features) != set(TAG_ITEMS):
+    if not isinstance(features, dict) or set(features) - {DISTINCTIVE} != set(TAG_ITEMS):
         raise ValueError("확정 특징표의 모든 태그 항목이 필요합니다(모르면 빈 목록).")
+    distinctive_notes(features.get(DISTINCTIVE))      # 고유 형태 메모 검사(D-126 ④)
     from genai_lab.character_features import features_text, parse_features_text
     if any(v is not None and (not isinstance(v, (list, tuple)) or any(not isinstance(x, str) for x in v)) for v in features.values()):
         raise ValueError("특징표 값은 태그 문자열 목록(없음은 빈 목록, 모름은 None)이어야 합니다.")
     normalized = parse_features_text(features_text({k: dict(values=v) for k, v in features.items()}))
     import re
-    for values in normalized.values():
+    for key, values in normalized.items():
+        if key == DISTINCTIVE:
+            continue
         for tag in values or ():
             if not re.fullmatch(r"[a-zA-Z0-9_-]{1,80}", tag) or not check_request(tag.replace("_", " "))["ok"]:
                 raise ValueError("특징표에는 외형 태그만 쓸 수 있습니다.")
@@ -69,24 +72,53 @@ def validate_inputs(base_path, base_kind, features, gender, body_parts, request_
                           proves_outfit_edit=False, source="user_confirmed"), checked
 
 
+HEAD_WINDOW = (3.0, 1.5, 1.0)     # 얼굴 상자 기준 창: 폭 = 얼굴 폭×3, 위 = 얼굴 높이×1.5, 아래 = 얼굴 높이×1.0 (D-126 ③)
+WIDE_REFERENCE = 0.35             # 크롭이 캔버스의 이 비율을 넘으면 넓은 참조(지시문이 head close-up이라고 부르지 않음)
+
+
+def head_box(parts, size):
+    """얼굴 기준 창 안의 머리 영역 상자. 긴 머리카락이 몸까지 내려가도 머리 둘레만 자른다. 얼굴이 없으면 None."""
+    width, height = size
+    face = np.logical_or.reduce([parts[k] for k in ("face", "eyes") if k in parts]) if any(k in parts for k in ("face", "eyes")) else None
+    if face is None or not face.any():
+        return None
+    ys, xs = np.where(face)
+    fw, fh = xs.max() - xs.min() + 1, ys.max() - ys.min() + 1
+    cx = (xs.min() + xs.max()) / 2
+    across, above, below = HEAD_WINDOW
+    window = (max(0, int(cx - fw * across / 2)), max(0, int(ys.min() - fh * above)),
+              min(width, int(cx + fw * across / 2) + 1), min(height, int(ys.max() + fh * below) + 1))
+    keys = ("hair", "face", "eyes", "nose", "mouth", "headwear", "eyewear", "earwear", "ears")
+    head = np.logical_or.reduce([parts[k] for k in keys if k in parts])
+    inside = np.zeros_like(head)
+    inside[window[1]:window[3], window[0]:window[2]] = head[window[1]:window[3], window[0]:window[2]]
+    ys, xs = np.where(inside)
+    return (max(0, int(xs.min()) - 12), max(0, int(ys.min()) - 12), min(width, int(xs.max()) + 13), min(height, int(ys.max()) + 13))
+
+
 def prepare_reference(image, parts, directory):
-    """같은 캔버스의 얼굴·머리 영역을 자른 참조. 위치 추출 실패는 전체 캔버스 참조로 명시한다."""
-    keys = ("hair", "face", "eyes", "nose", "mouth", "headwear", "eyewear", "earwear")
-    found = [parts[k] for k in keys if k in parts]
-    mask = np.logical_or.reduce(found) if found else np.zeros((image.height, image.width), bool)
-    ys, xs = np.where(mask)
-    box = (max(0, int(xs.min())-12), max(0, int(ys.min())-12), min(image.width, int(xs.max())+13),
-           min(image.height, int(ys.max())+13)) if len(xs) else (0, 0, image.width, image.height)
+    """같은 캔버스의 얼굴·머리 영역을 자른 참조. 얼굴 기준 창 → (얼굴 없음) 머리 전체 상자 → (머리 없음) 전체 캔버스."""
+    box, status = head_box(parts, image.size), "derived_head_crop"
+    if box is None:
+        keys = ("hair", "face", "eyes", "nose", "mouth", "headwear", "eyewear", "earwear")
+        found = [parts[k] for k in keys if k in parts]
+        mask = np.logical_or.reduce(found) if found else np.zeros((image.height, image.width), bool)
+        ys, xs = np.where(mask)
+        box, status = (((max(0, int(xs.min())-12), max(0, int(ys.min())-12), min(image.width, int(xs.max())+13),
+                         min(image.height, int(ys.max())+13)), "hair_box_fallback") if len(xs)
+                       else ((0, 0, image.width, image.height), "whole_canvas_fallback"))
+    ratio = (box[2] - box[0]) * (box[3] - box[1]) / (image.width * image.height)
+    scope = "wide" if ratio > WIDE_REFERENCE or status != "derived_head_crop" else "head"   # 얼굴을 못 찾았으면 머리 확대라고 부르지 않는다
     path = Path(directory) / "head-reference.png"
     image.crop(box).save(path)
     return path, dict(path=str(path), sha256=sha(path), box=list(box), source="automatic_analysis",
-                      parent_sha256=sha(Path(directory) / "canvas.png"),
-                      status="derived_head_crop" if len(xs) else "whole_canvas_fallback",
+                      parent_sha256=sha(Path(directory) / "canvas.png"), status=status, scope=scope, area_ratio=round(ratio, 3),
                       note="기준과 같은 이미지에서 파생한 시각 참조. 동일성을 보장하지 않는다.")
 
 
-def observe_result(reference, raw, directory, runtime, *, cancelled, popen):
-    """Qwen 종료 후 생성 결과 자체를 분할한다. 기준 마스크를 결과에 적용하지 않는다."""
+def observe_result(reference, raw, directory, runtime, *, cancelled, popen, skip=None, base_scores=None):
+    """Qwen 종료 후 생성 결과 자체를 분할한다. 기준 마스크를 결과에 적용하지 않는다.
+    skip: 요청과 충돌해 재지 않는 특징(request_conflicts), base_scores: 의상 태그 차이 관찰용 기준 태그."""
     directory = Path(directory)
     directory.mkdir()
     with Image.open(raw) as image:
@@ -110,8 +142,8 @@ def observe_result(reference, raw, directory, runtime, *, cancelled, popen):
     with Image.open(path) as im:
         rgb = np.asarray(im.convert("RGB"))
     scores = measure_result_scores(rgb, runtime)
-    verification = (verify_features(reference, scores, rgb, parts) if scores is not None
-                    else dict(items={}, summary={}, status="unmeasured", reason="tagger unavailable"))
+    verification = (verify_features(reference, scores, rgb, parts, skip or {}) if scores is not None
+                    else dict(items={}, summary={}, retry=[], status="unmeasured", reason="tagger unavailable"))
     observed = safety_observation(scores)
     safety = dict(status="not_reviewed", judge="user", reason="자동 안전 검사 통과를 보장하지 않는다", review=observed["review"])
     # 노출·금지 외형 태그가 강하게 관찰되면 승인할 수 없는 결과로 둔다. 나이 관련 태그는 사람 확인 근거로만 남긴다.
@@ -126,7 +158,8 @@ def observe_result(reference, raw, directory, runtime, *, cancelled, popen):
             raise
         limbs = dict(status="unmeasurable", reason=str(error))
     result = dict(image=str(path), image_sha256=sha(path), coordinate_basis="generated_output",
-                  segmentation=seg, verification=verification, body_part_counts=part_counts(parts), limbs=limbs, safety=safety, errors=errors)
+                  segmentation=seg, verification=verification, body_part_counts=part_counts(parts), limbs=limbs, safety=safety,
+                  garment_tags=garment_tag_changes(base_scores, scores), errors=errors)
     write_json(directory / "observation.json", result)
     return result
 
@@ -178,16 +211,26 @@ def prepare_generation_inputs(base_path, character_features, request_text, *, ba
     for key, values in character_features.items():
         if values is None:          # 모름(확인 불가). '없음'(빈 목록)은 사용자가 확정한 값이므로 그대로 둔다(검토 5번)
             features["items"][key].update(state="unknown", reason="사용자가 '모름'으로 둔 항목")
-    features["unknown"] = [k for k, v in features["items"].items() if v["state"] in ("unknown", "weak")]
+    features["unknown"] = [k for k, v in features["items"].items() if v["state"] in ("unknown", "weak") and k != DISTINCTIVE]
     write_features(directory / "character-features", features)
     reference, crop_record = prepare_reference(image, parts, inputs)
     trace["input_facts"].update(character_features=features, base_segmentation=segmented, derived_reference=crop_record)
-    assembled = free_conditions(features_sentence(features), gender, body_parts, request_text, selection_seed, base_kind)
+    assembled = free_conditions(features_sentence(features), gender, body_parts, request_text, selection_seed, base_kind,
+                                reference_scope=crop_record["scope"])
+    assembled["request_conflicts"] = request_conflicts(request_text)
+    assembled["base_scores"] = scores
+    notes = distinctive_notes(character_features.get(DISTINCTIVE))
+    assembled["distinctive_review"] = notes["review"]
+    if len(notes["prompt"]) < len(notes["review"]):
+        assembled["excluded"].append(dict(key="distinctive", reason="영어가 아닌 고유 형태 메모는 지시문에 넣지 않고 결과 확인 창에서만 확인",
+                                          notes=[n for n in notes["review"] if n not in notes["prompt"]]))
     assembled["excluded"].extend(dict(key="feature."+key, reason="미확정/확인 불가 특징은 프롬프트 값에서 제외") for key in features["unknown"])
-    trace.update(conditions=assembled["conditions"], excluded=assembled["excluded"], direction=assembled)
-    write_json(inputs / "conditions.json", dict(input_facts=trace["input_facts"], **assembled))
+    recorded = {k: v for k, v in assembled.items() if k != "base_scores"}      # 기준 태그는 input_facts.automatic_tags에 이미 있다
+    trace.update(conditions=assembled["conditions"], excluded=assembled["excluded"], direction=recorded)
+    write_json(inputs / "conditions.json", dict(input_facts=trace["input_facts"], **recorded))
     spec = prepare_free_spec(prepared["canvas"], reference, directory=directory / "qwen-inputs", request_text=request_text,
-                             gender=gender, body_parts=body_parts, features_text=features_sentence(features), base_kind=base_kind, reference_box=crop_record["box"], selection_seed=selection_seed)
+                             gender=gender, body_parts=body_parts, features_text=features_sentence(features), base_kind=base_kind, reference_box=crop_record["box"], selection_seed=selection_seed,
+                             reference_scope=crop_record["scope"])
     return features, assembled, spec
 
 
@@ -245,18 +288,20 @@ def run_free_generation(base_path, character_features, request_text="", *, base_
             trace["status"] = "verifying"
             persist()
             observation = observe_result(features, raw, directory / f"result-analysis{suffix}", runtime,
-                                         cancelled=cancelled, popen=popen)
+                                         cancelled=cancelled, popen=popen, skip=assembled["request_conflicts"],
+                                         base_scores=assembled["base_scores"])
             judgement = condition_judgements(assembled["conditions"], observation, number, raw)
             attempt.update(status="completed", raw=str(raw), raw_sha256=sha(raw), observation=observation, judgements=judgement)
             persist()
-            violations = observation["verification"].get("summary", {})
-            retry = bool(violations.get("changed") or violations.get("added") or observation["safety"]["status"] == "violated")
-            attempt["retry_reason"] = "자동 특징 위반 관찰" if retry else None
-            attempt["violation_score"] = (1000 if observation["safety"]["status"] == "violated"
-                                          else len(violations.get("changed") or ()) + len(violations.get("added") or ()))
-            if not retry:
+            # 확신 있는 위반만 재시도한다(D-126 ⑤). 경계값·엇갈림·가림·요청 충돌·의상 태그 차이는 사람 확인으로 남긴다.
+            reasons = retry_reasons(observation["verification"])
+            unsafe = observation["safety"]["status"] == "violated"
+            attempt["retry_reason"] = ("안전 태그 차단" if unsafe else ("확신 있는 특징 위반: " + ", ".join(reasons) if reasons else None))
+            attempt["retry_items"] = reasons
+            attempt["violation_score"] = 1000 if unsafe else len(reasons)
+            if not attempt["retry_reason"]:
                 break
-        # 두 시도 모두 위반이면 위반이 적은 시도를 보여 준다(같으면 앞 시도). 모든 시도는 trace에 그대로 남는다(검토 7번).
+        # 두 시도 모두 위반이면 위반이 적은 시도를 먼저 보여 준다(같으면 앞 시도). 어느 쪽을 쓸지는 사람이 고른다(candidates).
         chosen = min(trace["attempts"], key=lambda a: a["violation_score"]) if attempt["retry_reason"] else attempt
         raw, observation, judgement = Path(chosen["raw"]), chosen["observation"], chosen["judgements"]
         trace["selected_attempt"] = chosen["number"]
@@ -267,6 +312,13 @@ def run_free_generation(base_path, character_features, request_text="", *, base_
                        conditions=str(directory / "inputs" / "conditions.json"), trace=str(directory / "trace.json"),
                        condition_judgements=judgement, automatic_features=observation["verification"], quality_pass=None,
                        selected_attempt=chosen["number"],
+                       candidates=[dict(attempt=a["number"], seed=a["seed"], raw=a["raw"], sha256=a["raw_sha256"],
+                                        violation_score=a["violation_score"], retry_items=a["retry_items"],
+                                        blocked=a["observation"]["safety"]["status"] == "violated",
+                                        automatic_features=a["observation"]["verification"].get("summary", {}),
+                                        garment_tags=a["observation"]["garment_tags"])
+                                   for a in trace["attempts"] if a.get("status") == "completed"],
+                       distinctive_review=assembled["distinctive_review"],
                        note="자동 검사는 동일성·최종 품질 승인이 아니다. 원본 기준 성공은 의상 교체 해결 증거가 아니다.")
         write_json(directory / "outcome.json", outcome)
         persist()

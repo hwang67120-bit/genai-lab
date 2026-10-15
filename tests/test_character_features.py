@@ -125,3 +125,20 @@ def test_unknown_and_none_are_different_in_the_feature_text():
     it = cf.extract_features(image, parts, dict(headphones=0.9), confirmed=parsed)["items"]
     assert it["head_accessories"]["values"] == [] and it["head_accessories"]["confirmed"] is True     # 확정 없음
     assert it["skin"]["confirmed"] is False                                                           # 모름은 확정하지 않음
+
+
+def test_distinctive_notes_round_trip_with_semicolons_and_unknown():
+    # D-126 ④: 고유 형태 메모는 ';'로 나눈다(쉼표가 메모 안에 들어갈 수 있다). 줄이 없던 예전 글 상자 = 모름
+    items = {k: dict(values=None) for k in cf.TAG_ITEMS}
+    items["distinctive"] = dict(values=["heart-shaped tail tip", "right eye blue, left eye red"])
+    text = cf.features_text(items)
+    assert text.splitlines()[-1] == "고유 형태: heart-shaped tail tip; right eye blue, left eye red"
+    assert cf.parse_features_text(text)["distinctive"] == ["heart-shaped tail tip", "right eye blue, left eye red"]
+    assert cf.parse_features_text(text.rsplit("\n", 1)[0])["distinctive"] is None
+    assert cf.parse_features_text(text.replace("heart-shaped tail tip; right eye blue, left eye red", "없음"))["distinctive"] == []
+    with pytest.raises(ValueError):
+        cf.parse_features_text(text.replace("heart-shaped tail tip", "; ".join(["a"] * 5)))
+    image, parts = scene()
+    sheet = cf.extract_features(image, parts, {}, confirmed=dict(distinctive=["heart-shaped tail tip"]))
+    assert sheet["items"]["distinctive"]["confirmed"] is True and "distinctive" not in sheet["unknown"]
+    assert len(sheet["items"]["eye_color"]["eyes"]) == 1 and len(sheet["items"]["hair_color"]["palette"]) >= 1

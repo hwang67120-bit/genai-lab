@@ -1,0 +1,612 @@
+[
+  {
+    "run": "N1-1",
+    "attempt": 1,
+    "seed": 42,
+    "request": "",
+    "old_retry_reason": null,
+    "old_summary": {
+      "kept": [
+        "body_parts",
+        "eye_color",
+        "gender",
+        "hair_color",
+        "hair_length",
+        "hair_style",
+        "head_accessories",
+        "skin"
+      ],
+      "changed": [],
+      "missing": [],
+      "added": [],
+      "unknown": []
+    },
+    "new_retry": [],
+    "new_items": {
+      "eye_color": "kept",
+      "hair_color": "kept",
+      "head_accessories": "kept",
+      "skin": "kept",
+      "body_parts": "kept"
+    },
+    "new_hair_colors": [],
+    "garment_tags": {
+      "status": "observed",
+      "lost": [],
+      "added": [
+        "puffy_sleeves",
+        "yellow_pantyhose"
+      ],
+      "judge": "automatic_analysis",
+      "note": "태그 차이는 관찰 근거다. 가림·태그 노이즈가 많아 재시도·판정에 쓰지 않는다(사람이 의상 확인)"
+    },
+    "reference_box": [
+      313,
+      17,
+      518,
+      287
+    ],
+    "reference_scope": "head",
+    "old_reference_box": [
+      65,
+      8,
+      518,
+      771
+    ]
+  },
+  {
+    "run": "N1-2",
+    "attempt": 1,
+    "seed": 42,
+    "request": "sitting on a simple stool, hands on knees, three-quarter view",
+    "old_retry_reason": "자동 특징 위반 관찰",
+    "old_summary": {
+      "kept": [
+        "body_parts",
+        "gender",
+        "hair_color",
+        "hair_length",
+        "hair_style",
+        "head_accessories",
+        "skin"
+      ],
+      "changed": [
+        "eye_color"
+      ],
+      "missing": [],
+      "added": [],
+      "unknown": []
+    },
+    "new_retry": [],
+    "new_items": {
+      "eye_color": "kept",
+      "hair_color": "kept",
+      "head_accessories": "kept",
+      "skin": "kept",
+      "body_parts": "kept"
+    },
+    "new_hair_colors": [],
+    "garment_tags": {
+      "status": "observed",
+      "lost": [],
+      "added": [
+        "white_apron"
+      ],
+      "judge": "automatic_analysis",
+      "note": "태그 차이는 관찰 근거다. 가림·태그 노이즈가 많아 재시도·판정에 쓰지 않는다(사람이 의상 확인)"
+    },
+    "reference_box": [
+      313,
+      17,
+      518,
+      287
+    ],
+    "reference_scope": "head",
+    "old_reference_box": [
+      65,
+      8,
+      518,
+      771
+    ]
+  },
+  {
+    "run": "N1-2",
+    "attempt": 2,
+    "seed": 43,
+    "request": "sitting on a simple stool, hands on knees, three-quarter view",
+    "old_retry_reason": null,
+    "old_summary": {
+      "kept": [
+        "body_parts",
+        "eye_color",
+        "gender",
+        "hair_color",
+        "hair_length",
+        "hair_style",
+        "head_accessories",
+        "skin"
+      ],
+      "changed": [],
+      "missing": [],
+      "added": [],
+      "unknown": []
+    },
+    "new_retry": [],
+    "new_items": {
+      "eye_color": "kept",
+      "hair_color": "kept",
+      "head_accessories": "kept",
+      "skin": "kept",
+      "body_parts": "kept"
+    },
+    "new_hair_colors": [],
+    "garment_tags": {
+      "status": "observed",
+      "lost": [
+        "high_heel_boots",
+        "maid_apron"
+      ],
+      "added": [],
+      "judge": "automatic_analysis",
+      "note": "태그 차이는 관찰 근거다. 가림·태그 노이즈가 많아 재시도·판정에 쓰지 않는다(사람이 의상 확인)"
+    },
+    "reference_box": [
+      313,
+      17,
+      518,
+      287
+    ],
+    "reference_scope": "head",
+    "old_reference_box": [
+      65,
+      8,
+      518,
+      771
+    ]
+  },
+  {
+    "run": "N2-1",
+    "attempt": 1,
+    "seed": 42,
+    "request": "",
+    "old_retry_reason": "자동 특징 위반 관찰",
+    "old_summary": {
+      "kept": [
+        "body_parts",
+        "eye_color",
+        "gender",
+        "hair_color",
+        "hair_length",
+        "skin"
+      ],
+      "changed": [
+        "head_accessories"
+      ],
+      "missing": [],
+      "added": [],
+      "unknown": [
+        "hair_style"
+      ]
+    },
+    "new_retry": [],
+    "new_items": {
+      "eye_color": "kept",
+      "hair_color": "kept",
+      "head_accessories": "unknown(kept_generic)",
+      "skin": "kept",
+      "body_parts": "kept"
+    },
+    "new_hair_colors": [],
+    "garment_tags": {
+      "status": "observed",
+      "lost": [],
+      "added": [],
+      "judge": "automatic_analysis",
+      "note": "태그 차이는 관찰 근거다. 가림·태그 노이즈가 많아 재시도·판정에 쓰지 않는다(사람이 의상 확인)"
+    },
+    "reference_box": [
+      304,
+      33,
+      463,
+      278
+    ],
+    "reference_scope": "head",
+    "old_reference_box": [
+      233,
+      41,
+      463,
+      844
+    ]
+  },
+  {
+    "run": "N2-1",
+    "attempt": 2,
+    "seed": 43,
+    "request": "",
+    "old_retry_reason": null,
+    "old_summary": {
+      "kept": [
+        "body_parts",
+        "eye_color",
+        "gender",
+        "hair_color",
+        "hair_length",
+        "skin"
+      ],
+      "changed": [],
+      "missing": [
+        "head_accessories"
+      ],
+      "added": [],
+      "unknown": [
+        "hair_style"
+      ]
+    },
+    "new_retry": [],
+    "new_items": {
+      "eye_color": "kept",
+      "hair_color": "kept",
+      "head_accessories": "unknown(kept_generic)",
+      "skin": "kept",
+      "body_parts": "kept"
+    },
+    "new_hair_colors": [],
+    "garment_tags": {
+      "status": "observed",
+      "lost": [
+        "crop_top"
+      ],
+      "added": [],
+      "judge": "automatic_analysis",
+      "note": "태그 차이는 관찰 근거다. 가림·태그 노이즈가 많아 재시도·판정에 쓰지 않는다(사람이 의상 확인)"
+    },
+    "reference_box": [
+      304,
+      33,
+      463,
+      278
+    ],
+    "reference_scope": "head",
+    "old_reference_box": [
+      233,
+      41,
+      463,
+      844
+    ]
+  },
+  {
+    "run": "N2-2",
+    "attempt": 1,
+    "seed": 42,
+    "request": "walking in a snowy street",
+    "old_retry_reason": "자동 특징 위반 관찰",
+    "old_summary": {
+      "kept": [
+        "body_parts",
+        "eye_color",
+        "hair_color",
+        "hair_length",
+        "skin"
+      ],
+      "changed": [
+        "head_accessories"
+      ],
+      "missing": [],
+      "added": [],
+      "unknown": [
+        "gender",
+        "hair_style"
+      ]
+    },
+    "new_retry": [
+      "hair_color"
+    ],
+    "new_items": {
+      "eye_color": "kept",
+      "hair_color": "added!",
+      "head_accessories": "unknown(kept_generic)",
+      "skin": "kept",
+      "body_parts": "kept"
+    },
+    "new_hair_colors": [
+      {
+        "rgb": [
+          232,
+          87,
+          209
+        ],
+        "fraction": 0.06,
+        "nearest_delta_e": 47.7
+      },
+      {
+        "rgb": [
+          179,
+          205,
+          86
+        ],
+        "fraction": 0.042,
+        "nearest_delta_e": 65.2
+      }
+    ],
+    "garment_tags": {
+      "status": "observed",
+      "lost": [],
+      "added": [
+        "long_sleeves",
+        "shoes",
+        "socks",
+        "white_jacket"
+      ],
+      "judge": "automatic_analysis",
+      "note": "태그 차이는 관찰 근거다. 가림·태그 노이즈가 많아 재시도·판정에 쓰지 않는다(사람이 의상 확인)"
+    },
+    "reference_box": [
+      304,
+      33,
+      463,
+      278
+    ],
+    "reference_scope": "head",
+    "old_reference_box": [
+      233,
+      41,
+      463,
+      844
+    ]
+  },
+  {
+    "run": "N2-2",
+    "attempt": 2,
+    "seed": 43,
+    "request": "walking in a snowy street",
+    "old_retry_reason": "자동 특징 위반 관찰",
+    "old_summary": {
+      "kept": [
+        "body_parts",
+        "eye_color",
+        "gender",
+        "hair_length",
+        "head_accessories"
+      ],
+      "changed": [
+        "hair_color",
+        "skin"
+      ],
+      "missing": [],
+      "added": [],
+      "unknown": [
+        "hair_style"
+      ]
+    },
+    "new_retry": [
+      "hair_color"
+    ],
+    "new_items": {
+      "eye_color": "kept",
+      "hair_color": "added(borderline)!",
+      "head_accessories": "kept",
+      "skin": "kept(borderline)",
+      "body_parts": "kept"
+    },
+    "new_hair_colors": [
+      {
+        "rgb": [
+          136,
+          122,
+          72
+        ],
+        "fraction": 0.045,
+        "nearest_delta_e": 35.8
+      },
+      {
+        "rgb": [
+          46,
+          130,
+          122
+        ],
+        "fraction": 0.038,
+        "nearest_delta_e": 39.9
+      }
+    ],
+    "garment_tags": {
+      "status": "observed",
+      "lost": [
+        "black_shorts",
+        "crop_top",
+        "shorts"
+      ],
+      "added": [
+        "black_jacket",
+        "black_pants",
+        "black_shirt",
+        "collar",
+        "long_sleeves",
+        "pants",
+        "shirt"
+      ],
+      "judge": "automatic_analysis",
+      "note": "태그 차이는 관찰 근거다. 가림·태그 노이즈가 많아 재시도·판정에 쓰지 않는다(사람이 의상 확인)"
+    },
+    "reference_box": [
+      304,
+      33,
+      463,
+      278
+    ],
+    "reference_scope": "head",
+    "old_reference_box": [
+      233,
+      41,
+      463,
+      844
+    ]
+  },
+  {
+    "run": "K-1",
+    "attempt": 1,
+    "seed": 42,
+    "request": "",
+    "old_retry_reason": null,
+    "old_summary": {
+      "kept": [
+        "body_parts",
+        "eye_color",
+        "gender",
+        "hair_color",
+        "hair_length",
+        "skin"
+      ],
+      "changed": [],
+      "missing": [
+        "hair_style",
+        "head_accessories"
+      ],
+      "added": [],
+      "unknown": []
+    },
+    "new_retry": [
+      "eye_color"
+    ],
+    "new_items": {
+      "eye_color": "changed(heterochromia_lost)!",
+      "hair_color": "kept",
+      "head_accessories": "missing",
+      "skin": "kept",
+      "body_parts": "kept"
+    },
+    "new_hair_colors": [],
+    "garment_tags": {
+      "status": "observed",
+      "lost": [
+        "half_gloves"
+      ],
+      "added": [
+        "fingerless_gloves"
+      ],
+      "judge": "automatic_analysis",
+      "note": "태그 차이는 관찰 근거다. 가림·태그 노이즈가 많아 재시도·판정에 쓰지 않는다(사람이 의상 확인)"
+    },
+    "reference_box": [
+      335,
+      51,
+      523,
+      268
+    ],
+    "reference_scope": "head",
+    "old_reference_box": [
+      335,
+      51,
+      523,
+      268
+    ]
+  },
+  {
+    "run": "K-2",
+    "attempt": 1,
+    "seed": 42,
+    "request": "standing with eyes closed, head tilted slightly",
+    "old_retry_reason": "자동 특징 위반 관찰",
+    "old_summary": {
+      "kept": [
+        "body_parts",
+        "gender",
+        "hair_color",
+        "hair_length",
+        "skin"
+      ],
+      "changed": [
+        "eye_color"
+      ],
+      "missing": [
+        "hair_style",
+        "head_accessories"
+      ],
+      "added": [],
+      "unknown": []
+    },
+    "new_retry": [],
+    "new_items": {
+      "eye_color": "unknown(요청과 충돌: 눈 감기)",
+      "hair_color": "kept",
+      "head_accessories": "missing",
+      "skin": "kept",
+      "body_parts": "kept"
+    },
+    "new_hair_colors": [],
+    "garment_tags": {
+      "status": "observed",
+      "lost": [
+        "half_gloves"
+      ],
+      "added": [],
+      "judge": "automatic_analysis",
+      "note": "태그 차이는 관찰 근거다. 가림·태그 노이즈가 많아 재시도·판정에 쓰지 않는다(사람이 의상 확인)"
+    },
+    "reference_box": [
+      335,
+      51,
+      523,
+      268
+    ],
+    "reference_scope": "head",
+    "old_reference_box": [
+      335,
+      51,
+      523,
+      268
+    ]
+  },
+  {
+    "run": "K-2",
+    "attempt": 2,
+    "seed": 43,
+    "request": "standing with eyes closed, head tilted slightly",
+    "old_retry_reason": null,
+    "old_summary": {
+      "kept": [
+        "body_parts",
+        "eye_color",
+        "gender",
+        "hair_color",
+        "hair_length",
+        "skin"
+      ],
+      "changed": [],
+      "missing": [
+        "hair_style",
+        "head_accessories"
+      ],
+      "added": [],
+      "unknown": []
+    },
+    "new_retry": [],
+    "new_items": {
+      "eye_color": "unknown(요청과 충돌: 눈 감기)",
+      "hair_color": "kept",
+      "head_accessories": "missing",
+      "skin": "kept",
+      "body_parts": "kept"
+    },
+    "new_hair_colors": [],
+    "garment_tags": {
+      "status": "observed",
+      "lost": [],
+      "added": [],
+      "judge": "automatic_analysis",
+      "note": "태그 차이는 관찰 근거다. 가림·태그 노이즈가 많아 재시도·판정에 쓰지 않는다(사람이 의상 확인)"
+    },
+    "reference_box": [
+      335,
+      51,
+      523,
+      268
+    ],
+    "reference_scope": "head",
+    "old_reference_box": [
+      335,
+      51,
+      523,
+      268
+    ]
+  }
+]

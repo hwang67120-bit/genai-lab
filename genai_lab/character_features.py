@@ -41,6 +41,11 @@ TAG_GROUPS = {"hair_length": HAIR_LENGTH_TAGS, "hair_style": HAIR_STYLE_TAGS, "h
 TAG_ITEMS = tuple(TAG_GROUPS)
 LABELS = {"hair_length": "머리 길이", "hair_style": "머리 모양", "hair_color": "머리색", "eye_color": "눈 색",
           "head_accessories": "머리 장식", "skin": "피부"}
+# 고유 형태 메모(D-126 ④): 태그·픽셀이 못 재는 형태를 사람이 짧게 적는다("heart-shaped tail tip"). 자동 추출·자동 판정 없음.
+# 태그 항목이 아니므로 TAG_ITEMS에 넣지 않는다. 글 상자에서는 ';'로 나눈다(메모 안에 쉼표가 들어갈 수 있다).
+DISTINCTIVE = "distinctive"
+DISTINCTIVE_LABEL = "고유 형태"
+MAX_DISTINCTIVE = 4
 
 
 UNKNOWN_WORDS = ("모름", "확인 불가", "?", "unknown")
@@ -60,12 +65,15 @@ def tag_features(scores):
 
 
 def features_text(items):
-    """사람이 고치는 글 상자 내용: 한 줄에 한 항목, '라벨: 값, 값'. 확정 없음은 '없음', 확인 불가는 '모름'."""
+    """사람이 고치는 글 상자 내용: 한 줄에 한 항목, '라벨: 값, 값'. 확정 없음은 '없음', 확인 불가는 '모름'.
+    마지막 줄은 고유 형태 메모('; '로 나눔)."""
     lines = []
     for key in TAG_ITEMS:
         values = (items.get(key) or {}).get("values")
         text = "모름" if values is None else (", ".join(values) if values else "없음")
         lines.append(f"{LABELS[key]}: {text}")
+    notes = (items.get(DISTINCTIVE) or {}).get("values")
+    lines.append(f"{DISTINCTIVE_LABEL}: " + ("모름" if notes is None else ("; ".join(notes) if notes else "없음")))
     return "\n".join(lines)
 
 
@@ -81,6 +89,18 @@ def parse_features_text(text):
         if ":" not in line:
             raise ValueError(f"'라벨: 값' 형식이 아닙니다: {line}")
         label, _, rest = line.partition(":")
+        if label.strip() == DISTINCTIVE_LABEL:
+            notes = [v.strip() for v in rest.split(";") if v.strip()]
+            if not notes or all(v in UNKNOWN_WORDS for v in notes):
+                items[DISTINCTIVE] = None
+            elif any(v in UNKNOWN_WORDS for v in notes):
+                raise ValueError(f"'{DISTINCTIVE_LABEL}'에 '모름'과 메모를 함께 쓸 수 없습니다.")
+            else:
+                notes = [v for v in notes if v not in NONE_WORDS]
+                if len(notes) > MAX_DISTINCTIVE or any(len(v) > 60 for v in notes):
+                    raise ValueError(f"'{DISTINCTIVE_LABEL}'은 {MAX_DISTINCTIVE}개까지, 하나에 60자 이내로 써 주세요.")
+                items[DISTINCTIVE] = notes
+            continue
         key = by_label.get(label.strip())
         if key is None:
             raise ValueError(f"모르는 항목입니다: {label.strip()}")
@@ -95,6 +115,7 @@ def parse_features_text(text):
     missing = [LABELS[k] for k in TAG_ITEMS if k not in items]
     if missing:
         raise ValueError("빠진 항목: " + ", ".join(missing))
+    items.setdefault(DISTINCTIVE, None)       # 메모 줄이 없던 이전 글 상자 = 모름
     return items
 
 
@@ -164,6 +185,30 @@ def eye_color(image, eyes):
     return dict(lab=[round(float(v), 1) for v in center], rgb=lab_to_rgb(center), pixels=int(iris.sum()))
 
 
+EYE_TOP_CHROMA = 60             # 눈 하나 안에서 채도 상위 40%만 홍채로 본다(피부·눈꺼풀이 섞이면 색이 탁해진다, D-126 ①)
+
+
+def eye_colors(image, eyes):
+    """두 눈을 따로(마스크의 큰 연결 요소 두 개, 왼쪽부터). 눈마다 홍채 색(Lab 중앙값·색조·채도) 또는 None(픽셀 부족)."""
+    import cv2
+    lab = to_lab(image)
+    chroma = np.hypot(lab[..., 1], lab[..., 2])
+    n, labels, stats, _ = cv2.connectedComponentsWithStats(np.ascontiguousarray(eyes).astype(np.uint8), connectivity=8)
+    biggest = sorted(range(1, n), key=lambda i: -stats[i, cv2.CC_STAT_AREA])[:2]
+    found = []
+    for i in sorted(biggest, key=lambda i: stats[i, cv2.CC_STAT_LEFT]):
+        iris = (labels == i) & (lab[..., 0] > 15) & (lab[..., 0] < 90) & (chroma > 10)
+        if int(iris.sum()) < 20:
+            found.append(None)
+            continue
+        iris &= chroma >= np.percentile(chroma[iris], EYE_TOP_CHROMA)
+        center = np.median(lab[iris], 0)
+        found.append(dict(lab=[round(float(v), 1) for v in center], rgb=lab_to_rgb(center), pixels=int(iris.sum()),
+                          hue=round(float(np.degrees(np.arctan2(center[2], center[1]))), 1),
+                          chroma=round(float(np.hypot(center[1], center[2])), 1)))
+    return found
+
+
 def skin_color(image, parts):
     """얼굴에서 눈·코·입을 뺀 밝은 픽셀 군집 중 가장 큰 것. 부족하면 None."""
     face = parts.get("face")
@@ -199,10 +244,13 @@ def extract_features(image, parts, scores, *, gender="unknown", body_parts=None,
     items["hair_style"] = _item(state(style), "tags", values=[n for n, _ in style], scores=dict(style))
     hair_tags = tag_values(scores, HAIR_COLOR_TAGS)
     hair_colors = dominant_colors(image, hair_mask_without_background(image, parts["hair"])) if "hair" in parts else []
-    items["hair_color"] = _item(state(hair_tags, hair_colors), "tags+pixels", tags=[n for n, _ in hair_tags], colors=hair_colors)
+    palette = dominant_colors(image, hair_mask_without_background(image, parts["hair"]), k=5) if "hair" in parts else []
+    items["hair_color"] = _item(state(hair_tags, hair_colors), "tags+pixels", tags=[n for n, _ in hair_tags], colors=hair_colors,
+                                palette=palette)
     eye_tags = tag_values(scores, EYE_COLOR_TAGS)
     eye = eye_color(image, parts["eyes"]) if "eyes" in parts else None
-    items["eye_color"] = _item(state(eye_tags, eye), "tags+pixels", tags=[n for n, _ in eye_tags], color=eye)
+    eyes = eye_colors(image, parts["eyes"]) if "eyes" in parts else []
+    items["eye_color"] = _item(state(eye_tags, eye), "tags+pixels", tags=[n for n, _ in eye_tags], color=eye, eyes=eyes)
     accessories = tag_values(scores, HEAD_ACCESSORY_TAGS)
     masks = {k: int(parts[k].sum()) for k in ("headwear", "eyewear", "earwear") if k in parts}
     items["head_accessories"] = _item("measured", "tags+parts", values=[n for n, _ in accessories], scores=dict(accessories),
@@ -214,8 +262,11 @@ def extract_features(image, parts, scores, *, gender="unknown", body_parts=None,
         items[key]["weak"] = candidates
         if items[key]["state"] == "unknown" and candidates:
             items[key]["state"] = "weak"
+    notes = (confirmed or {}).get(DISTINCTIVE)
+    items[DISTINCTIVE] = (_item("unknown", "user", values=None) if notes is None
+                          else dict(_item("measured", "user", values=list(notes)), confirmed=True))
     for key, values in (confirmed or {}).items():  # 사람이 확정한 값이 태그 측정값을 대신한다(픽셀 측정은 그대로 둔다)
-        if key not in items or values is None:   # 모름: 자동 측정값을 그대로 두고 확정 표시하지 않는다
+        if key not in TAG_ITEMS or values is None:   # 모름: 자동 측정값을 그대로 두고 확정 표시하지 않는다
             continue
         item = items[key]
         if key == "hair_length":
@@ -231,7 +282,7 @@ def extract_features(image, parts, scores, *, gender="unknown", body_parts=None,
         items["body_parts"] = dict(_item("measured", provenance.get("body_parts", "user"), values=sorted(body_parts)), confirmed=True)
     items["gender"] = (_item("unknown", "user", value=None) if gender in (None, "unknown", "unspecified")
                        else dict(_item("measured", provenance.get("gender", "user"), value=gender), confirmed=True))
-    unknown = [k for k, v in items.items() if v["state"] in ("unknown", "weak")]
+    unknown = [k for k, v in items.items() if v["state"] in ("unknown", "weak") and k != DISTINCTIVE]
     return dict(schema=SCHEMA, items=items, unknown=unknown,
                 note="측정값은 자동 추출이며 사람 확정 전이다. unknown은 재지 못한 것이지 '없음'이 아니고, weak은 0.35~0.5 후보만 있는 것이다.")
 

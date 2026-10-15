@@ -28,6 +28,7 @@ class FreeGenerationSpec:
     confirmed: bool = False
     selection_seed: int = 42  # 연출 선택 seed. 생성 재시도 seed와 독립
     reference_box: tuple = (0, 0, 768, 1024)
+    reference_scope: str = "head"   # head | wide — 넓은 크롭이면 지시문이 head close-up이라고 부르지 않는다(D-126 ③)
 
     def record(self):
         return dict(asdict(self), body_parts=None if self.body_parts is None else list(self.body_parts))
@@ -58,16 +59,20 @@ class FreeGenerationSpec:
             box = self.reference_box
             if len(box) != 4 or any(type(x) is not int for x in box) or not (0 <= box[0] < box[2] <= SIZE[0] and 0 <= box[1] < box[3] <= SIZE[1]):
                 raise ValueError("머리 참조 좌표 오류")
+            if self.reference_scope not in ("head", "wide"):
+                raise ValueError("참조 범위 오류")
             with Image.open(self.reference_path) as reference:
                 if reference.mode != "RGB" or reference.size != (box[2]-box[0], box[3]-box[1]) or reference.tobytes() != im.crop(box).tobytes():
                     raise ValueError("추가 참조는 같은 기준 이미지의 크롭이어야 합니다.")
 
     def prompt(self, seed):
-        return free_prompt(self.features_text, self.gender, self.body_parts, self.request_text, self.selection_seed)
+        return free_prompt(self.features_text, self.gender, self.body_parts, self.request_text, self.selection_seed,
+                           reference_scope=self.reference_scope)
 
 
 def prepare_free_spec(canvas_path, reference_path, *, directory, request_text, gender="unspecified", body_parts=None,
-                      features_text="", base_kind="edited", confirmed=True, reference_box=(0, 0, 768, 1024), selection_seed=42):
+                      features_text="", base_kind="edited", confirmed=True, reference_box=(0, 0, 768, 1024), selection_seed=42,
+                      reference_scope="head"):
     """두 입력을 실행 폴더로 복사해 고정한다."""
     if confirmed is not True:
         raise ValueError("기준 그림과 요청을 확인해 주세요.")
@@ -79,7 +84,8 @@ def prepare_free_spec(canvas_path, reference_path, *, directory, request_text, g
     spec = FreeGenerationSpec(str(directory / "base.png"), hashlib.sha256(base).hexdigest(),
                               str(directory / "reference.png"), hashlib.sha256(reference).hexdigest(),
                               (request_text or "").strip(), gender, None if body_parts is None else tuple(body_parts),
-                              features_text or "", base_kind, confirmed, selection_seed=selection_seed, reference_box=tuple(reference_box))
+                              features_text or "", base_kind, confirmed, selection_seed=selection_seed, reference_box=tuple(reference_box),
+                              reference_scope=reference_scope)
     spec.verify_image()
     spec.prompt(SEEDS[0])          # 요청 문장 검사(외형·의상·안전) — 여기서 걸리면 ValueError
     return spec

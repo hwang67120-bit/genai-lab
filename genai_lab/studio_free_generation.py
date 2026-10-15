@@ -51,11 +51,13 @@ def confirm_free_inputs(window, analysis):
     layout.addLayout(row)
     prefill = load_character_features(source)
     guessed = tag_features(analysis["character_scores"])
-    layout.addWidget(QLabel("특징표: 자동 분석/저장값을 확인하고 수정해 주세요. '없음'은 없다고 확정, '모름'은 확인 불가로 기록합니다."))
+    layout.addWidget(QLabel("특징표: 자동 분석/저장값을 확인하고 수정해 주세요. '모름'·빈 칸은 확인 불가, '없음'은 없다고 확정입니다.\n"
+                            "고유 형태: 태그가 못 재는 모양을 ';'로 나눠 4개까지(예: heart-shaped tail tip; right eye blue, left eye red). "
+                            "영어 메모만 생성 지시문에 들어가고, 모든 메모는 결과 확인 때 하나씩 확인합니다."))
     features = QPlainTextEdit()
     features.setObjectName("free_features")
     features.setPlainText(features_text({k: dict(values=v) for k, v in prefill.items()} if prefill else guessed))
-    features.setFixedHeight(130)
+    features.setFixedHeight(150)
     layout.addWidget(features)
     layout.addWidget(QLabel(weak_note(guessed)))
     request = QPlainTextEdit()
@@ -82,6 +84,8 @@ def confirm_free_inputs(window, analysis):
         parsed.clear()
         try:
             parsed["features"] = parse_features_text(features.toPlainText())
+            from genai_lab.free_generation import distinctive_notes
+            distinctive_notes(parsed["features"].get("distinctive"))
             checked = check_request(request.toPlainText())
             if not checked["ok"]:
                 raise ValueError(checked["reason"])
@@ -121,7 +125,16 @@ def confirm_free_result(window, results):
     row.addLayout(picture(Path(trace["input_facts"]["base"].get("snapshot") or trace["input_facts"]["base"]["path"]), "기준", 250, 350))
     row.addLayout(picture(results.current_path, "생성 결과", 250, 350))
     layout.addLayout(row)
-    summary = QLabel("자동 특징 관찰: " + str(results.outcome["automatic_features"].get("summary", {})))
+    candidate = results.candidate
+    observed = candidate.get("automatic_features", results.outcome["automatic_features"].get("summary", {}))
+    lines = ["자동 특징 관찰(근거일 뿐, 판정 아님): " + str(observed)]
+    garments = candidate.get("garment_tags") or {}
+    if garments.get("lost") or garments.get("added"):
+        lines.append("의상 태그 차이(관찰): 없어짐 " + (", ".join(garments.get("lost") or ()) or "-")
+                     + " · 생김 " + (", ".join(garments.get("added") or ()) or "-"))
+    if len(results.candidates) > 1:
+        lines.append(f"시도 {len(results.candidates)}개 중 {candidate['attempt']}번째입니다. 다른 시도는 결과 목록에서 바꿔 볼 수 있습니다.")
+    summary = QLabel("\n".join(lines))
     summary.setWordWrap(True)
     layout.addWidget(summary)
     checks = {}
@@ -133,14 +146,27 @@ def confirm_free_result(window, results):
         box.setObjectName("free_review_"+key)
         checks[key] = box
         layout.addWidget(box)
+    notes = results.outcome.get("distinctive_review") or []
+    note_boxes = []
+    for number, note in enumerate(notes):          # 고유 형태 메모마다 확인(자동 판정 없음, D-126 ④)
+        box = QCheckBox(f"고유 형태 유지: {note}")
+        box.setObjectName(f"free_review_distinctive_{number}")
+        note_boxes.append(box)
+        layout.addWidget(box)
     layout.addWidget(QLabel("실제 연출 조건: " + next(c["text"] for c in trace["conditions"] if c["key"] == "request")))
     accept = QPushButton("이 결과 사용")
     accept.setEnabled(False)
-    for box in checks.values():
-        box.toggled.connect(lambda: accept.setEnabled(all(c.isChecked() for c in checks.values())))
+    every = [*checks.values(), *note_boxes]
+    for box in every:
+        box.toggled.connect(lambda: accept.setEnabled(all(c.isChecked() for c in every)))
     accept.clicked.connect(dialog.accept)
     back = QPushButton("다시 비교하기")
     back.clicked.connect(dialog.reject)
     layout.addWidget(accept)
     layout.addWidget(back)
-    return {k:v.isChecked() for k,v in checks.items()} if dialog.exec() == QDialog.DialogCode.Accepted else None
+    if dialog.exec() != QDialog.DialogCode.Accepted:
+        return None
+    answer = {k: v.isChecked() for k, v in checks.items()}
+    if note_boxes:
+        answer["distinctive"] = all(b.isChecked() for b in note_boxes)
+    return answer

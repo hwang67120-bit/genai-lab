@@ -23,7 +23,7 @@
 | key | 출처 | 문장(초안) |
 |---|---|---|
 | keep_character | character_features | "Keep the same character: {hair length/style/colour}, {eye colour}, {head accessories}, {skin}. Keep the face the same as in image 1." (unknown 항목은 뺌) |
-| keep_face | policy | image 1과 같은 그림의 머리 크롭(image 2)을 시각 참조로 전달. 머리 합성 없음, 동일성 보장 없음 |
+| keep_face | policy | image 1과 같은 그림의 머리 크롭(image 2)을 시각 참조로 전달. 머리 합성 없음, 동일성 보장 없음. D-126: 얼굴 기준 창으로 자르고, 얼굴을 못 찾았거나 캔버스 35%를 넘으면 지시문이 head close-up 대신 cropped reference라고 부른다 |
 | keep_outfit | policy | "Keep the character's outfit exactly as in image 1 (same garments, colours and details)." |
 | body_parts | user | 편집과 같은 문장(있는 것 유지·없는 것 추가 금지) |
 | gender | user | 편집과 같은 문장 |
@@ -32,7 +32,7 @@
 | no_props | policy | 편집과 같음 |
 
 ## 3. 검사(자동)와 판정(사람)
-자동(분석 실패는 확인 불가로 결과와 이유를 반환; 명백한 특징 changed/added 또는 금지 태그 관찰은 seed 43으로 한 번 재시도. Qwen 실패·메모리 중단·계약 불일치는 실패로 기록하고 자동 재실행하지 않음):
+자동(분석 실패는 확인 불가로 결과와 이유를 반환; 확신 있는 특징 위반(검증기 `retry`, D-126 — 경계값·태그와 픽셀 엇갈림·감김/가림·요청과 충돌·구체→일반 태그·의상 태그 차이는 제외) 또는 금지 태그 관찰은 seed 43으로 한 번 재시도. 두 시도가 있으면 결과 목록에서 사람이 고른다. Qwen 실패·메모리 중단·계약 불일치는 실패로 기록하고 자동 재실행하지 않음):
 1. 결과 분할(see-through 분할기, GPU, Qwen 종료 뒤) → 머리카락·얼굴·눈·부위 마스크.
 2. 특징 검증(D-121)을 **결과 마스크**로: 머리색·눈 색·피부색 ΔE, 태그 항목, 부위 유무. 분할 연결 요소는 `mask_components` 관찰값으로만 기록한다. 실제 귀·꼬리·날개의 개수·형태·연결·가림은 **확인 불가**로 남겨 사람에게 넘긴다. 요소 수를 실제 개수로 변환하지 않는다.
 3. 팔·손 관찰(DWPose, 결과 단독: 인식한 관절 기록, 미검출은 가림·분할 오류·소실을 구분하지 못하므로 확인 불가) — 편집의 원본 대비 검사는 자세가 바뀌므로 쓰지 않는다.

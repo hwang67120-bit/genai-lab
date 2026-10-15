@@ -234,8 +234,8 @@ def test_confirmed_adult_still_rejects_forbidden_input_observation(tmp_path,fake
 def test_result_measurement_receives_only_result_masks(tmp_path,fake_models,monkeypatch):
     base,_=fake_models
     received=[]
-    def verify(reference,scores,rgb,parts):
-        assert parts["hair"][350,450] and not parts["hair"][50,50]
+    def verify(reference,scores,rgb,parts,skip):
+        assert parts["hair"][350,450] and not parts["hair"][50,50] and skip == {}
         received.append(True)
         return dict(items={},summary={})
     monkeypatch.setattr(pipeline,"verify_features",verify)
@@ -318,3 +318,87 @@ def test_unknown_features_are_kept_apart_from_confirmed_none(tmp_path,fake_model
     sheet = json.loads((Path(result["directory"])/"character-features"/"features.json").read_text(encoding="utf-8"))
     assert sheet["items"]["skin"]["state"] == "unknown" and "skin" in sheet["unknown"]
     assert sheet["items"]["head_accessories"]["confirmed"] is True and sheet["items"]["head_accessories"]["values"] == []
+
+
+def sheet(**items):
+    base = {k: dict(state="unknown") for k in TAG_ITEMS}
+    base.update(items)
+    return dict(items=base)
+
+
+def test_placement_free_hair_tags_leave_the_prompt_and_english_notes_enter_it():
+    from genai_lab.free_generation import HAIR_PLACEMENT, features_sentence
+    text = features_sentence(sheet(hair_color=dict(state="measured", tags=["grey_hair", "multicolored_hair", "streaked_hair"]),
+                                   distinctive=dict(state="measured", values=["heart-shaped tail tip", "꼬리 끝 하트"])))
+    assert "grey hair" in text and "multicolored" not in text and "streaked" not in text and HAIR_PLACEMENT in text
+    assert "Keep these distinctive details exactly as in image 1: heart-shaped tail tip. " in text and "꼬리" not in text
+
+
+@pytest.mark.parametrize("note", ["change the tail to a heart", "nude", "꼬리를 없애고"])
+def test_distinctive_notes_reject_change_and_unsafe_phrases(note):
+    from genai_lab.free_generation import distinctive_notes
+    with pytest.raises(ValueError):
+        distinctive_notes([note])
+
+
+def test_request_conflicts_and_garment_tag_changes_are_observations():
+    from genai_lab.free_generation import garment_tag_changes, request_conflicts
+    assert request_conflicts("standing with eyes closed, head tilted slightly") == {"eye_color": "요청과 충돌: 눈 감기"}
+    assert set(request_conflicts("뒷모습으로 걷기")) == {"eye_color", "skin"} and request_conflicts("눈 내리는 거리") == {}
+    changes = garment_tag_changes(dict(shorts=0.8, crop_top=0.7, long_hair=0.9), dict(pants=0.8, crop_top=0.6))
+    assert changes["lost"] == ["shorts"] and changes["added"] == ["pants"] and changes["status"] == "observed"
+
+
+def test_reference_crop_follows_the_face_and_wide_crop_changes_the_wording(tmp_path):
+    canvas = Image.new("RGB", (768, 1024), "white")
+    canvas.save(tmp_path / "canvas.png")
+    parts = {k: np.zeros((1024, 768), bool) for k in ("hair", "face", "eyes")}
+    parts["face"][100:160, 350:410] = True
+    parts["hair"][60:900, 300:460] = True               # 긴 양갈래가 몸까지 내려간다(N1)
+    path, record = pipeline.prepare_reference(canvas, parts, tmp_path)
+    assert record["status"] == "derived_head_crop" and record["scope"] == "head" and record["box"][3] < 330
+    no_face = {k: v for k, v in parts.items() if k != "face"}
+    no_face["eyes"] = np.zeros((1024, 768), bool)
+    _, wide = pipeline.prepare_reference(canvas, no_face, tmp_path)
+    assert wide["status"] == "hair_box_fallback" and wide["scope"] == "wide"
+    text = "".join(c["text"] for c in free_conditions("", "female", (), "", 42, reference_scope="wide")["conditions"])
+    assert "cropped reference in image 2" in text and "head close-up" not in text
+
+
+def test_only_confident_violations_retry(tmp_path,fake_models,monkeypatch):
+    # D-126 ⑤: 경계값·엇갈림처럼 retry에 없는 바뀜은 재시도하지 않는다
+    base,calls = fake_models
+    monkeypatch.setattr(pipeline,"verify_features",lambda *a:dict(items={},summary=dict(changed=["eye_color"]),retry=[]))
+    result = run(tmp_path,base)
+    assert len([c for c in calls if c[0] == "qwen"]) == 1 and result["attempts"][0]["retry_reason"] is None
+
+
+def test_both_attempts_are_candidates_and_the_user_choice_is_recorded(tmp_path,fake_models,monkeypatch):
+    base,_ = fake_models
+    reports = iter([dict(items={}, summary={}, retry=["hair_color", "eye_color"]), dict(items={}, summary={}, retry=["hair_color"])])
+    monkeypatch.setattr(pipeline,"verify_features",lambda *a:next(reports))
+    result = run(tmp_path,base)
+    assert [c["attempt"] for c in result["candidates"]] == [1, 2] and result["selected_attempt"] == 2
+    results = FreeGenerationResults(result)
+    assert results.candidate["attempt"] == 2 and results.current_path.parent.name == "qwen-2"
+    results.select(0)
+    assert results.current_path.parent.name == "qwen"
+    with pytest.raises(ValueError):
+        results.select(2)
+    results.approve(dict(character=True,garment=True,request=True,exposure=True))
+    entry = json.loads((Path(result["directory"])/"judgement.json").read_text(encoding="utf-8"))[-1]
+    assert entry["target"]["attempt"] == 1 and entry["target"]["sha256"] == sha(Path(result["directory"])/"qwen"/"raw.png")
+
+
+def test_distinctive_notes_must_be_confirmed_at_approval(tmp_path,fake_models):
+    base,_ = fake_models
+    confirmed = dict(features(), distinctive=["heart-shaped tail tip"])
+    result = pipeline.run_free_generation(base,confirmed,base_kind="original",gender="female",body_parts=(),
+        confirmed=True,adult_confirmed=True,settings=settings(tmp_path),runtime=SimpleNamespace(),directory=tmp_path/"run")
+    assert result["distinctive_review"] == ["heart-shaped tail tip"]
+    request = json.loads((Path(result["directory"])/"qwen"/"request.json").read_text(encoding="utf-8"))
+    assert "heart-shaped tail tip" in request["prompt"]["positive"]
+    results = FreeGenerationResults(result)
+    with pytest.raises(ValueError):
+        results.approve(dict(character=True,garment=True,request=True,exposure=True))
+    results.approve(dict(character=True,garment=True,request=True,exposure=True,distinctive=True))

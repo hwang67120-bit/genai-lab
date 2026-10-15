@@ -44,7 +44,7 @@ def test_character_features_persist_per_source_and_reject_bad_shapes(tmp_path):
     assert load_character_features(a, settings) is None
     save_character_features(a, items, settings)
     reopened = QSettings(str(tmp_path / "settings.ini"), QSettings.Format.IniFormat)
-    assert load_character_features(a, reopened) == items and load_character_features(b, reopened) is None
+    assert load_character_features(a, reopened) == dict(items, distinctive=None) and load_character_features(b, reopened) is None
     with pytest.raises(ValueError):
         save_character_features(a, dict(hair_length=["x"]), settings)
 
@@ -55,4 +55,4 @@ def test_character_features_keep_unknown_apart_from_none(tmp_path):
     items = dict(hair_length=None, hair_style=["twintails"], hair_color=["aqua_hair"], eye_color=None, head_accessories=[], skin=None)
     save_character_features(tmp_path / "a.png", items, settings)
     reopened = QSettings(str(tmp_path / "settings.ini"), QSettings.Format.IniFormat)
-    assert load_character_features(tmp_path / "a.png", reopened) == items
+    assert load_character_features(tmp_path / "a.png", reopened) == dict(items, distinctive=None)   # 메모가 없던 저장값 = 모름

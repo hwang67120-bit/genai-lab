@@ -19,7 +19,7 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 from genai_lab.character_features import DISTINCTIVE, extract_features  # noqa: E402
 from genai_lab.character_verification import retry_reasons, verify_features  # noqa: E402
-from genai_lab.free_generation import garment_tag_changes, request_conflicts, request_observations  # noqa: E402
+from genai_lab.free_generation import garment_tag_changes, request_conflicts, request_observations, staging_text  # noqa: E402
 from genai_lab.free_generation_pipeline import head_box, WIDE_REFERENCE  # noqa: E402
 
 WATCH = ("eye_color", "hair_color", "head_accessories", "skin", "body_parts")
@@ -75,6 +75,8 @@ def main():
                 base.crop(box).save(args.out / f"{run.name}-reference.png")
                 ratio = (box[2] - box[0]) * (box[3] - box[1]) / (base.width * base.height)
             request = trace["input_facts"]["request"]["value"]
+            seed = next((c["basis"]["seed"] for c in trace["conditions"] if c["key"] == "request" and isinstance(c.get("basis"), dict)), 42)
+            request = staging_text(request, seed)          # 빈 요청이면 실제로 고른 고정 자세(D-128)
             skip = request_conflicts(request)
             base_scores = trace["input_facts"]["automatic_tags"]["scores"]
             for attempt in trace["attempts"]:

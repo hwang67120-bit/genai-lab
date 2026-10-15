@@ -235,7 +235,7 @@ def test_result_measurement_receives_only_result_masks(tmp_path,fake_models,monk
     base,_=fake_models
     received=[]
     def verify(reference,scores,rgb,parts,skip):
-        assert parts["hair"][350,450] and not parts["hair"][50,50] and skip == {}
+        assert parts["hair"][350,450] and not parts["hair"][50,50] and set(skip) <= {"hands"}   # 무작위 고정 자세 중 뒷짐(D-128)
         received.append(True)
         return dict(items={},summary={})
     monkeypatch.setattr(pipeline,"verify_features",verify)
@@ -449,3 +449,36 @@ def test_automatic_kept_is_not_fulfilled():
                        safety=dict(status="not_reviewed"), request_tags=[])
     rows = {r["key"]: r["status"] for r in pipeline.condition_judgements([], observation, 1, Path(__file__))}
     assert rows == {"feature.hair_color": "needs_review", "feature.skin": "not_violated", "safety": "not_reviewed"}
+
+
+@pytest.mark.parametrize("text,hidden", [("standing with her hands behind her back", {"hands"}), ("뒷짐을 지고 서기", {"hands"}),
+                                         ("hands in his pockets, walking", {"hands"}), ("sitting so that her tail is hidden", {"tail", "body_parts"}),
+                                         ("꼬리를 숨기고 앉기", {"tail", "body_parts"}), ("waving with one hand", set()), ("tail swaying", set())])
+def test_hands_and_tail_hiding_requests_are_conflicts(text, hidden):
+    # D-128: 손·꼬리를 가리는 연출도 눈 감기와 같은 원칙(사용자 결정 2026-10-15)
+    from genai_lab.free_generation import request_conflicts
+    assert check_request(text)["ok"] and set(request_conflicts(text)) == hidden
+
+
+def test_hidden_hands_and_tail_are_not_demanded_visible_in_the_prompt():
+    from genai_lab.free_generation import features_sentence, staging_text, POSES
+    items = sheet(distinctive=dict(state="measured", values=["heart-shaped tip at the end of the tail", "black claw-like fingernails", "two horns"]))
+    hands = features_sentence(items, hidden={"hands": "x"})
+    assert "fingernails" not in hands and "heart-shaped" in hands and "two horns" in hands
+    tail = features_sentence(items, hidden={"tail": "x", "body_parts": "x"})
+    assert "heart-shaped" not in tail and "fingernails" in tail
+    text = "".join(c["text"] for c in free_conditions("", "female", ("tail", "wings"), "sitting so that her tail is hidden", 42)["conditions"])
+    assert "the tail may be hidden by the requested pose, but do not remove it or add extra tails" in text
+    plain = "".join(c["text"] for c in free_conditions("", "female", ("tail",), "sitting on a chair", 42)["conditions"])
+    assert "keep them exactly as in image 1" in plain and "may be hidden" not in plain
+    seed = next(i for i, p in enumerate(POSES) if "behind the back" in p)      # 빈 요청의 고정 자세도 가림 기준
+    assert staging_text("", seed) == POSES[seed] and "hands" in __import__("genai_lab.free_generation", fromlist=["x"]).request_conflicts(staging_text("", seed))
+
+
+def test_hands_hidden_request_is_observed_with_tags():
+    from genai_lab.free_generation import request_observations
+    seen = request_observations("standing with her hands behind her back", {"arms_behind_back": 0.8})
+    assert seen == [dict(key="hands_hidden", status="observed", tags=["arms_behind_back", "hands_in_pockets", "hand_in_pocket"], score=0.8,
+                         note="태그 관찰. 요청 반영 판정은 사람이 한다")]
+    assert request_observations("hands in pockets", {})[0]["status"] == "not_observed"
+

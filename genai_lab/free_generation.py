@@ -53,11 +53,21 @@ HAIR_PLACEMENT = "Keep the exact hair colors and where each color appears as in 
 EYES_CLOSED_REQUEST = (r"\b(?:eyes?\s+(?:are\s+)?closed|closed\s+eyes|clos(?:e|es|ing)\s+(?:her|his|their|the)\s+eyes|wink(?:s|ing)?)\b"
                        r"|눈(?:을|은)?\s*감|윙크")
 BACK_VIEW_REQUEST = r"\b(?:from behind|back view|facing away|back to the viewer|seen from the back)\b|뒷모습|뒤돌아|등을\s*보"
+# 손·꼬리를 가리는 연출(D-128, 사용자 "손·꼬리에도 같은 원칙 적용"). 명시적인 가림 표현만 본다.
+HANDS_HIDDEN_REQUEST = (r"\b(?:(?:hands?|arms?)\s+(?:clasped\s+|folded\s+|held\s+)?behind\s+(?:her|his|their|the)\s+back"
+                        r"|hands?\s+in\s+(?:her|his|their|the\s+)?\s*pockets?|hands?\s+(?:are\s+)?hidden|hiding\s+(?:her|his|their|the)\s+hands?)\b"
+                        r"|뒷짐|손을?\s*(?:등\s*)?뒤로|손을?\s*주머니|손을?\s*(?:숨|가리)")
+TAIL_HIDDEN_REQUEST = (r"\b(?:tail\s+(?:is\s+)?(?:hidden|not\s+visible|out\s+of\s+(?:view|frame))|hid(?:e|es|ing)\s+(?:her|his|their|the)\s+tail)\b"
+                       r"|꼬리(?:를|가|는)?\s*(?:숨|가려|가리|안\s*보)")
 # 요청이 가리는 특징은 지시문에서 '보이게 유지'를 요구하지 않는다(D-127, 요청 21 K-2: 눈 색 설명 + eyes closed → 눈을 뜸).
 EYE_NOTE = r"\b(?:eyes?|iris|irises|pupils?|heterochromia)\b"
+HAND_NOTE = r"\b(?:hands?|fingers?|fingernails?|nails?|gloves?|palms?|wrists?)\b"
+TAIL_NOTE = r"\btails?\b"
+HIDDEN_NOTES = {"eye_color": EYE_NOTE, "hands": HAND_NOTE, "tail": TAIL_NOTE}
 # 요청 반영의 자동 관찰(태그). 관찰일 뿐 판정·재시도 근거가 아니다 — 요청 21 K-2 closed_eyes 0.00, 요청 20 K-2 1차 0.93.
 REQUEST_TAGS = ((EYES_CLOSED_REQUEST, "eyes_closed", ("closed_eyes",)),
-                (BACK_VIEW_REQUEST, "back_view", ("from_behind",)))
+                (BACK_VIEW_REQUEST, "back_view", ("from_behind",)),
+                (HANDS_HIDDEN_REQUEST, "hands_hidden", ("arms_behind_back", "hands_in_pockets", "hand_in_pocket")))
 WHOLE_FIGURE = "Show the whole character inside the frame. "
 WHITE_BACKGROUND = "Place the character alone on a plain pure white background with nothing else. "
 INTENT = "free_generation: keep the same character and outfit, change only the requested staging"
@@ -119,14 +129,24 @@ def distinctive_notes(notes):
     return dict(prompt=english, review=[n.strip() for n in notes])
 
 
+def staging_text(request_text, seed):
+    """실제 연출 문장: 요청이 비면 seed로 고른 고정 자세(가림 판단도 실제 연출 기준, D-128)."""
+    return request_text.strip() if (request_text or "").strip() else random_pose(seed)
+
+
 def request_conflicts(text):
-    """요청 문장이 일부러 가리는 특징 → {항목: 이유}. 그 항목은 자동 검사에서 빼고 사람이 본다."""
+    """요청 문장이 일부러 가리는 특징 → {항목: 이유}. 그 항목은 지시문에서 보이게 유지하라고 하지 않고(features_sentence·
+    free_conditions), 자동 검사에서 빼고(verify_features skip — 검증 항목 이름만 쓰인다) 사람이 본다."""
     text = text or ""
     skip = {}
     if re.search(EYES_CLOSED_REQUEST, text, re.I):
         skip["eye_color"] = "요청과 충돌: 눈 감기"
     if re.search(BACK_VIEW_REQUEST, text, re.I):
         skip.update(eye_color="요청과 충돌: 뒷모습", skin="요청과 충돌: 뒷모습")
+    if re.search(HANDS_HIDDEN_REQUEST, text, re.I):
+        skip["hands"] = "요청과 충돌: 손 가림"
+    if re.search(TAIL_HIDDEN_REQUEST, text, re.I):
+        skip.update(tail="요청과 충돌: 꼬리 가림", body_parts="요청과 충돌: 꼬리 가림")
     return skip
 
 
@@ -186,8 +206,7 @@ def features_sentence(features, hidden=()):
         text += HAIR_PLACEMENT
     notes = (items.get("distinctive") or {})
     english = distinctive_notes(notes.get("values"))["prompt"] if notes.get("state") == "measured" else []
-    if "eye_color" in hidden:
-        english = [n for n in english if not re.search(EYE_NOTE, n, re.I)]
+    english = [n for n in english if not any(re.search(HIDDEN_NOTES[k], n, re.I) for k in hidden if k in HIDDEN_NOTES)]
     if english:
         text += "Keep these distinctive details exactly as in image 1: " + "; ".join(english) + ". "
     return text
@@ -215,7 +234,13 @@ def free_conditions(features_text, gender, body_parts, request_text, seed, base_
                                source="user", reason="확정 성별", basis=gender))
     else:
         excluded.append(dict(key="gender", reason="성별 미지정"))
-    conditions.append(dict(key="body_parts", text=body_parts_sentence(None if body_parts is None else tuple(body_parts)).replace("color and position", "color and attachment to the body"),
+    parts_text = body_parts_sentence(None if body_parts is None else tuple(body_parts)).replace("color and position", "color and attachment to the body")
+    if body_parts and "tail" in body_parts and "tail" in request_conflicts(staging_text(request_text, seed)):
+        # 꼬리를 가리는 연출이면 '보이게 그대로'를 요구하지 않는다(D-128). 없애거나 더하지 말라는 조건은 남긴다.
+        parts_text = parts_text.replace("keep them exactly as in image 1 with the same number, shape, color and attachment to the body",
+                                        "keep them as in image 1 with the same number, shape, color and attachment to the body where visible; "
+                                        "the tail may be hidden by the requested pose, but do not remove it or add extra tails")
+    conditions.append(dict(key="body_parts", text=parts_text,
                            source="user" if body_parts is not None else "policy", reason="확정 부위만 유지·추가 금지(D-111)", basis=list(body_parts) if body_parts else body_parts))
     if checked["empty"]:
         pose = random_pose(seed)

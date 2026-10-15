@@ -12,8 +12,9 @@ from PIL import Image
 
 from genai_lab.character_features import DISTINCTIVE, TAG_ITEMS, extract_features, write_features
 from genai_lab.character_verification import measure_result_scores, retry_reasons, verify_features
-from genai_lab.free_generation import (EYE_NOTE, INTENT, SEEDS, check_request, distinctive_notes, features_sentence, free_conditions,
-                                       garment_tag_changes, part_counts, request_conflicts, request_observations, safety_observation)
+from genai_lab.free_generation import (HIDDEN_NOTES, INTENT, SEEDS, check_request, distinctive_notes, features_sentence, free_conditions,
+                                       garment_tag_changes, part_counts, request_conflicts, request_observations, safety_observation,
+                                       staging_text)
 from genai_lab.outfit_edit import SIZE, canvas, sha, write_json
 from genai_lab.outfit_edit_pipeline import segment_canvas, detect_joints
 
@@ -221,11 +222,13 @@ def prepare_generation_inputs(base_path, character_features, request_text, *, ba
     write_features(directory / "character-features", features)
     reference, crop_record = prepare_reference(image, parts, inputs)
     trace["input_facts"].update(character_features=features, base_segmentation=segmented, derived_reference=crop_record)
-    conflicts = request_conflicts(request_text)
+    staging = staging_text(request_text, selection_seed)        # 빈 요청이면 고른 고정 자세로 가림을 판단(D-128)
+    conflicts = request_conflicts(staging)
     sentence = features_sentence(features, hidden=conflicts)
     assembled = free_conditions(sentence, gender, body_parts, request_text, selection_seed, base_kind,
                                 reference_scope=crop_record["scope"])
     assembled["request_conflicts"] = conflicts
+    assembled["staging_text"] = staging
     if conflicts:
         assembled["excluded"].append(dict(key="feature_text." + "+".join(sorted(conflicts)), reason="요청이 가리는 특징은 지시문에서 보이게 유지하라고 하지 않는다(D-127). 결과 확인 체크에는 남는다",
                                           detail=conflicts))
@@ -233,7 +236,7 @@ def prepare_generation_inputs(base_path, character_features, request_text, *, ba
     notes = distinctive_notes(character_features.get(DISTINCTIVE))
     assembled["distinctive_review"] = notes["review"]
     import re
-    prompted = [n for n in notes["prompt"] if "eye_color" not in conflicts or not re.search(EYE_NOTE, n, re.I)]
+    prompted = [n for n in notes["prompt"] if not any(re.search(HIDDEN_NOTES[k], n, re.I) for k in conflicts if k in HIDDEN_NOTES)]
     if len(prompted) < len(notes["review"]):
         assembled["excluded"].append(dict(key="distinctive", reason="영어가 아닌 메모·요청이 가리는 특징의 메모는 지시문에 넣지 않고 결과 확인 창에서만 확인",
                                           notes=[n for n in notes["review"] if n not in prompted]))
@@ -302,7 +305,7 @@ def run_free_generation(base_path, character_features, request_text="", *, base_
             persist()
             observation = observe_result(features, raw, directory / f"result-analysis{suffix}", runtime,
                                          cancelled=cancelled, popen=popen, skip=assembled["request_conflicts"],
-                                         base_scores=assembled["base_scores"], request_text=request_text)
+                                         base_scores=assembled["base_scores"], request_text=assembled["staging_text"])
             judgement = condition_judgements(assembled["conditions"], observation, number, raw)
             attempt.update(status="completed", raw=str(raw), raw_sha256=sha(raw), observation=observation, judgements=judgement)
             persist()

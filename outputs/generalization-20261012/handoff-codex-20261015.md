@@ -8,7 +8,7 @@
 |---|---|---|---|---|
 | 21-rerun1 | 요청 20 입력을 D-126 코드로 다시(6줄) | Codex | 완료, Codex 보고서 있음 | **없음** |
 | 22 | K-2 한 줄, 눈 색 문장 제외 | Claude가 Codex 스크립트(`codex-preflight-22/run_one.py`) 그대로 실행 | 완료, 눈 감음(closed_eyes 0.945) | **정상(품질 통과)** — `free-r22/K-2/judgement.json` |
-| 23 | 손·꼬리 가림(D-128) 2줄 | Claude(`codex-preflight-23/run_23.py`) | 완료: 뒷짐 반영, 꼬리 가림 미반영(꼬리 보임) | **없음** |
+| 23 | 손·꼬리 가림(D-128) 2줄 | Claude(`codex-preflight-23/run_23.py`) | 완료: 뒷짐 반영, 꼬리 가림 미반영(꼬리 보임) | N2-hands **정상**, N1-tail **심한 이상(다리 3개 — 앉음·섬 겹침)**, 자동 관찰은 못 잡음 |
 | 20 | 원본 N1·N2·K 6줄 | Codex | 완료 | K-1만 일부(눈 색 오드아이 → 양쪽 파랑), 나머지 없음 |
 
 보고서: `codex_gpu_report_22.md`, `codex_gpu_report_23.md`(Claude 작성), 비교 그림 `comparison-22.png`, `comparison-23.png`.

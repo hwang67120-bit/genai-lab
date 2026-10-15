@@ -98,7 +98,7 @@ def near_identity(match):
             and abs(match["rotate_deg"]) <= RESIDUAL_ROTATE and max(map(abs, match["head_shift_px"])) <= RESIDUAL_SHIFT)
 
 
-def original_background(image, tolerance=8):
+def original_background(image, tolerance=8, frame_fallback=False):
     """캔버스 안 원본 그림의 배경: 그림 내용 상자 테두리 색(중앙값)과 거의 같고 그 테두리와 이어진 픽셀.
     D-115(요청 17 N4): 회색 배경 위의 흰 머리에서 분할기가 배경을 머리카락으로 넣어, 붙일 때 Qwen 소매 위에 회색 배경이 덮였다.
     흰 바탕 캔버스 여백은 원본 배경과 색이 달라 여기 포함되지 않는다."""
@@ -110,6 +110,13 @@ def original_background(image, tolerance=8):
     box = np.zeros(image.shape[:2], bool)
     box[y0:y1 + 1, x0:x1 + 1] = True
     ring = box & ~cv2.erode(box.astype(np.uint8), np.ones((13, 13), np.uint8)).astype(bool)
+    if not ring.any():
+        # 그림이 캔버스 끝까지 차면(눈길 배경 등) 위 테두리가 비어 중앙값이 NaN이 되고 배경 빼기가 조용히 건너뛰어진다(D-127).
+        # 특징 측정(frame_fallback)에서만 캔버스 가장자리를 테두리로 쓴다. 잠근 편집 단계 합성 동작은 그대로 둔다(D-118).
+        if not frame_fallback:
+            return np.zeros(image.shape[:2], bool)
+        ring = box & ~cv2.erode(box.astype(np.uint8), np.ones((13, 13), np.uint8), borderType=cv2.BORDER_CONSTANT,
+                                borderValue=0).astype(bool)
     colour = np.median(image[ring], axis=0)
     near = (np.abs(image.astype(np.int16) - colour.astype(np.int16)).max(axis=2) <= tolerance) & box
     _, labels = cv2.connectedComponents(near.astype(np.uint8), connectivity=4)

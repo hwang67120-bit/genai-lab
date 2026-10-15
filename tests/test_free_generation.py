@@ -418,3 +418,34 @@ def test_manual_free_judgement_does_not_use_the_head_paste_rule(tmp_path,fake_mo
     record_judgement(directory, dict(judge="user", same_character="no"))
     assert json.loads((directory/"judgement.json").read_text(encoding="utf-8"))[-1]["quality_pass"] is False
 
+
+def test_request_hidden_features_leave_the_prompt_but_stay_for_review(tmp_path,fake_models,monkeypatch):
+    # D-127 (요청 21 K-2): 눈 색 설명·눈 메모 + eyes closed → 눈을 뜸. 눈 감기 요청이면 지시문에서 눈 색을 빼고 확인 체크로만 남긴다
+    from genai_lab.free_generation import features_sentence
+    sheet_items = sheet(eye_color=dict(state="measured", tags=["heterochromia", "blue_eyes"]),
+                        distinctive=dict(state="measured", values=["blue eye on the viewer's left, red eye on the right", "heart-shaped tail tip"]))
+    hidden = features_sentence(sheet_items, hidden={"eye_color": "요청과 충돌: 눈 감기"})
+    assert "heterochromia" not in hidden and "viewer's left" not in hidden and "heart-shaped tail tip" in hidden
+    assert "heterochromia" in features_sentence(sheet_items)
+    base,calls = fake_models
+    monkeypatch.setattr(pipeline,"measure_result_scores",lambda *a:{"long_hair":.9,"1girl":.9,"closed_eyes":.01})
+    confirmed = dict(features(), eye_color=["blue_eyes"], distinctive=["blue eye on the left", "heart-shaped tail tip"])
+    result = pipeline.run_free_generation(base,confirmed,"standing with eyes closed",base_kind="original",gender="female",body_parts=(),
+        confirmed=True,adult_confirmed=True,settings=settings(tmp_path),runtime=SimpleNamespace(),directory=tmp_path/"run")
+    prompt = next(c[1] for c in calls if c[0] == "qwen")["prompt"]["positive"]
+    assert "blue eyes" not in prompt and "blue eye on the left" not in prompt and "heart-shaped tail tip" in prompt
+    assert result["distinctive_review"] == ["blue eye on the left", "heart-shaped tail tip"]
+    trace = json.loads(Path(result["trace"]).read_text(encoding="utf-8"))
+    assert any(e["key"] == "distinctive" and e["notes"] == ["blue eye on the left"] for e in trace["excluded"])
+    row = next(j for j in result["condition_judgements"] if j["key"] == "request.eyes_closed")
+    assert row["status"] == "needs_review" and row["evidence"]["status"] == "not_observed"
+    assert len([c for c in calls if c[0] == "qwen"]) == 1                          # 요청 관찰은 재시도 근거가 아니다
+
+
+def test_automatic_kept_is_not_fulfilled():
+    # D-127: 자동 '유지'는 충족이 아니다 — 위반 관찰 없음, 여유가 적으면 확인 필요. 충족은 사람만
+    observation = dict(verification=dict(items=dict(hair_color=dict(status="kept", review=["색 차이 12.3 / 문턱 15"]),
+                                                    skin=dict(status="kept", review=[]))),
+                       safety=dict(status="not_reviewed"), request_tags=[])
+    rows = {r["key"]: r["status"] for r in pipeline.condition_judgements([], observation, 1, Path(__file__))}
+    assert rows == {"feature.hair_color": "needs_review", "feature.skin": "not_violated", "safety": "not_reviewed"}

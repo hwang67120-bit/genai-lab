@@ -53,6 +53,11 @@ HAIR_PLACEMENT = "Keep the exact hair colors and where each color appears as in 
 EYES_CLOSED_REQUEST = (r"\b(?:eyes?\s+(?:are\s+)?closed|closed\s+eyes|clos(?:e|es|ing)\s+(?:her|his|their|the)\s+eyes|wink(?:s|ing)?)\b"
                        r"|눈(?:을|은)?\s*감|윙크")
 BACK_VIEW_REQUEST = r"\b(?:from behind|back view|facing away|back to the viewer|seen from the back)\b|뒷모습|뒤돌아|등을\s*보"
+# 요청이 가리는 특징은 지시문에서 '보이게 유지'를 요구하지 않는다(D-127, 요청 21 K-2: 눈 색 설명 + eyes closed → 눈을 뜸).
+EYE_NOTE = r"\b(?:eyes?|iris|irises|pupils?|heterochromia)\b"
+# 요청 반영의 자동 관찰(태그). 관찰일 뿐 판정·재시도 근거가 아니다 — 요청 21 K-2 closed_eyes 0.00, 요청 20 K-2 1차 0.93.
+REQUEST_TAGS = ((EYES_CLOSED_REQUEST, "eyes_closed", ("closed_eyes",)),
+                (BACK_VIEW_REQUEST, "back_view", ("from_behind",)))
 WHOLE_FIGURE = "Show the whole character inside the frame. "
 WHITE_BACKGROUND = "Place the character alone on a plain pure white background with nothing else. "
 INTENT = "free_generation: keep the same character and outfit, change only the requested staging"
@@ -125,6 +130,21 @@ def request_conflicts(text):
     return skip
 
 
+def request_observations(text, scores, threshold=SAFETY_THRESHOLD):
+    """요청 문장 중 태그로 볼 수 있는 연출(눈 감기·뒷모습)이 결과에 보이는지. observed / not_observed / unmeasurable."""
+    found = []
+    for pattern, key, tags in REQUEST_TAGS:
+        if not re.search(pattern, text or "", re.I):
+            continue
+        if scores is None:
+            found.append(dict(key=key, status="unmeasurable", tags=list(tags), reason="tagger unavailable"))
+            continue
+        best = max(float(scores.get(t, 0.0)) for t in tags)
+        found.append(dict(key=key, status="observed" if best >= threshold else "not_observed", tags=list(tags), score=round(best, 3),
+                          note="태그 관찰. 요청 반영 판정은 사람이 한다"))
+    return found
+
+
 def garment_tag_changes(base_scores, result_scores, threshold=SAFETY_THRESHOLD):
     """기준·결과 의상 태그(tag_scope garment)의 잃음·생김. 관찰만 — 자세 변화로 가려지기 쉬워 재시도 근거가 아니다(D-126 ④)."""
     from genai_lab.reference_features import tag_scope
@@ -137,8 +157,10 @@ def garment_tag_changes(base_scores, result_scores, threshold=SAFETY_THRESHOLD):
                 note="태그 차이는 관찰 근거다. 가림·태그 노이즈가 많아 재시도·판정에 쓰지 않는다(사람이 의상 확인)")
 
 
-def features_sentence(features):
-    """확정·측정된 특징표 값으로 한 문장. unknown/weak 항목은 뺀다. 아무것도 없으면 빈 문자열."""
+def features_sentence(features, hidden=()):
+    """확정·측정된 특징표 값으로 한 문장. unknown/weak 항목은 뺀다. 아무것도 없으면 빈 문자열.
+    hidden: 요청이 가리는 항목(request_conflicts의 키). 그 항목과 그에 관한 고유 형태 메모는 문장에 넣지 않는다(D-127)."""
+    hidden = set(hidden or ())
     items = (features or {}).get("items", {})
     parts = []
     hair = []
@@ -151,19 +173,21 @@ def features_sentence(features):
     if hair:
         parts.append(" ".join(hair) + " hair" if not any(h.endswith("hair") for h in hair) else " ".join(hair))
     eyes = (items.get("eye_color") or {})
-    if eyes.get("state") == "measured" and eyes.get("tags"):
+    if eyes.get("state") == "measured" and eyes.get("tags") and "eye_color" not in hidden:
         parts.append(", ".join(_plain(v) for v in eyes["tags"]))
     acc = items.get("head_accessories") or {}
     if acc.get("state") == "measured" and acc.get("values"):
         parts.append("head accessories: " + ", ".join(_plain(v) for v in acc["values"]))
     skin = items.get("skin") or {}
-    if skin.get("state") == "measured" and skin.get("tags"):
+    if skin.get("state") == "measured" and skin.get("tags") and "skin" not in hidden:
         parts.append(", ".join(_plain(v) for v in skin["tags"]))
     text = ("The character has " + "; ".join(parts) + "; keep these exactly. ") if parts else ""
     if (items.get("hair_color") or {}).get("state") == "measured":
         text += HAIR_PLACEMENT
     notes = (items.get("distinctive") or {})
     english = distinctive_notes(notes.get("values"))["prompt"] if notes.get("state") == "measured" else []
+    if "eye_color" in hidden:
+        english = [n for n in english if not re.search(EYE_NOTE, n, re.I)]
     if english:
         text += "Keep these distinctive details exactly as in image 1: " + "; ".join(english) + ". "
     return text

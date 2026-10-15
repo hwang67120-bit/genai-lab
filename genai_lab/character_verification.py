@@ -9,10 +9,10 @@ D-126(요청 20 후속): 재시도는 확신 있는 위반(`retry`)만. 경계�
 """
 import numpy as np
 
-from genai_lab.character_features import (BODY_PARTS, TAG_GROUPS, TAG_THRESHOLD, WEAK_THRESHOLD, dominant_colors,
+from genai_lab.character_features import (BODY_PARTS, TAG_GROUPS, TAG_THRESHOLD, WEAK_THRESHOLD, color_share, dominant_colors,
                                           eye_color, eye_colors, tag_values)
 
-SCHEMA = "character_verification/2"
+SCHEMA = "character_verification/3"
 HAIR_DE = 15                    # 머리색 Lab 거리(outfit_edit.HAIR_COLOR_DE와 같은 값)
 EYE_DE = 20                     # 눈 색은 마스크가 작아 조금 느슨하게
 SKIN_DE = 12
@@ -26,6 +26,9 @@ EYE_MIN_CHROMA = 12             # 이보다 무채색이면 색조가 뜻이 없
 NEW_HAIR_DE = 30                # 결과 머리 군집이 기준 군집 어느 것과도 이만큼 멀고
 NEW_HAIR_FRACTION = 0.03        # 이 비율 이상이고
 NEW_HAIR_CHROMA = 20            # 채도가 있으면 새 머리색(added) — N2-2 청록·노랑·초록 추가
+# D-127: 자동 '유지'는 충족이 아니라 '위반 관찰 없음'. 여유가 적으면 review(확인 필요)로 표시한다. 문턱은 바꾸지 않는다.
+LOW_MARGIN = 0.6                # 색 차이가 문턱의 이 비율을 넘는 유지(N2-2 머리 ΔE 12.2 / 15)
+SHARE_REDUCED = 0.5             # 기준의 색 있는 머리 군집 비중이 이 비율 아래로 줄면 감소(N2-2 분홍 17.8% → 6.7%)
 
 
 def reference_values(item, key):
@@ -56,7 +59,7 @@ def compare_tags(reference, result_scores, names):
     present = [v for v in reference if v in weak]
     lost = [v for v in reference if v not in weak]
     if not lost:
-        return dict(status="kept", result=sorted(strong))
+        return dict(status="kept", result=sorted(strong), weak_only=[v for v in reference if v not in strong])
     generic = {v: generic_of(v, weak) for v in lost}
     replaced = sorted(strong - set(reference) - {g for g in generic.values() if g})
     if all(generic.values()) and not replaced:
@@ -133,6 +136,33 @@ def compare_eyes(reference_eyes, reference_tags, result_eyes):
                 confident=status == "changed", reference_rgb=[e["rgb"] for e in ref], result_rgb=[e["rgb"] for e in res])
 
 
+def reduced_hair_colors(reference_colored, result_image, result_mask):
+    """기준의 색 있는 머리 군집 중 결과에서 비중이 절반 아래로 준 것. 조명·배경 영향이 있어 재시도 근거가 아니다."""
+    found = []
+    for c in reference_colored or ():
+        if not c.get("share"):
+            continue
+        share = color_share(result_image, result_mask, c["lab"])
+        if share is not None and share < c["share"] * SHARE_REDUCED:
+            found.append(dict(rgb=c["rgb"], reference_share=c["share"], result_share=share))
+    return found
+
+
+def review_reasons(key, item):
+    """유지(kept) 판정의 여유가 적은 이유. 비면 여유 있음."""
+    reasons = []
+    pixels = item.get("pixels") or {}
+    if pixels.get("delta_e") is not None and pixels["delta_e"] > pixels["limit"] * LOW_MARGIN:
+        reasons.append(f"색 차이 {pixels['delta_e']} / 문턱 {pixels['limit']}")
+    if pixels.get("hue_gap") is not None and pixels["hue_gap"] > EYE_HUE_KEPT * LOW_MARGIN:
+        reasons.append(f"눈 색조 차이 {pixels['hue_gap']}° / {EYE_HUE_KEPT}°")
+    if item.get("reduced_colors"):
+        reasons.append("색 있는 머리 비중 감소")
+    if item.get("weak_only"):
+        reasons.append("약한 태그(0.35~0.5)로만 유지")
+    return reasons
+
+
 def combine(tags, pixels):
     """눈 색: 픽셀이 태그를 덮어쓰지 않는다. 한쪽이 근거 없음(unknown·태그 missing)이면 다른 쪽, 엇갈리면 unknown."""
     t, p = tags["status"], pixels["status"]
@@ -207,6 +237,8 @@ def verify_features(reference, result_scores, result_image=None, parts=None, ski
             items[key]["new_colors"] = added
             if added and items[key]["status"] != "changed":
                 items[key].update(status="added", confident=True)
+            items[key]["reduced_colors"] = (reduced_hair_colors(ref.get("colored"), result_image, mask)
+                                            if measurable and "hair" in parts else [])
     # 부위·성별
     parts_ref = ref_items.get("body_parts") or {}
     found = body_parts_in_result(result_scores)
@@ -229,7 +261,11 @@ def verify_features(reference, result_scores, result_image=None, parts=None, ski
     for key, reason in (skip or {}).items():
         if key in items:
             items[key] = dict(status="unknown", reason=reason, skipped=True, observed=items[key])
+    for key, item in items.items():
+        if item["status"] == "kept":
+            item["review"] = review_reasons(key, item)
     summary = {s: sorted(k for k, v in items.items() if v["status"] == s) for s in ("kept", "changed", "missing", "added", "unknown")}
+    summary["review"] = sorted(k for k, v in items.items() if v.get("review"))
     retry = sorted(k for k, v in items.items() if v["status"] in ("changed", "added") and v.get("confident"))
     return dict(schema=SCHEMA, items=items, summary=summary, retry=retry,
                 note="자동 비교는 same_character 사람 판정의 근거다. unknown은 비교하지 못한 것이지 변화가 아니다. "

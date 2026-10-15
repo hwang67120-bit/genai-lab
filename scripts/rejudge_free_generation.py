@@ -19,7 +19,7 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 from genai_lab.character_features import DISTINCTIVE, extract_features  # noqa: E402
 from genai_lab.character_verification import retry_reasons, verify_features  # noqa: E402
-from genai_lab.free_generation import garment_tag_changes, request_conflicts  # noqa: E402
+from genai_lab.free_generation import garment_tag_changes, request_conflicts, request_observations  # noqa: E402
 from genai_lab.free_generation_pipeline import head_box, WIDE_REFERENCE  # noqa: E402
 
 WATCH = ("eye_color", "hair_color", "head_accessories", "skin", "body_parts")
@@ -50,7 +50,8 @@ def reference_sheet(run, trace):
 
 def short(item):
     extra = item.get("reason") or ((item.get("pixels") or {}).get("reason") if item["status"] == "unknown" else "") or ""
-    return item["status"] + (f"({extra})" if extra else "") + ("!" if item.get("confident") else "")
+    return (item["status"] + (f"({extra})" if extra else "") + ("!" if item.get("confident") else "")
+            + (f"[확인 필요: {'; '.join(item['review'])}]" if item.get("review") else ""))
 
 
 def main():
@@ -97,6 +98,8 @@ def main():
                                  old_retry_reason=attempt.get("retry_reason"), old_summary=old.get("summary"),
                                  new_retry=retry_reasons(report), new_items={k: short(report["items"][k]) for k in WATCH if k in report["items"]},
                                  new_hair_colors=report["items"]["hair_color"].get("new_colors"),
+                                 reduced_hair_colors=report["items"]["hair_color"].get("reduced_colors"),
+                                 request_tags=request_observations(request, cache[key]),
                                  garment_tags=garment_tag_changes(base_scores, cache[key]),
                                  reference_box=list(box) if box else None, reference_scope=("wide" if box and ratio > WIDE_REFERENCE else "head") if box else None,
                                  old_reference_box=trace["input_facts"]["derived_reference"]["box"]))
@@ -113,6 +116,10 @@ def main():
         print("    " + "  ".join(f"{k}={v}" for k, v in r["new_items"].items()))
         if r["new_hair_colors"]:
             print("    새 머리색:", [(c["rgb"], c["fraction"]) for c in r["new_hair_colors"]])
+        if r["reduced_hair_colors"]:
+            print("    줄어든 머리색:", [(c["rgb"], c["reference_share"], c["result_share"]) for c in r["reduced_hair_colors"]])
+        for t in r["request_tags"]:
+            print(f"    요청 관찰 {t['key']}: {t['status']} ({t.get('score')})")
         if changed.get("lost") or changed.get("added"):
             print("    의상 태그: 없어짐", changed["lost"], "생김", changed["added"])
     print(f"참조 크롭: {sorted({(r['run'], tuple(r['old_reference_box']), tuple(r['reference_box'] or ())) for r in rows})}")

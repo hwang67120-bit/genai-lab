@@ -147,7 +147,7 @@ def hair_mask_without_background(image, hair):
     """분할기가 머리카락에 넣은 원본 배경(그림 테두리 색, D-115와 같은 규칙)을 뺀 머리 마스크."""
     from genai_lab.outfit_edit import original_background
     try:
-        return hair & ~original_background(np.ascontiguousarray(image))
+        return hair & ~original_background(np.ascontiguousarray(image), frame_fallback=True)
     except Exception:
         return hair
 
@@ -183,6 +183,25 @@ def eye_color(image, eyes):
         return None
     center = np.median(lab[iris], 0)
     return dict(lab=[round(float(v), 1) for v in center], rgb=lab_to_rgb(center), pixels=int(iris.sum()))
+
+
+COLORED_CLUSTER = 0.08          # 머리 군집 중 이 비율 이상이고
+COLORED_CHROMA = 20             # 채도가 있는 색(N2의 옅은 분홍)은 결과에서 비중이 줄었는지 본다(D-127)
+SHARE_DE = 15                   # 군집 중심에서 이 거리 안의 머리 픽셀 비중
+
+
+def color_share(image, mask, lab):
+    """마스크 안 픽셀 중 lab에서 SHARE_DE 안인 비중. 픽셀이 적으면 None."""
+    pixels = to_lab(image)[mask]
+    if len(pixels) < MIN_PIXELS:
+        return None
+    return round(float((np.linalg.norm(pixels - np.array(lab, np.float32), axis=1) <= SHARE_DE).mean()), 3)
+
+
+def colored_hair(image, mask, palette):
+    """기준 머리의 '색 있는' 군집과 그 비중(감소 관찰용)."""
+    return [dict(lab=c["lab"], rgb=c["rgb"], share=color_share(image, mask, c["lab"])) for c in palette
+            if c["fraction"] >= COLORED_CLUSTER and float(np.hypot(c["lab"][1], c["lab"][2])) >= COLORED_CHROMA]
 
 
 EYE_TOP_CHROMA = 60             # 눈 하나 안에서 채도 상위 40%만 홍채로 본다(피부·눈꺼풀이 섞이면 색이 탁해진다, D-126 ①)
@@ -244,9 +263,10 @@ def extract_features(image, parts, scores, *, gender="unknown", body_parts=None,
     items["hair_style"] = _item(state(style), "tags", values=[n for n, _ in style], scores=dict(style))
     hair_tags = tag_values(scores, HAIR_COLOR_TAGS)
     hair_colors = dominant_colors(image, hair_mask_without_background(image, parts["hair"])) if "hair" in parts else []
-    palette = dominant_colors(image, hair_mask_without_background(image, parts["hair"]), k=5) if "hair" in parts else []
+    hair_mask = hair_mask_without_background(image, parts["hair"]) if "hair" in parts else None
+    palette = dominant_colors(image, hair_mask, k=5) if hair_mask is not None else []
     items["hair_color"] = _item(state(hair_tags, hair_colors), "tags+pixels", tags=[n for n, _ in hair_tags], colors=hair_colors,
-                                palette=palette)
+                                palette=palette, colored=colored_hair(image, hair_mask, palette) if hair_mask is not None else [])
     eye_tags = tag_values(scores, EYE_COLOR_TAGS)
     eye = eye_color(image, parts["eyes"]) if "eyes" in parts else None
     eyes = eye_colors(image, parts["eyes"]) if "eyes" in parts else []

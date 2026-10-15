@@ -161,3 +161,34 @@ def test_generic_tag_is_not_a_change_and_weak_replacement_is_not_retried():
     assert weak["items"]["hair_length"]["status"] == "changed" and "hair_length" not in weak["retry"]
     strong = cv.verify_features(reference, dict(x_hair_ornament=0.8, short_hair=0.9))
     assert "hair_length" in strong["retry"]
+
+
+def test_reduced_coloured_hair_and_low_margin_are_marked_for_review():
+    # D-127 (요청 21 N2-2): 분홍 비중이 줄었는데 대표색 차이는 문턱 안이라 '유지'였다 → 유지 + 확인 필요
+    image, parts = scene()
+    image[10:40, 30:130] = (230, 120, 170)                  # 머리 절반이 분홍
+    reference = cf.extract_features(image, parts, {}, gender="female", body_parts=())
+    assert reference["items"]["hair_color"]["colored"] and reference["items"]["hair_color"]["colored"][0]["share"] > 0.3
+    faded = image.copy()
+    faded[10:37, 30:130] = (60, 200, 200)                   # 분홍이 거의 사라짐(3줄만 남음)
+    report = cv.verify_features(reference, {}, faded, parts)
+    hair = report["items"]["hair_color"]
+    assert hair["reduced_colors"] and "색 있는 머리 비중 감소" in hair["review"] and "hair_color" in report["summary"]["review"]
+    assert "hair_color" not in report["retry"]                                     # 조명·배경 영향이 있어 재시도 근거가 아니다
+    same = cv.verify_features(reference, {}, image, parts)
+    assert same["items"]["hair_color"]["reduced_colors"] == [] and not same["items"]["hair_color"]["review"]
+
+
+def test_full_bleed_background_no_longer_yields_nan_and_is_removed_from_hair():
+    # D-127: 그림이 캔버스 끝까지 차면 테두리가 비어 NaN 경고 + 배경 빼기 생략이었다(눈길 배경)
+    import warnings
+    image = np.full((120, 100, 3), (150, 160, 170), np.uint8)                    # 끝까지 찬 회색 배경
+    image[30:90, 30:70] = (230, 120, 170)
+    hair = np.zeros((120, 100), bool)
+    hair[20:100, 20:80] = True                                                      # 분할기가 배경 일부를 머리에 넣음
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        cleaned = cf.hair_mask_without_background(image, hair)
+    assert not cleaned[25, 25] and cleaned[50, 50]
+    from genai_lab.outfit_edit import original_background
+    assert not original_background(image).any()                                    # 잠근 편집 단계 동작은 그대로

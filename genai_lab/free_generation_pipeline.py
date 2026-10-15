@@ -12,8 +12,8 @@ from PIL import Image
 
 from genai_lab.character_features import DISTINCTIVE, TAG_ITEMS, extract_features, write_features
 from genai_lab.character_verification import measure_result_scores, retry_reasons, verify_features
-from genai_lab.free_generation import (INTENT, SEEDS, check_request, distinctive_notes, features_sentence, free_conditions,
-                                       garment_tag_changes, part_counts, request_conflicts, safety_observation)
+from genai_lab.free_generation import (EYE_NOTE, INTENT, SEEDS, check_request, distinctive_notes, features_sentence, free_conditions,
+                                       garment_tag_changes, part_counts, request_conflicts, request_observations, safety_observation)
 from genai_lab.outfit_edit import SIZE, canvas, sha, write_json
 from genai_lab.outfit_edit_pipeline import segment_canvas, detect_joints
 
@@ -116,7 +116,7 @@ def prepare_reference(image, parts, directory):
                       note="기준과 같은 이미지에서 파생한 시각 참조. 동일성을 보장하지 않는다.")
 
 
-def observe_result(reference, raw, directory, runtime, *, cancelled, popen, skip=None, base_scores=None):
+def observe_result(reference, raw, directory, runtime, *, cancelled, popen, skip=None, base_scores=None, request_text=""):
     """Qwen 종료 후 생성 결과 자체를 분할한다. 기준 마스크를 결과에 적용하지 않는다.
     skip: 요청과 충돌해 재지 않는 특징(request_conflicts), base_scores: 의상 태그 차이 관찰용 기준 태그."""
     directory = Path(directory)
@@ -159,7 +159,8 @@ def observe_result(reference, raw, directory, runtime, *, cancelled, popen, skip
         limbs = dict(status="unmeasurable", reason=str(error))
     result = dict(image=str(path), image_sha256=sha(path), coordinate_basis="generated_output",
                   segmentation=seg, verification=verification, body_part_counts=part_counts(parts), limbs=limbs, safety=safety,
-                  garment_tags=garment_tag_changes(base_scores, scores), errors=errors)
+                  garment_tags=garment_tag_changes(base_scores, scores), request_tags=request_observations(request_text, scores),
+                  errors=errors)
     write_json(directory / "observation.json", result)
     return result
 
@@ -169,11 +170,16 @@ def condition_judgements(conditions, observation, number, raw):
     target = dict(attempt=number, image=str(raw), sha256=sha(raw))
     rows = [dict(key=c["key"], status="not_reviewed", judge="human_pending", target=target,
                  evidence=[], reason="의상 세부·동일성·연출 반영은 사람 검토") for c in conditions]
-    status_map = {"kept": "fulfilled", "changed": "violated", "missing": "unmeasurable", "added": "violated", "unknown": "unmeasurable"}
+    # 자동 관찰은 '충족'을 말하지 않는다(D-127). 유지 = 위반 관찰 없음, 여유가 적으면 확인 필요. 충족은 사람 판정만.
+    status_map = {"kept": "not_violated", "changed": "violated", "missing": "unmeasurable", "added": "violated", "unknown": "unmeasurable"}
     for key, value in observation["verification"].get("items", {}).items():
-        rows.append(dict(key="feature."+key, status=status_map.get(value.get("status"), "unmeasurable"),
-                         judge="automatic_analysis", target=target, evidence=value,
+        status = "needs_review" if value.get("status") == "kept" and value.get("review") else status_map.get(value.get("status"), "unmeasurable")
+        rows.append(dict(key="feature."+key, status=status, judge="automatic_analysis", target=target, evidence=value,
                          note="태그·색 관찰은 최종 동일성 판정이 아니다. 부위 개수/연결은 확인 불가"))
+    for item in observation.get("request_tags") or ():
+        rows.append(dict(key="request."+item["key"], judge="automatic_analysis", target=target, evidence=item,
+                         status={"observed": "not_violated", "not_observed": "needs_review"}.get(item["status"], "unmeasurable"),
+                         note="요청 연출의 태그 관찰. 반영 판정은 사람"))
     rows.append(dict(key="safety", **observation["safety"], target=target))
     return rows
 
@@ -215,21 +221,28 @@ def prepare_generation_inputs(base_path, character_features, request_text, *, ba
     write_features(directory / "character-features", features)
     reference, crop_record = prepare_reference(image, parts, inputs)
     trace["input_facts"].update(character_features=features, base_segmentation=segmented, derived_reference=crop_record)
-    assembled = free_conditions(features_sentence(features), gender, body_parts, request_text, selection_seed, base_kind,
+    conflicts = request_conflicts(request_text)
+    sentence = features_sentence(features, hidden=conflicts)
+    assembled = free_conditions(sentence, gender, body_parts, request_text, selection_seed, base_kind,
                                 reference_scope=crop_record["scope"])
-    assembled["request_conflicts"] = request_conflicts(request_text)
+    assembled["request_conflicts"] = conflicts
+    if conflicts:
+        assembled["excluded"].append(dict(key="feature_text." + "+".join(sorted(conflicts)), reason="요청이 가리는 특징은 지시문에서 보이게 유지하라고 하지 않는다(D-127). 결과 확인 체크에는 남는다",
+                                          detail=conflicts))
     assembled["base_scores"] = scores
     notes = distinctive_notes(character_features.get(DISTINCTIVE))
     assembled["distinctive_review"] = notes["review"]
-    if len(notes["prompt"]) < len(notes["review"]):
-        assembled["excluded"].append(dict(key="distinctive", reason="영어가 아닌 고유 형태 메모는 지시문에 넣지 않고 결과 확인 창에서만 확인",
-                                          notes=[n for n in notes["review"] if n not in notes["prompt"]]))
+    import re
+    prompted = [n for n in notes["prompt"] if "eye_color" not in conflicts or not re.search(EYE_NOTE, n, re.I)]
+    if len(prompted) < len(notes["review"]):
+        assembled["excluded"].append(dict(key="distinctive", reason="영어가 아닌 메모·요청이 가리는 특징의 메모는 지시문에 넣지 않고 결과 확인 창에서만 확인",
+                                          notes=[n for n in notes["review"] if n not in prompted]))
     assembled["excluded"].extend(dict(key="feature."+key, reason="미확정/확인 불가 특징은 프롬프트 값에서 제외") for key in features["unknown"])
     recorded = {k: v for k, v in assembled.items() if k != "base_scores"}      # 기준 태그는 input_facts.automatic_tags에 이미 있다
     trace.update(conditions=assembled["conditions"], excluded=assembled["excluded"], direction=recorded)
     write_json(inputs / "conditions.json", dict(input_facts=trace["input_facts"], **recorded))
     spec = prepare_free_spec(prepared["canvas"], reference, directory=directory / "qwen-inputs", request_text=request_text,
-                             gender=gender, body_parts=body_parts, features_text=features_sentence(features), base_kind=base_kind, reference_box=crop_record["box"], selection_seed=selection_seed,
+                             gender=gender, body_parts=body_parts, features_text=sentence, base_kind=base_kind, reference_box=crop_record["box"], selection_seed=selection_seed,
                              reference_scope=crop_record["scope"])
     return features, assembled, spec
 
@@ -289,7 +302,7 @@ def run_free_generation(base_path, character_features, request_text="", *, base_
             persist()
             observation = observe_result(features, raw, directory / f"result-analysis{suffix}", runtime,
                                          cancelled=cancelled, popen=popen, skip=assembled["request_conflicts"],
-                                         base_scores=assembled["base_scores"])
+                                         base_scores=assembled["base_scores"], request_text=request_text)
             judgement = condition_judgements(assembled["conditions"], observation, number, raw)
             attempt.update(status="completed", raw=str(raw), raw_sha256=sha(raw), observation=observation, judgements=judgement)
             persist()

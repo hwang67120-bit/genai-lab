@@ -3,7 +3,7 @@
     "run": "N1-1",
     "attempt": 1,
     "seed": 42,
-    "request": "",
+    "request": "standing with the arms crossed, looking slightly to the side",
     "old_retry_reason": null,
     "old_summary": {
       "kept": [
@@ -115,7 +115,7 @@
     "run": "N2-1",
     "attempt": 1,
     "seed": 42,
-    "request": "",
+    "request": "standing with the arms crossed, looking slightly to the side",
     "old_retry_reason": null,
     "old_summary": {
       "kept": [
@@ -242,7 +242,7 @@
     "run": "K-1",
     "attempt": 1,
     "seed": 42,
-    "request": "",
+    "request": "standing with the arms crossed, looking slightly to the side",
     "old_retry_reason": null,
     "old_summary": {
       "kept": [

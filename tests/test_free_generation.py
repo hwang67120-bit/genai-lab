@@ -604,3 +604,20 @@ def test_adult_male_topless_is_recorded_not_blocked():
     assert safety_observation({"1girl": .9, "nipples": .8})["blocked"] == ["nipples"]
     assert safety_observation({"1boy": .98, "topless_male": .9, "penis": .6})["blocked"] == ["penis"]
 
+
+
+@pytest.mark.parametrize("text", ["kneeling on one knee in a flower field", "standing in a garden", "walking in a meadow", "standing on a rooftop",
+                                  "sitting by the window", "standing in the woods", "kneeling on one knee on a beach at sunset",
+                                  "꽃밭에서 무릎 꿇기", "정원에 서 있기", "해 질 녘 바닷가", "산길을 걷기", "강가에 앉기", "밤에 걷기"])
+def test_scene_words_count_as_background_requests(text):
+    from genai_lab.free_generation import WHITE_BACKGROUND, free_conditions, mentions_background
+    assert mentions_background(text)
+    conditions = free_conditions("", "female", (), text, 42, base_kind="original")["conditions"]
+    assert WHITE_BACKGROUND not in " ".join(c["text"] for c in conditions)
+
+
+@pytest.mark.parametrize("text", ["close-up portrait", "sitting on a simple stool", "kneeling on one knee", "산책하듯 걷기", "다리를 꼬고 앉기",
+                                  "강하게 웃기", "팔짱 끼고 서기", "standing with the hands in the pockets", "sea-green eyes looking up"])
+def test_pose_only_requests_keep_the_white_background(text):
+    from genai_lab.free_generation import mentions_background
+    assert not mentions_background(text)

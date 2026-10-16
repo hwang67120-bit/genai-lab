@@ -33,7 +33,16 @@ SAFETY_PATTERNS = (
     r"(?:알몸|누드|벗겨|벗은|노출시키|야한|어린이처럼|아동처럼|아동 외형|어린 외형|미성년)",
     r"\b(?:make|turn|change).{0,25}\b(?:child|kid|baby|young girl|young boy)\b",
 )
-BACKGROUND_PATTERN = r"\b(?:background|scene|room|street|city|forest|beach|sky|night|indoor|outdoor|park|cafe|office|sunset|rain|snow)\b|(?:배경|거리|도시|숲|해변|하늘|실내|야외|공원|카페|노을|눈(?:이)?\s*내리|비(?:가)?\s*내리)"
+# 배경 요청 낱말(2026-10-16 보강: flower field·garden·meadow가 인식되지 않아 흰 배경 문장과 충돌, 요청 26 준비 중 발견).
+# 모호한 낱말은 뺀다: flower(머리 꽃 장식), sea-green 같은 붙임표 낱말, 한국어 다리(bridge/leg)·산(산책)·강(강하게)·역(역할)·성·밤(밤색)은 붙은 꼴만.
+BACKGROUND_PATTERN = (r"\b(?:background|scene(?:ry)?|landscape|room|street|city|town|village|alley|road|forest|woods|garden|meadow|field|grassland"
+                      r"|beach|shore|sea|ocean|lake|river|waterfall|mountain|hill|desert|cave|ruins|countryside|sky|night|indoors?|outdoors?"
+                      r"|inside|outside|interior|park|cafe|office|library|classroom|school|kitchen|bedroom|castle|temple|shrine|station"
+                      r"|rooftop|balcony|stage|market|shop|store|bridge|harbor|window|sunset|sunrise|dusk|dawn|rain|snow)(?:s|es)?(?![\w-])"
+                      r"|\b(?:snowy|rainy|starry|moonlit|sunlit)\b"
+                      r"|(?:배경|거리|도시|마을|골목|숲|정원|꽃밭|초원|들판|눈밭|해변|바닷가|바다|호수|강가|강변|폭포|산속|산길|산꼭대기|사막|동굴|폐허"
+                      r"|하늘|실내|야외|공원|카페|도서관|교실|학교|부엌|침실|옥상|무대|기차역|지하철역|노을|해\s*질\s*녘|밤하늘|밤거리|밤에"
+                      r"|눈(?:이)?\s*내리|비(?:가)?\s*내리)")
 # 결과·기준 그림의 자동 차단 태그(태거 어휘에 실제로 있는 이름만, 검토 2번). 노출은 성인 캐릭터에도 차단한다.
 EXPOSURE_TAGS = ("nude", "completely_nude", "topless", "bottomless", "nipples", "nipple_slip", "breasts_out", "pussy", "penis",
                  "anus", "pubic_hair", "sex", "cum", "pussy_juice")

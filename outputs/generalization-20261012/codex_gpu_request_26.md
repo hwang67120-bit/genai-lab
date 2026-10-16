@@ -1,6 +1,6 @@
-# GPU 시험 요청 26 — 자유 생성 1차 완료 판정용 고정 평가 세트(A) (초안 2026-10-16)
+# GPU 시험 요청 26 — 자유 생성 1차 완료 판정용 고정 평가 세트(A) (승인 2026-10-16)
 
-완료 기준 `docs/FREE_GENERATION_CONTRACT.md` 10절 A(D-133)를 한 번에 재는 고정 세트다. 상태: **초안 — 새 캐릭터 4명 특징표 사용자 확인 전**. 실행: **Codex**. 실행 코드는 D-134(피부 톤 문장) 커밋 이후 HEAD.
+완료 기준 `docs/FREE_GENERATION_CONTRACT.md` 10절 A(D-133)를 한 번에 재는 고정 세트다. 상태: **승인** — 사용자 "특징표 그대로 승인, 요청 26 승인하고 푸쉬 해줘"(2026-10-16). 실행: **Codex**. 실행 코드는 D-134(피부 톤 문장) 커밋 이후 HEAD.
 
 ## 목적과 완료 판정
 
@@ -15,14 +15,14 @@
 | N1 | 아니오 | 여성 · 꼬리·날개 | `free-r20/N1-1/inputs/canvas.png` | 요청 21 사용자 확정값 그대로 |
 | N2 | 아니오 | 남성 · 귀·꼬리 | `free-r20/N2-1/inputs/canvas.png` | 요청 21 사용자 확정값 그대로 |
 | K | 아니오 | 여성 · 없음 | `free-r20/K-1/inputs/canvas.png` | 요청 21 사용자 확정값 그대로 |
-| M2 드레드 | 예 | 남성 · 없음 | `eval-smoke-26/sources/M2-dreads.jpg` | **확인 필요** |
-| M3 땋은 머리 | 예 | 남성 · 없음 | `eval-smoke-26/sources/M3-braid.jpg` | **확인 필요** |
-| M6 후드 | 예 | 남성 · 없음 | `eval-smoke-26/sources/M6-hoodie.jpg` | **확인 필요** |
-| F5 치어 | 예 | 여성 · 없음 | `eval-smoke-26/sources/F5-cheer.jpg` | **확인 필요** |
+| M2 드레드 | 예 | 남성 · 없음 | `eval-smoke-26/sources/M2-dreads.jpg` | 아래 제안값, 사용자 승인 |
+| M3 땋은 머리 | 예 | 남성 · 없음 | `eval-smoke-26/sources/M3-braid.jpg` | 아래 제안값, 사용자 승인 |
+| M6 후드 | 예 | 남성 · 없음 | `eval-smoke-26/sources/M6-hoodie.jpg` | 아래 제안값, 사용자 승인 |
+| F5 치어 | 예 | 여성 · 없음 | `eval-smoke-26/sources/F5-cheer.jpg` | 아래 제안값, 사용자 승인 |
 
 - 제외: M1(앞만 가리는 천 의상, 노출 차단 — 사용자 제외), M5 강아지 소년(N2와 같은 분홍 동물 귀 남성이라 겹침, 예비).
 - 기준은 원본. 승인된 의상 편집본 기준 평가는 이후 별도.
-- 새 캐릭터 특징표 제안값(`eval-set-26/proposed-inputs.json`, 자동 태그 + Claude 눈 확인; `null` = 모름 → 지시·검사 안 함, `[]` = 없다고 확정):
+- 새 캐릭터 특징표 제안값(`eval-set-26/proposed-inputs.json`, 자동 태그 + Claude 눈 확인, 사용자 그대로 승인; `null` = 모름 → 지시·검사 안 함, `[]` = 없다고 확정):
 
 | 항목 | M2 | M3 | M6 | F5 |
 |---|---|---|---|---|

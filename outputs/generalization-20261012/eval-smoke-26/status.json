@@ -1,0 +1,32 @@
+{
+  "status": "running",
+  "total": 5,
+  "done": 2,
+  "active": "M3-braid",
+  "results": [
+    {
+      "case": "M1-horned",
+      "status": "rejected",
+      "rejection": {
+        "code": "unsafe_input",
+        "message": "기준 이미지에서 금지된 외형·노출 태그가 관찰됐습니다: nipples",
+        "detail": {
+          "tags": [
+            "nipples"
+          ]
+        }
+      }
+    },
+    {
+      "case": "M2-dreads",
+      "status": "awaiting_user_review",
+      "attempts": 1,
+      "result": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\eval-smoke-26\\runs\\M2-dreads\\qwen\\raw.png",
+      "retry": [
+        null
+      ]
+    }
+  ],
+  "stage": "상태: 자유 생성 · 19/40",
+  "elapsed_seconds": 2974.9
+}

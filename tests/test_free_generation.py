@@ -586,3 +586,13 @@ def test_approval_requires_finish_quality_and_records_it(tmp_path,fake_models):
     entry = json.loads((results.directory/"judgement.json").read_text(encoding="utf-8"))[-1]
     assert entry["finish_quality"] == "good" and entry["quality_pass"] is True
 
+
+def test_adult_male_topless_is_recorded_not_blocked():
+    # 사용자 결정 2026-10-16: 성인 남성 상의 탈의는 차단하지 않는다. 다른 노출·여성·불확실한 경우는 그대로 차단
+    from genai_lab.free_generation import safety_observation
+    male = safety_observation({"1boy": .98, "topless_male": .89, "nipples": .74})
+    assert male["blocked"] == [] and male["review"]["nipples"] == .74
+    assert safety_observation({"1boy": .97, "topless_male": .04, "nipples": .86})["blocked"] == ["nipples"]
+    assert safety_observation({"1girl": .9, "nipples": .8})["blocked"] == ["nipples"]
+    assert safety_observation({"1boy": .98, "topless_male": .9, "penis": .6})["blocked"] == ["penis"]
+

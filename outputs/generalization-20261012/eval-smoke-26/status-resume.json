@@ -1,0 +1,38 @@
+{
+  "status": "completed",
+  "total": 3,
+  "done": 3,
+  "active": null,
+  "results": [
+    {
+      "case": "M3-braid",
+      "status": "awaiting_user_review",
+      "attempts": 1,
+      "result": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\eval-smoke-26\\runs\\M3-braid-resume\\qwen\\raw.png",
+      "retry": [
+        null
+      ]
+    },
+    {
+      "case": "M5-dogboy",
+      "status": "awaiting_user_review",
+      "attempts": 1,
+      "result": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\eval-smoke-26\\runs\\M5-dogboy-resume\\qwen\\raw.png",
+      "retry": [
+        null
+      ]
+    },
+    {
+      "case": "F5-cheer",
+      "status": "awaiting_user_review",
+      "attempts": 2,
+      "result": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\eval-smoke-26\\runs\\F5-cheer-resume\\qwen\\raw.png",
+      "retry": [
+        "확신 있는 특징 위반: skin",
+        "확신 있는 특징 위반: skin"
+      ]
+    }
+  ],
+  "stage": "done",
+  "elapsed_seconds": 8062.1
+}

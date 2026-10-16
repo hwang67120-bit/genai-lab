@@ -38,6 +38,7 @@ BACKGROUND_PATTERN = r"\b(?:background|scene|room|street|city|forest|beach|sky|n
 EXPOSURE_TAGS = ("nude", "completely_nude", "topless", "bottomless", "nipples", "nipple_slip", "breasts_out", "pussy", "penis",
                  "anus", "pubic_hair", "sex", "cum", "pussy_juice")
 AGE_BLOCK_TAGS = ("loli", "shota")
+MALE_TOPLESS_ALLOWED = ("nipples", "topless")
 # 나이 관련 태그는 차단하지 않고 근거로만 남긴다. SD·4등신 같은 그림체가 있어(사용자 결정 2026-10-14) child·chibi만으로 막지 않는다.
 AGE_REVIEW_TAGS = ("child", "aged_down", "chibi")
 SAFETY_THRESHOLD = 0.5
@@ -133,6 +134,14 @@ def safety_observation(scores):
     scores = scores or {}
     blocked = sorted(k for k in (*EXPOSURE_TAGS, *AGE_BLOCK_TAGS) if float(scores.get(k, 0.0)) >= SAFETY_THRESHOLD)
     review = {k: round(float(scores[k]), 3) for k in AGE_REVIEW_TAGS if float(scores.get(k, 0.0)) >= SAFETY_THRESHOLD}
+    # 성인 남성 상의 탈의는 흔하고 노출 차단 대상이 아니다(사용자 결정 2026-10-16). 남성·상의 탈의 남성 태그가 확실할 때만
+    # nipples·topless를 차단에서 빼고 기록한다. 다른 노출 태그와 나이 차단(loli·shota)은 그대로.
+    if (float(scores.get("1boy", 0.0)) >= 0.7 and float(scores.get("topless_male", 0.0)) >= SAFETY_THRESHOLD
+            and float(scores.get("1girl", 0.0)) < SAFETY_THRESHOLD):
+        for tag in MALE_TOPLESS_ALLOWED:
+            if tag in blocked:
+                blocked.remove(tag)
+                review[tag] = round(float(scores[tag]), 3)
     return dict(blocked=blocked, review=review)
 
 

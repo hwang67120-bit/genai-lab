@@ -18,7 +18,8 @@ from genai_lab.qwen_pose_settings import QwenPoseSettings  # noqa: E402
 from genai_lab.studio_generation import StudioRuntime  # noqa: E402
 
 CASES = (("M1-horned", "male", ()), ("M2-dreads", "male", ()), ("M3-braid", "male", ()),
-         ("M5-dogboy", "male", ("ears", "tail")), ("F5-cheer", "female", ()))
+         ("M5-dogboy", "male", ("ears", "tail")), ("F5-cheer", "female", ()),
+         ("M6-hoodie", "male", ()))  # M1 대신(2026-10-16 사용자 선택 B, 참조 의상/54acf7f5)
 
 
 # 이어서 돌리기(2026-10-16, 첫 실행이 M3 생성 중 06:12에 끊김): 인자로 후보를 고르고 --suffix로 새 폴더·상태 파일을 쓴다.

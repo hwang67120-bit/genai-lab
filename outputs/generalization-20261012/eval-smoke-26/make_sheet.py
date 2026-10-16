@@ -5,7 +5,8 @@ P = Path(__file__).resolve().parent
 rows = [("M2-dreads", ["runs/M2-dreads/qwen/raw.png"]),
         ("M3-braid", ["runs/M3-braid-resume/qwen/raw.png"]),
         ("M5-dogboy", ["runs/M5-dogboy-resume/qwen/raw.png"]),
-        ("F5-cheer", ["runs/F5-cheer-resume/qwen/raw.png", "runs/F5-cheer-resume/qwen-2/raw.png"])]
+        ("F5-cheer", ["runs/F5-cheer-resume/qwen/raw.png", "runs/F5-cheer-resume/qwen-2/raw.png"]),
+        ("M6-hoodie", ["runs/M6-hoodie-m6/qwen/raw.png"])]
 H = 640
 for name, results in rows:
     tiles = [Image.open(P / "sources" / f"{name}.jpg").convert("RGB")] + [Image.open(P / r).convert("RGB") for r in results]

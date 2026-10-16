@@ -1,0 +1,23 @@
+{
+  "status": "completed",
+  "total": 1,
+  "done": 1,
+  "active": null,
+  "results": [
+    {
+      "case": "M1-horned",
+      "status": "rejected",
+      "rejection": {
+        "code": "unsafe_input",
+        "message": "기준 이미지에서 금지된 외형·노출 태그가 관찰됐습니다: nipples",
+        "detail": {
+          "tags": [
+            "nipples"
+          ]
+        }
+      }
+    }
+  ],
+  "stage": "done",
+  "elapsed_seconds": 2.5
+}

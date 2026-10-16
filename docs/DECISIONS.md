@@ -2,6 +2,12 @@
 
 > 이 문서는 과거 판단과 실험 근거를 보존하는 기록이다. 현재 제품 계약은 docs/FLOW.md만 따른다. 아래 결정이 FLOW.md와 충돌하면 과거 결정으로 취급하며 새 구현의 근거로 사용하지 않는다.
 
+## D-134 남성 상의 탈의 검토 전환, 통과 시험 결과, 피부는 톤 유지 문장으로 (2026-10-16)
+
+- 사용자 결정: 성인 남성 상의 탈의는 허용. `safety_observation`에서 1boy ≥0.7·topless_male ≥0.5·1girl <0.5이면 nipples/topless를 차단 대신 검토로 둔다. loli/shota 등 나머지 노출 태그는 계속 차단.
+- 평가 후보 통과 시험(`outputs/generalization-20261012/eval-smoke-26`): M2·M5·M6 정상, M3 땋은 머리 길어짐·리본 사라짐(사용자 성공 처리), F5 피부 어두워짐(사용자 실패 판정). M1은 앞만 가리는 천 의상이라 topless_male 0.04·nipples 0.86으로 새 규칙에도 거부 → 사용자 결정으로 제외, 참조 의상/54acf7f5를 M6로 대체.
+- F5 원인 후보: 자동 특징표 `dark_skin`이 "dark skin; keep these exactly"로 지시문에 들어갔으나 원본 피부는 RGB(212,163,145). 수정(완료 기준 C의 개선 1회차): 피부는 태그 낱말을 쓰지 않고 `SKIN_TONE`("Keep the exact skin tone as in image 1; do not make the skin lighter or darker.")만 붙인다. 검증(픽셀 ΔE)은 그대로. F5 한 요인 재실행으로 확인.
+
 ## D-133 자유 생성 1차 완료 기준과 호환성(B) 구현 (2026-10-16)
 
 - 사용자 "권고대로 진행하고 푸쉬 해줘": 완료 기준 A(고정 평가 세트 약 20줄, 선택 통과율 70%, 완성도 판정 추가, 1장/선택 통과율 따로)·B(호환성)·C(개선 최대 2번 → 지원 범위 밖 경고 → 운영 모드)를 `docs/FREE_GENERATION_CONTRACT.md` 10절에 확정.

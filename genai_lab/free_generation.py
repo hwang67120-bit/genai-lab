@@ -228,6 +228,9 @@ def garment_tag_changes(base_scores, result_scores, threshold=SAFETY_THRESHOLD):
                 note="태그 차이는 관찰 근거다. 가림·태그 노이즈가 많아 재시도·판정에 쓰지 않는다(사람이 의상 확인)")
 
 
+SKIN_TONE = "Keep the exact skin tone as in image 1; do not make the skin lighter or darker. "
+
+
 def features_sentence(features, hidden=()):
     """확정·측정된 특징표 값으로 한 문장. unknown/weak 항목은 뺀다. 아무것도 없으면 빈 문자열.
     hidden: 요청이 가리는 항목(request_conflicts의 키). 그 항목과 그에 관한 고유 형태 메모는 문장에 넣지 않는다(D-127)."""
@@ -249,10 +252,12 @@ def features_sentence(features, hidden=()):
     acc = items.get("head_accessories") or {}
     if acc.get("state") == "measured" and acc.get("values"):
         parts.append("head accessories: " + ", ".join(_plain(v) for v in acc["values"]))
+    text = ("The character has " + "; ".join(parts) + "; keep these exactly. ") if parts else ""
+    # 피부는 태그 낱말(dark skin 등)로 적지 않고 그림 1의 톤을 유지하라고만 한다(2026-10-16 통과 시험 F5: 자동 태그 dark_skin이
+    # 실제(RGB 212,163,145)보다 어둡게 끌어 두 시도 모두 실패). 시각 조건 우선 원칙.
     skin = items.get("skin") or {}
     if skin.get("state") == "measured" and skin.get("tags") and "skin" not in hidden:
-        parts.append(", ".join(_plain(v) for v in skin["tags"]))
-    text = ("The character has " + "; ".join(parts) + "; keep these exactly. ") if parts else ""
+        text += SKIN_TONE
     if (items.get("hair_color") or {}).get("state") == "measured":
         text += HAIR_PLACEMENT
     notes = (items.get("distinctive") or {})

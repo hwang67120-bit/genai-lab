@@ -334,6 +334,14 @@ def test_placement_free_hair_tags_leave_the_prompt_and_english_notes_enter_it():
     assert "Keep these distinctive details exactly as in image 1: heart-shaped tail tip. " in text and "꼬리" not in text
 
 
+def test_skin_is_kept_by_tone_not_by_tag_words():
+    from genai_lab.free_generation import SKIN_TONE, features_sentence
+    text = features_sentence(sheet(skin=dict(state="measured", tags=["dark_skin"])))
+    assert SKIN_TONE in text and "dark skin" not in text and "dark_skin" not in text
+    assert SKIN_TONE not in features_sentence(sheet(skin=dict(state="measured", tags=["dark_skin"])), hidden={"skin": "x"})
+    assert SKIN_TONE not in features_sentence(sheet(skin=dict(state="measured", tags=[])))
+
+
 @pytest.mark.parametrize("note", ["change the tail to a heart", "nude", "꼬리를 없애고"])
 def test_distinctive_notes_reject_change_and_unsafe_phrases(note):
     from genai_lab.free_generation import distinctive_notes

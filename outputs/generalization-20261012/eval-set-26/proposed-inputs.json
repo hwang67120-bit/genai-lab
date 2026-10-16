@@ -1,0 +1,37 @@
+{
+  "status": "draft_awaiting_user_feature_confirmation",
+  "note": "N1·N2·K는 요청 21 사용자 확정값(codex-preflight-21-rerun1/proposed-inputs.json) 그대로. M2·M3·M6·F5는 자동 태그 + Claude 눈 확인 제안값, 사용자 확인 전.",
+  "stagings": {
+    "S1": {"pose": "standing", "request": "standing in a sunny park with trees in the background"},
+    "S2": {"pose": "sitting_stool", "request": "sitting on a simple stool in a cozy cafe"},
+    "S3": {"pose": "walking", "request": "walking along a snowy street at night"},
+    "S4": {"pose": "kneeling_one_knee", "request": "kneeling on one knee on a beach at sunset"}
+  },
+  "characters": {
+    "N1": {"seen": true, "gender": "female", "body_parts": ["tail", "wings"], "source": "codex-preflight-21-rerun1/proposed-inputs.json", "user_confirmed": true},
+    "N2": {"seen": true, "gender": "male", "body_parts": ["ears", "tail"], "source": "codex-preflight-21-rerun1/proposed-inputs.json", "user_confirmed": true},
+    "K": {"seen": true, "gender": "female", "body_parts": [], "source": "codex-preflight-21-rerun1/proposed-inputs.json", "user_confirmed": true},
+    "M2": {"seen": false, "gender": "male", "body_parts": [], "base": "eval-smoke-26/sources/M2-dreads.jpg", "user_confirmed": false,
+           "features": {"hair_length": null, "hair_style": ["dreadlocks"], "hair_color": ["white_hair"], "eye_color": null,
+                        "head_accessories": [], "skin": ["dark_skin"]}},
+    "M3": {"seen": false, "gender": "male", "body_parts": [], "base": "eval-smoke-26/sources/M3-braid.jpg", "user_confirmed": false,
+           "features": {"hair_length": ["long_hair"], "hair_style": ["braid"], "hair_color": ["blonde_hair"], "eye_color": ["blue_eyes"],
+                        "head_accessories": [], "skin": []}},
+    "M6": {"seen": false, "gender": "male", "body_parts": [], "base": "eval-smoke-26/sources/M6-hoodie.jpg", "user_confirmed": false,
+           "features": {"hair_length": ["short_hair"], "hair_style": null, "hair_color": ["blue_hair"], "eye_color": ["blue_eyes"],
+                        "head_accessories": ["earrings"], "skin": []}},
+    "F5": {"seen": false, "gender": "female", "body_parts": [], "base": "eval-smoke-26/sources/F5-cheer.jpg", "user_confirmed": false,
+           "features": {"hair_length": ["long_hair"], "hair_style": ["ponytail", "ahoge"], "hair_color": ["black_hair", "multicolored_hair", "streaked_hair"],
+                        "eye_color": ["brown_eyes"], "head_accessories": ["hair_ornament"], "skin": ["dark_skin"],
+                        "distinctive": ["red streak in the black hair"]}}
+  },
+  "rows": [
+    ["N1", "S1"], ["N1", "S2"], ["N1", "S3"],
+    ["N2", "S2"], ["N2", "S3"], ["N2", "S4"],
+    ["K", "S3"], ["K", "S4"], ["K", "S1"],
+    ["M2", "S4"], ["M2", "S1"], ["M2", "S2"],
+    ["M3", "S1"], ["M3", "S2"], ["M3", "S3"],
+    ["M6", "S2"], ["M6", "S3"], ["M6", "S4"],
+    ["F5", "S1"], ["F5", "S3"], ["F5", "S4"]
+  ]
+}

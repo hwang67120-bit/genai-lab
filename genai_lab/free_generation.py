@@ -79,6 +79,12 @@ REQUEST_TAGS = ((EYES_CLOSED_REQUEST, "eyes_closed", ("closed_eyes",)),
                 (BACK_VIEW_REQUEST, "back_view", ("from_behind",)),
                 (HANDS_HIDDEN_REQUEST, "hands_hidden", ("arms_behind_back", "hands_in_pockets", "hand_in_pocket")))
 WHOLE_FIGURE = "Show the whole character inside the frame. "
+# 요청 26(D-136): 연출 요청에 구도 말이 없으면 공원 서기 등에서 얼굴·상반신 확대로 당겨 그렸다(K·F5·M3 공원, M6 카페 잘림).
+# 구도·시점을 말한 요청(클로즈업·상반신 등)은 덮어쓰지 않는다.
+FULL_BODY = "Full-body shot: show the whole character from head to feet inside the frame; do not crop or zoom in on the face or upper body. "
+COMPOSITION_REQUEST = (r"\b(?:close-?ups?|portraits?|headshots?|upper\s+body|half\s+body|bust|waist[\s-]+up|cowboy\s+shot|full[\s-]+body"
+                       r"|face|crop(?:ped)?|zoom(?:ed)?|from\s+(?:above|below)|low\s+angle|high\s+angle)\b"
+                       r"|클로즈업|얼굴|상반신|반신|허리\s*위|확대|전신|위에서|아래에서")
 WHITE_BACKGROUND = "Place the character alone on a plain pure white background with nothing else. "
 SCENE_COLORS = "Keep the character's own {} colors exactly as in image 1; the scene lighting must not change or wash out these colors. "
 INTENT = "free_generation: keep the same character and outfit, change only the requested staging"
@@ -238,6 +244,16 @@ def garment_tag_changes(base_scores, result_scores, threshold=SAFETY_THRESHOLD):
 
 
 SKIN_TONE = "Keep the exact skin tone as in image 1; do not make the skin lighter or darker. "
+# D-136: 톤 문장만으로는 짙은 피부가 장면에서 밝아졌다(요청 26 M2 L* 31 → 70, 3줄 모두 실패). 기준 피부 픽셀 밝기(Lab L*)가
+# 낮을 때만 낱말을 붙인다. 밝은 쪽(F5 L* 71)은 낱말 없이 톤 문장만 — dark skin 낱말이 더 어둡게 끌었다(D-134).
+SKIN_WORDS = ((45, "dark brown skin"), (60, "brown skin"))
+
+
+def skin_word(skin):
+    lab = ((skin or {}).get("color") or {}).get("lab")
+    if not lab:
+        return None
+    return next((word for limit, word in SKIN_WORDS if float(lab[0]) < limit), None)
 
 
 def features_sentence(features, hidden=()):
@@ -261,11 +277,14 @@ def features_sentence(features, hidden=()):
     acc = items.get("head_accessories") or {}
     if acc.get("state") == "measured" and acc.get("values"):
         parts.append("head accessories: " + ", ".join(_plain(v) for v in acc["values"]))
-    text = ("The character has " + "; ".join(parts) + "; keep these exactly. ") if parts else ""
-    # 피부는 태그 낱말(dark skin 등)로 적지 않고 그림 1의 톤을 유지하라고만 한다(2026-10-16 통과 시험 F5: 자동 태그 dark_skin이
-    # 실제(RGB 212,163,145)보다 어둡게 끌어 두 시도 모두 실패). 시각 조건 우선 원칙.
+    # 피부는 태그 낱말(dark skin 등)로 적지 않는다(2026-10-16 통과 시험 F5: 자동 태그 dark_skin이 실제(RGB 212,163,145)보다
+    # 어둡게 끌어 두 시도 모두 실패). 낱말은 기준 픽셀이 실제로 짙을 때만(D-136), 톤 문장은 늘 붙인다.
     skin = items.get("skin") or {}
-    if skin.get("state") == "measured" and skin.get("tags") and "skin" not in hidden:
+    skin_kept = skin.get("state") == "measured" and skin.get("tags") and "skin" not in hidden
+    if skin_kept and skin_word(skin):
+        parts.append(skin_word(skin))
+    text = ("The character has " + "; ".join(parts) + "; keep these exactly. ") if parts else ""
+    if skin_kept:
         text += SKIN_TONE
     if (items.get("hair_color") or {}).get("state") == "measured":
         text += HAIR_PLACEMENT
@@ -333,6 +352,9 @@ def free_conditions(features_text, gender, body_parts, request_text, seed, base_
     conditions.append(dict(key="no_props", text=NO_PROPS, source="policy", reason="요청에 없는 소품 금지", basis=None))
     if checked["empty"]:
         conditions.append(dict(key="framing", text=WHOLE_FIGURE, source="policy", reason="기본 무작위 자세는 전신", basis=None))
+    elif not re.search(COMPOSITION_REQUEST, request_text, re.I):
+        conditions.append(dict(key="framing", text=FULL_BODY, source="policy", basis="D-136",
+                               reason="요청에 구도·시점 말이 없으면 전신(요청 26: 공원 서기 3명이 얼굴·상반신 확대로 실패)"))
     else:
         excluded.append(dict(key="framing", reason="사용자 연출의 구도·시점을 전신 강제로 덮어쓰지 않는다"))
     return dict(conditions=conditions, excluded=excluded, pose=pose, base_kind=base_kind)

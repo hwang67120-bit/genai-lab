@@ -621,3 +621,19 @@ def test_scene_words_count_as_background_requests(text):
 def test_pose_only_requests_keep_the_white_background(text):
     from genai_lab.free_generation import mentions_background
     assert not mentions_background(text)
+
+
+def test_staging_without_composition_words_asks_for_full_body():
+    from genai_lab.free_generation import FULL_BODY, free_prompt
+    assert FULL_BODY in free_prompt("", "female", (), "standing in a sunny park with trees in the background", 42)
+    assert FULL_BODY in free_prompt("", "male", (), "sitting on a simple stool in a cozy cafe", 42)
+    for text in ("close-up portrait in a cafe", "upper body shot on a beach", "상반신만 보이게 카페에서"):
+        assert FULL_BODY not in free_prompt("", "female", (), text, 42)
+
+
+def test_skin_word_follows_measured_reference_lightness():
+    from genai_lab.free_generation import SKIN_TONE, features_sentence
+    dark = features_sentence(sheet(skin=dict(state="measured", tags=["dark_skin"], color=dict(lab=[31.2, 11.5, 6.1]))))
+    tan = features_sentence(sheet(skin=dict(state="measured", tags=["dark_skin"], color=dict(lab=[71.3, 16.4, 16.3]))))
+    assert "dark brown skin" in dark and SKIN_TONE in dark
+    assert "brown skin" not in tan and "dark" not in tan.replace("darker", "") and SKIN_TONE in tan

@@ -637,3 +637,33 @@ def test_skin_word_follows_measured_reference_lightness():
     tan = features_sentence(sheet(skin=dict(state="measured", tags=["dark_skin"], color=dict(lab=[71.3, 16.4, 16.3]))))
     assert "dark brown skin" in dark and SKIN_TONE in dark
     assert "brown skin" not in tan and "dark" not in tan.replace("darker", "") and SKIN_TONE in tan
+
+
+def test_auto_selected_hair_restore_is_shown_first_but_still_needs_approval(tmp_path,fake_models,monkeypatch):
+    import genai_lab.hair_auto_restore as auto
+    base,_ = fake_models
+    monkeypatch.setattr(auto,"decide",lambda *a,**k:dict(decision="auto_selected",reason="머리만의 색 변화 + 재검사 통과",
+                                                         cast=dict(status="hair_only_shift"),restored=np.full((1184,896,3),90,np.uint8)))
+    result = run(tmp_path,base)
+    assert result["schema"] == "free_generation_outcome/2"
+    assert result["auto_selection"] == dict(attempt=1,variant="hair_auto",reason="머리만의 색 변화 + 재검사 통과")
+    auto_candidate = next(c for c in result["candidates"] if c["variant"] == "hair_auto")
+    assert auto_candidate["auto_selected"] and auto_candidate["raw"].endswith("hair-auto.png")
+    assert any(c["variant"] == "raw" for c in result["candidates"])                 # 원 결과 보존
+    results = FreeGenerationResults(result)
+    assert results.candidate["variant"] == "hair_auto" and results.status == "awaiting_user_review"
+    assert "자동 보정본" in results.head_notice
+    results.approve(dict(character=True,garment=True,request=True,exposure=True,finish=True))
+    saved = results.export(tmp_path/"out.png")
+    assert json.loads(saved.with_suffix(".review.json").read_text(encoding="utf-8"))["variant"] == "hair_auto"
+
+
+def test_hair_auto_decision_errors_never_fail_the_generation(tmp_path,fake_models,monkeypatch):
+    import genai_lab.hair_auto_restore as auto
+    base,_ = fake_models
+    def broken(*a,**k):
+        raise RuntimeError("boom")
+    monkeypatch.setattr(auto,"decide",broken)
+    result = run(tmp_path,base)
+    assert result["auto_selection"] is None and all(c["variant"] != "hair_auto" for c in result["candidates"])
+    assert result["attempts"][0]["hair_auto"]["decision"] == "unmeasurable"

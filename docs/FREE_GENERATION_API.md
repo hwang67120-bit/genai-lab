@@ -47,15 +47,16 @@
 
 생성 중 실패(모델·메모리·계약 불일치)는 거부가 아니라 실패(`status: "failed"`)이며 자동 재실행하지 않는다.
 
-## 4. 결과 형식 `free_generation_outcome/1`
+## 4. 결과 형식 `free_generation_outcome/2`
 
 | 키 | 뜻 |
 |---|---|
-| `schema` | `"free_generation_outcome/1"` — 키를 바꾸면 버전을 올린다 |
+| `schema` | `"free_generation_outcome/2"` — 키를 바꾸면 버전을 올린다(/2: `auto_selection`, 변형 `hair_auto`, D-137) |
 | `status` | `awaiting_user_review` \| `blocked`(안전 태그 차단, 사용 불가) |
 | `result`, `result_sha256` | 처음 보여 줄 결과(자동 위반이 적은 시도의 원 결과) |
-| `candidates` | 고를 수 있는 결과 목록: `attempt`·`variant`(`raw` \| `hair_restored`)·`seed`·`raw`(경로)·`sha256`·`violation_score`·`retry_items`·`blocked`·`automatic_features`·`garment_tags` |
-| `selected_attempt` | 처음 보여 줄 시도 번호 |
+| `candidates` | 고를 수 있는 결과 목록: `attempt`·`variant`(`raw` \| `hair_restored` \| `hair_auto`)·`seed`·`raw`(경로)·`sha256`·`violation_score`·`retry_items`·`blocked`·`automatic_features`·`garment_tags` |
+| `selected_attempt` | 자동 위반이 적은 시도 번호 |
+| `auto_selection` | 재검사를 통과한 머리색 자동 보정본 `{attempt, variant: "hair_auto", reason}` 또는 `null`(D-137). 있으면 처음 보여 주는 후보지만 **승인은 여전히 사람**이 한다. 원 결과는 `candidates`에 그대로 있다 |
 | `condition_judgements` | 조건별 자동 관찰: `not_violated`·`needs_review`·`violated`·`unmeasurable`. **자동은 '충족'을 말하지 않는다** — 충족은 사람 판정만 |
 | `automatic_features` | 특징 비교 요약(kept·changed·missing·added·unknown·review) |
 | `distinctive_review` | 사람이 결과에서 하나씩 확인할 고유 형태 메모 |

@@ -22,7 +22,7 @@ from genai_lab.qwen_free_generation import (FreeGenerationWorkflow, make_free_re
                                            run_free_generation_edit)
 
 
-OUTCOME_SCHEMA = "free_generation_outcome/1"     # 반환 형식(D-133, docs/FREE_GENERATION_API.md). 키를 바꾸면 버전을 올린다
+OUTCOME_SCHEMA = "free_generation_outcome/2"     # 반환 형식(D-133, docs/FREE_GENERATION_API.md). 키를 바꾸면 버전을 올린다(/2: auto_selection·hair_auto, D-137)
 
 
 def validate_inputs(base_path, base_kind, features, gender, body_parts, request_text, confirmed, adult_confirmed, *, snapshot_directory=None):
@@ -203,6 +203,36 @@ def hair_restore_candidate(features, raw, analysis_directory, observation):
                 trigger=dict(status=hair.get("status"), review=hair.get("review")))
 
 
+def hair_auto_candidate(features, directory, raw, analysis_directory, observation):
+    """머리색 자동 보정 판정(D-137): 기준 그림 대비 머리만의 고유색 손실이면 1회 보정 + 독립 재검사, 통과한 보정본만 자동 선택 후보.
+    기준은 승인된 기준 캔버스와 그 분할(inputs/canvas.png, base-parts)이고, 결과 분할은 결과에서 다시 찾은 것이다.
+    실패·측정 불가는 기록만 하고 생성은 계속한다(원 결과 유지)."""
+    import cv2
+    from genai_lab.hair_auto_restore import decide
+    directory = Path(directory)
+    parts_path = (observation.get("segmentation") or {}).get("parts")
+    if not parts_path:
+        return dict(decision="unmeasurable", reason="결과 분할 없음")
+    try:
+        with Image.open(raw) as source:
+            image = np.asarray(source.convert("RGB"))
+        with Image.open(directory / "inputs" / "canvas.png") as source:
+            base = np.asarray(source.convert("RGB"))
+        def load(path, size):
+            with np.load(path, allow_pickle=False) as data:
+                return {k: cv2.resize(data[k].astype(np.uint8), size, interpolation=cv2.INTER_NEAREST).astype(bool) for k in data.files}
+        result = decide(features, base, load(directory / "base-parts" / "parts.npz", (base.shape[1], base.shape[0])), image,
+                        load(parts_path, (image.shape[1], image.shape[0])))
+    except Exception as error:          # 보정 판정 실패는 생성 실패가 아니다
+        return dict(decision="unmeasurable", reason=f"판정 오류: {error}")
+    restored = result.pop("restored", None)
+    if result["decision"] == "auto_selected" and restored is not None:
+        path = Path(analysis_directory) / "hair-auto.png"
+        Image.fromarray(restored).save(path)
+        result.update(path=str(path), sha256=sha(path), source=str(raw), source_sha256=sha(raw))
+    return json.loads(json.dumps(result, default=float))
+
+
 def condition_judgements(conditions, observation, number, raw):
     """자동 판정은 특징별 관찰에 한정. 의상·동일성·연출 전체를 추정하지 않는다."""
     target = dict(attempt=number, image=str(raw), sha256=sha(raw))
@@ -338,7 +368,7 @@ def run_free_generation(base_path, character_features, request_text="", *, base_
     try:
         from genai_lab.qwen_preservation import json_sha
         source_root = Path(__file__).resolve().parents[1]
-        code_files = ("free_generation", "qwen_free_generation", "free_generation_pipeline", "qwen_pose_worker", "qwen_pose_edit", "qwen_pose_settings", "qwen_outfit_edit", "outfit_edit", "outfit_edit_pipeline", "character_features", "character_verification", "pose_guidance", "hair_color_restore")
+        code_files = ("free_generation", "qwen_free_generation", "free_generation_pipeline", "qwen_pose_worker", "qwen_pose_edit", "qwen_pose_settings", "qwen_outfit_edit", "outfit_edit", "outfit_edit_pipeline", "character_features", "character_verification", "pose_guidance", "hair_color_restore", "hair_auto_restore")
         trace["execution_contract"] = dict(settings=settings.record(), settings_sha256=json_sha(settings.record()),
             code_sha256={name: sha(source_root / "genai_lab" / (name+".py")) for name in code_files},
             contract_sha256=sha(source_root / "docs/FREE_GENERATION_CONTRACT.md"),
@@ -383,8 +413,9 @@ def run_free_generation(base_path, character_features, request_text="", *, base_
                                          skeleton=assembled["skeleton"])
             judgement = condition_judgements(assembled["conditions"], observation, number, raw)
             restore = hair_restore_candidate(features, raw, directory / f"result-analysis{suffix}", observation)
+            auto = hair_auto_candidate(features, directory, raw, directory / f"result-analysis{suffix}", observation)
             attempt.update(status="completed", raw=str(raw), raw_sha256=sha(raw), observation=observation, judgements=judgement,
-                           hair_restore=restore)
+                           hair_restore=restore, hair_auto=auto)
             persist()
             # 확신 있는 위반만 재시도한다(D-126 ⑤). 경계값·엇갈림·가림·요청 충돌·의상 태그 차이는 사람 확인으로 남긴다.
             reasons = retry_reasons(observation["verification"])
@@ -416,7 +447,15 @@ def run_free_generation(base_path, character_features, request_text="", *, base_
                                                retry_items=a["retry_items"], blocked=a["observation"]["safety"]["status"] == "violated",
                                                automatic_features=a["observation"]["verification"].get("summary", {}),
                                                garment_tags=a["observation"]["garment_tags"], hair_restore=a["hair_restore"])]
-                                         if (a.get("hair_restore") or {}).get("status") == "restored" else []))],
+                                         if (a.get("hair_restore") or {}).get("status") == "restored" else []),
+                                       *([dict(attempt=a["number"], variant="hair_auto", seed=a["seed"], raw=a["hair_auto"]["path"],
+                                               sha256=a["hair_auto"]["sha256"], violation_score=a["violation_score"],
+                                               retry_items=a["retry_items"], blocked=a["observation"]["safety"]["status"] == "violated",
+                                               automatic_features=a["observation"]["verification"].get("summary", {}),
+                                               garment_tags=a["observation"]["garment_tags"], hair_auto=a["hair_auto"], auto_selected=True)]
+                                         if (a.get("hair_auto") or {}).get("decision") == "auto_selected" else []))],
+                       auto_selection=next((dict(attempt=chosen["number"], variant="hair_auto", reason=chosen["hair_auto"]["reason"])
+                                            for _ in [0] if (chosen.get("hair_auto") or {}).get("decision") == "auto_selected"), None),
                        distinctive_review=assembled["distinctive_review"],
                        note="자동 검사는 동일성·최종 품질 승인이 아니다. 원본 기준 성공은 의상 교체 해결 증거가 아니다.")
         write_json(directory / "outcome.json", outcome)

@@ -21,10 +21,15 @@ class FreeGenerationResults(OutfitEditResults):
                                              raw=outcome["result"], sha256=outcome["result_sha256"])]) if not c.get("blocked")]
         if not self.candidates:
             raise ValueError("사용할 수 있는 시도가 없습니다.")
-        first = next((i for i, c in enumerate(self.candidates)                 # 처음엔 보정 전 원 결과(보정은 사용자가 고를 때만, D-130)
-                      if c["attempt"] == outcome.get("selected_attempt") and c.get("variant", "raw") == "raw"), 0)
+        # 처음엔 보정 전 원 결과(보정은 사용자가 고를 때만, D-130). 단 재검사를 통과한 자동 선택 보정본이 있으면 그것(D-137) — 승인은 여전히 사람
+        auto = outcome.get("auto_selection") or {}
+        first = next((i for i, c in enumerate(self.candidates)
+                      if c["attempt"] == auto.get("attempt") and c.get("variant") == auto.get("variant")), None)
+        if first is None:
+            first = next((i for i, c in enumerate(self.candidates)
+                          if c["attempt"] == outcome.get("selected_attempt") and c.get("variant", "raw") == "raw"), 0)
         self.selected = first
-        super().__init__(dict(outcome, qwen_view=outcome["result"]))
+        super().__init__(dict(outcome, qwen_view=self.candidates[first]["raw"]))   # 처음 보여 주는 후보(자동 선택 보정본일 수 있다)
         self.verify_current()
 
     @property
@@ -58,6 +63,9 @@ class FreeGenerationResults(OutfitEditResults):
         text = "Qwen 생성 결과입니다. 원본 머리 합성 없음 · 자동 특징 관찰과 사람 품질 판정은 별도입니다."
         if len(self.candidates) > 1:
             text += f" 결과 {len(self.candidates)}개 중 시도 {self.candidate['attempt']}을 보고 있습니다 — 결과 목록에서 바꿔 보고 골라 주세요(자동 관찰 기준 순서, 품질 보장 아님)."
+        if self.candidate.get("variant") == "hair_auto":
+            text += (" 머리색 자동 보정본입니다: 조명이 아니라 머리색만 기준에서 벗어나 1회 보정했고, 머리 밖·눈·얼굴과 위치별 색을 다시 확인했습니다."
+                     " 원 결과도 목록에 있습니다(명암 유지, 원본 픽셀 합성 아님).")
         if self.candidate.get("variant") == "hair_restored":
             text += " 머리색 보정본입니다: 생성 결과의 머리 색감만 기준 머리색 분포로 맞췄습니다(명암 유지, 원본 픽셀 합성 아님)."
         return text
@@ -117,6 +125,7 @@ class FreeGenerationResults(OutfitEditResults):
         metadata = dict(mode="free_generation", sha256=self.approved_sha, reviewer="user", checks=self.checks,
                         source_run=str(self.directory), base_kind=self.outcome["base_kind"], attempt=self.candidate["attempt"],
                         variant=self.candidate.get("variant", "raw"), hair_restore=self.candidate.get("hair_restore"),
+                        hair_auto=self.candidate.get("hair_auto"),
                         head_composited=False, trace=self.outcome["trace"], approval_record=str(self.directory / "user-review.json"))
         created = []
         try:

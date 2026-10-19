@@ -163,7 +163,7 @@ class StudioController(QObject):
         combo.clear()
         for candidate in self.results.candidates:      # 두 시도가 있으면 사람이 바꿔 보고 고른다(D-126 ⑤)
             score = candidate.get("violation_score")
-            combo.addItem(f"자유 생성 시도 {candidate['attempt']}" + (" · 머리색 보정" if candidate.get("variant") == "hair_restored" else "")
+            combo.addItem(f"자유 생성 시도 {candidate['attempt']}" + (" · 머리색 보정" if candidate.get("variant") == "hair_restored" else (" · 머리색 자동 보정(추천)" if candidate.get("variant") == "hair_auto" else ""))
                           + ("" if score is None else f" · 자동 위반 관찰 {score}"))
         combo.setCurrentIndex(self.results.selected)
         combo.blockSignals(False)

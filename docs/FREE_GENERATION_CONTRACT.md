@@ -94,6 +94,6 @@
 - 두 수치를 따로 잰다: **1장 통과율**(첫 시도만)과 **선택 통과율**(만든 후보 중 하나라도 통과). 완료 = 선택 통과율 70% 이상, 같은 실패 유형이 2명 이상에서 반복되지 않음, 처음 보는 캐릭터에도 통과 줄 있음.
 - 범위: 지원 자세 목록(standing·sitting_stool·kneeling_one_knee·walking·arms_crossed)과 일반 장면. 목록 밖 요청은 완료 판정 대상이 아니다.
 
-**B. 호환성 — `docs/FREE_GENERATION_API.md`**: 입력·요청 문장 규칙, 고정 거부 코드(`FreeGenerationRejected.code`), 결과 형식 `free_generation_outcome/1`, GUI 없이 부르는 시험. API 서버·LLM 연결은 만들지 않는다(D-110).
+**B. 호환성 — `docs/FREE_GENERATION_API.md`**: 입력·요청 문장 규칙, 고정 거부 코드(`FreeGenerationRejected.code`), 결과 형식 `free_generation_outcome/2`(D-137에서 /1 → /2), GUI 없이 부르는 시험. API 서버·LLM 연결은 만들지 않는다(D-110).
 
 **C. 끝내는 규칙**: A가 모자라면 공통 개선은 최대 2번, 같은 세트로 다시 잰다. 남는 실패 유형은 '지원 범위 밖' 경고로 돌리고 운영 모드(판정 20건마다 공통 규칙 수정, D-118과 같은 방식)로 넘어간다. 그림체 반영(4단계)·구조 결함 자동 검출(5단계)은 다음 단계.

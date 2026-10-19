@@ -1,0 +1,29 @@
+[
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, review-27/review-batch-27-1.png #3",
+    "case": "M3-S3",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\M3-S3\\qwen\\raw.png",
+      "sha256": "59136bf8f50adbf393aeaeffe8412cb2b2bdfa7932cd9c4d98ab643d3cf781d4"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T12:44:20",
+    "note": "사용자: 실패 — 팔 잘림, 얼굴 일그러짐, 헤어스타일 불일치",
+    "same_character": "not_judged",
+    "outfit": "not_judged",
+    "request_followed": "not_judged",
+    "severe_defect": "present",
+    "finish_quality": "not_judged",
+    "quality_pass": false,
+    "failure_type": "defect",
+    "failure_types": [
+      "defect",
+      "hair"
+    ]
+  }
+]

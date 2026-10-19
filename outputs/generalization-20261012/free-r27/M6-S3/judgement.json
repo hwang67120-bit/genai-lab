@@ -1,0 +1,51 @@
+[
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, review-27/review-batch-27-1.png #4",
+    "case": "M6-S3",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "hair_restored",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\M6-S3\\result-analysis\\hair-restored.png",
+      "sha256": "dae70dac3fb13b3529d0ef09768191d2f27859cc17446626fb8f93fe2ea5f7b9"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T12:44:21",
+    "note": "사용자: 성공(머리색 보정본). 26 같은 줄 raw42는 머리색이 다름",
+    "same_character": "yes",
+    "outfit": "same",
+    "request_followed": "yes",
+    "severe_defect": "none",
+    "finish_quality": "good",
+    "quality_pass": true,
+    "failure_type": null
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, judgement-27/batch-4.png #3",
+    "case": "M6-S3",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\M6-S3\\qwen\\raw.png",
+      "sha256": "4759b708565f5a18f522d357dd94cecfa9ac25bfd68136a6363a39d7ffd60869"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T13:10:44",
+    "note": "사용자: Claude가 제시한 내용과 동일(판정은 Claude 해석, 사용자에게 확인 요청): 머리 진한 청록. 같은 줄 머리색 보정본은 성공(1묶음)",
+    "same_character": "partial",
+    "outfit": "not_judged",
+    "request_followed": "not_judged",
+    "severe_defect": "not_judged",
+    "finish_quality": "not_judged",
+    "quality_pass": false,
+    "failure_type": "hair",
+    "failure_types": [
+      "hair_color"
+    ]
+  }
+]

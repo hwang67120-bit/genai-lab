@@ -1,0 +1,728 @@
+[
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, review-27/review-batch-27-1.png #1",
+    "case": "K-S1",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\K-S1\\qwen\\raw.png",
+      "sha256": "dc03f1c4fec159bc4bc8f11b72f1e492814e432a06e35fb1f6e37c5a8df21f4f"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T12:44:20",
+    "note": "사용자: 실패 — 전신 안 나옴, 헤어스타일 불일치",
+    "same_character": "not_judged",
+    "outfit": "not_judged",
+    "request_followed": "partial",
+    "severe_defect": "not_judged",
+    "finish_quality": "not_judged",
+    "quality_pass": false,
+    "failure_type": "framing",
+    "failure_types": [
+      "framing",
+      "hair"
+    ]
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, review-27/review-batch-27-1.png #2",
+    "case": "M2-S4",
+    "target": {
+      "attempt": 2,
+      "seed": 43,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\M2-S4\\qwen-2\\raw.png",
+      "sha256": "5274d01c2ca11c303d3ff69968cd868c0e78809ea30d0a5caa8923929349294b"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T12:44:20",
+    "note": "사용자: 실패 — 투톤 피부, 꼬리 생성",
+    "same_character": "partial",
+    "outfit": "not_judged",
+    "request_followed": "not_judged",
+    "severe_defect": "not_judged",
+    "finish_quality": "not_judged",
+    "quality_pass": false,
+    "failure_type": "skin",
+    "failure_types": [
+      "skin",
+      "extra_part"
+    ],
+    "body_parts": "extra"
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, review-27/review-batch-27-1.png #3",
+    "case": "M3-S3",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\M3-S3\\qwen\\raw.png",
+      "sha256": "59136bf8f50adbf393aeaeffe8412cb2b2bdfa7932cd9c4d98ab643d3cf781d4"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T12:44:20",
+    "note": "사용자: 실패 — 팔 잘림, 얼굴 일그러짐, 헤어스타일 불일치",
+    "same_character": "not_judged",
+    "outfit": "not_judged",
+    "request_followed": "not_judged",
+    "severe_defect": "present",
+    "finish_quality": "not_judged",
+    "quality_pass": false,
+    "failure_type": "defect",
+    "failure_types": [
+      "defect",
+      "hair"
+    ]
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, review-27/review-batch-27-1.png #4",
+    "case": "M6-S3",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "hair_restored",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\M6-S3\\result-analysis\\hair-restored.png",
+      "sha256": "dae70dac3fb13b3529d0ef09768191d2f27859cc17446626fb8f93fe2ea5f7b9"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T12:44:21",
+    "note": "사용자: 성공(머리색 보정본). 26 같은 줄 raw42는 머리색이 다름",
+    "same_character": "yes",
+    "outfit": "same",
+    "request_followed": "yes",
+    "severe_defect": "none",
+    "finish_quality": "good",
+    "quality_pass": true,
+    "failure_type": null
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, review-27/review-batch-27-1.png #5",
+    "case": "F5-S1",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\F5-S1\\qwen\\raw.png",
+      "sha256": "5915c34a8c9210d849030c5d9ed7f7bb7c052985158661d03b70fd134ae9a42c"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T12:44:21",
+    "note": "사용자: 눈 색만 다름, 피부색 불일치",
+    "same_character": "partial",
+    "outfit": "not_judged",
+    "request_followed": "not_judged",
+    "severe_defect": "not_judged",
+    "finish_quality": "not_judged",
+    "quality_pass": false,
+    "failure_type": "skin",
+    "failure_types": [
+      "skin",
+      "eye_color"
+    ],
+    "eye_color": "different"
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, judgement-27/batch-2.png #1",
+    "case": "N1-S1",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\N1-S1\\qwen\\raw.png",
+      "sha256": "d707ff6c06f3642b3c15e0dae43ca4cf7da5e2937b81592d9a34d099979b01a4"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T12:52:57",
+    "note": "사용자: 눈 색이 다름",
+    "same_character": "partial",
+    "outfit": "not_judged",
+    "request_followed": "not_judged",
+    "severe_defect": "not_judged",
+    "finish_quality": "not_judged",
+    "quality_pass": false,
+    "failure_type": "character",
+    "failure_types": [
+      "eye_color"
+    ],
+    "eye_color": "different"
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, judgement-27/batch-2.png #2",
+    "case": "N1-S2",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\N1-S2\\qwen\\raw.png",
+      "sha256": "61b68369735369ae23d83304830aa0f43a2c027963263260e2485931ffaecb86"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T12:52:57",
+    "note": "사용자: 눈 색이 다름. Claude 관찰: 앉지 않고 서 있음",
+    "same_character": "partial",
+    "outfit": "not_judged",
+    "request_followed": "not_judged",
+    "severe_defect": "not_judged",
+    "finish_quality": "not_judged",
+    "quality_pass": false,
+    "failure_type": "character",
+    "failure_types": [
+      "eye_color"
+    ],
+    "eye_color": "different"
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, judgement-27/batch-2.png #3",
+    "case": "N1-S3",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\N1-S3\\qwen\\raw.png",
+      "sha256": "7e189a3fa452d857108a3c62f560807e23d29931e3832b64919f52a689565f60"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T12:52:57",
+    "note": "사용자: 성공 — 머리색 차이는 조명 영향(밝은 카페 결과는 정상인 것이 근거). Claude 관찰: 걷기보다 서 있는 자세",
+    "same_character": "yes",
+    "outfit": "same",
+    "request_followed": "yes",
+    "severe_defect": "none",
+    "finish_quality": "good",
+    "quality_pass": true,
+    "failure_type": null
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, judgement-27/batch-2.png #4",
+    "case": "N2-S2",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\N2-S2\\qwen\\raw.png",
+      "sha256": "5c4412252d4c431d16e8f4b25f4cb20d230c09b3498d424a972c04e3063807ac"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T12:52:57",
+    "note": "사용자: 밝은 카페라 정상",
+    "same_character": "yes",
+    "outfit": "same",
+    "request_followed": "yes",
+    "severe_defect": "none",
+    "finish_quality": "good",
+    "quality_pass": true,
+    "failure_type": null
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, judgement-27/batch-2.png #5",
+    "case": "N2-S3",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\N2-S3\\qwen\\raw.png",
+      "sha256": "73180abacad60502913dc0293c70c37e538a62a778acbadaac2ea5e8e6c138cb"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T12:52:58",
+    "note": "사용자: 머리색은 조명 영향, 정상",
+    "same_character": "yes",
+    "outfit": "same",
+    "request_followed": "yes",
+    "severe_defect": "none",
+    "finish_quality": "good",
+    "quality_pass": true,
+    "failure_type": null
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, judgement-27/batch-2.png #6",
+    "case": "N2-S4",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\N2-S4\\qwen\\raw.png",
+      "sha256": "7cbd00c0b3cb02d8d0ef992eac53126e56c0e238f6c3ba7a1d93b8732ae20427"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T12:52:58",
+    "note": "사용자: 머리색은 조명 영향, 정상",
+    "same_character": "yes",
+    "outfit": "same",
+    "request_followed": "yes",
+    "severe_defect": "none",
+    "finish_quality": "good",
+    "quality_pass": true,
+    "failure_type": null
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, judgement-27/batch-3.png #1",
+    "case": "K-S3",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\K-S3\\qwen\\raw.png",
+      "sha256": "fddd66c45895794f6c7c9b4537134e753d4051d10fb3837ad602cbe305064aaf"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T13:08:24",
+    "note": "",
+    "same_character": "yes",
+    "outfit": "same",
+    "request_followed": "yes",
+    "severe_defect": "none",
+    "finish_quality": "good",
+    "quality_pass": true,
+    "failure_type": null
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, judgement-27/batch-3.png #2",
+    "case": "K-S4",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\K-S4\\qwen\\raw.png",
+      "sha256": "623e53f29631e4a2622d85296dac9af04df78ea130a99703b681934311e9bb61"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T13:08:25",
+    "note": "사용자: '2번 두번째 시도는 성공' — 묶음 2번(27 시도1)을 성공으로 기록(Claude 해석, 사용자 확인 요청함)",
+    "same_character": "yes",
+    "outfit": "same",
+    "request_followed": "yes",
+    "severe_defect": "none",
+    "finish_quality": "good",
+    "quality_pass": true,
+    "failure_type": null
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, judgement-27/batch-3.png #3",
+    "case": "M2-S4",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\M2-S4\\qwen\\raw.png",
+      "sha256": "d2bba740fc700244d3925ce551373ca7c82c728ecdd00a8f2a99cb1b14f14759"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T13:08:25",
+    "note": "사용자: 나머지는 Claude가 제시한 내용과 동일: 피부 노을빛 주황 섞임, 바지 올리브 갈색(꼬리 없음)",
+    "same_character": "not_judged",
+    "outfit": "different",
+    "request_followed": "not_judged",
+    "severe_defect": "not_judged",
+    "finish_quality": "not_judged",
+    "quality_pass": false,
+    "failure_type": "outfit",
+    "failure_types": [
+      "outfit",
+      "skin"
+    ]
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, judgement-27/batch-3.png #4",
+    "case": "M2-S1",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\M2-S1\\qwen\\raw.png",
+      "sha256": "85d6d9da966205365469941c907e9b66cc7d501af29be724fb577494542ef09d"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T13:08:25",
+    "note": "사용자: 나머지는 Claude가 제시한 내용과 동일: 바지 올리브색, 피부 짙은 주황 갈색",
+    "same_character": "not_judged",
+    "outfit": "different",
+    "request_followed": "not_judged",
+    "severe_defect": "not_judged",
+    "finish_quality": "not_judged",
+    "quality_pass": false,
+    "failure_type": "outfit",
+    "failure_types": [
+      "outfit",
+      "skin"
+    ]
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, judgement-27/batch-3.png #5",
+    "case": "M2-S2",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\M2-S2\\qwen\\raw.png",
+      "sha256": "539d7bbff48e6dee1c48e32bf19205739e142b21554b62e8d890d1abb4559c7e"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T13:08:25",
+    "note": "사용자: 나머지는 Claude가 제시한 내용과 동일: 피부 원본에 가장 가깝고 바지 검정, 앉기",
+    "same_character": "yes",
+    "outfit": "same",
+    "request_followed": "yes",
+    "severe_defect": "none",
+    "finish_quality": "good",
+    "quality_pass": true,
+    "failure_type": null
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, judgement-27/batch-3.png #6",
+    "case": "M3-S1",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\M3-S1\\qwen\\raw.png",
+      "sha256": "6261ba3f3e50b59214ead752f4c809ad1f786a76857f4af37a74669921a5a501"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T13:08:26",
+    "note": "사용자: 나머지는 Claude가 제시한 내용과 동일: 전신, 이마에 손 올린 원본 자세, 손가락 조각 문제 없음",
+    "same_character": "yes",
+    "outfit": "same",
+    "request_followed": "yes",
+    "severe_defect": "none",
+    "finish_quality": "good",
+    "quality_pass": true,
+    "failure_type": null
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, judgement-27/batch-4.png #1",
+    "case": "M3-S2",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\M3-S2\\qwen\\raw.png",
+      "sha256": "bec5e2c8f08d951bc1a57ac7fd0054c2cebd60c4f363d94e3d3e0d145b7903c0"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T13:10:43",
+    "note": "사용자: Claude가 제시한 내용과 동일(판정은 Claude 해석, 사용자에게 확인 요청): 앉은 전신, 이마 조각 없음",
+    "same_character": "yes",
+    "outfit": "same",
+    "request_followed": "yes",
+    "severe_defect": "none",
+    "finish_quality": "good",
+    "quality_pass": true,
+    "failure_type": null
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, judgement-27/batch-4.png #2",
+    "case": "M6-S2",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\M6-S2\\qwen\\raw.png",
+      "sha256": "c0dc23ddee8fa350b94846ce2ea1fcbdc13254e7d6b598eebe54a449d47cbf61"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T13:10:43",
+    "note": "사용자: Claude가 제시한 내용과 동일(판정은 Claude 해석, 사용자에게 확인 요청): 머리 진한 청록(원본 연청회색)",
+    "same_character": "partial",
+    "outfit": "not_judged",
+    "request_followed": "not_judged",
+    "severe_defect": "not_judged",
+    "finish_quality": "not_judged",
+    "quality_pass": false,
+    "failure_type": "hair",
+    "failure_types": [
+      "hair_color"
+    ]
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, judgement-27/batch-4.png #3",
+    "case": "M6-S3",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\M6-S3\\qwen\\raw.png",
+      "sha256": "4759b708565f5a18f522d357dd94cecfa9ac25bfd68136a6363a39d7ffd60869"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T13:10:44",
+    "note": "사용자: Claude가 제시한 내용과 동일(판정은 Claude 해석, 사용자에게 확인 요청): 머리 진한 청록. 같은 줄 머리색 보정본은 성공(1묶음)",
+    "same_character": "partial",
+    "outfit": "not_judged",
+    "request_followed": "not_judged",
+    "severe_defect": "not_judged",
+    "finish_quality": "not_judged",
+    "quality_pass": false,
+    "failure_type": "hair",
+    "failure_types": [
+      "hair_color"
+    ]
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, judgement-27/batch-4.png #4",
+    "case": "M6-S4",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\M6-S4\\qwen\\raw.png",
+      "sha256": "194293179e0740546cb9d27d7f18ec949e35ab8e63b82551434f99a4107da0f0"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T13:10:44",
+    "note": "사용자: Claude가 제시한 내용과 동일(판정은 Claude 해석, 사용자에게 확인 요청): 머리 진한 청록, 슬리퍼 안 보임",
+    "same_character": "not_judged",
+    "outfit": "different",
+    "request_followed": "not_judged",
+    "severe_defect": "not_judged",
+    "finish_quality": "not_judged",
+    "quality_pass": false,
+    "failure_type": "outfit",
+    "failure_types": [
+      "hair_color",
+      "outfit"
+    ]
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, judgement-27/batch-4.png #5",
+    "case": "F5-S3",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\F5-S3\\qwen\\raw.png",
+      "sha256": "ed1aa9c73a9777a888fbe62af7895a57075645d05d83146121f5328f297d8b58"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T13:10:44",
+    "note": "사용자: Claude가 제시한 내용과 동일(판정은 Claude 해석, 사용자에게 확인 요청): 걷지 않고 서 있음, 신발 끝 잘림",
+    "same_character": "not_judged",
+    "outfit": "not_judged",
+    "request_followed": "no",
+    "severe_defect": "not_judged",
+    "finish_quality": "not_judged",
+    "quality_pass": false,
+    "failure_type": "pose",
+    "failure_types": [
+      "pose",
+      "framing"
+    ]
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, judgement-27/batch-4.png #6",
+    "case": "F5-S4",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\F5-S4\\qwen\\raw.png",
+      "sha256": "3297a5101dcc99158a3e678837c67e8f70f2d60c58d00cac8f17390194ca3928"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T13:10:44",
+    "note": "사용자: Claude가 제시한 내용과 동일(판정은 Claude 해석, 사용자에게 확인 요청): 머리 장식 바뀜, 노을빛에 피부 짙어짐(26에서는 같은 꽃 장식을 통과 — 확인 필요)",
+    "same_character": "partial",
+    "outfit": "not_judged",
+    "request_followed": "not_judged",
+    "severe_defect": "not_judged",
+    "finish_quality": "not_judged",
+    "quality_pass": false,
+    "failure_type": "hair",
+    "failure_types": [
+      "head_accessory",
+      "skin"
+    ]
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, judgement-27/batch-5.png #1",
+    "case": "N1-S1",
+    "target": {
+      "attempt": 2,
+      "seed": 43,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\N1-S1\\qwen-2\\raw.png",
+      "sha256": "882a5ffa1bbdb53cb9715293e61c521b4b880e1fa8c7d26142342f2fff334a1c"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T13:12:10",
+    "note": "",
+    "same_character": "yes",
+    "outfit": "same",
+    "request_followed": "yes",
+    "severe_defect": "none",
+    "finish_quality": "good",
+    "quality_pass": true,
+    "failure_type": null
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, judgement-27/batch-5.png #2",
+    "case": "N1-S2",
+    "target": {
+      "attempt": 2,
+      "seed": 43,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\N1-S2\\qwen-2\\raw.png",
+      "sha256": "83ea142963a55a87e211a0213f078a8cfe9acb7c6a7a8521284f6b87ecbdb232"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T13:12:10",
+    "note": "",
+    "same_character": "yes",
+    "outfit": "same",
+    "request_followed": "yes",
+    "severe_defect": "none",
+    "finish_quality": "good",
+    "quality_pass": true,
+    "failure_type": null
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, judgement-27/batch-5.png #3",
+    "case": "M2-S1",
+    "target": {
+      "attempt": 2,
+      "seed": 43,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\M2-S1\\qwen-2\\raw.png",
+      "sha256": "e1a37558486b8a942d5f899b2d2d0cc11cb2650f270ba44f946c9920311f7a9c"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T13:12:10",
+    "note": "",
+    "same_character": "yes",
+    "outfit": "same",
+    "request_followed": "yes",
+    "severe_defect": "none",
+    "finish_quality": "good",
+    "quality_pass": true,
+    "failure_type": null
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, judgement-27/batch-5.png #4",
+    "case": "M6-S2",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "hair_restored",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\M6-S2\\result-analysis\\hair-restored.png",
+      "sha256": "74165cdc342584520dae836b651877838c5eae40995848b548ca39e773cf12bb"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T13:12:11",
+    "note": "",
+    "same_character": "yes",
+    "outfit": "same",
+    "request_followed": "yes",
+    "severe_defect": "none",
+    "finish_quality": "good",
+    "quality_pass": true,
+    "failure_type": null
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, judgement-27/batch-5.png #5",
+    "case": "M6-S4",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "hair_restored",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\M6-S4\\result-analysis\\hair-restored.png",
+      "sha256": "6c40c5fea1cc8e62363a8d82b9c3b1c801e88e6658a4ba4f533d71492deb1abe"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T13:12:11",
+    "note": "사용자: 실패. Claude 관찰: 슬리퍼 안 보임",
+    "same_character": "not_judged",
+    "outfit": "different",
+    "request_followed": "not_judged",
+    "severe_defect": "not_judged",
+    "finish_quality": "not_judged",
+    "quality_pass": false,
+    "failure_type": "outfit",
+    "failure_types": [
+      "outfit"
+    ]
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, judgement-27/batch-5.png #6",
+    "case": "F5-S4",
+    "target": {
+      "attempt": 2,
+      "seed": 43,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\F5-S4\\qwen-2\\raw.png",
+      "sha256": "5d58e73065517db538c181c0ddefce35e4ce782164aa6008503e6c57e18a0a37"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T13:12:11",
+    "note": "사용자: 실패. Claude 관찰: 머리 장식 바뀜, 빨간 브릿지 위치 이동",
+    "same_character": "partial",
+    "outfit": "not_judged",
+    "request_followed": "not_judged",
+    "severe_defect": "not_judged",
+    "finish_quality": "not_judged",
+    "quality_pass": false,
+    "failure_type": "hair",
+    "failure_types": [
+      "head_accessory",
+      "hair"
+    ]
+  }
+]

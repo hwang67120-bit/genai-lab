@@ -1,0 +1,55 @@
+[
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, judgement-27/batch-4.png #4",
+    "case": "M6-S4",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\M6-S4\\qwen\\raw.png",
+      "sha256": "194293179e0740546cb9d27d7f18ec949e35ab8e63b82551434f99a4107da0f0"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T13:10:44",
+    "note": "사용자: Claude가 제시한 내용과 동일(판정은 Claude 해석, 사용자에게 확인 요청): 머리 진한 청록, 슬리퍼 안 보임",
+    "same_character": "not_judged",
+    "outfit": "different",
+    "request_followed": "not_judged",
+    "severe_defect": "not_judged",
+    "finish_quality": "not_judged",
+    "quality_pass": false,
+    "failure_type": "outfit",
+    "failure_types": [
+      "hair_color",
+      "outfit"
+    ]
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, judgement-27/batch-5.png #5",
+    "case": "M6-S4",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "hair_restored",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\M6-S4\\result-analysis\\hair-restored.png",
+      "sha256": "6c40c5fea1cc8e62363a8d82b9c3b1c801e88e6658a4ba4f533d71492deb1abe"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T13:12:11",
+    "note": "사용자: 실패. Claude 관찰: 슬리퍼 안 보임",
+    "same_character": "not_judged",
+    "outfit": "different",
+    "request_followed": "not_judged",
+    "severe_defect": "not_judged",
+    "finish_quality": "not_judged",
+    "quality_pass": false,
+    "failure_type": "outfit",
+    "failure_types": [
+      "outfit"
+    ]
+  }
+]

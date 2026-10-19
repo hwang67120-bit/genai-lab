@@ -667,3 +667,61 @@ def test_hair_auto_decision_errors_never_fail_the_generation(tmp_path,fake_model
     result = run(tmp_path,base)
     assert result["auto_selection"] is None and all(c["variant"] != "hair_auto" for c in result["candidates"])
     assert result["attempts"][0]["hair_auto"]["decision"] == "unmeasurable"
+
+
+def test_experiment_hair_color_words_off_drops_only_the_colour_words():
+    from genai_lab.free_generation import HAIR_PLACEMENT, features_sentence
+    items = sheet(hair_length=dict(state="measured", value="short_hair"), hair_color=dict(state="measured", tags=["blue_hair"]))
+    on, off = features_sentence(items), features_sentence(items, hair_color_words=False)
+    assert "blue hair" in on and "blue" not in off
+    assert "short hair" in off and HAIR_PLACEMENT in off and HAIR_PLACEMENT in on
+
+
+def test_experiment_moves_absent_parts_to_the_negative_prompt():
+    import re
+    from genai_lab.free_generation import absent_parts_negative_prompt, free_prompt
+    text = "kneeling on one knee on a beach at sunset"
+    default = free_prompt("", "male", (), text, 42)
+    moved = free_prompt("", "male", (), text, 42, absent_parts_negative=True)
+    assert "no animal ears, no tail and no wings" in default and re.search(r"\btails?\b", moved) is None
+    assert moved == default.replace("The character has no animal ears, no tail and no wings; do not add any. ", "")
+    assert absent_parts_negative_prompt(()) == "animal tail, animal ears, wings"
+    assert absent_parts_negative_prompt(("ears", "tail")) == "wings"
+    assert absent_parts_negative_prompt(None) == " "
+    partial = free_prompt("", "female", ("ears",), text, 42, absent_parts_negative=True)
+    assert "animal ears" in partial and "no a tail" not in partial and "do not add any" not in partial
+
+
+def test_experiment_switches_reach_the_worker_request_and_trace(tmp_path,fake_models,monkeypatch):
+    base,calls = fake_models
+    monkeypatch.setattr(pipeline,"verify_features",lambda *a,**k:dict(items=dict(skin=dict(status="changed",confident=True)),
+                                                                      summary=dict(changed=["skin"]),retry=["skin"]))
+    result = run(tmp_path,base,experiment=dict(absent_parts_negative=True,hair_color_words=False,single_attempt=True))
+    requests = [c[1] for c in calls if c[0] == "qwen"]
+    assert len(requests) == 1                                                  # 확신 위반이어도 한 장만
+    assert requests[0]["prompt"]["negative"] == "animal tail, animal ears, wings"
+    assert "no tail" not in requests[0]["prompt"]["positive"]
+    from genai_lab.qwen_free_generation import validate_free_request
+    assert validate_free_request(json.loads(json.dumps(requests[0]))).absent_parts_negative is True
+    trace = json.loads(Path(result["trace"]).read_text(encoding="utf-8"))
+    assert trace["experiment"]["single_attempt"] is True and len(result["attempts"]) == 1
+
+
+def test_default_request_keeps_the_blank_negative_prompt(tmp_path,fake_models):
+    base,calls = fake_models
+    run(tmp_path,base)
+    request = next(c[1] for c in calls if c[0] == "qwen")
+    assert request["prompt"]["negative"] == " " and "no animal ears, no tail and no wings" in request["prompt"]["positive"]
+    tampered = json.loads(json.dumps(request))
+    tampered["prompt"]["negative"] = "animal tail"
+    from genai_lab.qwen_free_generation import validate_free_request
+    with pytest.raises(ValueError):
+        validate_free_request(tampered)
+
+
+def test_unknown_experiment_switch_is_rejected(tmp_path,fake_models):
+    base,_ = fake_models
+    from genai_lab.free_generation import FreeGenerationRejected
+    with pytest.raises(FreeGenerationRejected) as error:
+        run(tmp_path,base,experiment=dict(stronger_identity=True))
+    assert error.value.code == "invalid_input"

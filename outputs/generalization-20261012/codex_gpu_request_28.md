@@ -1,6 +1,6 @@
-# GPU 시험 요청 28 — 생성 쪽 원인 가설 2개 한 요인 확인 (초안 2026-10-19)
+# GPU 시험 요청 28 — 생성 쪽 원인 가설 2개 한 요인 확인 (승인 2026-10-19)
 
-요청 27 분석(D-137 앞 원인 분석)에서 남은 생성 쪽 가설 두 개를 **한 요인만 바꿔** 확인한다. 품질 평가 세트가 아니라 원인 확인이다. 상태: **초안 — 사용자 승인 전**. 실행: **Codex**. 선행 구현: Claude(아래 '선행 구현', 기본값은 지금과 같고 시험에서만 켠다).
+요청 27 분석(D-137 앞 원인 분석)에서 남은 생성 쪽 가설 두 개를 **한 요인만 바꿔** 확인한다. 품질 평가 세트가 아니라 원인 확인이다. 상태: **승인** — 사용자 "요청 28 승인, 선행 구현 진행하고 푸쉬 해줘"(2026-10-19). 실행: **Codex**. 선행 구현: **완료**(D-138, 아래).
 
 ## 가설
 
@@ -27,7 +27,14 @@
 
 새 생성 **9장**, 한 장 약 34분 → **약 5시간**(재시도 없음). 검증 기준(특징표)은 바꾸지 않는다 — 지시문에서 뺀 머리색도 결과 검사에는 그대로 남는다.
 
-## 선행 구현(Claude, 승인 뒤 · GPU 전)
+## 선행 구현(Claude) — 완료(D-138)
+
+- 호출: `run_free_generation(..., experiment=dict(hair_color_words=False, single_attempt=True))`(시험 A) / `experiment=dict(absent_parts_negative=True, single_attempt=True)`(시험 B) / `experiment=dict(single_attempt=True)`(A0). `experiment=None`(기본)은 제품 동작 그대로. 켠 값은 `trace.json`의 `experiment`에 남는다. 다른 키는 `invalid_input`으로 거부.
+- 재시도 끄기는 `single_attempt=True`(실행기에서 한 시도만 부르는 대신 선택지로 구현).
+- 생성 seed: 시험 B의 seed 43 줄은 제품 함수가 첫 시도를 42로 만들므로, 실행기가 `genai_lab.free_generation_pipeline.SEEDS`를 `(43,)`로 바꿔 부르거나 같은 효과의 방법을 쓰고 그 사실을 기록한다(Codex 판단, 지시문 대조는 그대로).
+- CPU 대조(`request-28-prep/parity28.py` → `parity28.txt`): 기본값 지시문이 요청 27 실제 지시문과 **21/21 바이트 같음**. 시험 A는 머리색 낱말만(`short hair blue hair` → `short hair`, `long hair blonde hair braid` → `long hair braid`), 시험 B는 "no animal ears, no tail and no wings; do not add any" 문장만 빠지고 부정 지시문이 `animal tail, animal ears, wings`.
+
+### (원래 계획)
 
 - 실험 선택지 두 개, **기본 꺼짐**, 켜면 trace·request에 기록:
   - `hair_color_words=False`: `features_sentence`에서 머리색 태그 낱말만 뺀다(`HAIR_PLACEMENT`·고유 형태 메모·검증은 그대로).

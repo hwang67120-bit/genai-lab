@@ -22,6 +22,7 @@ from genai_lab.qwen_free_generation import (FreeGenerationWorkflow, make_free_re
                                            run_free_generation_edit)
 
 
+EXPERIMENT_KEYS = {"hair_color_words", "absent_parts_negative", "single_attempt"}
 OUTCOME_SCHEMA = "free_generation_outcome/2"     # 반환 형식(D-133, docs/FREE_GENERATION_API.md). 키를 바꾸면 버전을 올린다(/2: auto_selection·hair_auto, D-137)
 
 
@@ -280,8 +281,9 @@ def prepare_skeleton(image, staging, directory, runtime, cancelled):
 
 def prepare_generation_inputs(base_path, character_features, request_text, *, base_kind, gender, body_parts,
                               confirmed, adult_confirmed, directory, runtime, cancelled, progress, popen, trace, persist, selection_seed,
-                              pose_guidance=False):
+                              pose_guidance=False, experiment=None):
     """확인된 입력의 같은 바이트·특징·조건·파생 참조를 실행 폴더에 고정하고 Qwen 명세를 반환한다."""
+    experiment = dict(experiment or {})
     inputs = directory / "inputs"
     inputs.mkdir()
     image, base, checked = validate_inputs(base_path, base_kind, character_features, gender, body_parts,
@@ -319,12 +321,13 @@ def prepare_generation_inputs(base_path, character_features, request_text, *, ba
     trace["input_facts"].update(character_features=features, base_segmentation=segmented, derived_reference=crop_record)
     staging = staging_text(request_text, selection_seed)        # 빈 요청이면 고른 고정 자세로 가림을 판단(D-128)
     conflicts = request_conflicts(staging)
-    sentence = features_sentence(features, hidden=conflicts)
+    sentence = features_sentence(features, hidden=conflicts, hair_color_words=experiment.get("hair_color_words", True))
     skeleton_path, skeleton_records, skeleton_record = (prepare_skeleton(image, staging, directory, runtime, cancelled) if pose_guidance
                                                         else (None, None, dict(status="off")))
     trace["input_facts"]["pose_guidance"] = skeleton_record
     assembled = free_conditions(sentence, gender, body_parts, request_text, selection_seed, base_kind,
-                                reference_scope=crop_record["scope"], skeleton=skeleton_path is not None)
+                                reference_scope=crop_record["scope"], skeleton=skeleton_path is not None,
+                                absent_parts_negative=experiment.get("absent_parts_negative", False))
     assembled["skeleton"] = skeleton_records
     if pose_guidance and skeleton_path is None:
         assembled["excluded"].append(dict(key="pose_skeleton", reason=skeleton_record["reason"]))
@@ -348,13 +351,14 @@ def prepare_generation_inputs(base_path, character_features, request_text, *, ba
     spec = prepare_free_spec(prepared["canvas"], reference, directory=directory / "qwen-inputs", request_text=request_text,
                              gender=gender, body_parts=body_parts, features_text=sentence, base_kind=base_kind, reference_box=crop_record["box"], selection_seed=selection_seed,
                              reference_scope=crop_record["scope"], skeleton_path=skeleton_path, skeleton_joints=skeleton_records or (),
-                             pose_key=skeleton_record.get("pose_key", ""))
+                             pose_key=skeleton_record.get("pose_key", ""),
+                             absent_parts_negative=experiment.get("absent_parts_negative", False))
     return features, assembled, spec
 
 
 def run_free_generation(base_path, character_features, request_text="", *, base_kind, gender, body_parts,
                         confirmed, adult_confirmed, settings, runtime, directory, cancelled=lambda: False,
-                        progress=lambda _: None, popen=subprocess.Popen, selection_seed=None, pose_guidance=False):
+                        progress=lambda _: None, popen=subprocess.Popen, selection_seed=None, pose_guidance=False, experiment=None):
     """GUI와 향후 API가 사용할 함수. 실패는 trace를 보존하고 예외, 성공은 사람 검토 대기 결과 반환."""
     directory = Path(directory).resolve()
     directory.mkdir(parents=True, exist_ok=False)
@@ -381,10 +385,15 @@ def run_free_generation(base_path, character_features, request_text="", *, base_
             selection_seed = secrets.randbelow(2**31) if not request_text.strip() else SEEDS[0]
         if type(selection_seed) is not int or not 0 <= selection_seed < 2**63:
             raise FreeGenerationRejected("invalid_input", "연출 선택 seed 형식 오류")
+        # 원인 확인 시험용 선택지(요청 28). 기본(None)은 제품 동작 그대로. 켜면 trace에 남는다.
+        if experiment is not None:
+            if not isinstance(experiment, dict) or not set(experiment) <= EXPERIMENT_KEYS or not all(type(v) is bool for v in experiment.values()):
+                raise FreeGenerationRejected("invalid_input", "시험 선택지 형식 오류")
+            trace["experiment"] = dict(experiment, note="원인 확인 시험(요청 28). 제품 기본값 아님")
         features, assembled, spec = prepare_generation_inputs(base_path, character_features, request_text,
             base_kind=base_kind, gender=gender, body_parts=body_parts, confirmed=confirmed, adult_confirmed=adult_confirmed,
             directory=directory, runtime=runtime, cancelled=cancelled, progress=progress, popen=popen, trace=trace, persist=persist, selection_seed=selection_seed,
-            pose_guidance=pose_guidance)
+            pose_guidance=pose_guidance, experiment=experiment)
         for number, seed in enumerate(SEEDS, 1):
             if cancelled():
                 raise RuntimeError("사용자 취소")
@@ -423,7 +432,7 @@ def run_free_generation(base_path, character_features, request_text="", *, base_
             attempt["retry_reason"] = ("안전 태그 차단" if unsafe else ("확신 있는 특징 위반: " + ", ".join(reasons) if reasons else None))
             attempt["retry_items"] = reasons
             attempt["violation_score"] = 1000 if unsafe else len(reasons)
-            if not attempt["retry_reason"]:
+            if not attempt["retry_reason"] or (experiment or {}).get("single_attempt"):
                 break
         # 두 시도 모두 위반이면 위반이 적은 시도를 먼저 보여 준다(같으면 앞 시도). 어느 쪽을 쓸지는 사람이 고른다(candidates).
         chosen = min(trace["attempts"], key=lambda a: a["violation_score"]) if attempt["retry_reason"] else attempt

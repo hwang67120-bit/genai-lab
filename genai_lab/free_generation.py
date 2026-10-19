@@ -256,7 +256,7 @@ def skin_word(skin):
     return next((word for limit, word in SKIN_WORDS if float(lab[0]) < limit), None)
 
 
-def features_sentence(features, hidden=()):
+def features_sentence(features, hidden=(), hair_color_words=True):
     """확정·측정된 특징표 값으로 한 문장. unknown/weak 항목은 뺀다. 아무것도 없으면 빈 문자열.
     hidden: 요청이 가리는 항목(request_conflicts의 키). 그 항목과 그에 관한 고유 형태 메모는 문장에 넣지 않는다(D-127)."""
     hidden = set(hidden or ())
@@ -268,6 +268,8 @@ def features_sentence(features, hidden=()):
         if item.get("state") != "measured":
             continue
         values = [item["value"]] if key == "hair_length" and item.get("value") else (item.get("tags") if key == "hair_color" else item.get("values")) or []
+        if key == "hair_color" and not hair_color_words:      # 요청 28 시험 A: 머리색 낱말만 뺀다(색 배치 문장·검증은 그대로)
+            values = []
         hair.extend(_plain(v) for v in values if v not in PLACEMENT_FREE_HAIR)
     if hair:
         parts.append(" ".join(hair) + " hair" if not any(h.endswith("hair") for h in hair) else " ".join(hair))
@@ -296,7 +298,8 @@ def features_sentence(features, hidden=()):
     return text
 
 
-def free_conditions(features_text, gender, body_parts, request_text, seed, base_kind="edited", reference_scope="head", skeleton=False):
+def free_conditions(features_text, gender, body_parts, request_text, seed, base_kind="edited", reference_scope="head", skeleton=False,
+                    absent_parts_negative=False):
     """조건 목록(D-112 구조). features_text는 features_sentence()의 결과(확정 특징표에서 온 문장)."""
     conditions, excluded = [], []
     checked = check_request(request_text)
@@ -325,6 +328,11 @@ def free_conditions(features_text, gender, body_parts, request_text, seed, base_
         parts_text = parts_text.replace("keep them exactly as in image 1 with the same number, shape, color and attachment to the body",
                                         "keep them as in image 1 with the same number, shape, color and attachment to the body where visible; "
                                         "the tail may be hidden by the requested pose, but do not remove it or add extra tails")
+    if absent_parts_negative and body_parts is not None:
+        # 요청 28 시험 B: "no tail … do not add any" 부정 문장을 지시문에서 빼고 부정 지시문 칸으로(absent_parts_negative_prompt)
+        parts_text = "" if not tuple(body_parts) else re.sub(r"The character has no [^;]*; do not add any\. ", "", parts_text)
+        excluded.append(dict(key="absent_body_parts_sentence", reason="없는 부위는 부정 지시문 칸으로(요청 28 시험 B)",
+                             negative=absent_parts_negative_prompt(body_parts)))
     conditions.append(dict(key="body_parts", text=parts_text,
                            source="user" if body_parts is not None else "policy", reason="확정 부위만 유지·추가 금지(D-111)", basis=list(body_parts) if body_parts else body_parts))
     if checked["empty"]:
@@ -360,9 +368,21 @@ def free_conditions(features_text, gender, body_parts, request_text, seed, base_
     return dict(conditions=conditions, excluded=excluded, pose=pose, base_kind=base_kind)
 
 
-def free_prompt(features_text, gender, body_parts, request_text, seed, reference_scope="head", skeleton=False):
+def free_prompt(features_text, gender, body_parts, request_text, seed, reference_scope="head", skeleton=False, absent_parts_negative=False):
     return "".join(c["text"] for c in free_conditions(features_text, gender, body_parts, request_text, seed,
-                                                       reference_scope=reference_scope, skeleton=skeleton)["conditions"])
+                                                       reference_scope=reference_scope, skeleton=skeleton,
+                                                       absent_parts_negative=absent_parts_negative)["conditions"])
+
+
+NEGATIVE_PART_WORDS = (("tail", "animal tail"), ("ears", "animal ears"), ("wings", "wings"))
+
+
+def absent_parts_negative_prompt(body_parts):
+    """요청 28 시험 B: 확인된 부위 목록에 없는 부위를 부정 지시문으로. 부위가 모름(None)이면 쓰지 않는다(기본 " ")."""
+    if body_parts is None:
+        return " "
+    absent = [word for key, word in NEGATIVE_PART_WORDS if key not in tuple(body_parts)]
+    return ", ".join(absent) if absent else " "
 
 
 def part_counts(parts, min_px=200):

@@ -169,7 +169,7 @@ def generate(request, directory, record):
         begin("encode")
         with torch.no_grad():
             pe, pm = p1.encode_prompt(prompt=request["prompt"]["positive"], image=cond, device=torch.device("cuda"))
-            ne, nm = p1.encode_prompt(prompt=" ", image=cond, device=torch.device("cuda"))
+            ne, nm = p1.encode_prompt(prompt=request["prompt"].get("negative", " "), image=cond, device=torch.device("cuda"))
         pe, pm, ne, nm = (v.to("cpu") if v is not None else None for v in (pe, pm, ne, nm))
         record["embedding_shapes"] = {"positive": list(pe.shape), "negative": list(ne.shape)}
         observed = record["processor_inputs"]
@@ -231,7 +231,7 @@ def generate(request, directory, record):
         record["call_arguments"] = {"height": height, "width": width, "true_cfg_scale": settings.true_cfg_scale,
             "guidance_scale": settings.guidance_scale, "num_inference_steps": settings.steps,
             "num_images_per_prompt": 1, "seed": request["seed"], "generator_device": "cpu",
-            "positive": request["prompt"]["positive"], "negative": " ", "images": len(images)}
+            "positive": request["prompt"]["positive"], "negative": request["prompt"].get("negative", " "), "images": len(images)}
         save()
         if guard is None:
             torch.cuda.reset_peak_memory_stats()

@@ -33,6 +33,7 @@ class FreeGenerationSpec:
     skeleton_sha256: str = ""
     skeleton_joints: tuple = ()     # 골격을 그린 관절 기록 — 작업 프로세스가 다시 그려 대조한다
     pose_key: str = ""
+    absent_parts_negative: bool = False   # 요청 28 시험 B(기본 꺼짐): 없는 부위를 지시문 대신 부정 지시문으로
 
     @property
     def images(self):
@@ -88,12 +89,17 @@ class FreeGenerationSpec:
 
     def prompt(self, seed):
         return free_prompt(self.features_text, self.gender, self.body_parts, self.request_text, self.selection_seed,
-                           reference_scope=self.reference_scope, skeleton=bool(self.skeleton_path))
+                           reference_scope=self.reference_scope, skeleton=bool(self.skeleton_path),
+                           absent_parts_negative=self.absent_parts_negative)
+
+    def negative(self):
+        from genai_lab.free_generation import absent_parts_negative_prompt
+        return absent_parts_negative_prompt(self.body_parts) if self.absent_parts_negative else " "
 
 
 def prepare_free_spec(canvas_path, reference_path, *, directory, request_text, gender="unspecified", body_parts=None,
                       features_text="", base_kind="edited", confirmed=True, reference_box=(0, 0, 768, 1024), selection_seed=42,
-                      reference_scope="head", skeleton_path=None, skeleton_joints=(), pose_key=""):
+                      reference_scope="head", skeleton_path=None, skeleton_joints=(), pose_key="", absent_parts_negative=False):
     """두 입력을 실행 폴더로 복사해 고정한다."""
     if confirmed is not True:
         raise ValueError("기준 그림과 요청을 확인해 주세요.")
@@ -113,7 +119,7 @@ def prepare_free_spec(canvas_path, reference_path, *, directory, request_text, g
                               str(directory / "reference.png"), hashlib.sha256(reference).hexdigest(),
                               (request_text or "").strip(), gender, None if body_parts is None else tuple(body_parts),
                               features_text or "", base_kind, confirmed, selection_seed=selection_seed, reference_box=tuple(reference_box),
-                              reference_scope=reference_scope, **skeleton)
+                              reference_scope=reference_scope, absent_parts_negative=absent_parts_negative, **skeleton)
     spec.verify_image()
     spec.prompt(SEEDS[0])          # 요청 문장 검사(외형·의상·안전) — 여기서 걸리면 ValueError
     return spec
@@ -123,7 +129,7 @@ def make_free_request(spec, *, settings, seed=SEEDS[0]):
     spec.verify_image()
     positive = spec.prompt(seed)
     return {"schema_version": 1, "task_kind": "free_generation", "images": spec.images, "free_spec": spec.record(),
-            "prompt": {"positive": positive, "negative": " ",
+            "prompt": {"positive": positive, "negative": spec.negative(),
                        "positive_sha256": hashlib.sha256(positive.encode("utf-8")).hexdigest()},
             "settings": settings.record(), "seed": seed, "memory": dict(MEMORY_POLICY),
             "basis_size": list(SIZE), "output_size": list(output_dimensions(*SIZE))}
@@ -146,7 +152,7 @@ def validate_free_request(request):
         raise ValueError("자유 생성 메모리 계약 오류(6.5GiB 상한·VAE 타일·lm_head CPU)")
     if request["prompt"].get("positive_sha256") != hashlib.sha256(spec.prompt(request["seed"]).encode("utf-8")).hexdigest():
         raise ValueError("자유 생성 지시문 SHA 오류")
-    if request["prompt"]["positive"] != spec.prompt(request["seed"]) or request["prompt"]["negative"] != " ":
+    if request["prompt"]["positive"] != spec.prompt(request["seed"]) or request["prompt"]["negative"] != spec.negative():
         raise ValueError("확인한 요청과 지시문이 다릅니다.")
     if request.get("basis_size") != list(SIZE) or request.get("output_size") != list(output_dimensions(*SIZE)):
         raise ValueError("자유 생성 이미지 크기 계약 오류")

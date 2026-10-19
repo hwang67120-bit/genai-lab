@@ -707,13 +707,14 @@ def test_experiment_switches_reach_the_worker_request_and_trace(tmp_path,fake_mo
     assert trace["experiment"]["single_attempt"] is True and len(result["attempts"]) == 1
 
 
-def test_default_request_keeps_the_blank_negative_prompt(tmp_path,fake_models):
+def test_absent_parts_go_to_the_negative_prompt_by_default(tmp_path,fake_models):
     base,calls = fake_models
     run(tmp_path,base)
     request = next(c[1] for c in calls if c[0] == "qwen")
-    assert request["prompt"]["negative"] == " " and "no animal ears, no tail and no wings" in request["prompt"]["positive"]
+    assert request["prompt"]["negative"] == "animal tail, animal ears, wings"                      # D-140 기본값
+    assert "no animal ears, no tail and no wings" not in request["prompt"]["positive"]
     tampered = json.loads(json.dumps(request))
-    tampered["prompt"]["negative"] = "animal tail"
+    tampered["prompt"]["negative"] = " "
     from genai_lab.qwen_free_generation import validate_free_request
     with pytest.raises(ValueError):
         validate_free_request(tampered)
@@ -725,3 +726,10 @@ def test_unknown_experiment_switch_is_rejected(tmp_path,fake_models):
     with pytest.raises(FreeGenerationRejected) as error:
         run(tmp_path,base,experiment=dict(stronger_identity=True))
     assert error.value.code == "invalid_input"
+
+
+def test_old_in_prompt_negation_is_still_available_for_experiments(tmp_path,fake_models):
+    base,calls = fake_models
+    run(tmp_path,base,experiment=dict(absent_parts_negative=False))
+    request = next(c[1] for c in calls if c[0] == "qwen")
+    assert request["prompt"]["negative"] == " " and "no animal ears, no tail and no wings" in request["prompt"]["positive"]

@@ -51,3 +51,8 @@ def test_unlink_and_remove_from_the_command_line(tmp_path, capsys):
     assert tool.main(["--root", str(root), "unlink", record["character_id"], str(original), "--reason", "x"]) == 1   # 기준 원본은 거부
     assert tool.main(["--root", str(root), "remove", record["character_id"], "--reason", "정리"]) == 0
     assert memory.characters() == []
+
+
+def test_list_says_when_nothing_is_saved(tmp_path, capsys):
+    assert tool.main(["--root", str(tmp_path / "memory"), "list"]) == 0
+    assert "저장된 캐릭터 0명" in capsys.readouterr().out

@@ -75,8 +75,11 @@ def main(argv=None):
     memory = CharacterMemory(args.root)
     try:
         if args.command == "list":
-            for record in memory.characters():
+            records = memory.characters()
+            for record in records:
                 print(summary(record))
+            print(f"저장된 캐릭터 {len(records)}명 · 위치 {memory.root}"
+                  + ("" if records else " — 작업실 확인 창에서 시작을 누르면 등록됩니다"))
         elif args.command == "show":
             print(json.dumps(memory.get(args.character_id), ensure_ascii=False, indent=1))
         elif args.command == "unlink":

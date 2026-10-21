@@ -8,6 +8,12 @@ from PySide6.QtWidgets import (
     QSizePolicy, QSplitter, QToolButton, QVBoxLayout, QWidget,
 )
 
+# 한 줄 흐름(2026-10-22): ① 옷 바꾸기 → ② 자세·장면. gui_main·작업실 제어가 같은 문구를 쓴다.
+STEP1_BUTTON = "① 옷 바꾸기 시작"
+STEP1_TOOLTIP = "선택한 캐릭터와 의상으로 원본 그림의 옷을 바꿉니다(결과 1장, 약 30분). 승인하면 ② 자세·장면으로 이어 갈 수 있습니다."
+STEP2_CHAIN = "② 승인한 옷 바꾸기 결과로 자세·장면 만들기"
+STEP2_ALONE = "② 옷은 그대로 두고 자세·장면 만들기"
+
 
 class ImagePreview(QLabel):
     """원본 이미지를 보관해 크기 변경 때 작은 사본을 다시 확대하지 않게 한다."""
@@ -186,7 +192,7 @@ def build_studio(window, framing_options, clothing_mode):
                    window.outfit_button, window.clear_outfit_button)
     input_layout.addWidget(card)
 
-    card, box = _card("생성 설정")
+    card, box = _card("만드는 순서")
     window.framing_combo = QComboBox()
     window.framing_combo.setAccessibleName("화면 범위")
     for framing_type, label in framing_options:
@@ -233,7 +239,7 @@ def build_studio(window, framing_options, clothing_mode):
         if edit:
             window.studio_proportion_checkbox.setChecked(False)
         if edit:
-            text = ("원본 그림에서 옷을 바꿔 결과 1장을 만듭니다(약 30분). 설정은 자동입니다: 얼굴·머리·머리 장식은 원본 그대로, "
+            text = ("① 옷 바꾸기: 원본 그림에서 옷을 바꿔 결과 1장을 만듭니다(약 30분). 설정은 자동입니다: 얼굴·머리·머리 장식은 원본 그대로, "
                     "무기 등 소품과 배경은 지웁니다. 검사(머리 위치·형태, 팔)에 걸리면 자동으로 한 번 더 그립니다(최대 약 1시간). "
                     "자세는 바뀔 수 있습니다.")
         elif window.studio_proportion_checkbox.isChecked():
@@ -244,9 +250,12 @@ def build_studio(window, framing_options, clothing_mode):
     window.studio_method_combo.currentIndexChanged.connect(update_method)
     window.studio_proportion_checkbox.toggled.connect(update_method)
     update_method()
-    window.free_generation_button = _button("기준 이미지로 자유 생성", lambda: window.studio.start_free_generation(), enabled=False)
+    # ② 자세·장면(자유 생성, D-123). ① 결과를 승인하면 그 결과로 이어 가고, 없으면 선택한 캐릭터 그림의 옷 그대로(D-094 흐름)
+    window.free_generation_button = _button(STEP2_ALONE, lambda: window.studio.start_staging(), enabled=False)
     box.addWidget(window.free_generation_button)
-    box.addWidget(_label("선택한 캐릭터 이미지를 기준으로 의상을 유지하고 연출을 바꿉니다. 별도 옷 참조는 쓰지 않습니다.", "muted"))
+    window.studio_staging_note = _label("② 자세·장면: ①의 결과를 승인하면 그 결과(바뀐 옷)로 자세·구도·배경을 만듭니다. "
+                                        "승인한 결과가 없으면 선택한 캐릭터 그림의 옷을 그대로 두고 자세·장면만 바꿉니다.", "muted")
+    box.addWidget(window.studio_staging_note)
     input_layout.addWidget(card)
 
     window.qwen_pose_button = _button("저장한 이미지 자세 바꾸기", window.open_qwen_pose_editor)
@@ -306,9 +315,9 @@ def build_studio(window, framing_options, clothing_mode):
     input_layout.addStretch()
     window.input_scroll.setWidget(inputs)
     left_layout.addWidget(window.input_scroll, 1)
-    window.generate_button = _button("이미지 생성 시작", window.start_generation, enabled=False, primary=True)
+    window.generate_button = _button(STEP1_BUTTON, window.start_generation, enabled=False, primary=True)
     window.generate_button.setMinimumHeight(46)
-    window.generate_button.setToolTip("선택한 캐릭터와 옷으로 이미지 4장을 만들고 결과를 비교합니다.")
+    window.generate_button.setToolTip(STEP1_TOOLTIP)
     left_layout.addWidget(window.generate_button)
     window.studio_cancel_button = QPushButton("현재 작업 취소")
     window.studio_cancel_button.hide()

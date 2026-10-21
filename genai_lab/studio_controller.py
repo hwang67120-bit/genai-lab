@@ -66,6 +66,7 @@ class StudioController(QObject):
         self.last_saved = None
         self.character_memory = None          # 캐릭터 기억(H1-B). None이면 기본 위치(character_memory.default_root)
         self.character_id = None              # 이번 실행이 연결된 캐릭터(승인 저장 때 등록)
+        self.approved_edit = None             # ① 승인한 옷 바꾸기 결과(저장 경로, 그때의 캐릭터 그림) — ②가 이어 쓴다
         self.output_root = Path(__file__).resolve().parents[1] / "outputs" / "studio-runs"
         window.studio_candidate_combo.currentIndexChanged.connect(self.select)
         window.studio_cancel_button.clicked.connect(self.cancel)
@@ -113,7 +114,39 @@ class StudioController(QObject):
             self.fail(error, traceback.format_exc())
             self.controls()
 
-    def start_free_generation(self):
+    def edit_result_ready(self):
+        """화면의 ① 결과를 사람이 승인했는가(저장 전이어도). 자유 생성 결과는 ①이 아니다."""
+        results = self.results
+        return (results is not None and getattr(results, "edit_mode", False) and not getattr(results, "free_mode", False)
+                and results.status == "user_approved")
+
+    def chain_base(self):
+        """②가 이어 쓸 ① 승인 결과 파일(같은 캐릭터 그림일 때만). 없으면 None."""
+        if not self.approved_edit:
+            return None
+        path, character = self.approved_edit
+        if str(character) != str(self.window.style_path) or not Path(path).is_file() or not Path(path).with_suffix(".review.json").is_file():
+            return None
+        return Path(path)
+
+    def start_staging(self):
+        """② 자세·장면(한 줄 흐름). ① 결과를 승인했으면 저장·다시 열기 없이 그 결과(편집본)를 기준으로, 아니면 캐릭터 그림 그대로."""
+        if self.task is not None or self.confirming or self.cleanup_blocked:
+            return
+        if self.edit_result_ready():
+            try:        # 승인한 같은 바이트를 승인 기록(.review.json)과 함께 실행 폴더에 저장한다 — 편집본 기준의 승인 근거
+                saved = self.results.export(self.run_directory / "approved-edit.png")
+            except Exception as error:
+                QMessageBox.warning(self.window, "② 자세·장면", "승인한 옷 바꾸기 결과를 준비하지 못했습니다.\n" + str(error))
+                return
+            note = self.register_saved(saved)
+            self.approved_edit = (saved, str(self.window.style_path))
+            self.results = None
+            self.window.status_label.setText(f"상태: ① 결과를 {saved}에 저장했습니다{note} · ② 입력 확인으로 이어 갑니다.")
+        base = self.chain_base()
+        self.start_free_generation(source=base)
+
+    def start_free_generation(self, source=None):
         from genai_lab.studio_free_generation import analyze_base
         if self.occupied or not self.window.can_start_registered_generation(require_outfit=False):
             return
@@ -121,7 +154,7 @@ class StudioController(QObject):
             self.runtime = StudioRuntime.from_environment()
             self.run_directory = self.output_root / uuid.uuid4().hex
             self.run_directory.mkdir(parents=True)
-            source = Path(self.window.style_path)
+            source = Path(source or self.window.style_path)
             self.launch(lambda cancel, progress: analyze_base(source, self.runtime), self.free_inputs_ready)
         except Exception as error:
             self.fail(error, traceback.format_exc())
@@ -425,8 +458,12 @@ class StudioController(QObject):
         if not path:
             return
         try:
+            edit_result = getattr(self.results, "edit_mode", False) and not getattr(self.results, "free_mode", False)
             self.last_saved = self.results.export(path)
-            self.window.status_label.setText(f"상태: 저장 완료 · {path}" + self.register_saved(self.last_saved))
+            if edit_result:                     # 저장한 ① 결과도 ②가 이어 쓸 수 있다
+                self.approved_edit = (self.last_saved, str(self.window.style_path))
+            self.window.status_label.setText(f"상태: 저장 완료 · {path}" + self.register_saved(self.last_saved)
+                                             + (" · ②로 자세·장면을 이어 만들 수 있습니다" if edit_result else ""))
             self.results = None
             self.controls()
         except Exception as error:
@@ -725,7 +762,11 @@ class StudioController(QObject):
         edit_result = bool(getattr(self.results, "edit_mode", False))
         w.studio_shoulder_checkbox.setEnabled(not self.occupied and w.studio_proportion_checkbox.isChecked())
         w.generate_button.setEnabled(not self.occupied and bool(w.style_path and w.selected_outfit_path))
-        w.free_generation_button.setEnabled(not self.occupied and w.can_start_registered_generation(require_outfit=False))
+        from genai_lab.studio_ui import STEP2_ALONE, STEP2_CHAIN
+        chain = self.edit_result_ready() or self.chain_base() is not None
+        w.free_generation_button.setText(STEP2_CHAIN if chain else STEP2_ALONE)
+        w.free_generation_button.setEnabled(not active and not self.cleanup_blocked and bool(w.style_path) and (
+            chain or (self.results is None and w.can_start_registered_generation(require_outfit=False))))
         w.studio_cancel_button.setVisible(self.task is not None)
         w.studio_candidate_combo.setVisible(self.results is not None)
         w.studio_candidate_combo.setEnabled(not active)

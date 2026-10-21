@@ -86,7 +86,7 @@ def test_reference_mode_requires_registered_outfit_to_enable_start():
     window.style_path = 'character.png'
     window.update_input_ready_status()
     assert not window.generate_button.isEnabled()
-    assert '의상 이미지를 모두 등록' in window.status_label.text()
+    assert '의상 이미지도 등록' in window.status_label.text()   # 한 줄 흐름(D-150): ②는 의상 없이도 가능하다고 안내
     window.selected_outfit_path = Path('outfit.png')
     window.update_input_ready_status()
     assert window.generate_button.isEnabled()

@@ -294,3 +294,53 @@ def test_character_features_are_prefilled_from_tags_or_saved_and_bad_text_blocks
         return QDialog.DialogCode.Accepted
     monkeypatch.setattr(QDialog, "exec", break_text)
     assert ui.confirm_outfit_edit(None, analysis, "keep") is None and "특징표" in seen["enabled"]
+
+
+def test_approved_edit_continues_to_staging_without_save_and_reopen(tmp_path, monkeypatch):
+    # 한 줄 흐름(2026-10-22): ① 결과 승인 → ② 버튼이 그 결과(편집본, 승인 기록 포함)로 자유 생성 입력 확인을 연다
+    from genai_lab import studio_free_generation as free_ui
+    app = QApplication.instance() or QApplication([])
+    analysis = analysis_at(tmp_path / "inputs")
+    window = GenAILabWindow()
+    window.studio.output_root = tmp_path / "runs"
+    window.style_path = Path(analysis["source"])
+    window.selected_outfit_path = Path(analysis["directory"]) / "garment.png"
+    window.update_input_ready_status()
+    monkeypatch.setattr(ui, "analyze_inputs", lambda *a, **k: analysis)
+    monkeypatch.setattr(ui, "confirm_outfit_edit", lambda *a, **k: dict(gender="male", body_parts=()))
+    for name in ("load_character_features", "load_character_gender", "load_character_body_parts"):
+        monkeypatch.setattr(ui, name, lambda source: None)
+    for name in ("save_character_features", "save_character_gender", "save_character_body_parts"):
+        monkeypatch.setattr(ui, name, lambda *a: None)
+    from genai_lab import qwen_outfit_edit
+    monkeypatch.setattr(qwen_outfit_edit, "load_qwen_settings", lambda path: object())
+    monkeypatch.setattr(outfit_edit_pipeline, "run_outfit_pipeline", lambda c, g, **kw: fake_outcome(kw["directory"]))
+    monkeypatch.setattr(ui, "confirm_result", lambda *a: dict(character=True, garment=True, exposure=True, appendages=True,
+                                                               original_outfit_gone=True))
+    opened = []
+    monkeypatch.setattr(free_ui, "analyze_base", lambda source, runtime: opened.append(Path(source)) or
+                        dict(source=str(source), character_scores={}, groups=dict(fixed=[], appearance=[], body=[])))
+    monkeypatch.setattr(free_ui, "confirm_free_inputs", lambda *a, **k: None)
+    try:
+        window.generate_button.click()
+        wait_for(app, lambda: window.studio.task is None and window.studio.results is not None)
+        assert window.free_generation_button.text().startswith("② 옷은 그대로")
+        assert not window.free_generation_button.isEnabled()                 # 승인 전 ① 결과로는 잇지 않는다
+        expected = window.studio.results.current_path.read_bytes()
+        window.approve_candidate_button.click()
+        assert window.free_generation_button.text() == "② 승인한 옷 바꾸기 결과로 자세·장면 만들기"
+        assert window.free_generation_button.isEnabled()
+        window.free_generation_button.click()
+        wait_for(app, lambda: window.studio.task is None and opened)
+        base = opened[0]
+        assert base.name == "approved-edit.png" and base.read_bytes() == expected
+        record = json.loads(base.with_suffix(".review.json").read_text(encoding="utf-8"))
+        assert record["mode"] == "outfit_edit" and record["reviewer"] == "user" and record["sha256"] == sha(base)
+        assert record["checks"]["original_outfit_gone"] is True              # 편집본 기준 자유 생성의 승인 근거
+        app.processEvents()
+        assert window.free_generation_button.text() == "② 승인한 옷 바꾸기 결과로 자세·장면 만들기"   # 취소해도 다시 이어 갈 수 있다
+        window.style_path = Path(analysis["directory"]) / "garment.png"      # 다른 캐릭터 그림을 고르면 잇지 않는다
+        window.studio.controls()
+        assert window.free_generation_button.text().startswith("② 옷은 그대로")
+    finally:
+        window.close()

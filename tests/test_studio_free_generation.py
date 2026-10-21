@@ -32,6 +32,7 @@ def test_free_button_needs_base_but_no_garment(tmp_path, fake_models):
         window.update_input_ready_status()
         assert window.selected_outfit_path is None and window.free_generation_button.isEnabled()
         assert not window.generate_button.isEnabled()
+        assert window.free_generation_button.text() == "② 옷은 그대로 두고 자세·장면 만들기"
     finally:
         window.close()
 

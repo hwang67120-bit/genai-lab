@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
     QProgressDialog,
 )
 
-from genai_lab.studio_ui import build_studio, refresh_reference_previews
+from genai_lab.studio_ui import STEP1_BUTTON, build_studio, refresh_reference_previews
 
 from run import (
     check_environment,
@@ -3183,8 +3183,8 @@ class GenAILabWindow(QMainWindow):
             + (() if CLOTHING_REFERENCE_GENERATION_MODE else (self.selected_pose_path is not None,))
         )
         ready = self.can_start_registered_generation()
-        if hasattr(self, "free_generation_button"):
-            self.free_generation_button.setEnabled(self.can_start_registered_generation(require_outfit=False))
+        if hasattr(self, "studio"):
+            self.studio.controls()           # ② 버튼 문구·사용 가능 여부(승인한 ① 결과가 있는지)는 작업실 제어가 정한다
         self.generate_button.setEnabled(ready)
         missing_required_outfit = (
             CLOTHING_REFERENCE_GENERATION_MODE
@@ -3209,15 +3209,16 @@ class GenAILabWindow(QMainWindow):
             active_generation_state or not missing_required_outfit
         ):
             return  # 진행 중 작업·검토 상태와 버튼 문구를 유지한다.
-        self.generate_button.setText("이미지 생성 시작")
+        self.generate_button.setText(STEP1_BUTTON)
         self.status_label.setText(
             "상태: 입력 등록 "
             f"{registered_input_count}/{required_input_count}개 - "
             + (
-                "캐릭터 기준 이미지와 의상 이미지를 모두 등록하세요."
+                ("옷을 바꾸려면 의상 이미지도 등록하세요. 옷을 그대로 두고 자세·장면만 바꾸려면 ②를 누르세요."
+                 if self.style_path is not None else "캐릭터 기준 이미지와 의상 이미지를 모두 등록하세요.")
                 if (CLOTHING_REFERENCE_GENERATION_MODE
                     and self.selected_outfit_path is None)
-                else ("이미지 생성 시작 버튼을 누르세요."
+                else ("① 옷 바꾸기 시작을 누르세요. 승인한 뒤 ②로 자세·장면을 이어 만듭니다."
                       if self.style_path is not None
                       else "캐릭터 기준 이미지는 필수입니다.")
             )
@@ -6749,7 +6750,7 @@ class GenAILabWindow(QMainWindow):
         self.workflow_context = None
         self.set_workflow_input_buttons_enabled(True)
         self.generate_button.setEnabled(self.can_start_registered_generation())
-        self.generate_button.setText("이미지 생성 시작")
+        self.generate_button.setText(STEP1_BUTTON)
         self.status_label.setText(status_message)
 
     @Slot(str, str, object)

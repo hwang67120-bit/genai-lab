@@ -1,3 +1,5 @@
+if __name__ == "__main__":      # 패키지를 불러오는 10~20초 동안 멈춘 것처럼 보이지 않게
+    print("캐릭터 작업실을 여는 중입니다. 창이 뜰 때까지 10~20초 걸립니다...", flush=True)
 import gc
 import sys
 import os
@@ -6823,4 +6825,6 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = GenAILabWindow()
     window.show()
+    window.raise_()             # 다른 창 뒤에 열려 안 보이는 일을 막는다(2026-10-22 사용자 "UI 화면이 안 나와")
+    window.activateWindow()
     sys.exit(app.exec())

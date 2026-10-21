@@ -1,0 +1,21 @@
+{
+  "mode": "free_generation",
+  "sha256": "2023acca5fb1a5f9f2cc93d108ac4c60cc8c632ded637f6a30f164a9e77f215f",
+  "reviewer": "user",
+  "checks": {
+    "character": true,
+    "garment": true,
+    "request": true,
+    "exposure": true,
+    "finish": true
+  },
+  "source_run": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\product-check-20261021\\smoke-all\\studio-runs\\a50eb0aa26b74270bcfc9616513ec003\\free-generation",
+  "base_kind": "original",
+  "attempt": 1,
+  "variant": "raw",
+  "hair_restore": null,
+  "hair_auto": null,
+  "head_composited": false,
+  "trace": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\product-check-20261021\\smoke-all\\studio-runs\\a50eb0aa26b74270bcfc9616513ec003\\free-generation\\trace.json",
+  "approval_record": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\product-check-20261021\\smoke-all\\studio-runs\\a50eb0aa26b74270bcfc9616513ec003\\free-generation\\user-review.json"
+}

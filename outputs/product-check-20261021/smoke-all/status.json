@@ -1,0 +1,39 @@
+{
+  "flows": {
+    "preview": {
+      "state": "ok",
+      "elapsed_seconds": 720,
+      "status_label": "상태: 자유 생성 완료 · 사람 품질 검토 대기 · 머리 픽셀 합성 없음",
+      "seconds": 722,
+      "errors": [],
+      "result": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\product-check-20261021\\smoke-all\\studio-runs\\bcb0480833a74719a75300a9cc1654b2\\free-generation\\qwen\\raw.png",
+      "head_notice": "Qwen 생성 결과입니다. 원본 머리 합성 없음 · 자동 특징 관찰과 사람 품질 판정은 별도입니다. 빠른 미리보기(8단계 가속) 결과입니다 — 최종 결과는 미리보기를 끄고 다시 만들어 주세요.",
+      "approved": true,
+      "saved": true
+    },
+    "edit": {
+      "state": "ok",
+      "elapsed_seconds": 4610,
+      "status_label": "상태: 결과 1장 준비됨 · 확인해 주세요. 머리(얼굴·머리카락·장식)는 원본 그대로 붙였습니다. 첫 결과가 검사에 걸려 한 번 더 그렸습니다. 옷 참조의 배경을 흰색으로 자동으로 뺐습니다(옷 자체는 그대로).",
+      "seconds": 4611,
+      "errors": [],
+      "result": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\product-check-20261021\\smoke-all\\studio-runs\\9621a8f06c9d449884030096ced7dc03\\outfit-edit\\compose-2\\result.png",
+      "head_notice": "머리(얼굴·머리카락·장식)는 원본 그대로 붙였습니다. 첫 결과가 검사에 걸려 한 번 더 그렸습니다. 옷 참조의 배경을 흰색으로 자동으로 뺐습니다(옷 자체는 그대로).",
+      "approved": true,
+      "saved": true
+    },
+    "free": {
+      "state": "ok",
+      "elapsed_seconds": 2384,
+      "status_label": "상태: 자유 생성 완료 · 사람 품질 검토 대기 · 머리 픽셀 합성 없음",
+      "seconds": 2385,
+      "errors": [],
+      "result": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\product-check-20261021\\smoke-all\\studio-runs\\a50eb0aa26b74270bcfc9616513ec003\\free-generation\\qwen\\raw.png",
+      "head_notice": "Qwen 생성 결과입니다. 원본 머리 합성 없음 · 자동 특징 관찰과 사람 품질 판정은 별도입니다.",
+      "approved": true,
+      "saved": true
+    }
+  },
+  "started": "2026-10-21 23:37:25",
+  "finished": "2026-10-22 01:46:18"
+}

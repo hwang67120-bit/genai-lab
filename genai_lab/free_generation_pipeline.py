@@ -26,11 +26,16 @@ EXPERIMENT_KEYS = {"hair_color_words", "absent_parts_negative", "single_attempt"
 # D-140: 없는 부위는 지시문의 "no … do not add any" 대신 부정 지시문 칸으로(요청 28 시험 B 4/4, D-139). 제품 기본값.
 # 시험에서 예전 방식이 필요하면 experiment=dict(absent_parts_negative=False).
 ABSENT_PARTS_NEGATIVE = True
+# 입력(성별·부위·특징표·성인·연출) 확정 출처. 사용자 화면의 자동 흐름(2026-10-22)은 사람이 확인 창을 거치지 않으므로 따로 적는다.
+CONFIRMATION_SOURCES = ("user_confirmed", "automatic_product")
 OUTCOME_SCHEMA = "free_generation_outcome/2"     # 반환 형식(D-133, docs/FREE_GENERATION_API.md). 키를 바꾸면 버전을 올린다(/2: auto_selection·hair_auto, D-137)
 
 
-def validate_inputs(base_path, base_kind, features, gender, body_parts, request_text, confirmed, adult_confirmed, *, snapshot_directory=None):
-    """원본과 승인 편집본을 구분하고 이미지 바이트·승인 근거를 확인한다."""
+def validate_inputs(base_path, base_kind, features, gender, body_parts, request_text, confirmed, adult_confirmed, *, snapshot_directory=None,
+                    automatic_edit=False, confirmation_source="user_confirmed"):
+    """원본과 승인 편집본을 구분하고 이미지 바이트·승인 근거를 확인한다.
+    automatic_edit: 사용자 화면 자동 흐름에서 같은 실행이 만든 옷 바꾸기 결과(승인 기록 reviewer=automatic_chain)도 기준으로 받는다.
+    사람 승인이 아니라는 사실은 기록(base.approval, source)에 그대로 남는다."""
     if confirmed is not True or adult_confirmed is not True:
         raise FreeGenerationRejected("confirmation_required", "성인 캐릭터와 특징표·연출 범위를 확인해 주세요.")
     if base_kind not in ("original", "edited"):
@@ -66,9 +71,10 @@ def validate_inputs(base_path, base_kind, features, gender, body_parts, request_
         sidecar = path.with_suffix(".review.json")
         approval = json.loads(sidecar.read_text(encoding="utf-8"))
         checks = approval.get("checks") or {}
-        if (approval.get("mode") != "outfit_edit" or approval.get("reviewer") != "user"
-                or approval.get("sha256") != digest
-                or not all(checks.get(k) is True for k in ("character", "garment", "exposure", "original_outfit_gone"))):
+        by_user = (approval.get("reviewer") == "user"
+                   and all(checks.get(k) is True for k in ("character", "garment", "exposure", "original_outfit_gone")))
+        by_chain = automatic_edit is True and approval.get("reviewer") == "automatic_chain"
+        if approval.get("mode") != "outfit_edit" or approval.get("sha256") != digest or not (by_user or by_chain):
             raise FreeGenerationRejected("approval_required", "같은 이미지에 대한 사용자 의상 편집 승인이 필요합니다.")
         approval = dict(path=str(sidecar), sha256=sha(sidecar), record=approval)
     with Image.open(io.BytesIO(data)) as image:
@@ -78,7 +84,7 @@ def validate_inputs(base_path, base_kind, features, gender, body_parts, request_
         snapshot = Path(snapshot_directory) / ("source" + path.suffix.lower())
         snapshot.write_bytes(data)  # 확인한 동일 바이트를 보존, 원본을 다시 읽어 바뀐 파일을 복사하지 않는다.
     return prepared, dict(path=str(path), snapshot=str(snapshot) if snapshot else None, sha256=digest, kind=base_kind, approval=approval,
-                          proves_outfit_edit=False, source="user_confirmed"), checked
+                          proves_outfit_edit=False, source=confirmation_source), checked
 
 
 HEAD_WINDOW = (3.0, 1.5, 1.0)     # 얼굴 상자 기준 창: 폭 = 얼굴 폭×3, 위 = 얼굴 높이×1.5, 아래 = 얼굴 높이×1.0 (D-126 ③)
@@ -284,20 +290,21 @@ def prepare_skeleton(image, staging, directory, runtime, cancelled):
 
 def prepare_generation_inputs(base_path, character_features, request_text, *, base_kind, gender, body_parts,
                               confirmed, adult_confirmed, directory, runtime, cancelled, progress, popen, trace, persist, selection_seed,
-                              pose_guidance=False, experiment=None):
+                              pose_guidance=False, experiment=None, automatic_edit=False, confirmation_source="user_confirmed"):
     """확인된 입력의 같은 바이트·특징·조건·파생 참조를 실행 폴더에 고정하고 Qwen 명세를 반환한다."""
     experiment = dict(experiment or {})
     inputs = directory / "inputs"
     inputs.mkdir()
     image, base, checked = validate_inputs(base_path, base_kind, character_features, gender, body_parts,
-                                           request_text, confirmed, adult_confirmed, snapshot_directory=inputs)
+                                           request_text, confirmed, adult_confirmed, snapshot_directory=inputs,
+                                           automatic_edit=automatic_edit, confirmation_source=confirmation_source)
     image.save(inputs / "canvas.png")
     prepared = dict(canvas=str(inputs / "canvas.png"), canvas_sha256=sha(inputs / "canvas.png"))
-    trace["input_facts"] = dict(base=base, gender=dict(value=gender, source="user_confirmed"),
-        body_parts=dict(value=list(body_parts), source="user_confirmed"),
-        confirmed_features=dict(value=character_features, source="user_confirmed"),
-        request=dict(value=request_text, source="user_confirmed", validation=checked),
-        adult=dict(value=True, source="user_confirmed"), policy=dict(source="common_policy", contract="D-123"))
+    trace["input_facts"] = dict(base=base, gender=dict(value=gender, source=confirmation_source),
+        body_parts=dict(value=list(body_parts), source=confirmation_source),
+        confirmed_features=dict(value=character_features, source=confirmation_source),
+        request=dict(value=request_text, source=confirmation_source, validation=checked),
+        adult=dict(value=True, source=confirmation_source), policy=dict(source="common_policy", contract="D-123"))
     persist()
     progress("상태: 기준 이미지 특징 측정 중")
     scores = measure_result_scores(np.asarray(image), runtime) or {}
@@ -365,8 +372,10 @@ def prepare_generation_inputs(base_path, character_features, request_text, *, ba
 
 def run_free_generation(base_path, character_features, request_text="", *, base_kind, gender, body_parts,
                         confirmed, adult_confirmed, settings, runtime, directory, cancelled=lambda: False,
-                        progress=lambda _: None, popen=subprocess.Popen, selection_seed=None, pose_guidance=False, experiment=None):
-    """GUI와 향후 API가 사용할 함수. 실패는 trace를 보존하고 예외, 성공은 사람 검토 대기 결과 반환."""
+                        progress=lambda _: None, popen=subprocess.Popen, selection_seed=None, pose_guidance=False, experiment=None,
+                        automatic_edit_base=False, confirmation_source="user_confirmed"):
+    """GUI와 향후 API가 사용할 함수. 실패는 trace를 보존하고 예외, 성공은 사람 검토 대기 결과 반환.
+    automatic_edit_base·confirmation_source는 사용자 화면 자동 흐름용(기본값 = 사람 확인 흐름 그대로)."""
     directory = Path(directory).resolve()
     directory.mkdir(parents=True, exist_ok=False)
     trace = dict(schema="free_generation_trace/1", intent=INTENT, status="validating", attempts=[],
@@ -392,6 +401,8 @@ def run_free_generation(base_path, character_features, request_text="", *, base_
             selection_seed = secrets.randbelow(2**31) if not request_text.strip() else SEEDS[0]
         if type(selection_seed) is not int or not 0 <= selection_seed < 2**63:
             raise FreeGenerationRejected("invalid_input", "연출 선택 seed 형식 오류")
+        if confirmation_source not in CONFIRMATION_SOURCES or type(automatic_edit_base) is not bool:
+            raise FreeGenerationRejected("invalid_input", "입력 확정 출처 형식 오류")
         # 원인 확인 시험용 선택지(요청 28). 기본(None)은 제품 동작 그대로. 켜면 trace에 남는다.
         if experiment is not None:
             if not isinstance(experiment, dict) or not set(experiment) <= EXPERIMENT_KEYS or not all(type(v) is bool for v in experiment.values()):
@@ -406,7 +417,8 @@ def run_free_generation(base_path, character_features, request_text="", *, base_
         features, assembled, spec = prepare_generation_inputs(base_path, character_features, request_text,
             base_kind=base_kind, gender=gender, body_parts=body_parts, confirmed=confirmed, adult_confirmed=adult_confirmed,
             directory=directory, runtime=runtime, cancelled=cancelled, progress=progress, popen=popen, trace=trace, persist=persist, selection_seed=selection_seed,
-            pose_guidance=pose_guidance, experiment=experiment)
+            pose_guidance=pose_guidance, experiment=experiment, automatic_edit=automatic_edit_base,
+            confirmation_source=confirmation_source)
         for number, seed in enumerate(SEEDS, 1):
             if cancelled():
                 raise RuntimeError("사용자 취소")

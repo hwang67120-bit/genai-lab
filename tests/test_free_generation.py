@@ -786,3 +786,22 @@ def test_quick_preview_results_are_labelled_and_kept_apart_in_judgements(tmp_pat
     results.approve(dict(character=True,garment=True,request=True,exposure=True,finish=True))
     entry = json.loads((Path(results.directory)/"judgement.json").read_text(encoding="utf-8"))[-1]
     assert entry["target"]["steps"] == 8
+
+
+def test_automatic_chain_edit_base_needs_the_flag_and_is_recorded(tmp_path):
+    # 사용자 화면 자동 흐름(2026-10-22): 같은 실행의 자동 옷 바꾸기 결과(reviewer automatic_chain)는 플래그가 있을 때만 기준이 된다
+    import hashlib
+    from genai_lab.free_generation import FreeGenerationRejected
+    from genai_lab.free_generation_pipeline import validate_inputs
+    from PIL import Image
+    base = tmp_path / "edit-result.png"
+    Image.new("RGB", (64, 80), (200, 180, 170)).save(base)
+    digest = hashlib.sha256(base.read_bytes()).hexdigest()
+    base.with_suffix(".review.json").write_text(json.dumps(dict(mode="outfit_edit", reviewer="automatic_chain", sha256=digest,
+                                                                checks=dict(automatic=True))), encoding="utf-8")
+    items = dict(hair_length=None, hair_style=None, hair_color=None, eye_color=None, head_accessories=None, skin=None)
+    with pytest.raises(FreeGenerationRejected):
+        validate_inputs(base, "edited", items, "male", [], "", True, True)
+    _, record, _ = validate_inputs(base, "edited", items, "male", [], "", True, True, automatic_edit=True,
+                                   confirmation_source="automatic_product")
+    assert record["source"] == "automatic_product" and record["approval"]["record"]["reviewer"] == "automatic_chain"

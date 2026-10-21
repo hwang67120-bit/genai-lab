@@ -17,9 +17,25 @@ def analyze_base(path, runtime):
     return dict(source=str(path), character_scores=scores, groups=dict(fixed=[], appearance=[], body=[]))
 
 
-def confirm_free_inputs(window, analysis):
+def character_link_info(source, memory=None):
+    """캐릭터 기억 조회(H1-B). 반환 (연결 정보 | None, 미리 채울 정체성, 오류 문장, 기억).
+    기억을 못 읽으면 기존 파일 경로 기록만으로 미리 채우고 연결 줄을 빼고 진행한다(생성은 막지 않는다)."""
+    from genai_lab.character_memory import CharacterMemory, CharacterMemoryError, prefill
+    record = dict(gender=load_character_gender(source), body_parts=load_character_body_parts(source),
+                  features=load_character_features(source))
+    memory = memory if memory is not None else CharacterMemory()
+    try:
+        info = prefill(memory, source, record)
+    except (OSError, ValueError, KeyError, CharacterMemoryError) as error:
+        return None, {k: v for k, v in record.items() if v is not None}, str(error)[:200], memory
+    return info, dict(info["identity"] or {}), "", memory
+
+
+def confirm_free_inputs(window, analysis, memory=None):
     from genai_lab.studio_controller import picture, guessed_gender, guessed_body_parts
+    from genai_lab.studio_character_link import CharacterLinkRow, Prefill
     source = Path(analysis["source"])
+    link_info, identity, memory_error, memory = character_link_info(source, memory)
     dialog = QDialog(window)
     dialog.setWindowTitle("같은 캐릭터·의상으로 자유 생성")
     dialog.resize(650, 820)
@@ -36,10 +52,10 @@ def confirm_free_inputs(window, analysis):
     gender.setObjectName("free_gender")
     for key, label in (("male", "남성"), ("female", "여성"), ("unspecified", "미지정")):
         gender.addItem(label, key)
-    gender.setCurrentIndex(gender.findData(load_character_gender(source) or guessed_gender(analysis)))
+    gender.setCurrentIndex(gender.findData(identity.get("gender") or guessed_gender(analysis)))
     layout.addWidget(gender)
     part_boxes = {}
-    saved = load_character_body_parts(source)
+    saved = identity.get("body_parts")
     chosen = guessed_body_parts(analysis) if saved is None else saved
     row = QHBoxLayout()
     for key, label in (("ears", "동물 귀"), ("tail", "꼬리"), ("wings", "날개")):
@@ -49,7 +65,7 @@ def confirm_free_inputs(window, analysis):
         part_boxes[key] = box
         row.addWidget(box)
     layout.addLayout(row)
-    prefill = load_character_features(source)
+    prefill = identity.get("features")
     guessed = tag_features(analysis["character_scores"])
     layout.addWidget(QLabel("특징표: 자동 분석/저장값을 확인하고 수정해 주세요. '모름'·빈 칸은 확인 불가, '없음'은 없다고 확정입니다.\n"
                             "고유 형태: 태그가 못 재는 모양을 ';'로 나눠 4개까지(예: heart-shaped tail tip; right eye blue, left eye red). "
@@ -60,6 +76,14 @@ def confirm_free_inputs(window, analysis):
     features.setFixedHeight(150)
     layout.addWidget(features)
     layout.addWidget(QLabel(weak_note(guessed)))
+    link = None
+    if link_info is not None:
+        fallback = dict(gender=gender.currentData(), body_parts=chosen,
+                        features={k: v for k, v in prefill.items()} if prefill else {k: v["values"] for k, v in guessed.items()})
+        filler = Prefill(gender, part_boxes, features, lambda f: features_text({k: dict(values=v) for k, v in f.items()}), fallback)
+        link = CharacterLinkRow(layout, link_info, memory, "free", filler.apply, lambda *_: refresh())
+    elif memory_error:
+        layout.addWidget(QLabel("캐릭터 기억을 읽지 못해 이번에는 연결 없이 진행합니다: " + memory_error))
     request = QPlainTextEdit()
     request.setObjectName("free_request")
     request.setPlaceholderText("자세·구도·시점·배경·상황만 요청. 비워 두면 고정 목록에서 자세를 선택합니다.")
@@ -105,7 +129,7 @@ def confirm_free_inputs(window, analysis):
             hint.setText(str(error))
         support.setText(support_summary(support_warnings(analysis["character_scores"], tuple(k for k,v in part_boxes.items() if v.isChecked())))
                         + " 요청한 앉은 자세는 허용됩니다. 경고는 입력 근거일 뿐입니다.")
-        start.setEnabled(confirm.isChecked() and bool(parsed.get("valid")))
+        start.setEnabled(confirm.isChecked() and bool(parsed.get("valid")) and (link is None or link.ready()))
     for box in part_boxes.values():
         box.toggled.connect(refresh)
     confirm.toggled.connect(refresh)
@@ -119,12 +143,14 @@ def confirm_free_inputs(window, analysis):
     if dialog.exec() != QDialog.DialogCode.Accepted:
         return None
     refresh()
-    if not confirm.isChecked() or not parsed.get("valid"):
+    if not confirm.isChecked() or not parsed.get("valid") or (link is not None and not link.ready()):
         return None
     decision = dict(base_kind=kind.currentData(), gender=gender.currentData(), body_parts=tuple(k for k,v in part_boxes.items() if v.isChecked()),
                     character_features=parsed["features"], request_text=request.toPlainText(), confirmed=True, adult_confirmed=True)
     if quick.isChecked():
         decision["experiment"] = dict(lightning8=True, single_attempt=True)
+    if link is not None:        # 생성 함수에는 넘기지 않는다(작업실이 생성 전에 꺼내 적용한다)
+        decision["character_link"] = dict(link.choice(), path_record_used=link_info["source"] == "path_record")
     return decision
 
 

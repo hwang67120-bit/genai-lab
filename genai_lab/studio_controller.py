@@ -64,6 +64,8 @@ class StudioController(QObject):
         self.outfit_edit_enabled = False
         self.head_accessories = "keep"
         self.last_saved = None
+        self.character_memory = None          # 캐릭터 기억(H1-B). None이면 기본 위치(character_memory.default_root)
+        self.character_id = None              # 이번 실행이 연결된 캐릭터(승인 저장 때 등록)
         self.output_root = Path(__file__).resolve().parents[1] / "outputs" / "studio-runs"
         window.studio_candidate_combo.currentIndexChanged.connect(self.select)
         window.studio_cancel_button.clicked.connect(self.cancel)
@@ -137,7 +139,7 @@ class StudioController(QObject):
         self.confirming = True
         self.controls()
         try:
-            decision = confirm_free_inputs(self.window, analysis)
+            decision = confirm_free_inputs(self.window, analysis, self.memory())
         finally:
             self.confirming = False
         if decision is None:
@@ -145,9 +147,11 @@ class StudioController(QObject):
             self.controls()
             return
         source = Path(analysis["source"])
+        link = decision.pop("character_link", None)
         save_character_features(source, decision["character_features"])
         save_character_gender(source, decision["gender"])
         save_character_body_parts(source, decision["body_parts"])
+        self.apply_character_link(source, link, decision["gender"], decision["body_parts"], decision["character_features"])
         def operation(cancel, progress):
             from genai_lab.free_generation_pipeline import run_free_generation
             return run_free_generation(source, settings=settings, runtime=self.runtime,
@@ -292,11 +296,18 @@ class StudioController(QObject):
         saved = load_character_gender(source) if source else None
         saved_parts = load_character_body_parts(source) if source else None
         saved_features = load_character_features(source) if source else None
+        link_info, memory = None, None
+        if source and Path(source).is_file():     # 캐릭터 기억(H1-B): 연결된 캐릭터가 있으면 그 확정값을 미리 채운다
+            from genai_lab.studio_free_generation import character_link_info
+            link_info, identity, _, memory = character_link_info(Path(source), self.memory())
+            if link_info is not None and link_info["source"] == "memory":
+                saved, saved_parts, saved_features = identity["gender"], identity["body_parts"], identity["features"]
         self.confirming = True
         self.controls()
         try:
             confirmed = confirm_outfit_edit(self.window, analysis, self.head_accessories, saved_gender=saved,
-                                            saved_body_parts=saved_parts, saved_features=saved_features)
+                                            saved_body_parts=saved_parts, saved_features=saved_features,
+                                            link_info=link_info, memory=memory)
         finally:
             self.confirming = False
         if not confirmed:
@@ -315,6 +326,8 @@ class StudioController(QObject):
             save_character_body_parts(source, body_parts)
         if source and features is not None and features != saved_features:
             save_character_features(source, features)   # 한 번 확정한 특징표는 다음부터 미리 채운다(D-120)
+        if source:
+            self.apply_character_link(Path(source), confirmed.get("character_link"), gender, body_parts, features)
         self.release_tail_predecessor()
         directory = self.run_directory / "outfit-edit"
         inputs = Path(analysis["directory"])
@@ -327,6 +340,22 @@ class StudioController(QObject):
                                        character_features=features, cancelled=cancel, progress=progress)
         self.window.status_label.setText("상태: 옷 바꾸기 준비 중 · 약 30분 걸릴 수 있습니다.")
         self.launch(operation, self.outfit_edited)
+
+    def memory(self):
+        from genai_lab.character_memory import CharacterMemory
+        return self.character_memory if self.character_memory is not None else CharacterMemory()
+
+    def apply_character_link(self, source, link, gender, body_parts, features):
+        """확인 창에서 고른 캐릭터 연결을 적용(H1-B). 기억 저장 실패는 생성을 막지 않고 알린다 — 이번 실행은 연결 없이 진행."""
+        self.character_id = None
+        if not link or features is None:
+            return
+        from genai_lab.character_memory import apply_link
+        try:
+            self.character_id = apply_link(self.memory(), source, link, gender=gender, body_parts=body_parts, features=features,
+                                           path_record_used=link.get("path_record_used", False))
+        except Exception as error:  # noqa: BLE001 — 기억은 편의 기능이다
+            QMessageBox.warning(self.window, "캐릭터 기억", "캐릭터 연결을 저장하지 못해 이번에는 연결 없이 진행합니다.\n" + str(error))
 
     def outfit_edited(self, outcome):
         from genai_lab.outfit_edit_results import OutfitEditResults
@@ -396,11 +425,21 @@ class StudioController(QObject):
             return
         try:
             self.last_saved = self.results.export(path)
-            self.window.status_label.setText(f"상태: 저장 완료 · {path}")
+            self.window.status_label.setText(f"상태: 저장 완료 · {path}" + self.register_saved(self.last_saved))
             self.results = None
             self.controls()
         except Exception as error:
             QMessageBox.warning(self.window, "저장하지 못했습니다", str(error))
+
+    def register_saved(self, saved):
+        """승인·저장한 결과를 연결된 캐릭터에 등록(근거: 같은 그림의 '같은 캐릭터' 승인 기록). 반환: 상태 줄에 붙일 말."""
+        if not self.character_id or saved is None:
+            return ""
+        try:
+            record = self.memory().register_approved(self.character_id, saved, Path(saved).with_suffix(".review.json"))
+            return f" · 캐릭터 '{record['name']}'의 승인 결과로 기억했습니다"
+        except Exception as error:  # noqa: BLE001 — 저장은 이미 끝났다
+            return " · 캐릭터 기억 등록 실패: " + str(error)[:120]
 
     # 다른 선택: 재검토·폐기·취소·원본 보기는 자동 재생성을 요청하지 않는다.
 
@@ -1051,7 +1090,8 @@ def confirmation_provenance(analysis, saved_gender, saved_body_parts, body_parts
                 support=dict(status="measured", source="tags", warnings=support_warnings(scores, body_parts)))
 
 
-def confirm_outfit_edit(window, analysis, head_accessories, saved_gender=None, saved_body_parts=None, saved_features=None):
+def confirm_outfit_edit(window, analysis, head_accessories, saved_gender=None, saved_body_parts=None, saved_features=None,
+                        link_info=None, memory=None):
     """옷 바꾸기 시작 전 확인. 실행 환경은 작업실 기본 설정을 쓰므로 고르지 않는다.
     성별과 동물 귀·꼬리·날개는 저장된 값이 있으면 그대로 쓰고(표시만), 없으면 자동 분석 값을 미리 채워 한 번 고르게 한다.
     캐릭터 특징표(머리 길이·모양·색, 눈 색, 머리 장식, 피부; D-120)도 같은 방식 — 저장값 또는 태그 값으로 미리 채운 글 상자를 사람이 고친다.
@@ -1124,6 +1164,13 @@ def confirm_outfit_edit(window, analysis, head_accessories, saved_gender=None, s
     features_note.setObjectName("outfit_edit_features_note")
     features_note.setWordWrap(True)
     layout.addWidget(features_note)
+    link = None
+    if link_info is not None:       # 캐릭터 기억(H1-B): 입힐 옷은 기억에 없으므로 이 줄이 바꾸지 않는다
+        from genai_lab.studio_character_link import CharacterLinkRow, Prefill
+        fallback = dict(gender=gender_combo.currentData(), body_parts=tuple(initial_parts),
+                        features=dict(saved_features) if saved_features else {k: v["values"] for k, v in guessed.items()})
+        filler = Prefill(gender_combo, part_boxes, features_edit, lambda f: features_text({k: dict(values=v) for k, v in f.items()}), fallback)
+        link = CharacterLinkRow(layout, link_info, memory, "outfit_edit", filler.apply, lambda *_: refresh())
     confirm = QCheckBox("캐릭터와 옷을 확인했고, 약 30분 걸리는 것을 이해했습니다.")
     confirm.setObjectName("outfit_edit_confirm")
     layout.addWidget(confirm)
@@ -1140,6 +1187,8 @@ def confirm_outfit_edit(window, analysis, head_accessories, saved_gender=None, s
         except ValueError as error:
             parsed.pop("features", None)
             problem = "특징표: " + str(error)
+        if not problem and link is not None and not link.ready():
+            problem = "캐릭터 연결: 같은 캐릭터인지 확인 체크를 해 주세요."
         hint.setText(problem or ("준비됐습니다. 시작하면 약 30분 걸립니다." if confirm.isChecked() else "확인 체크를 해 주세요."))
         run.setEnabled(confirm.isChecked() and not problem)
     confirm.toggled.connect(refresh)
@@ -1153,11 +1202,14 @@ def confirm_outfit_edit(window, analysis, head_accessories, saved_gender=None, s
     if dialog.exec() != QDialog.DialogCode.Accepted:
         return None
     refresh()
-    if "features" not in parsed:
+    if "features" not in parsed or (link is not None and not link.ready()):
         return None
-    return dict(gender=gender_combo.currentData(),
-                body_parts=tuple(value for value, box in part_boxes.items() if box.isChecked()),
-                features=parsed["features"])
+    result = dict(gender=gender_combo.currentData(),
+                  body_parts=tuple(value for value, box in part_boxes.items() if box.isChecked()),
+                  features=parsed["features"])
+    if link is not None:
+        result["character_link"] = dict(link.choice(), path_record_used=link_info["source"] == "path_record")
+    return result
 
 
 def confirm_result(window, candidate, analysis):

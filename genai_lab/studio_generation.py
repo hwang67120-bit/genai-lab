@@ -130,8 +130,10 @@ def save_analysis_reference(image, destination):
             "analysis_sha256": digest(destination)}
 
 
-def analyze_inputs(character, garment, directory, runtime, *, cancelled=lambda: False):
-    """참조를 고정하고 CPU 모델을 생성과 화면 선택 저장소에서 분리한다."""
+def analyze_inputs(character, garment, directory, runtime, *, cancelled=lambda: False, require_face=True):
+    """참조를 고정하고 CPU 모델을 생성과 화면 선택 저장소에서 분리한다.
+    require_face: 얼굴 크롭(face.png)이 필요한 예전 4장 생성 경로만 True. 원본 편집(Qwen)은 False — 팔이 머리 근처 같은
+    크롭 거부로 멈추지 않는다(2026-10-22 사용자 GUI 시험: 앞발 장갑을 얼굴 옆에 든 캐릭터가 옷 바꾸기에서 거부됨)."""
     from PIL import Image
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=False)
@@ -155,6 +157,8 @@ def analyze_inputs(character, garment, directory, runtime, *, cancelled=lambda: 
                     directory / f"{mode}.log", cancelled, runtime.analysis_timeout)
     analysis = json.loads((directory / "analysis.json").read_text(encoding="utf-8"))
     analysis.update(directory=str(directory), source=str(character), references=references)
+    if require_face and not analysis.get("face_sha256"):
+        raise ValueError("캐릭터 얼굴을 준비하지 못했습니다. " + str((analysis.get("face_crop") or {}).get("reason")))
     return analysis
 
 

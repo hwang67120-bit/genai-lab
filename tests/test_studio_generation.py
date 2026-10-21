@@ -502,3 +502,21 @@ def test_gui_cleanup_failure_blocks_new_generation(tmp_path, monkeypatch):
         assert state["status"] == "cancel_cleanup_failed"
         assert "앱을 다시 시작" in window.status_label.text()
     finally: window.close()
+
+
+def test_face_crop_rejection_blocks_only_paths_that_need_the_face(tmp_path, monkeypatch):
+    # 2026-10-22: 팔이 머리 근처인 캐릭터는 예전 4장 생성(얼굴 크롭 필요)만 거부, 원본 편집은 진행
+    a = analysis_at(tmp_path/"source")
+    exe = tmp_path/"python.exe"
+    exe.touch()
+    runtime = service.StudioRuntime(pose_python=exe, analysis_python=exe)
+    def run(cmd, log, cancelled, timeout):
+        if cmd[2]=="features":
+            service.record(Path(cmd[3])/"analysis.json", {"face_sha256": None, "groups": {},
+                           "face_crop": {"status": "reject", "reason": "팔이 머리 근처"}})
+    monkeypatch.setattr(service,"cpu_process",run)
+    garment = Path(a["directory"])/"garment.png"
+    with pytest.raises(ValueError, match="팔이 머리 근처"):
+        service.analyze_inputs(a["source"], garment, tmp_path/"one", runtime)
+    result = service.analyze_inputs(a["source"], garment, tmp_path/"two", runtime, require_face=False)
+    assert result["face_crop"]["status"] == "reject"

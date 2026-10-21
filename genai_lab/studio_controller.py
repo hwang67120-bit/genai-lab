@@ -106,8 +106,9 @@ class StudioController(QObject):
             w.candidate_preview.setText("선택한 캐릭터와 옷을 준비하고 있습니다.")
             w.status_label.setText("상태: 캐릭터와 옷 확인 중")
             character, garment = Path(w.style_path), Path(w.selected_outfit_path)
+            require_face = not self.outfit_edit_enabled       # 얼굴 크롭은 예전 4장 생성만 쓴다
             self.launch(lambda cancel, progress: analyze_inputs(character, garment,
-                self.run_directory / "inputs", self.runtime, cancelled=cancel), self.inputs_ready)
+                self.run_directory / "inputs", self.runtime, cancelled=cancel, require_face=require_face), self.inputs_ready)
         except Exception as error:
             self.fail(error, traceback.format_exc())
             self.controls()

@@ -71,11 +71,13 @@ def features(directory, cache):
                 face_points=observed["face_points"], face_scores=observed["face_scores"])
         finally:
             foreground.close()
+        # 얼굴 크롭(C6)은 예전 4장 생성(SDXL)·마무리만 쓴다. 거부돼도 여기서 멈추지 않고 기록한다 —
+        # 필요한 경로는 analyze_inputs(require_face=True)가 같은 문장으로 거부한다(원본 편집은 쓰지 않음, 2026-10-22).
+        face_crop = dict(status=crop.status, reason=None if crop.reason is None else str(crop.reason))
         try:
-            if crop.status != "review":
-                raise ValueError("캐릭터 얼굴을 준비하지 못했습니다. " + str(crop.reason))
-            crop.image.save(directory / "face.png")
-            crop.mask.save(directory / "face-mask.png")
+            if crop.status == "review":
+                crop.image.save(directory / "face.png")
+                crop.mask.save(directory / "face-mask.png")
             crop_details = crop.details
         finally:
             crop.close()
@@ -96,7 +98,8 @@ def features(directory, cache):
         raise ValueError("옷을 인식하지 못했습니다. 옷이 잘 보이는 다른 이미지를 선택해 주세요.")
     save(directory / "analysis.json", {"groups": groups, "garment_tags": garments,
         "slim": measure_slimness(joints)["slim"], "crop_details": crop_details,
-        "face_sha256": hashlib.sha256((directory / "face.png").read_bytes()).hexdigest(),
+        "face_sha256": hashlib.sha256((directory / "face.png").read_bytes()).hexdigest() if (directory / "face.png").is_file() else None,
+        "face_crop": face_crop,
         "character_scores": character_scores, "garment_scores": garment_scores,
         "analysis_device": "cpu", "models_downloaded": False})
 

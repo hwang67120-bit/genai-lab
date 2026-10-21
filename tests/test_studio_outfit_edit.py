@@ -64,7 +64,8 @@ def test_gui_outfit_edit_runs_pipeline_and_saves_approved_result(tmp_path, monke
     window.selected_outfit_path = Path(analysis["directory"]) / "garment.png"
     window.update_input_ready_status()
     monkeypatch.setattr(ui, "validate_local_models", lambda _: pytest.fail("원본 편집형은 SDXL 모델을 확인하지 않는다"))
-    monkeypatch.setattr(ui, "analyze_inputs", lambda *a, **k: analysis)
+    analyzed = []
+    monkeypatch.setattr(ui, "analyze_inputs", lambda *a, **k: analyzed.append(k.get("require_face")) or analysis)
     monkeypatch.setattr(ui, "confirm_inputs", lambda *a: pytest.fail("SDXL 입력 확인 화면을 띄우지 않는다"))
     monkeypatch.setattr(ui, "generate_onepass_request", lambda *a, **k: pytest.fail("SDXL 생성을 하지 않는다"))
     asked = []
@@ -92,6 +93,7 @@ def test_gui_outfit_edit_runs_pipeline_and_saves_approved_result(tmp_path, monke
     try:
         window.generate_button.click()
         wait_for(app, lambda: window.studio.task is None and window.studio.results is not None)
+        assert analyzed == [False]                                            # 얼굴 크롭 거부로 편집을 막지 않는다
         assert calls == [("character.png", "garment.png", "keep", "male", ("tail",))]  # 머리 장식 항상 유지(D-105), 성별(D-106)·부위(D-111) 전달
         assert asked == [(None, None)] and list(saved.values()) == ["male"]   # 처음 보는 캐릭터는 고른 성별·부위를 저장한다
         assert list(saved_parts.values()) == [("tail",)]

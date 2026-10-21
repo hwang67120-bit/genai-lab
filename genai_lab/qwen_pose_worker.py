@@ -263,7 +263,7 @@ def generate(request, directory, record):
             record["memory_stages"] = guard.stages
         record["generation_memory"] = {"allocated_bytes": torch.cuda.max_memory_allocated(),
                                       "reserved_bytes": torch.cuda.max_memory_reserved()}
-        if len(result.images) != 1 or len(record["steps"]) != settings.steps or count[0] != len(images):
+        if len(result.images) != 1 or len(record["steps"]) != steps or count[0] != len(images):
             raise RuntimeError("이미지/호출/입력 관측 수 불일치")
         if result.images[0].size != (width, height):
             raise RuntimeError("실제 출력 크기 불일치")

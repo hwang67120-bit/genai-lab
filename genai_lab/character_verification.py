@@ -29,6 +29,7 @@ NEW_HAIR_CHROMA = 20            # 채도가 있으면 새 머리색(added) — N
 # D-127: 자동 '유지'는 충족이 아니라 '위반 관찰 없음'. 여유가 적으면 review(확인 필요)로 표시한다. 문턱은 바꾸지 않는다.
 LOW_MARGIN = 0.6                # 색 차이가 문턱의 이 비율을 넘는 유지(N2-2 머리 ΔE 12.2 / 15)
 SHARE_REDUCED = 0.5             # 기준의 색 있는 머리 군집 비중이 이 비율 아래로 줄면 감소(N2-2 분홍 17.8% → 6.7%)
+NO_RETRY_ITEMS = ("hair_style", "head_accessories")   # D-142: 재시도 이유에서 제외(기록·확인 필요에는 남김)
 
 
 def reference_values(item, key):
@@ -266,7 +267,9 @@ def verify_features(reference, result_scores, result_image=None, parts=None, ski
             item["review"] = review_reasons(key, item)
     summary = {s: sorted(k for k, v in items.items() if v["status"] == s) for s in ("kept", "changed", "missing", "added", "unknown")}
     summary["review"] = sorted(k for k, v in items.items() if v.get("review"))
-    retry = sorted(k for k, v in items.items() if v["status"] in ("changed", "added") and v.get("confident"))
+    # D-142(R3): 헤어스타일·머리 장식은 태그 판별이라 사람 통과에도 위반을 자주 낸다(요청 29: 헤어스타일 7·머리 장식 4건 오판).
+    # 재시도 이유에서만 빼고 상태·확인 필요 기록은 그대로 둔다. 오프라인 채점(26·27·29)에서 잃는 통과 줄 0.
+    retry = sorted(k for k, v in items.items() if v["status"] in ("changed", "added") and v.get("confident") and k not in NO_RETRY_ITEMS)
     return dict(schema=SCHEMA, items=items, summary=summary, retry=retry,
                 note="자동 비교는 same_character 사람 판정의 근거다. unknown은 비교하지 못한 것이지 변화가 아니다. "
                      "retry는 확신 있는 위반만(경계값·엇갈림·가림 제외).")

@@ -760,3 +760,18 @@ def test_default_spec_has_no_accelerator_and_unknown_names_fail():
     assert accelerator("") is None and ACCELERATORS["lightning8"]["steps"] == 8 and ACCELERATORS["lightning8"]["true_cfg_scale"] == 1.0
     with pytest.raises(ValueError):
         accelerator("turbo")
+
+
+def test_worker_uses_the_accelerated_step_count_everywhere():
+    # 요청 30 첫 줄: 생성 뒤 검사가 settings.steps(40)로 대조해 8단계 결과를 거부했다(D-141 구현 실수)
+    source = (Path(__file__).resolve().parents[1] / "genai_lab" / "qwen_pose_worker.py").read_text(encoding="utf-8")
+    assert source.count("settings.steps") == 1 and "steps, true_cfg = settings.steps, settings.true_cfg_scale" in source
+
+
+def test_tag_only_style_and_accessory_violations_do_not_trigger_a_retry():
+    from genai_lab.character_verification import verify_features
+    reference = dict(items=dict(hair_style=dict(state="measured", values=["ponytail"]),
+                                head_accessories=dict(state="measured", values=["hair_bow"])))
+    out = verify_features(reference, {"twintails": .95, "hat": .95})
+    assert not (set(out["retry"]) & {"hair_style", "head_accessories"})
+    assert out["items"]["hair_style"]["status"] != "kept" or out["items"]["head_accessories"]["status"] != "kept"

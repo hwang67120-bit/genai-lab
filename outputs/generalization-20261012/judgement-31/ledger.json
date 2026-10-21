@@ -1,0 +1,44 @@
+[
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "case": "M7-S1",
+    "target": {
+      "attempt": 1,
+      "variant": "raw",
+      "steps": 8
+    },
+    "quality_pass": true,
+    "note": "",
+    "source": "Claude 대화 2026-10-21, judgement-31/sheet.png",
+    "recorded_at": "2026-10-21T19:43:25"
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "case": "M7-S2",
+    "target": {
+      "attempt": 1,
+      "variant": "raw",
+      "steps": 8
+    },
+    "quality_pass": true,
+    "note": "",
+    "source": "Claude 대화 2026-10-21, judgement-31/sheet.png",
+    "recorded_at": "2026-10-21T19:43:25"
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "case": "M7-S3",
+    "target": {
+      "attempt": 1,
+      "variant": "raw",
+      "steps": 8
+    },
+    "quality_pass": true,
+    "note": "",
+    "source": "Claude 대화 2026-10-21, judgement-31/sheet.png",
+    "recorded_at": "2026-10-21T19:43:25"
+  }
+]

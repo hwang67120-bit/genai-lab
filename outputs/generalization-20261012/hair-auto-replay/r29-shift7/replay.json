@@ -1,0 +1,733 @@
+{
+  "summary": {
+    "attempts": 31,
+    "decisions": {
+      "auto_selected": 3,
+      "not_applicable": 28
+    },
+    "user_judged_raw": 23,
+    "hair_failures_by_user": 5,
+    "hair_failures_auto_selected": 3,
+    "auto_selected_where_user_passed_raw": [],
+    "auto_selected_restored_user_verdicts": {
+      "M6-S2#1": true,
+      "M6-S3#1": null,
+      "M6-S4#1": false
+    },
+    "note": "hair_failure는 사용자 판정 이유·메모에 머리색 낱말이 있는 실패. 보정본을 사람이 안 본 경우 판정 None — sheet.png로 확인 필요"
+  },
+  "rows": [
+    {
+      "case": "F5-S1",
+      "attempt": 1,
+      "decision": "not_applicable",
+      "reason": "무채색 계열(평균 채도 4.2)",
+      "measurements": {
+        "eligibility": {
+          "eligible": false,
+          "reason": "무채색 계열(평균 채도 4.2)",
+          "mean_chroma": 4.2
+        }
+      },
+      "same_as_saved_restore": null,
+      "user_raw": {
+        "pass_": true,
+        "hair_failure": false,
+        "note": ""
+      },
+      "user_restored": null
+    },
+    {
+      "case": "F5-S3",
+      "attempt": 1,
+      "decision": "not_applicable",
+      "reason": "무채색 계열(평균 채도 4.2)",
+      "measurements": {
+        "eligibility": {
+          "eligible": false,
+          "reason": "무채색 계열(평균 채도 4.2)",
+          "mean_chroma": 4.2
+        }
+      },
+      "same_as_saved_restore": null,
+      "user_raw": {
+        "pass_": false,
+        "hair_failure": false,
+        "note": "사용자: 실패 자세(걷지 않음)"
+      },
+      "user_restored": null
+    },
+    {
+      "case": "F5-S4",
+      "attempt": 1,
+      "decision": "not_applicable",
+      "reason": "무채색 계열(평균 채도 4.2)",
+      "measurements": {
+        "eligibility": {
+          "eligible": false,
+          "reason": "무채색 계열(평균 채도 4.2)",
+          "mean_chroma": 4.2
+        }
+      },
+      "same_as_saved_restore": null,
+      "user_raw": {
+        "pass_": true,
+        "hair_failure": false,
+        "note": ""
+      },
+      "user_restored": null
+    },
+    {
+      "case": "F5-S4",
+      "attempt": 2,
+      "decision": "not_applicable",
+      "reason": "무채색 계열(평균 채도 4.2)",
+      "measurements": {
+        "eligibility": {
+          "eligible": false,
+          "reason": "무채색 계열(평균 채도 4.2)",
+          "mean_chroma": 4.2
+        }
+      },
+      "same_as_saved_restore": null,
+      "user_raw": null,
+      "user_restored": null
+    },
+    {
+      "case": "K-S1",
+      "attempt": 1,
+      "decision": "not_applicable",
+      "reason": "무채색 계열(평균 채도 7.9)",
+      "measurements": {
+        "eligibility": {
+          "eligible": false,
+          "reason": "무채색 계열(평균 채도 7.9)",
+          "mean_chroma": 7.9
+        }
+      },
+      "same_as_saved_restore": null,
+      "user_raw": {
+        "pass_": true,
+        "hair_failure": false,
+        "note": ""
+      },
+      "user_restored": null
+    },
+    {
+      "case": "K-S3",
+      "attempt": 1,
+      "decision": "not_applicable",
+      "reason": "무채색 계열(평균 채도 7.9)",
+      "measurements": {
+        "eligibility": {
+          "eligible": false,
+          "reason": "무채색 계열(평균 채도 7.9)",
+          "mean_chroma": 7.9
+        }
+      },
+      "same_as_saved_restore": null,
+      "user_raw": {
+        "pass_": true,
+        "hair_failure": false,
+        "note": ""
+      },
+      "user_restored": null
+    },
+    {
+      "case": "K-S4",
+      "attempt": 1,
+      "decision": "not_applicable",
+      "reason": "무채색 계열(평균 채도 7.9)",
+      "measurements": {
+        "eligibility": {
+          "eligible": false,
+          "reason": "무채색 계열(평균 채도 7.9)",
+          "mean_chroma": 7.9
+        }
+      },
+      "same_as_saved_restore": null,
+      "user_raw": {
+        "pass_": true,
+        "hair_failure": false,
+        "note": ""
+      },
+      "user_restored": null
+    },
+    {
+      "case": "K-S4",
+      "attempt": 2,
+      "decision": "not_applicable",
+      "reason": "무채색 계열(평균 채도 7.9)",
+      "measurements": {
+        "eligibility": {
+          "eligible": false,
+          "reason": "무채색 계열(평균 채도 7.9)",
+          "mean_chroma": 7.9
+        }
+      },
+      "same_as_saved_restore": null,
+      "user_raw": null,
+      "user_restored": null
+    },
+    {
+      "case": "M2-S1",
+      "attempt": 1,
+      "decision": "not_applicable",
+      "reason": "무채색 계열(평균 채도 5.2)",
+      "measurements": {
+        "eligibility": {
+          "eligible": false,
+          "reason": "무채색 계열(평균 채도 5.2)",
+          "mean_chroma": 5.2
+        }
+      },
+      "same_as_saved_restore": null,
+      "user_raw": {
+        "pass_": false,
+        "hair_failure": false,
+        "note": "사용자: 실패 바지색(올리브)"
+      },
+      "user_restored": null
+    },
+    {
+      "case": "M2-S1",
+      "attempt": 2,
+      "decision": "not_applicable",
+      "reason": "무채색 계열(평균 채도 5.2)",
+      "measurements": {
+        "eligibility": {
+          "eligible": false,
+          "reason": "무채색 계열(평균 채도 5.2)",
+          "mean_chroma": 5.2
+        }
+      },
+      "same_as_saved_restore": null,
+      "user_raw": {
+        "pass_": true,
+        "hair_failure": false,
+        "note": ""
+      },
+      "user_restored": null
+    },
+    {
+      "case": "M2-S2",
+      "attempt": 1,
+      "decision": "not_applicable",
+      "reason": "무채색 계열(평균 채도 5.2)",
+      "measurements": {
+        "eligibility": {
+          "eligible": false,
+          "reason": "무채색 계열(평균 채도 5.2)",
+          "mean_chroma": 5.2
+        }
+      },
+      "same_as_saved_restore": null,
+      "user_raw": {
+        "pass_": true,
+        "hair_failure": false,
+        "note": ""
+      },
+      "user_restored": null
+    },
+    {
+      "case": "M2-S2",
+      "attempt": 2,
+      "decision": "not_applicable",
+      "reason": "무채색 계열(평균 채도 5.2)",
+      "measurements": {
+        "eligibility": {
+          "eligible": false,
+          "reason": "무채색 계열(평균 채도 5.2)",
+          "mean_chroma": 5.2
+        }
+      },
+      "same_as_saved_restore": null,
+      "user_raw": null,
+      "user_restored": null
+    },
+    {
+      "case": "M2-S4",
+      "attempt": 1,
+      "decision": "not_applicable",
+      "reason": "무채색 계열(평균 채도 5.2)",
+      "measurements": {
+        "eligibility": {
+          "eligible": false,
+          "reason": "무채색 계열(평균 채도 5.2)",
+          "mean_chroma": 5.2
+        }
+      },
+      "same_as_saved_restore": null,
+      "user_raw": {
+        "pass_": true,
+        "hair_failure": false,
+        "note": "꼬리 없음, 바지 검정"
+      },
+      "user_restored": null
+    },
+    {
+      "case": "M2-S4",
+      "attempt": 2,
+      "decision": "not_applicable",
+      "reason": "무채색 계열(평균 채도 5.2)",
+      "measurements": {
+        "eligibility": {
+          "eligible": false,
+          "reason": "무채색 계열(평균 채도 5.2)",
+          "mean_chroma": 5.2
+        }
+      },
+      "same_as_saved_restore": null,
+      "user_raw": null,
+      "user_restored": null
+    },
+    {
+      "case": "M3-S1",
+      "attempt": 1,
+      "decision": "not_applicable",
+      "reason": "여러 색 머리(위치 무시 보정 위험)",
+      "measurements": {
+        "eligibility": {
+          "eligible": false,
+          "reason": "여러 색 머리(위치 무시 보정 위험)",
+          "mean_chroma": 16.2,
+          "chroma_range": 8.2,
+          "hue_spread": 43.9
+        }
+      },
+      "same_as_saved_restore": null,
+      "user_raw": {
+        "pass_": true,
+        "hair_failure": false,
+        "note": ""
+      },
+      "user_restored": null
+    },
+    {
+      "case": "M3-S1",
+      "attempt": 2,
+      "decision": "not_applicable",
+      "reason": "여러 색 머리(위치 무시 보정 위험)",
+      "measurements": {
+        "eligibility": {
+          "eligible": false,
+          "reason": "여러 색 머리(위치 무시 보정 위험)",
+          "mean_chroma": 16.2,
+          "chroma_range": 8.2,
+          "hue_spread": 43.9
+        }
+      },
+      "same_as_saved_restore": null,
+      "user_raw": null,
+      "user_restored": null
+    },
+    {
+      "case": "M3-S2",
+      "attempt": 1,
+      "decision": "not_applicable",
+      "reason": "여러 색 머리(위치 무시 보정 위험)",
+      "measurements": {
+        "eligibility": {
+          "eligible": false,
+          "reason": "여러 색 머리(위치 무시 보정 위험)",
+          "mean_chroma": 16.2,
+          "chroma_range": 8.2,
+          "hue_spread": 43.9
+        }
+      },
+      "same_as_saved_restore": null,
+      "user_raw": {
+        "pass_": false,
+        "hair_failure": true,
+        "note": "사용자: 실패 머리색(노란 금발)"
+      },
+      "user_restored": {
+        "pass_": false,
+        "hair_failure": true,
+        "note": "사용자: 실패 머리색(분홍 과함)"
+      }
+    },
+    {
+      "case": "M3-S2",
+      "attempt": 2,
+      "decision": "not_applicable",
+      "reason": "여러 색 머리(위치 무시 보정 위험)",
+      "measurements": {
+        "eligibility": {
+          "eligible": false,
+          "reason": "여러 색 머리(위치 무시 보정 위험)",
+          "mean_chroma": 16.2,
+          "chroma_range": 8.2,
+          "hue_spread": 43.9
+        }
+      },
+      "same_as_saved_restore": null,
+      "user_raw": {
+        "pass_": false,
+        "hair_failure": true,
+        "note": "사용자: 실패 머리색(노란 금발)"
+      },
+      "user_restored": {
+        "pass_": false,
+        "hair_failure": true,
+        "note": "사용자: 실패 머리색"
+      }
+    },
+    {
+      "case": "M3-S3",
+      "attempt": 1,
+      "decision": "not_applicable",
+      "reason": "여러 색 머리(위치 무시 보정 위험)",
+      "measurements": {
+        "eligibility": {
+          "eligible": false,
+          "reason": "여러 색 머리(위치 무시 보정 위험)",
+          "mean_chroma": 16.2,
+          "chroma_range": 8.2,
+          "hue_spread": 43.9
+        }
+      },
+      "same_as_saved_restore": null,
+      "user_raw": {
+        "pass_": true,
+        "hair_failure": false,
+        "note": "Claude 관찰: 걷기보다 원본 자세로 서 있음"
+      },
+      "user_restored": null
+    },
+    {
+      "case": "M6-S2",
+      "attempt": 1,
+      "decision": "auto_selected",
+      "reason": "머리만의 색 변화 + 재검사 통과",
+      "measurements": {
+        "eligibility": {
+          "eligible": true,
+          "reason": "채도 있는 한 가지 색 계열",
+          "mean_chroma": 19.6,
+          "chroma_range": 12.7,
+          "hue_spread": 12.8
+        },
+        "cast": {
+          "status": "hair_only_shift",
+          "hair_shift": 7.6,
+          "skin_shift": 11.0,
+          "cos": -0.61
+        },
+        "restore": {
+          "status": "restored",
+          "pixels": 18913,
+          "chroma_before": 24.3,
+          "chroma_after": 19.5,
+          "reference_chroma": 19.9,
+          "lightness_change": 0.05,
+          "strength": 1.0,
+          "note": "색감(a·b)만 기준 분포로, 명암(L) 유지. 원본 픽셀 합성 아님"
+        },
+        "bands": {
+          "raw_error": 7.3,
+          "restored_error": 0.8
+        },
+        "collateral": {
+          "outside_hair": 0,
+          "guarded": {
+            "eyes": 0.0,
+            "face_skin": 0.0
+          },
+          "ok": true
+        }
+      },
+      "same_as_saved_restore": false,
+      "user_raw": {
+        "pass_": false,
+        "hair_failure": true,
+        "note": "사용자: 실패 머리색(진한 청록)"
+      },
+      "user_restored": {
+        "pass_": true,
+        "hair_failure": false,
+        "note": ""
+      }
+    },
+    {
+      "case": "M6-S3",
+      "attempt": 1,
+      "decision": "auto_selected",
+      "reason": "머리만의 색 변화 + 재검사 통과",
+      "measurements": {
+        "eligibility": {
+          "eligible": true,
+          "reason": "채도 있는 한 가지 색 계열",
+          "mean_chroma": 19.6,
+          "chroma_range": 12.7,
+          "hue_spread": 12.8
+        },
+        "cast": {
+          "status": "hair_only_shift",
+          "hair_shift": 13.6,
+          "skin_shift": 1.2,
+          "cos": -0.61
+        },
+        "restore": {
+          "status": "restored",
+          "pixels": 15489,
+          "chroma_before": 31.9,
+          "chroma_after": 19.7,
+          "reference_chroma": 19.9,
+          "lightness_change": 0.07,
+          "strength": 1.0,
+          "note": "색감(a·b)만 기준 분포로, 명암(L) 유지. 원본 픽셀 합성 아님"
+        },
+        "bands": {
+          "raw_error": 14.5,
+          "restored_error": 1.7
+        },
+        "collateral": {
+          "outside_hair": 0,
+          "guarded": {
+            "eyes": 0.0,
+            "face_skin": 0.001
+          },
+          "ok": true
+        }
+      },
+      "same_as_saved_restore": false,
+      "user_raw": {
+        "pass_": false,
+        "hair_failure": true,
+        "note": "사용자: 실패 머리색(진한 청록)"
+      },
+      "user_restored": null
+    },
+    {
+      "case": "M6-S4",
+      "attempt": 1,
+      "decision": "auto_selected",
+      "reason": "머리만의 색 변화 + 재검사 통과",
+      "measurements": {
+        "eligibility": {
+          "eligible": true,
+          "reason": "채도 있는 한 가지 색 계열",
+          "mean_chroma": 19.6,
+          "chroma_range": 12.7,
+          "hue_spread": 12.8
+        },
+        "cast": {
+          "status": "hair_only_shift",
+          "hair_shift": 7.1,
+          "skin_shift": 14.3,
+          "cos": -0.48
+        },
+        "restore": {
+          "status": "restored",
+          "pixels": 26442,
+          "chroma_before": 21.8,
+          "chroma_after": 19.5,
+          "reference_chroma": 19.9,
+          "lightness_change": 0.06,
+          "strength": 1.0,
+          "note": "색감(a·b)만 기준 분포로, 명암(L) 유지. 원본 픽셀 합성 아님"
+        },
+        "bands": {
+          "raw_error": 7.8,
+          "restored_error": 1.5
+        },
+        "collateral": {
+          "outside_hair": 0,
+          "guarded": {
+            "eyes": 0.0,
+            "face_skin": 0.0
+          },
+          "ok": true
+        }
+      },
+      "same_as_saved_restore": false,
+      "user_raw": {
+        "pass_": false,
+        "hair_failure": true,
+        "note": "사용자: 실패 머리색. Claude 관찰: 슬리퍼도 안 보임"
+      },
+      "user_restored": {
+        "pass_": false,
+        "hair_failure": true,
+        "note": "사용자: 실패. Claude 관찰: 슬리퍼 안 보임(머리색은 가까워짐)"
+      }
+    },
+    {
+      "case": "N1-S1",
+      "attempt": 1,
+      "decision": "not_applicable",
+      "reason": "무채색 계열(평균 채도 9.3)",
+      "measurements": {
+        "eligibility": {
+          "eligible": false,
+          "reason": "무채색 계열(평균 채도 9.3)",
+          "mean_chroma": 9.3
+        }
+      },
+      "same_as_saved_restore": null,
+      "user_raw": {
+        "pass_": true,
+        "hair_failure": false,
+        "note": "사용자: 1묶음 전체 통과"
+      },
+      "user_restored": null
+    },
+    {
+      "case": "N1-S1",
+      "attempt": 2,
+      "decision": "not_applicable",
+      "reason": "무채색 계열(평균 채도 9.3)",
+      "measurements": {
+        "eligibility": {
+          "eligible": false,
+          "reason": "무채색 계열(평균 채도 9.3)",
+          "mean_chroma": 9.3
+        }
+      },
+      "same_as_saved_restore": null,
+      "user_raw": null,
+      "user_restored": null
+    },
+    {
+      "case": "N1-S2",
+      "attempt": 1,
+      "decision": "not_applicable",
+      "reason": "무채색 계열(평균 채도 9.3)",
+      "measurements": {
+        "eligibility": {
+          "eligible": false,
+          "reason": "무채색 계열(평균 채도 9.3)",
+          "mean_chroma": 9.3
+        }
+      },
+      "same_as_saved_restore": null,
+      "user_raw": {
+        "pass_": true,
+        "hair_failure": false,
+        "note": "사용자: 1묶음 전체 통과. Claude 관찰: 의자 옆에 서 있음(요청 26에서는 같은 모습을 '앉지 않음'으로 실패 판정)"
+      },
+      "user_restored": null
+    },
+    {
+      "case": "N1-S2",
+      "attempt": 2,
+      "decision": "not_applicable",
+      "reason": "무채색 계열(평균 채도 9.3)",
+      "measurements": {
+        "eligibility": {
+          "eligible": false,
+          "reason": "무채색 계열(평균 채도 9.3)",
+          "mean_chroma": 9.3
+        }
+      },
+      "same_as_saved_restore": null,
+      "user_raw": null,
+      "user_restored": null
+    },
+    {
+      "case": "N1-S3",
+      "attempt": 1,
+      "decision": "not_applicable",
+      "reason": "무채색 계열(평균 채도 9.3)",
+      "measurements": {
+        "eligibility": {
+          "eligible": false,
+          "reason": "무채색 계열(평균 채도 9.3)",
+          "mean_chroma": 9.3
+        }
+      },
+      "same_as_saved_restore": null,
+      "user_raw": {
+        "pass_": true,
+        "hair_failure": false,
+        "note": "사용자: 1묶음 전체 통과. Claude 관찰: 걷기보다 서 있는 자세"
+      },
+      "user_restored": null
+    },
+    {
+      "case": "N2-S2",
+      "attempt": 1,
+      "decision": "not_applicable",
+      "reason": "여러 색 머리(위치 무시 보정 위험)",
+      "measurements": {
+        "eligibility": {
+          "eligible": false,
+          "reason": "여러 색 머리(위치 무시 보정 위험)",
+          "mean_chroma": 14.4,
+          "chroma_range": 25.6,
+          "hue_spread": 8.6
+        }
+      },
+      "same_as_saved_restore": null,
+      "user_raw": {
+        "pass_": true,
+        "hair_failure": false,
+        "note": "사용자: 1묶음 전체 통과"
+      },
+      "user_restored": null
+    },
+    {
+      "case": "N2-S3",
+      "attempt": 1,
+      "decision": "not_applicable",
+      "reason": "여러 색 머리(위치 무시 보정 위험)",
+      "measurements": {
+        "eligibility": {
+          "eligible": false,
+          "reason": "여러 색 머리(위치 무시 보정 위험)",
+          "mean_chroma": 14.4,
+          "chroma_range": 25.6,
+          "hue_spread": 8.6
+        }
+      },
+      "same_as_saved_restore": null,
+      "user_raw": {
+        "pass_": true,
+        "hair_failure": false,
+        "note": "사용자: 1묶음 전체 통과"
+      },
+      "user_restored": null
+    },
+    {
+      "case": "N2-S4",
+      "attempt": 1,
+      "decision": "not_applicable",
+      "reason": "여러 색 머리(위치 무시 보정 위험)",
+      "measurements": {
+        "eligibility": {
+          "eligible": false,
+          "reason": "여러 색 머리(위치 무시 보정 위험)",
+          "mean_chroma": 14.4,
+          "chroma_range": 25.6,
+          "hue_spread": 8.6
+        }
+      },
+      "same_as_saved_restore": null,
+      "user_raw": {
+        "pass_": true,
+        "hair_failure": false,
+        "note": "사용자: 1묶음 전체 통과"
+      },
+      "user_restored": null
+    },
+    {
+      "case": "N2-S4",
+      "attempt": 2,
+      "decision": "not_applicable",
+      "reason": "여러 색 머리(위치 무시 보정 위험)",
+      "measurements": {
+        "eligibility": {
+          "eligible": false,
+          "reason": "여러 색 머리(위치 무시 보정 위험)",
+          "mean_chroma": 14.4,
+          "chroma_range": 25.6,
+          "hue_spread": 8.6
+        }
+      },
+      "same_as_saved_restore": null,
+      "user_raw": null,
+      "user_restored": null
+    }
+  ]
+}

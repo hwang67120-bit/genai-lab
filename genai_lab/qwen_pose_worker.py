@@ -198,6 +198,21 @@ def generate(request, directory, record):
             raise RuntimeError("zero_cond_t=True 계약 불일치")
         pipe = QwenImageEditPlusPipeline.from_pretrained(settings.model_root, transformer=tr,
             text_encoder=None, tokenizer=None, processor=None, torch_dtype=torch.bfloat16, local_files_only=True)
+        steps, true_cfg = settings.steps, settings.true_cfg_scale
+        accel_name = getattr(spec, "accelerator", "") if request.get("task_kind") == "free_generation" else ""
+        if accel_name:      # D-141 시험용 가속: 오프로드 전에 LoRA를 붙이고 스케줄러·단계·CFG를 제작자 설정으로
+            from diffusers import FlowMatchEulerDiscreteScheduler
+            from genai_lab.qwen_accelerators import accelerator, lora_path
+            accel = accelerator(accel_name)
+            path = lora_path(accel_name, settings.model_root)
+            if file_sha(str(path)) != accel["sha256"]:
+                raise ValueError("가속 LoRA SHA 불일치")
+            pipe.scheduler = FlowMatchEulerDiscreteScheduler.from_config(accel["scheduler"])
+            pipe.load_lora_weights(str(path.parent), weight_name=path.name, adapter_name=accel_name)
+            steps, true_cfg = accel["steps"], accel["true_cfg_scale"]
+            record["accelerator"] = dict(name=accel_name, repo=accel["repo"], revision=accel["revision"], lora=str(path),
+                                         sha256=accel["sha256"], steps=steps, true_cfg_scale=true_cfg,
+                                         note="시험용 가속(D-141). CFG 1.0이면 부정 지시문은 쓰이지 않는다")
         pipe.vae.to("cuda")
         if outfit and request["memory"]["vae_tiling"]:  # 타일 없이는 6.5GiB 상한에서 VAE 복원이 실패했다(시험 10 진단 C)
             pipe.vae.enable_tiling()
@@ -222,14 +237,14 @@ def generate(request, directory, record):
         def callback(pipeline, index, timestep, kwargs):
             check()
             stage(f"step{index}")
-            begin("decode" if index + 1 == settings.steps else f"step{index + 1}")
+            begin("decode" if index + 1 == steps else f"step{index + 1}")
             now = time.perf_counter()
             record["steps"].append({"index": index, "seconds": now - previous[0]})
             previous[0] = now
             save()
             return kwargs
-        record["call_arguments"] = {"height": height, "width": width, "true_cfg_scale": settings.true_cfg_scale,
-            "guidance_scale": settings.guidance_scale, "num_inference_steps": settings.steps,
+        record["call_arguments"] = {"height": height, "width": width, "true_cfg_scale": true_cfg,
+            "guidance_scale": settings.guidance_scale, "num_inference_steps": steps,
             "num_images_per_prompt": 1, "seed": request["seed"], "generator_device": "cpu",
             "positive": request["prompt"]["positive"], "negative": request["prompt"].get("negative", " "), "images": len(images)}
         save()
@@ -239,8 +254,8 @@ def generate(request, directory, record):
         tick = time.perf_counter()
         result = pipe(image=images, prompt_embeds=pe.to("cuda"), prompt_embeds_mask=pm.to("cuda") if pm is not None else None,
             negative_prompt_embeds=ne.to("cuda"), negative_prompt_embeds_mask=nm.to("cuda") if nm is not None else None,
-            true_cfg_scale=settings.true_cfg_scale, guidance_scale=settings.guidance_scale,
-            num_inference_steps=settings.steps, height=height, width=width,
+            true_cfg_scale=true_cfg, guidance_scale=settings.guidance_scale,
+            num_inference_steps=steps, height=height, width=width,
             generator=torch.Generator("cpu").manual_seed(request["seed"]), callback_on_step_end=callback)
         record["stage_seconds"]["generation"] = time.perf_counter() - tick
         stage("decoded")

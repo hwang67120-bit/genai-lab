@@ -22,7 +22,7 @@ from genai_lab.qwen_free_generation import (FreeGenerationWorkflow, make_free_re
                                            run_free_generation_edit)
 
 
-EXPERIMENT_KEYS = {"hair_color_words", "absent_parts_negative", "single_attempt"}
+EXPERIMENT_KEYS = {"hair_color_words", "absent_parts_negative", "single_attempt", "lightning8"}
 # D-140: 없는 부위는 지시문의 "no … do not add any" 대신 부정 지시문 칸으로(요청 28 시험 B 4/4, D-139). 제품 기본값.
 # 시험에서 예전 방식이 필요하면 experiment=dict(absent_parts_negative=False).
 ABSENT_PARTS_NEGATIVE = True
@@ -358,7 +358,8 @@ def prepare_generation_inputs(base_path, character_features, request_text, *, ba
                              gender=gender, body_parts=body_parts, features_text=sentence, base_kind=base_kind, reference_box=crop_record["box"], selection_seed=selection_seed,
                              reference_scope=crop_record["scope"], skeleton_path=skeleton_path, skeleton_joints=skeleton_records or (),
                              pose_key=skeleton_record.get("pose_key", ""),
-                             absent_parts_negative=experiment.get("absent_parts_negative", ABSENT_PARTS_NEGATIVE))
+                             absent_parts_negative=experiment.get("absent_parts_negative", ABSENT_PARTS_NEGATIVE),
+                             accelerator="lightning8" if experiment.get("lightning8") else "")
     return features, assembled, spec
 
 
@@ -378,7 +379,7 @@ def run_free_generation(base_path, character_features, request_text="", *, base_
     try:
         from genai_lab.qwen_preservation import json_sha
         source_root = Path(__file__).resolve().parents[1]
-        code_files = ("free_generation", "qwen_free_generation", "free_generation_pipeline", "qwen_pose_worker", "qwen_pose_edit", "qwen_pose_settings", "qwen_outfit_edit", "outfit_edit", "outfit_edit_pipeline", "character_features", "character_verification", "pose_guidance", "hair_color_restore", "hair_auto_restore", "feature_selection")
+        code_files = ("free_generation", "qwen_free_generation", "free_generation_pipeline", "qwen_pose_worker", "qwen_pose_edit", "qwen_pose_settings", "qwen_outfit_edit", "outfit_edit", "outfit_edit_pipeline", "character_features", "character_verification", "pose_guidance", "hair_color_restore", "hair_auto_restore", "feature_selection", "qwen_accelerators")
         trace["execution_contract"] = dict(settings=settings.record(), settings_sha256=json_sha(settings.record()),
             code_sha256={name: sha(source_root / "genai_lab" / (name+".py")) for name in code_files},
             contract_sha256=sha(source_root / "docs/FREE_GENERATION_CONTRACT.md"),
@@ -395,7 +396,13 @@ def run_free_generation(base_path, character_features, request_text="", *, base_
         if experiment is not None:
             if not isinstance(experiment, dict) or not set(experiment) <= EXPERIMENT_KEYS or not all(type(v) is bool for v in experiment.values()):
                 raise FreeGenerationRejected("invalid_input", "시험 선택지 형식 오류")
-            trace["experiment"] = dict(experiment, note="원인 확인 시험(요청 28). 제품 기본값 아님")
+            trace["experiment"] = dict(experiment, note="원인 확인·가속 시험(요청 28·D-141). 제품 기본값 아님")
+            if experiment.get("lightning8"):
+                from genai_lab.qwen_accelerators import check_file
+                try:
+                    trace["experiment"]["lightning8_file"] = str(check_file("lightning8", settings.model_root))
+                except ValueError as error:
+                    raise FreeGenerationRejected("invalid_input", str(error)) from error
         features, assembled, spec = prepare_generation_inputs(base_path, character_features, request_text,
             base_kind=base_kind, gender=gender, body_parts=body_parts, confirmed=confirmed, adult_confirmed=adult_confirmed,
             directory=directory, runtime=runtime, cancelled=cancelled, progress=progress, popen=popen, trace=trace, persist=persist, selection_seed=selection_seed,

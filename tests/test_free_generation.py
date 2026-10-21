@@ -733,3 +733,30 @@ def test_old_in_prompt_negation_is_still_available_for_experiments(tmp_path,fake
     run(tmp_path,base,experiment=dict(absent_parts_negative=False))
     request = next(c[1] for c in calls if c[0] == "qwen")
     assert request["prompt"]["negative"] == " " and "no animal ears, no tail and no wings" in request["prompt"]["positive"]
+
+
+def test_lightning_experiment_is_recorded_in_the_worker_request(tmp_path,fake_models,monkeypatch):
+    import genai_lab.qwen_accelerators as accel
+    base,calls = fake_models
+    monkeypatch.setattr(accel,"check_file",lambda name,root: Path(root)/"lora.safetensors")
+    result = run(tmp_path,base,experiment=dict(lightning8=True,single_attempt=True))
+    request = next(c[1] for c in calls if c[0] == "qwen")
+    assert request["free_spec"]["accelerator"] == "lightning8"
+    assert request["settings"]["steps"] == 40                              # 설정 계약은 그대로, 가속은 명세 선택지
+    trace = json.loads(Path(result["trace"]).read_text(encoding="utf-8"))
+    assert trace["experiment"]["lightning8"] is True
+
+
+def test_lightning_experiment_without_the_file_is_rejected(tmp_path,fake_models):
+    from genai_lab.free_generation import FreeGenerationRejected
+    base,_ = fake_models
+    with pytest.raises(FreeGenerationRejected) as error:
+        run(tmp_path,base,experiment=dict(lightning8=True))
+    assert error.value.code == "invalid_input"
+
+
+def test_default_spec_has_no_accelerator_and_unknown_names_fail():
+    from genai_lab.qwen_accelerators import ACCELERATORS, accelerator
+    assert accelerator("") is None and ACCELERATORS["lightning8"]["steps"] == 8 and ACCELERATORS["lightning8"]["true_cfg_scale"] == 1.0
+    with pytest.raises(ValueError):
+        accelerator("turbo")

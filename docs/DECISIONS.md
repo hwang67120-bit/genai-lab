@@ -2,6 +2,15 @@
 
 > 이 문서는 과거 판단과 실험 근거를 보존하는 기록이다. 현재 제품 계약은 docs/FLOW.md만 따른다. 아래 결정이 FLOW.md와 충돌하면 과거 결정으로 취급하며 새 구현의 근거로 사용하지 않는다.
 
+## D-141 시험용 가속 LoRA 선택지와 요청 30 (2026-10-21)
+
+- 사용자 "가속 가중치 조사" → "배치 끝난 뒤 내려받기" → "비교 준비" → "요청 30 승인".
+- 내려받기(승인 범위): `peft` 0.21.2(--no-deps, 다른 패키지 그대로), `lightx2v/Qwen-Image-Edit-2511-Lightning` rev 107d238d `Qwen-Image-Edit-2511-Lightning-8steps-V1.0-bf16.safetensors`(849,608,296 B, SHA 일치) → `D:/genai-cache/models/Qwen-Image-Edit-2511-Lightning/`.
+- `genai_lab/qwen_accelerators.py` `lightning8`: 제작자 예제 설정(8단계, true CFG 1.0, FlowMatchEuler shift 3). `run_free_generation(experiment=dict(lightning8=True))` → 명세 `accelerator` → 작업 프로세스가 SHA 대조 후 오프로드 전에 LoRA·스케줄러 적용. **제품 기본값 아님**(설정 계약 40단계/CFG 4.0 그대로).
+- CPU 확인(`outputs/lightning-check-20261021/`): GGUF 층 720개에 주입, 작업 프로세스 순서 재현, LoRA 효과 실제로 더해짐. 위험: CFG 1.0이면 부정 지시문 무효(D-139), 동일성 미확인.
+- 요청 29 실측(48GB 램): 시도당 불러오기 223 → 61초, 생성 1,846 → 1,646초(중앙값), 전체 19.9 → 17.4시간.
+- 요청 30(6장, 요청 29 같은 seed 대조 재사용) 승인.
+
 ## D-140 생성 조합 고정과 운영 도구(CPU) (2026-10-19)
 
 - 사용자: 반복 조정을 줄이자고 검토했는데 다시 조정하고 있다는 지적 → 계획 승인 "CPU만으로 바로 할 수 있는 일을 하자".

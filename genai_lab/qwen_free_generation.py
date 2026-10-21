@@ -34,6 +34,7 @@ class FreeGenerationSpec:
     skeleton_joints: tuple = ()     # 골격을 그린 관절 기록 — 작업 프로세스가 다시 그려 대조한다
     pose_key: str = ""
     absent_parts_negative: bool = False   # 요청 28 시험 B(기본 꺼짐): 없는 부위를 지시문 대신 부정 지시문으로
+    accelerator: str = ""                 # D-141 시험용 가속(qwen_accelerators). 비면 검증된 40단계/CFG 4.0
 
     @property
     def images(self):
@@ -86,6 +87,9 @@ class FreeGenerationSpec:
                     raise ValueError("골격 그림은 기록된 관절로 코드가 그린 그림이어야 합니다.")
         elif self.skeleton_sha256 or self.skeleton_joints or self.pose_key:
             raise ValueError("골격 없이 골격 기록만 있습니다.")
+        if self.accelerator:
+            from genai_lab.qwen_accelerators import accelerator
+            accelerator(self.accelerator)          # 알 수 없는 이름은 ValueError
 
     def prompt(self, seed):
         return free_prompt(self.features_text, self.gender, self.body_parts, self.request_text, self.selection_seed,
@@ -99,7 +103,8 @@ class FreeGenerationSpec:
 
 def prepare_free_spec(canvas_path, reference_path, *, directory, request_text, gender="unspecified", body_parts=None,
                       features_text="", base_kind="edited", confirmed=True, reference_box=(0, 0, 768, 1024), selection_seed=42,
-                      reference_scope="head", skeleton_path=None, skeleton_joints=(), pose_key="", absent_parts_negative=False):
+                      reference_scope="head", skeleton_path=None, skeleton_joints=(), pose_key="", absent_parts_negative=False,
+                      accelerator=""):
     """두 입력을 실행 폴더로 복사해 고정한다."""
     if confirmed is not True:
         raise ValueError("기준 그림과 요청을 확인해 주세요.")
@@ -119,7 +124,8 @@ def prepare_free_spec(canvas_path, reference_path, *, directory, request_text, g
                               str(directory / "reference.png"), hashlib.sha256(reference).hexdigest(),
                               (request_text or "").strip(), gender, None if body_parts is None else tuple(body_parts),
                               features_text or "", base_kind, confirmed, selection_seed=selection_seed, reference_box=tuple(reference_box),
-                              reference_scope=reference_scope, absent_parts_negative=absent_parts_negative, **skeleton)
+                              reference_scope=reference_scope, absent_parts_negative=absent_parts_negative, accelerator=accelerator,
+                              **skeleton)
     spec.verify_image()
     spec.prompt(SEEDS[0])          # 요청 문장 검사(외형·의상·안전) — 여기서 걸리면 ValueError
     return spec

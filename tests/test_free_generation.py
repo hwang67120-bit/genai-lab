@@ -775,3 +775,14 @@ def test_tag_only_style_and_accessory_violations_do_not_trigger_a_retry():
     out = verify_features(reference, {"twintails": .95, "hat": .95})
     assert not (set(out["retry"]) & {"hair_style", "head_accessories"})
     assert out["items"]["hair_style"]["status"] != "kept" or out["items"]["head_accessories"]["status"] != "kept"
+
+
+def test_quick_preview_results_are_labelled_and_kept_apart_in_judgements(tmp_path,fake_models,monkeypatch):
+    import genai_lab.qwen_accelerators as accel
+    base,_ = fake_models
+    monkeypatch.setattr(accel,"check_file",lambda name,root: Path(root)/"lora.safetensors")
+    results = FreeGenerationResults(run(tmp_path,base,experiment=dict(lightning8=True,single_attempt=True)))
+    assert results.quick_preview and "빠른 미리보기" in results.head_notice
+    results.approve(dict(character=True,garment=True,request=True,exposure=True,finish=True))
+    entry = json.loads((Path(results.directory)/"judgement.json").read_text(encoding="utf-8"))[-1]
+    assert entry["target"]["steps"] == 8

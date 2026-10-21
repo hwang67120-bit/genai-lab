@@ -110,6 +110,20 @@ def test_input_confirmation_rechecks_staging_and_adult_checkbox(tmp_path, fake_m
     result=free_ui.confirm_free_inputs(None,dict(source=str(base),character_scores={}))
     assert seen==dict(allowed=True,blocked=True)
     assert result["adult_confirmed"] and result["request_text"]=="눈 내리는 거리"
+    assert "experiment" not in result                                          # 기본은 40단계(제품 설정)
+
+
+def test_quick_preview_checkbox_requests_the_8_step_accelerator(tmp_path, fake_models, monkeypatch):
+    app=QApplication.instance() or QApplication([])
+    base,_=fake_models
+    patch_preferences(monkeypatch)
+    def interact(dialog):
+        dialog.findChild(QCheckBox,"free_quick_preview").setChecked(True)
+        dialog.findChild(QCheckBox,"free_confirm").setChecked(True)
+        return QDialog.DialogCode.Accepted
+    monkeypatch.setattr(QDialog,"exec",interact)
+    result=free_ui.confirm_free_inputs(None,dict(source=str(base),character_scores={}))
+    assert result["experiment"]==dict(lightning8=True,single_attempt=True)
 
 
 def test_missing_qwen_settings_are_reported_instead_of_stopping(tmp_path, fake_models, monkeypatch):

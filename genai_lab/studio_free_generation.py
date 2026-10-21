@@ -71,9 +71,19 @@ def confirm_free_inputs(window, analysis):
     confirm = QCheckBox("성인 캐릭터이며 특징표·부위와 연출 범위를 확인했습니다. 외형·의상을 바꾸지 않습니다.")
     confirm.setObjectName("free_confirm")
     layout.addWidget(confirm)
-    note = QLabel("약 30분, 자동 재시도 한 번이면 약 1시간. 같은 기준의 머리 크롭도 참조하며 동일성 보장은 없습니다.")
+    # D-147: 직접 시험용 빠른 미리보기(8단계 가속, 재시도 없음, D-141/143). 최종·판정용은 꺼 둔 40단계.
+    quick = QCheckBox("빠른 미리보기(8단계 가속, 약 10분, 재시도 없음 — 최종 결과·판정용 아님)")
+    quick.setObjectName("free_quick_preview")
+    layout.addWidget(quick)
+    note = QLabel()
     note.setWordWrap(True)
     layout.addWidget(note)
+    def note_text():
+        note.setText("약 10분. 8단계 가속 미리보기라 세부·색이 40단계와 다를 수 있습니다(요청 30 F5). 마음에 들면 끄고 다시 만들어 주세요."
+                     if quick.isChecked() else
+                     "약 30분, 자동 재시도 한 번이면 약 1시간. 같은 기준의 머리 크롭도 참조하며 동일성 보장은 없습니다.")
+    quick.toggled.connect(note_text)
+    note_text()
     hint = QLabel()
     hint.setWordWrap(True)
     layout.addWidget(hint)
@@ -111,8 +121,11 @@ def confirm_free_inputs(window, analysis):
     refresh()
     if not confirm.isChecked() or not parsed.get("valid"):
         return None
-    return dict(base_kind=kind.currentData(), gender=gender.currentData(), body_parts=tuple(k for k,v in part_boxes.items() if v.isChecked()),
-                character_features=parsed["features"], request_text=request.toPlainText(), confirmed=True, adult_confirmed=True)
+    decision = dict(base_kind=kind.currentData(), gender=gender.currentData(), body_parts=tuple(k for k,v in part_boxes.items() if v.isChecked()),
+                    character_features=parsed["features"], request_text=request.toPlainText(), confirmed=True, adult_confirmed=True)
+    if quick.isChecked():
+        decision["experiment"] = dict(lightning8=True, single_attempt=True)
+    return decision
 
 
 def confirm_free_result(window, results):

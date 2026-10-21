@@ -30,6 +30,11 @@ class FreeGenerationResults(OutfitEditResults):
                           if c["attempt"] == outcome.get("selected_attempt") and c.get("variant", "raw") == "raw"), 0)
         self.selected = first
         super().__init__(dict(outcome, qwen_view=self.candidates[first]["raw"]))   # 처음 보여 주는 후보(자동 선택 보정본일 수 있다)
+        try:        # D-147: 빠른 미리보기(8단계)였는지 — 화면·판정 기록에 표시
+            experiment = json.loads(Path(outcome["trace"]).read_text(encoding="utf-8")).get("experiment") or {}
+        except (OSError, KeyError, ValueError):
+            experiment = {}
+        self.quick_preview = bool(experiment.get("lightning8"))
         self.verify_current()
 
     @property
@@ -61,6 +66,8 @@ class FreeGenerationResults(OutfitEditResults):
     @property
     def head_notice(self):
         text = "Qwen 생성 결과입니다. 원본 머리 합성 없음 · 자동 특징 관찰과 사람 품질 판정은 별도입니다."
+        if getattr(self, "quick_preview", False):
+            text += " 빠른 미리보기(8단계 가속) 결과입니다 — 최종 결과는 미리보기를 끄고 다시 만들어 주세요."
         if len(self.candidates) > 1:
             text += f" 결과 {len(self.candidates)}개 중 시도 {self.candidate['attempt']}을 보고 있습니다 — 결과 목록에서 바꿔 보고 골라 주세요(자동 관찰 기준 순서, 품질 보장 아님)."
         if self.candidate.get("variant") == "hair_auto":
@@ -85,6 +92,8 @@ class FreeGenerationResults(OutfitEditResults):
     def record_human(self, values, source):
         target = dict(image=str(self.current_path), sha256=self.verify_current(), attempt=self.candidate["attempt"],
                       variant=self.candidate.get("variant", "raw"))
+        if getattr(self, "quick_preview", False):
+            target["steps"] = 8             # 빠른 미리보기 판정은 40단계 운영 집계와 구분한다(D-147)
         # 편집 단계와 같은 판정 형식(D-114: 항목 검증·recorded_at)으로 남겨 운영 집계(D-118)에 들어가게 한다(검토 4번)
         entry = validate_judgement(dict(judge="user", source=source, target=target, mode="free_generation", **values))
         path = self.directory / "judgement.json"

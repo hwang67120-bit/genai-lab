@@ -12,6 +12,7 @@ import traceback
 from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+os.environ.setdefault("GENAI_STUDIO_DEVELOPER", "1")   # 이 점검은 개발·평가 화면 경로(확인 창 대체)를 돈다. 사용자 화면은 D-151
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 

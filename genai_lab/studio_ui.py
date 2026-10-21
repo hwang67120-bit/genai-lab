@@ -156,7 +156,8 @@ def build_studio(window, framing_options, clothing_mode):
     heading.addWidget(_label("GenAI Lab", "brand"))
     heading.addWidget(_label("캐릭터 작업실", "windowTitle"))
     header.addLayout(heading, 1)
-    header.addWidget(QLabel("캐릭터·옷 선택  →  만들기  →  결과 선택  →  저장"))
+    window.studio_steps_label = QLabel("캐릭터·옷 선택  →  만들기  →  결과 선택  →  저장")
+    header.addWidget(window.studio_steps_label)
     root.addLayout(header)
 
     window.workspace_splitter = QSplitter(Qt.Orientation.Horizontal)

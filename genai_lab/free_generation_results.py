@@ -89,6 +89,15 @@ class FreeGenerationResults(OutfitEditResults):
         self.record_human(dict(same_character="yes", outfit="same", request_followed="yes", severe_defect="none", finish_quality="good",
                                quality_pass=True), "gui_approval")
 
+    def approve_saved_by_user(self):
+        """사용자 화면(D-151): '저장' = 이 결과를 쓰겠다는 결정. 같은 캐릭터·의상 같은 품질 항목을 판정한 것은 아니므로
+        체크는 saved_by_user 하나, 판정 값은 미판정으로 남긴다(운영 집계의 품질 통과로 세지 않는다)."""
+        self.approved_sha = self.verify_current()
+        self.checks = dict(saved_by_user=True)
+        self.status = "user_approved"
+        self.persist()
+        self.record_human(dict(note="사용자 화면 저장 — 품질 항목 판정 아님"), "product_save")
+
     def record_human(self, values, source):
         target = dict(image=str(self.current_path), sha256=self.verify_current(), attempt=self.candidate["attempt"],
                       variant=self.candidate.get("variant", "raw"))

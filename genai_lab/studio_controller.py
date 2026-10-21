@@ -67,6 +67,7 @@ class StudioController(QObject):
         self.character_memory = None          # 캐릭터 기억(H1-B). None이면 기본 위치(character_memory.default_root)
         self.character_id = None              # 이번 실행이 연결된 캐릭터(승인 저장 때 등록)
         self.approved_edit = None             # ① 승인한 옷 바꾸기 결과(저장 경로, 그때의 캐릭터 그림) — ②가 이어 쓴다
+        self.product = None                   # 사용자 화면(studio_product.ProductFlow, D-151). None이면 개발·평가 화면
         self.output_root = Path(__file__).resolve().parents[1] / "outputs" / "studio-runs"
         window.studio_candidate_combo.currentIndexChanged.connect(self.select)
         window.studio_cancel_button.clicked.connect(self.cancel)
@@ -795,6 +796,8 @@ class StudioController(QObject):
         w.studio_finish_notice.setVisible(self.results is not None and not edit_result)
         self.head_paste_controller.refresh(ready)
         self.identity_report_controller.refresh()
+        if self.product is not None:            # 사용자 화면: 개발 위젯을 다시 숨기고 '이미지 생성'·'저장'만 다룬다
+            self.product.refresh()
 
     def launch(self, action, complete, *, on_error=None, on_cancel=None):
         if self.task is not None or self.cleanup_blocked:

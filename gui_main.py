@@ -3006,6 +3006,10 @@ class GenAILabWindow(QMainWindow):
         build_studio(self, FRAMING_OPTIONS, CLOTHING_REFERENCE_GENERATION_MODE)
         from genai_lab.studio_controller import StudioController
         self.studio = StudioController(self)
+        from genai_lab.studio_product import ProductFlow, developer_mode
+        self.developer_mode = developer_mode()  # 기본은 사용자 화면(D-151). 개발·평가 화면은 GENAI_STUDIO_DEVELOPER=1 또는 --developer
+        if not self.developer_mode:
+            self.studio.product = ProductFlow(self.studio)
 
     def open_qwen_pose_editor(self):
         if hasattr(self, "studio") and self.studio.occupied:
@@ -3186,6 +3190,9 @@ class GenAILabWindow(QMainWindow):
         if hasattr(self, "studio"):
             self.studio.controls()           # ② 버튼 문구·사용 가능 여부(승인한 ① 결과가 있는지)는 작업실 제어가 정한다
         self.generate_button.setEnabled(ready)
+        if hasattr(self, "studio") and self.studio.product is not None:
+            self.studio.product.inputs_changed()   # 사용자 화면: 캐릭터만 있어도 '이미지 생성'(의상은 선택)
+            return
         missing_required_outfit = (
             CLOTHING_REFERENCE_GENERATION_MODE
             and self.selected_outfit_path is None

@@ -1,5 +1,6 @@
 """캐릭터 기억 관리(H1-B, genai_lab/character_memory.py). 작업실 확인 창 밖에서 보고·고치는 도구.
 
+  python scripts/character_memory.py            (= list, 저장된 캐릭터 목록)
   python scripts/character_memory.py list
   python scripts/character_memory.py show <캐릭터 ID>
   python scripts/character_memory.py unlink <캐릭터 ID> <그림 경로 또는 SHA-256> --reason "잘못 연결"
@@ -56,7 +57,7 @@ def migrate(memory, paths, apply):
 def main(argv=None):
     parser = argparse.ArgumentParser(description="캐릭터 기억 관리")
     parser.add_argument("--root")
-    commands = parser.add_subparsers(dest="command", required=True)
+    commands = parser.add_subparsers(dest="command")      # 없으면 list
     commands.add_parser("list")
     show = commands.add_parser("show")
     show.add_argument("character_id")
@@ -74,7 +75,7 @@ def main(argv=None):
     sys.stdout.reconfigure(encoding="utf-8")
     memory = CharacterMemory(args.root)
     try:
-        if args.command == "list":
+        if args.command in (None, "list"):
             records = memory.characters()
             for record in records:
                 print(summary(record))

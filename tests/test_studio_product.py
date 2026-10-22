@@ -8,7 +8,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
 from PIL import Image
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QLineEdit
 
 from genai_lab import free_generation_pipeline, free_generation_results, outfit_edit_pipeline, qwen_outfit_edit
 from genai_lab import studio_controller as ui, studio_free_generation as free_ui, studio_generation
@@ -86,7 +86,9 @@ def test_with_outfit_runs_edit_then_staging_automatically(product_window, tmp_pa
     wait_for(QApplication.instance(), lambda: w.studio.task is None and w.studio.results is not None)
     assert asked == [False] and edits[0]["provenance"]["gender"]["source"] == "automatic_product"
     call = calls[0]
-    assert call["base"].name == "edit-result.png" and call["base_kind"] == "edited" and call["request_text"] == ""
+    assert call["base"].name == "edit-result.png" and call["base_kind"] == "edited"
+    scene = json.loads((w.studio.run_directory / "scene.json").read_text(encoding="utf-8"))      # 장면 자동 조합(D-153)
+    assert scene["source"] == "scene_composer" and call["request_text"] == scene["text"] and "head to feet" in scene["text"]
     assert call["automatic_edit_base"] is True and call["confirmation_source"] == "automatic_product"
     record = json.loads(call["base"].with_suffix(".review.json").read_text(encoding="utf-8"))
     assert record["reviewer"] == "automatic_chain" and record["sha256"] == hashlib.sha256(call["base"].read_bytes()).hexdigest()
@@ -113,6 +115,7 @@ def test_without_outfit_keeps_the_outfit_and_makes_pose_and_scene(product_window
     call = calls[0]
     assert call["base"] == character and call["base_kind"] == "original" and call["automatic_edit_base"] is False
     assert call["gender"] == "male" and set(call["features"]) >= {"hair_color", "distinctive"}
+    assert call["request_text"] and "white background" not in call["request_text"].lower()
 
 
 def test_preview_shows_the_newest_step_image(product_window, tmp_path):
@@ -134,3 +137,24 @@ def test_saved_by_user_is_not_a_quality_judgement(tmp_path):
     results.approve_saved_by_user()
     assert results.status == "user_approved" and results.checks == dict(saved_by_user=True)
     assert recorded and recorded[0][1] == "product_save" and "quality_pass" not in recorded[0][0]
+
+
+def test_scene_field_feeds_the_request_and_blocks_appearance_changes(product_window, tmp_path, monkeypatch):
+    w = product_window
+    character = tmp_path / "character.png"
+    Image.new("RGB", (8, 8)).save(character)
+    w.style_path = character
+    w.update_input_ready_status()
+    field = w.findChild(QLineEdit, "product_scene")
+    field.setText("머리색을 금발로 바꿔")
+    assert not w.generate_button.isEnabled() and "자세·배경·상황" in w.studio.product.scene_note.text()
+    field.setText("jumping happily")
+    assert w.generate_button.isEnabled()
+    monkeypatch.setattr(free_ui, "analyze_base", lambda source, runtime: dict(source=str(source), character_scores={},
+                                                                              groups=dict(fixed=[], appearance=[], body=[])))
+    calls = []
+    monkeypatch.setattr(free_generation_pipeline, "run_free_generation", fake_free(calls, tmp_path))
+    monkeypatch.setattr(free_generation_results, "FreeGenerationResults", FakeResults)
+    w.generate_button.click()
+    wait_for(QApplication.instance(), lambda: w.studio.task is None and w.studio.results is not None)
+    assert calls[0]["request_text"].startswith("jumping happily. Setting: ")       # 배경 말이 없어 장소·빛을 덧붙임

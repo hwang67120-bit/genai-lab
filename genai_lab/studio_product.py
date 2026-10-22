@@ -152,15 +152,16 @@ class ProductFlow:
             self.window.status_label.setText(READY if self.window.style_path else NEED_CHARACTER)
 
     def poll_preview(self):
-        """작업 프로세스가 단계마다 쓰는 preview.png 중 가장 새것을 미리보기에 띄운다."""
+        """작업 프로세스가 단계마다 쓰는 preview-NNN.png 중 가장 새것을 미리보기에 띄운다."""
+        from genai_lab.generation_preview import latest_preview
         directory = self.studio.run_directory
         if directory is None:
             return
-        paths = [p for sub in ("outfit-edit", "free-generation") for p in (Path(directory) / sub).glob("qwen*/preview.png")]
-        if not paths:
+        folders = [p for sub in ("outfit-edit", "free-generation") for p in (Path(directory) / sub).glob("qwen*") if p.is_dir()]
+        latest = latest_preview(folders)
+        if latest is None:
             return
         try:
-            latest = max(paths, key=lambda p: p.stat().st_mtime)
             stamp = (str(latest), latest.stat().st_mtime)
         except OSError:
             return

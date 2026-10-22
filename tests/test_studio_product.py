@@ -123,7 +123,7 @@ def test_preview_shows_the_newest_step_image(product_window, tmp_path):
     w.studio.run_directory = tmp_path / "run"
     qwen = w.studio.run_directory / "free-generation" / "qwen"
     qwen.mkdir(parents=True)
-    Image.new("RGB", (16, 20), (200, 0, 0)).save(qwen / "preview.png")
+    Image.new("RGB", (16, 20), (200, 0, 0)).save(qwen / "preview-007.png")
     w.studio.product.poll_preview()
     assert not w.candidate_preview._original.isNull()
 

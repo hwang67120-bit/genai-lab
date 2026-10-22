@@ -234,11 +234,13 @@ def generate(request, directory, record):
             return tensor
         pipe.image_processor.preprocess = preprocess
         previous = [time.perf_counter()]
-        try:        # 생성 과정 미리보기(2026-10-22): 단계마다 잠재값을 대략 색으로 바꿔 preview.png. 결과에는 영향 없음
+        try:        # 생성 과정 미리보기(2026-10-22): 단계마다 잠재값을 대략 색으로 바꿔 preview-NNN.png. 결과에는 영향 없음
             from genai_lab.generation_preview import load_factors
             preview = [load_factors()]
+            preview_failures = [0]
         except Exception as error:      # noqa: BLE001 — 미리보기는 보조
             preview = [None]
+            preview_failures = [0]
             record["preview_error"] = str(error)[:200]
         def callback(pipeline, index, timestep, kwargs):
             check()
@@ -251,10 +253,14 @@ def generate(request, directory, record):
                 try:
                     from genai_lab.generation_preview import preview_rgb, write_preview
                     latents = kwargs["latents"][:1].detach().float().cpu().numpy()
-                    write_preview(directory, preview_rgb(latents, height, width, pipeline.vae_scale_factor, preview[0]))
-                except Exception as error:      # noqa: BLE001 — 한 번 실패하면 끄고 생성은 계속
-                    preview[0] = None
-                    record["preview_error"] = str(error)[:200]
+                    write_preview(directory, preview_rgb(latents, height, width, pipeline.vae_scale_factor, preview[0]), index)
+                    preview_failures[0] = 0
+                except Exception as error:      # noqa: BLE001 — 한 번 실패해도 다음 단계에 다시 쓴다. 연속 5번이면 끈다. 생성은 계속
+                    preview_failures[0] += 1
+                    record.setdefault("preview_errors", []).append(dict(step=index, error=str(error)[:200]))
+                    if preview_failures[0] >= 5:
+                        preview[0] = None
+                        record["preview_error"] = str(error)[:200]
             save()
             return kwargs
         record["call_arguments"] = {"height": height, "width": width, "true_cfg_scale": true_cfg,

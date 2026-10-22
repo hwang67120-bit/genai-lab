@@ -145,6 +145,10 @@ class FreeGenerationResults(OutfitEditResults):
                         variant=self.candidate.get("variant", "raw"), hair_restore=self.candidate.get("hair_restore"),
                         hair_auto=self.candidate.get("hair_auto"),
                         head_composited=False, trace=self.outcome["trace"], approval_record=str(self.directory / "user-review.json"))
+        from genai_lab.ai_label import label_record, labeled_png   # D-152: 저장 파일에 AI 생성 표시(픽셀은 그대로)
+        label = label_record("generated")
+        data = labeled_png(data, label)
+        metadata.update(sha256=hashlib.sha256(data).hexdigest(), approved_sha256=self.approved_sha, ai_label=label)
         created = []
         try:
             with sidecar.open("x", encoding="utf-8") as stream:

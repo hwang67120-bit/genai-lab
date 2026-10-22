@@ -1,4 +1,5 @@
 """합성 이미지로 CPU 규칙과 화면 수명을 검사한다. 모델·GPU는 사용하지 않는다."""
+from saved_image import saved_as   # D-152: 저장 파일은 AI 생성 표시 때문에 픽셀로 비교
 from dataclasses import replace
 import hashlib
 import json
@@ -189,7 +190,7 @@ def test_adopt_review_export_and_candidate_switch(tmp_path):
     with pytest.raises(ValueError): results.export(tmp_path/"no.png")
     results.approve(CHECKS)
     saved=results.export(tmp_path/"saved.png")
-    assert saved.read_bytes()==product.read_bytes() and saved.read_bytes()!=original[0]
+    assert saved_as(saved, product) and saved.read_bytes()!=original[0]
     assert json.loads(saved.with_suffix(".review.json").read_text(encoding="utf-8"))["tail_edit"]["directory"]==str(out.resolve())
     assert [c.path.read_bytes() for c in results.batch.candidates]==original
     assert [c.record_path.read_bytes() for c in results.batch.candidates]==records
@@ -274,7 +275,7 @@ def test_gui_tail_adoption_and_save_selected_product(tmp_path,monkeypatch):
         w.studio.tail_edited(product)
         assert w.save_candidate_button.isEnabled()
         w.save_candidate_button.click()
-        assert destination.read_bytes()==product.read_bytes()
+        assert saved_as(destination, product)
         assert w.studio.results is None
     finally:w.close()
 
@@ -398,7 +399,7 @@ def test_actual_tail_button_request_process_review_and_export(tmp_path,monkeypat
             assert results.status=="user_approved"
             expected=results.current_path.read_bytes()
             w.save_candidate_button.click()
-            assert destination.read_bytes()==expected and expected!=original[0]
+            assert saved_as(destination, expected) and expected!=original[0]
         else:
             assert results.tail_edit is None and results.status=="awaiting_user_review"
             assert not w.save_candidate_button.isEnabled()

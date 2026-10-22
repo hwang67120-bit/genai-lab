@@ -133,7 +133,9 @@ def test_completed_output_is_pending_and_segmented_in_its_own_coordinates(tmp_pa
     results.approve(dict(character=True,garment=True,request=True,exposure=True,finish=True))
     results.export(tmp_path/"saved.png")
     human = json.loads(Path(result["trace"]).read_text(encoding="utf-8"))["human_judgements"][-1]
-    assert human["judge"] == "user" and human["target"]["sha256"] == sha(tmp_path/"saved.png")
+    saved_record = json.loads((tmp_path/"saved.review.json").read_text(encoding="utf-8"))   # D-152: 판정 대상 = 승인한 그림, 저장 파일은 AI 표시가 더해짐
+    assert human["judge"] == "user" and human["target"]["sha256"] == saved_record["approved_sha256"]
+    assert saved_record["sha256"] == sha(tmp_path/"saved.png") and saved_record["ai_label"]["ai_generated"] is True
     assert json.loads((tmp_path/"saved.review.json").read_text(encoding="utf-8"))["head_composited"] is False
 
 

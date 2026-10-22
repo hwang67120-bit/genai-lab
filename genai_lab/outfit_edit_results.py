@@ -114,6 +114,10 @@ class OutfitEditResults:
                     "garment_reference": self.outcome.get("garment_reference"),
                     "approval_record": str(self.directory / "user-review.json"),
                     "reviewer": "user", "checks": self.checks}
+        from genai_lab.ai_label import label_record, labeled_png   # D-152: 저장 파일에 AI 생성 표시(픽셀은 그대로)
+        label = label_record("composite" if self.composited else "generated")
+        data = labeled_png(data, label)
+        metadata.update(sha256=hashlib.sha256(data).hexdigest(), approved_sha256=self.approved_sha, ai_label=label)
         created = []
         try:
             with sidecar.open("x", encoding="utf-8") as f:

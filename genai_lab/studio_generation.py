@@ -616,6 +616,10 @@ class StudioResults:
             metadata["optional_finishing"] = self.optional_finishing
         if self.tail_edit:
             metadata["tail_edit"] = dict(self.tail_edit)
+        from genai_lab.ai_label import label_record, labeled_png   # D-152: 저장 파일에 AI 생성 표시(픽셀은 그대로)
+        label = label_record("composite" if metadata.get("head_paste") else "generated", model="SDXL")
+        data = labeled_png(data, label)
+        metadata.update(sha256=hashlib.sha256(data).hexdigest(), approved_sha256=self.approved_sha, ai_label=label)
         created = []
         try:
             with sidecar.open("x", encoding="utf-8") as f:

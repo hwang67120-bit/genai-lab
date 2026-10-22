@@ -1,4 +1,5 @@
 """작업실의 원본 편집형 의상 교체 흐름(GPU 없이): 체크 → 입력 확인 → 편집 → 결과 1장 → 승인·저장."""
+from saved_image import saved_as   # D-152: 저장 파일은 AI 생성 표시 때문에 픽셀로 비교
 import json
 import os
 import sys
@@ -104,7 +105,7 @@ def test_gui_outfit_edit_runs_pipeline_and_saves_approved_result(tmp_path, monke
         expected = results.current_path.read_bytes()
         window.approve_candidate_button.click()
         window.save_candidate_button.click()
-        assert destination.read_bytes() == expected
+        assert saved_as(destination, expected)
         record = json.loads(destination.with_suffix(".review.json").read_text(encoding="utf-8"))
         assert record["mode"] == "outfit_edit" and record["head_composited"] and record["reviewer"] == "user"
     finally:
@@ -139,7 +140,7 @@ def test_result_without_head_paste_is_shown_with_reason_and_can_still_be_judged(
     with pytest.raises(ValueError):
         results.export(tmp_path / "x.png")                                 # 승인 전 저장 불가
     results.approve(dict(character=True, garment=True, exposure=True, original_outfit_gone=True))
-    assert results.export(tmp_path / "x.png").read_bytes() == results.current_path.read_bytes()
+    assert saved_as(results.export(tmp_path / "x.png"), results.current_path)
     record = json.loads((results.directory / "judgement.json").read_text(encoding="utf-8"))[-1]   # D-114
     assert record["judge"] == "user" and record["source"] == "gui_approval" and record["original_garment_remaining"] == "none"
 
@@ -333,7 +334,7 @@ def test_approved_edit_continues_to_staging_without_save_and_reopen(tmp_path, mo
         window.free_generation_button.click()
         wait_for(app, lambda: window.studio.task is None and opened)
         base = opened[0]
-        assert base.name == "approved-edit.png" and base.read_bytes() == expected
+        assert base.name == "approved-edit.png" and saved_as(base, expected)
         record = json.loads(base.with_suffix(".review.json").read_text(encoding="utf-8"))
         assert record["mode"] == "outfit_edit" and record["reviewer"] == "user" and record["sha256"] == sha(base)
         assert record["checks"]["original_outfit_gone"] is True              # 편집본 기준 자유 생성의 승인 근거

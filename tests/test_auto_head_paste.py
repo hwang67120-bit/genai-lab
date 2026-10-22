@@ -1,4 +1,5 @@
 """자동 붙이기 계약·일괄 수명·사용자 선택을 GPU 없이 확인한다."""
+from saved_image import saved_as   # D-152: 저장 파일은 AI 생성 표시 때문에 픽셀로 비교
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
@@ -109,7 +110,7 @@ def test_four_candidates_cycle_view_rejection_and_export(tmp_path,before):
     record=json.loads((tmp_path/'saved.review.json').read_text(encoding="utf-8"))
     assert record['head_view']==('before' if before else 'pasted')
     assert ('head_paste' in record) is not before
-    assert (tmp_path/'saved.png').read_bytes()==(originals[0] if before else Path(results.active_head['product_file']).read_bytes())
+    assert saved_as(tmp_path/'saved.png', originals[0] if before else Path(results.active_head['product_file']))
     assert [c.path.read_bytes() for c in results.batch.candidates]==originals
     results.select(2)
     assert results.current_path==results.candidate.path and '눈알 없음' in results.head_notice

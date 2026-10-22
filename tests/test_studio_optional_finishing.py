@@ -1,4 +1,5 @@
 """선택 원본 유지·필수 얼굴 참조·되돌릴 수 있는 검토·꼬리 좌표를 CPU 통합 검사한다."""
+from saved_image import saved_as   # D-152: 저장 파일은 AI 생성 표시 때문에 픽셀로 비교
 from dataclasses import asdict, replace
 import json
 from pathlib import Path
@@ -100,9 +101,9 @@ def test_selection_export_sha_and_audit(tmp_path, monkeypatch, adopt):
     result.approve(checks())
     target = result.export(tmp_path / "saved.png")
     expected = Path(info["product_file"]) if adopt else original
-    assert target.read_bytes() == expected.read_bytes()
+    assert saved_as(target, expected)
     audit = json.loads(target.with_suffix(".review.json").read_text(encoding="utf-8"))
-    assert audit["finishing_applied"] is adopt and audit["sha256"] == sha(expected)
+    assert audit["finishing_applied"] is adopt and audit["approved_sha256"] == sha(expected) and audit["sha256"] == sha(target)
     if adopt:
         assert audit["finishing"]["face_reference"] == "on"
         assert audit["finishing"]["stages"]["hires"]["sha256"]
@@ -190,7 +191,7 @@ def test_tail_edit_uses_finished_dimensions_and_disables_reverse(tmp_path, monke
     assert "꼬리를 고친 뒤" in result.finishing_unavailable_reason
     result.approve(checks())
     saved = result.export(tmp_path/"tail-saved.png")
-    assert saved.read_bytes() == product.read_bytes()
+    assert saved_as(saved, product)
     assert json.loads(saved.with_suffix(".review.json").read_text(encoding="utf-8"))["finishing_applied"] is True
 
 
@@ -239,7 +240,7 @@ def test_real_button_worker_selection_and_save(tmp_path, monkeypatch, outcome):
         expected = controller.results.current_path.read_bytes()
         monkeypatch.setattr(QFileDialog,"getSaveFileName",lambda *a:(str(destination),""))
         window.save_candidate_button.click()
-        assert destination.read_bytes() == expected
+        assert saved_as(destination, expected)
         assert not window.studio_finish_button.isEnabled()
     finally: window.close()
 

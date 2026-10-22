@@ -1,4 +1,5 @@
 """영역 확인·기억·실패·새 후보 보존 흐름을 CPU 대역으로 검사한다."""
+from saved_image import saved_as   # D-152: 저장 파일은 AI 생성 표시 때문에 픽셀로 비교
 from pathlib import Path
 from dataclasses import replace
 from types import SimpleNamespace
@@ -115,7 +116,7 @@ def test_new_candidate_keeps_four_originals_reapproval_and_export_provenance(tmp
         assert candidate.path.read_bytes()==product and candidate.raw.path.read_bytes()==raw
     result.approve(dict(character=True,garment=True,exposure=True))
     result.export(tmp_path/"saved.png")
-    assert (tmp_path/"saved.png").read_bytes()==Path(info["product_file"]).read_bytes()
+    assert saved_as(tmp_path/"saved.png", Path(info["product_file"]))
     assert service.read(tmp_path/"saved.review.json")["head_paste"]==info
     result.select(0)
     assert not result.head_paste_unavailable_reason

@@ -31,7 +31,7 @@ def test_pending_measurement_never_blocks_approval_export(tmp_path,monkeypatch):
         s.results.approve({'character':True,'garment':True,'exposure':True,'appendages':True});s.controls()
         assert w.save_candidate_button.isEnabled()
         s.results.export(tmp_path/'saved.png')
-        info=json.loads((tmp_path/'saved.review.json').read_text())
+        info=json.loads((tmp_path/'saved.review.json').read_text(encoding='utf-8'))
         assert info['identity_report']['status']=='pending_or_unavailable'
     finally:w.close()
 
@@ -54,7 +54,7 @@ def test_late_report_is_bound_to_its_image_not_new_selection(tmp_path,monkeypatc
         assert w.identity_report_button.isEnabled()
         s.results.approve({'character':True,'garment':True,'exposure':True,'appendages':True})
         s.results.export(tmp_path/'measured.png')
-        assert json.loads((tmp_path/'measured.review.json').read_text())['identity_report']['sha256']==digest(path)
+        assert json.loads((tmp_path/'measured.review.json').read_text(encoding='utf-8'))['identity_report']['sha256']==digest(path)
         path.write_text('changed')
         assert s.results.identity_report_record['status']=='changed'
     finally:w.close()

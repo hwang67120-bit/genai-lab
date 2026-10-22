@@ -1,4 +1,5 @@
 """마무리 연결·고정 문구·좌표·파일 소유권을 CPU로 검사한다."""
+from saved_image import saved_as   # D-152: 저장 파일은 AI 생성 표시 때문에 픽셀로 비교
 from dataclasses import asdict, replace
 from pathlib import Path
 from types import SimpleNamespace
@@ -113,7 +114,7 @@ def test_raw_hires_face_background_and_export_are_distinct(tmp_path,heads,expect
     with Image.open(results.current_path) as image: assert image.size==(1104,1848)
     results.approve(dict(character=True,garment=True,exposure=True))
     saved=results.export(tmp_path/"saved.png")
-    assert saved.read_bytes()==results.current_path.read_bytes()
+    assert saved_as(saved, results.current_path)
     assert candidate.path.read_bytes()==original and candidate.record_path.read_bytes()==raw_record
     assert json.loads(saved.with_suffix(".review.json").read_text(encoding="utf-8"))["finishing"]["status"]=="completed"
 

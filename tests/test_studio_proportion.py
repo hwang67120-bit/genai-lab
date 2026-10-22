@@ -1,4 +1,5 @@
 """비율 화면의 CPU 규칙 검사다. 모델 추론이나 GPU 생성은 없다."""
+from saved_image import saved_as   # D-152: 저장 파일은 AI 생성 표시 때문에 픽셀로 비교
 from dataclasses import asdict, replace
 from pathlib import Path
 from types import SimpleNamespace
@@ -234,7 +235,7 @@ def test_gui_two_pass_request_approval_export_and_no_second_background(tmp_path,
         assert window.studio.results.raw_path.name=="raw.png"
         expected=window.studio.results.current_path.read_bytes()
         window.approve_candidate_button.click();window.save_candidate_button.click()
-        assert destination.read_bytes()==expected
+        assert saved_as(destination, expected)
         record=json.loads(destination.with_suffix(".review.json").read_text(encoding="utf-8"))
         assert record["proportion_mode"]=="two_pass" and record["raw_sha256"]!=record["sha256"]
     finally: window.close()

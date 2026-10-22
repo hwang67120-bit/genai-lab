@@ -1,4 +1,5 @@
 """A/B/C의 CPU 규칙 검사다. 원본 보존·제품 승인·참고 태그를 확인한다."""
+from saved_image import saved_as   # D-152: 저장 파일은 AI 생성 표시 때문에 픽셀로 비교
 import json
 from dataclasses import replace
 from pathlib import Path
@@ -49,11 +50,11 @@ def test_background_product_raw_record_unchanged_and_export_uses_product(tmp_pat
         assert image.getpixel((8, 0)) == (128, 137, 142)  # 이진 마스크가 아닌 부드러운 알파 값이다.
     result.approve(checks())
     saved = result.export(tmp_path/"saved.png")
-    assert saved.read_bytes() == result.current_path.read_bytes()
+    assert saved_as(saved, result.current_path)
     assert [(c.path.read_bytes(), c.record_path.read_bytes()) for c in batch.candidates] == original
     metadata = json.loads(saved.with_suffix(".review.json").read_text(encoding="utf-8"))
     assert metadata["sha256"] != metadata["raw_sha256"]
-    assert metadata["background"]["product_sha256"] == metadata["sha256"]
+    assert metadata["background"]["product_sha256"] == metadata["approved_sha256"]   # sha256은 AI 표시가 들어간 저장 파일(D-152)
     assert metadata["automatic_gates_executed"] is False
 
 
@@ -71,7 +72,7 @@ def test_missing_or_wrong_model_records_visible_raw_fallback_without_loading(tmp
     assert "배경 정리 안 됨" in result.background_notice
     assert all(bg.read_background(c)["status"] == "failed" for c in batch.candidates)
     result.approve(checks())
-    assert result.export(tmp_path/"raw-fallback.png").read_bytes() == result.candidate.path.read_bytes()
+    assert saved_as(result.export(tmp_path/"raw-fallback.png"), result.candidate.path)
 
 
 @pytest.mark.parametrize("target", ["product.png", "background.json", "raw"])
@@ -222,7 +223,7 @@ def test_gui_preview_approval_export_and_raw_button_use_separate_images(tmp_path
         expected = window.studio.results.current_path
         window.approve_candidate_button.click()
         window.save_candidate_button.click()
-        assert seen == [expected] and destination.read_bytes() == expected.read_bytes()
+        assert seen == [expected] and saved_as(destination, expected)
     finally:
         window.close()
 
@@ -238,7 +239,7 @@ def test_tail_edit_accepts_white_product_basis_and_rejects_raw_basis(tmp_path):
     result.adopt_tail_edit(edit)
     assert result.current_path == product
     result.approve(checks())
-    assert result.export(tmp_path/"tail-export.png").read_bytes() == product.read_bytes()
+    assert saved_as(result.export(tmp_path/"tail-export.png"), product)
 
 
 def test_generate_button_releases_backend_before_cpu_background_and_records_warnings(tmp_path, monkeypatch):

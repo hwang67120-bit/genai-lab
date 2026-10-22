@@ -1,4 +1,5 @@
 """실제 화면 신호 → 요청·문구 → 원본 묶음 → 명시적 검토 → 내보내기를 CPU로 검사한다."""
+from saved_image import saved_as   # D-152: 저장 파일은 AI 생성 표시 때문에 픽셀로 비교
 import json
 import time
 from dataclasses import replace
@@ -125,7 +126,7 @@ def test_create_button_to_review_and_export_without_legacy_fallback(tmp_path, mo
         w.studio_candidate_combo.setCurrentIndex(2)
         w.approve_candidate_button.click()
         w.save_candidate_button.click()
-        assert destination.read_bytes() == selected.path.read_bytes()
+        assert saved_as(destination, selected.path)
         assert "저장 완료" in w.status_label.text()
         raw = json.loads(selected.record_path.read_text(encoding="utf-8"))
         assert raw["gates_executed"] is False and raw["final_return_eligible"] is False

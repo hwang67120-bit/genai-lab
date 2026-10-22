@@ -35,6 +35,8 @@ class FreeGenerationSpec:
     pose_key: str = ""
     absent_parts_negative: bool = False   # 요청 28 시험 B(기본 꺼짐): 없는 부위를 지시문 대신 부정 지시문으로
     accelerator: str = ""                 # D-141 시험용 가속(qwen_accelerators). 비면 검증된 40단계/CFG 4.0
+    style_lora: str = ""                  # D-159 그림체 LoRA 맛보기(style_loras, 시험 전용). 비면 없음
+    style_strength: float = 0.0
 
     @property
     def images(self):
@@ -90,11 +92,21 @@ class FreeGenerationSpec:
         if self.accelerator:
             from genai_lab.qwen_accelerators import accelerator
             accelerator(self.accelerator)          # 알 수 없는 이름은 ValueError
+        if self.style_lora:
+            from genai_lab.style_loras import check_strength, style_lora
+            style_lora(self.style_lora)
+            check_strength(self.style_strength)
+        elif self.style_strength:
+            raise ValueError("그림체 LoRA 없이 강도만 있습니다.")
 
     def prompt(self, seed):
-        return free_prompt(self.features_text, self.gender, self.body_parts, self.request_text, self.selection_seed,
+        text = free_prompt(self.features_text, self.gender, self.body_parts, self.request_text, self.selection_seed,
                            reference_scope=self.reference_scope, skeleton=bool(self.skeleton_path),
                            absent_parts_negative=self.absent_parts_negative)
+        if self.style_lora:                 # 그림체 LoRA의 지시 문장(제작자 표기)을 맨 앞에
+            from genai_lab.style_loras import style_lora
+            text = style_lora(self.style_lora)["trigger"] + " " + text
+        return text
 
     def negative(self):
         from genai_lab.free_generation import absent_parts_negative_prompt
@@ -104,7 +116,7 @@ class FreeGenerationSpec:
 def prepare_free_spec(canvas_path, reference_path, *, directory, request_text, gender="unspecified", body_parts=None,
                       features_text="", base_kind="edited", confirmed=True, reference_box=(0, 0, 768, 1024), selection_seed=42,
                       reference_scope="head", skeleton_path=None, skeleton_joints=(), pose_key="", absent_parts_negative=False,
-                      accelerator=""):
+                      accelerator="", style_lora="", style_strength=0.0):
     """두 입력을 실행 폴더로 복사해 고정한다."""
     if confirmed is not True:
         raise ValueError("기준 그림과 요청을 확인해 주세요.")
@@ -125,7 +137,7 @@ def prepare_free_spec(canvas_path, reference_path, *, directory, request_text, g
                               (request_text or "").strip(), gender, None if body_parts is None else tuple(body_parts),
                               features_text or "", base_kind, confirmed, selection_seed=selection_seed, reference_box=tuple(reference_box),
                               reference_scope=reference_scope, absent_parts_negative=absent_parts_negative, accelerator=accelerator,
-                              **skeleton)
+                              style_lora=style_lora, style_strength=float(style_strength), **skeleton)
     spec.verify_image()
     spec.prompt(SEEDS[0])          # 요청 문장 검사(외형·의상·안전) — 여기서 걸리면 ValueError
     return spec

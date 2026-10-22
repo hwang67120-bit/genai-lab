@@ -292,7 +292,8 @@ def prepare_skeleton(image, staging, directory, runtime, cancelled):
 
 def prepare_generation_inputs(base_path, character_features, request_text, *, base_kind, gender, body_parts,
                               confirmed, adult_confirmed, directory, runtime, cancelled, progress, popen, trace, persist, selection_seed,
-                              pose_guidance=False, experiment=None, automatic_edit=False, confirmation_source="user_confirmed"):
+                              pose_guidance=False, experiment=None, automatic_edit=False, confirmation_source="user_confirmed",
+                              style_trial=None):
     """확인된 입력의 같은 바이트·특징·조건·파생 참조를 실행 폴더에 고정하고 Qwen 명세를 반환한다."""
     experiment = dict(experiment or {})
     inputs = directory / "inputs"
@@ -369,14 +370,15 @@ def prepare_generation_inputs(base_path, character_features, request_text, *, ba
                              reference_scope=crop_record["scope"], skeleton_path=skeleton_path, skeleton_joints=skeleton_records or (),
                              pose_key=skeleton_record.get("pose_key", ""),
                              absent_parts_negative=experiment.get("absent_parts_negative", ABSENT_PARTS_NEGATIVE),
-                             accelerator="lightning8" if experiment.get("lightning8") else "")
+                             accelerator="lightning8" if experiment.get("lightning8") else "",
+                             style_lora=(style_trial or {}).get("name", ""), style_strength=(style_trial or {}).get("strength", 0.0))
     return features, assembled, spec
 
 
 def run_free_generation(base_path, character_features, request_text="", *, base_kind, gender, body_parts,
                         confirmed, adult_confirmed, settings, runtime, directory, cancelled=lambda: False,
                         progress=lambda _: None, popen=subprocess.Popen, selection_seed=None, pose_guidance=False, experiment=None,
-                        automatic_edit_base=False, confirmation_source="user_confirmed"):
+                        automatic_edit_base=False, confirmation_source="user_confirmed", style_trial=None):
     """GUI와 향후 API가 사용할 함수. 실패는 trace를 보존하고 예외, 성공은 사람 검토 대기 결과 반환.
     automatic_edit_base·confirmation_source는 사용자 화면 자동 흐름용(기본값 = 사람 확인 흐름 그대로)."""
     directory = Path(directory).resolve()
@@ -391,7 +393,7 @@ def run_free_generation(base_path, character_features, request_text="", *, base_
     try:
         from genai_lab.qwen_preservation import json_sha
         source_root = Path(__file__).resolve().parents[1]
-        code_files = ("free_generation", "qwen_free_generation", "free_generation_pipeline", "qwen_pose_worker", "qwen_pose_edit", "qwen_pose_settings", "qwen_outfit_edit", "outfit_edit", "outfit_edit_pipeline", "character_features", "character_verification", "pose_guidance", "hair_color_restore", "hair_auto_restore", "feature_selection", "qwen_accelerators")
+        code_files = ("free_generation", "qwen_free_generation", "free_generation_pipeline", "qwen_pose_worker", "qwen_pose_edit", "qwen_pose_settings", "qwen_outfit_edit", "outfit_edit", "outfit_edit_pipeline", "character_features", "character_verification", "pose_guidance", "hair_color_restore", "hair_auto_restore", "feature_selection", "qwen_accelerators", "style_loras")
         trace["execution_contract"] = dict(settings=settings.record(), settings_sha256=json_sha(settings.record()),
             code_sha256={name: sha(source_root / "genai_lab" / (name+".py")) for name in code_files},
             contract_sha256=sha(source_root / "docs/FREE_GENERATION_CONTRACT.md"),
@@ -406,6 +408,18 @@ def run_free_generation(base_path, character_features, request_text="", *, base_
             raise FreeGenerationRejected("invalid_input", "연출 선택 seed 형식 오류")
         if confirmation_source not in CONFIRMATION_SOURCES or type(automatic_edit_base) is not bool:
             raise FreeGenerationRejected("invalid_input", "입력 확정 출처 형식 오류")
+        if style_trial is not None:         # D-159 그림체 LoRA 맛보기(시험 전용, docs/STYLE_STAGE_DESIGN.md 3-3)
+            from genai_lab.style_loras import check_file, check_strength, style_lora
+            try:
+                if not isinstance(style_trial, dict) or set(style_trial) != {"name", "strength"}:
+                    raise ValueError("그림체 맛보기 형식은 dict(name, strength)")
+                style_lora(style_trial["name"])
+                check_strength(style_trial["strength"])
+                lora = check_file(style_trial["name"], settings.model_root)
+            except ValueError as error:
+                raise FreeGenerationRejected("invalid_input", str(error)) from error
+            trace["style_trial"] = dict(style_trial, lora=str(lora), trial="style_lora_borrowed",
+                                        note="그림체 맛보기 — 품질 기준선·운영 집계에 넣지 않는다(STYLE_STAGE_DESIGN 3-3)")
         # 원인 확인 시험용 선택지(요청 28). 기본(None)은 제품 동작 그대로. 켜면 trace에 남는다.
         if experiment is not None:
             if not isinstance(experiment, dict) or not set(experiment) <= EXPERIMENT_KEYS or not all(type(v) is bool for v in experiment.values()):
@@ -421,7 +435,7 @@ def run_free_generation(base_path, character_features, request_text="", *, base_
             base_kind=base_kind, gender=gender, body_parts=body_parts, confirmed=confirmed, adult_confirmed=adult_confirmed,
             directory=directory, runtime=runtime, cancelled=cancelled, progress=progress, popen=popen, trace=trace, persist=persist, selection_seed=selection_seed,
             pose_guidance=pose_guidance, experiment=experiment, automatic_edit=automatic_edit_base,
-            confirmation_source=confirmation_source)
+            confirmation_source=confirmation_source, style_trial=style_trial)
         for number, seed in enumerate(SEEDS, 1):
             if cancelled():
                 raise RuntimeError("사용자 취소")

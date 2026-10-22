@@ -2,6 +2,19 @@
 
 > 이 문서는 과거 판단과 실험 근거를 보존하는 기록이다. 현재 제품 계약은 docs/FLOW.md만 따른다. 아래 결정이 FLOW.md와 충돌하면 과거 결정으로 취급하며 새 구현의 근거로 사용하지 않는다.
 
+## D-159 그림체 단계 맛보기(S0.5): 빌린 공개 LoRA로 효과·동일성 섞임·동작만 본다, 시험 전용 (2026-10-23)
+
+- 사용자 (가): 오염 방지 선을 적고 맛보기를 진행(2026-10-23 새벽, 자는 동안 자동으로 이어 가기).
+- 오염 방지 선 = docs/STYLE_STAGE_DESIGN.md 3-3:
+  - 결과는 `outputs/style-trial-*`에만, trace에 `trial: style_lora_borrowed`. 품질 기준선·운영 집계·D-118 판정 20건에 넣지 않는다.
+  - 빌린 그림체는 목표 그림체가 아니다(학습 자료 미공개 → 완성 기준 4 증명 불가). 사용자 화면·제품 기본값에 연결하지 않는다.
+  - 판단 근거는 대화가 아니라 문서(STYLE_STAGE_DESIGN·이 기록)다.
+- 구현(기본 꺼짐, 제품 동작 변화 없음):
+  - `genai_lab/style_loras.py`: 등록 1개 `anime_borrowed` = prithivMLmods/Qwen-Image-Edit-2511-Anime rev 977f8c2e, `Qwen-Image-Edit-2511-Anime-2000.safetensors` 236,117,056 B, Apache-2.0, 지시 문장 `Transform into anime.`. 사용자 승인으로 `D:/genai-cache/models/style-loras/`에 내려받음, SHA dc84f766…8df9(저장소 LFS SHA와 일치) 기록 — SHA 없이는 쓸 수 없다.
+  - `run_free_generation(style_trial=dict(name, strength))`: 형식·강도(0 초과 1.5 이하)·파일 확인 → 명세 `style_lora`·`style_strength` → 지시문 맨 앞에 지시 문장 → 작업 프로세스가 가속 LoRA 다음, 오프로드 전에 `style` 어댑터로 얹고 SHA 대조. trace `style_trial`, 작업 기록 `style_lora`.
+  - `scripts/style_trial_run.py`: 줄마다 같은 장면·seed로 없음/0.6/1.0, 8단계 가속·재시도 없음, `sheet.png`.
+- 요청 35 준비: `outputs/style-trial-20261023/`(N1·K·M6·M7 × 3 = 12장). LoRA 내려받기·GPU 실행 사용자 승인(2026-10-23), Codex 인계.
+
 ## D-158 배포 전 노출 검사 = 기록만, 어려 보이는 신호 + 노출은 계속 차단 (2026-10-23)
 
 - 사용자: 노출 검사(`safety_observation`)는 태그 점수로만 판단해 어린아이인지·실제 노출인지 검증하지 못하고 오판을 낸다(요청 34·GUI 재시험에서 A2 셔츠 풀어 헤친 성인 남성이 `nipples` 0.697로 두 번 거부) → "배포 전까지 비활성화".

@@ -213,6 +213,20 @@ def generate(request, directory, record):
             record["accelerator"] = dict(name=accel_name, repo=accel["repo"], revision=accel["revision"], lora=str(path),
                                          sha256=accel["sha256"], steps=steps, true_cfg_scale=true_cfg,
                                          note="시험용 가속(D-141). CFG 1.0이면 부정 지시문은 쓰이지 않는다")
+        style_name = getattr(spec, "style_lora", "") if request.get("task_kind") == "free_generation" else ""
+        if style_name:      # D-159 그림체 LoRA 맛보기(시험 전용): 오프로드 전에 붙이고 가속 LoRA와 함께면 강도를 나눠 건다
+            from genai_lab.style_loras import check_strength, lora_path as style_path, style_lora
+            style = style_lora(style_name)
+            path = style_path(style_name, settings.model_root)
+            if not style["sha256"] or file_sha(str(path)) != style["sha256"]:
+                raise ValueError("그림체 LoRA SHA 불일치(또는 미기록)")
+            strength = check_strength(spec.style_strength)
+            pipe.load_lora_weights(str(path.parent), weight_name=path.name, adapter_name="style")
+            names, weights = ([accel_name], [1.0]) if accel_name else ([], [])
+            pipe.set_adapters(names + ["style"], weights + [strength])
+            record["style_lora"] = dict(name=style_name, repo=style["repo"], revision=style["revision"], lora=str(path),
+                                        sha256=style["sha256"], strength=strength, adapters=names + ["style"],
+                                        note="그림체 맛보기(D-159, 시험 전용 — 제품 아님)")
         pipe.vae.to("cuda")
         if outfit and request["memory"]["vae_tiling"]:  # 타일 없이는 6.5GiB 상한에서 VAE 복원이 실패했다(시험 10 진단 C)
             pipe.vae.enable_tiling()

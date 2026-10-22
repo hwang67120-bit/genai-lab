@@ -9,6 +9,8 @@ from collections import defaultdict
 from pathlib import Path
 
 SCENE_SKIN_LIGHTER = 15     # D-136 ③ 보류안: 장면 요청에서 피부가 기준보다 L*로 이만큼 넘게 밝아질 때만 위반
+CAST_COS = 0.5              # R5(2026-10-23): 피부와 머리의 색 이동(a·b)이 이 코사인 넘게 같은 방향이면 장면 조명이 둘 다 물들인 것
+CAST_MIN_SHIFT = 5.0        # 두 이동이 모두 이 크기 이상일 때만 방향을 본다(작은 이동은 방향이 잡음)
 
 
 def lightness(rgb):
@@ -26,6 +28,35 @@ def skin_lighter(attempt):
     return lightness(pixels["result_rgb"]) - lightness(pixels["reference_rgb"])
 
 
+def lab(rgb):
+    import numpy as np
+    c = np.array(rgb, dtype=float) / 255
+    c = np.where(c > 0.04045, ((c + 0.055) / 1.055) ** 2.4, c / 12.92)
+    xyz = np.array([[0.4124, 0.3576, 0.1805], [0.2126, 0.7152, 0.0722], [0.0193, 0.1192, 0.9505]]) @ c / np.array([0.9505, 1.0, 1.089])
+    f = np.where(xyz > 0.008856, np.cbrt(xyz), 7.787 * xyz + 16 / 116)
+    return np.array([116 * f[1] - 16, 500 * (f[0] - f[1]), 200 * (f[1] - f[2])])
+
+
+def shared_cast(attempt):
+    """피부·머리 색 이동이 같은 방향인가(장면 조명). 반환 코사인 또는 None(값 없음·이동 작음)."""
+    import numpy as np
+    items = (((attempt.get("observation") or {}).get("verification") or {}).get("items") or {})
+    shifts = []
+    for key in ("skin", "hair_color"):
+        pixels = (items.get(key) or {}).get("pixels") or {}
+        if not pixels.get("reference_rgb") or not pixels.get("result_rgb"):
+            return None
+        shifts.append((lab(pixels["result_rgb"]) - lab(pixels["reference_rgb"]))[1:])
+    if min(float(np.linalg.norm(v)) for v in shifts) < CAST_MIN_SHIFT:
+        return None
+    return float(shifts[0] @ shifts[1] / (np.linalg.norm(shifts[0]) * np.linalg.norm(shifts[1])))
+
+
+def lighting_cast(attempt):
+    cos = shared_cast(attempt)
+    return cos is not None and cos > CAST_COS
+
+
 RULES = {
     "R0 지금": lambda items, a: items,
     "R1 장면 피부는 크게 밝아질 때만": lambda items, a: [i for i in items if i != "skin" or (skin_lighter(a) or 0) > SCENE_SKIN_LIGHTER],
@@ -33,14 +64,18 @@ RULES = {
     "R3 헤어스타일·머리 장식 태그 빼기": lambda items, a: [i for i in items if i not in ("hair_style", "head_accessories")],
     "R4 = R1 + R3": lambda items, a: [i for i in items if i not in ("hair_style", "head_accessories")
                                       and (i != "skin" or (skin_lighter(a) or 0) > SCENE_SKIN_LIGHTER)],
+    "R5 피부·머리가 같은 방향으로 물들면(장면 조명) 둘 다 빼기": lambda items, a: [i for i in items if not (lighting_cast(a) and i in ("skin", "hair_color"))],
+    "R6 = R3(지금 제품) + R5": lambda items, a: [i for i in items if i not in ("hair_style", "head_accessories")
+                                             and not (lighting_cast(a) and i in ("skin", "hair_color"))],
 }
 
 
 def score(runs, ledger):
     verdict = {(r["case"], r["target"]["attempt"], r["target"]["variant"]): r["quality_pass"] for r in ledger}
     rows = []
-    for run in sorted(p for p in Path(runs).iterdir() if (p / "trace.json").exists()):
-        attempts = json.loads((run / "trace.json").read_text(encoding="utf-8")).get("attempts") or []
+    for run in sorted(p for p in Path(runs).iterdir() if (p / "trace.json").exists() or (p / "free-generation" / "trace.json").exists()):
+        trace = run / "trace.json" if (run / "trace.json").exists() else run / "free-generation" / "trace.json"   # 작업실 실행 폴더(요청 34)
+        attempts = json.loads(trace.read_text(encoding="utf-8")).get("attempts") or []
         if not attempts:
             continue
         def passed(number):
@@ -60,6 +95,7 @@ def score(runs, ledger):
             wasted_avoided += (r["retried"] and not retry and r["a1_pass"])
         out[name] = dict(retries=retries, selection_pass=kept, rows_lost_vs_R0=lost, needless_retries_avoided=wasted_avoided)
     detail = [dict(case=r["case"], items=r["items"], skin_lighter=None if skin_lighter(r["a1"]) is None else round(skin_lighter(r["a1"]), 1),
+                   cast_cos=None if shared_cast(r["a1"]) is None else round(shared_cast(r["a1"]), 2),
                    a1_pass=r["a1_pass"], a2_pass=r["a2_pass"]) for r in rows if r["retried"]]
     return dict(rows=len(rows), rules=out, retried_rows=detail)
 

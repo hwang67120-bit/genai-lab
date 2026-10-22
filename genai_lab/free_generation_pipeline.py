@@ -161,10 +161,12 @@ def observe_result(reference, raw, directory, runtime, *, cancelled, popen, skip
     verification = (verify_features(reference, scores, rgb, parts, skip or {}) if scores is not None
                     else dict(items={}, summary={}, retry=[], status="unmeasured", reason="tagger unavailable"))
     observed = safety_observation(scores)
-    safety = dict(status="not_reviewed", judge="user", reason="자동 안전 검사 통과를 보장하지 않는다", review=observed["review"])
+    safety = dict(status="not_reviewed", judge="user", reason="자동 안전 검사 통과를 보장하지 않는다", review=observed["review"],
+                  exposure=observed["exposure"], policy=observed["policy"])
     # 노출·금지 외형 태그가 강하게 관찰되면 승인할 수 없는 결과로 둔다. 나이 관련 태그는 사람 확인 근거로만 남긴다.
     if observed["blocked"]:
-        safety = dict(status="violated", judge="automatic_analysis", evidence=observed["blocked"], review=observed["review"])
+        safety = dict(status="violated", judge="automatic_analysis", evidence=observed["blocked"], review=observed["review"],
+                      exposure=observed["exposure"], policy=observed["policy"])
     pose_match = dict(status="unmeasurable", reason="결과 관절 인식 실패") if skeleton else None
     try:
         joints = detect_joints(rgb, directory / "joints", runtime, cancelled=cancelled)
@@ -310,7 +312,8 @@ def prepare_generation_inputs(base_path, character_features, request_text, *, ba
     scores = measure_result_scores(np.asarray(image), runtime) or {}
     observed = safety_observation(scores)
     blocked = observed["blocked"]
-    trace["input_facts"]["automatic_tags"] = dict(source="automatic_analysis", scores=scores, blocked=blocked, review=observed["review"])
+    trace["input_facts"]["automatic_tags"] = dict(source="automatic_analysis", scores=scores, blocked=blocked, review=observed["review"],
+                                                  exposure=observed["exposure"], policy=observed["policy"])
     persist()
     if blocked:
         raise FreeGenerationRejected("unsafe_input", "기준 이미지에서 금지된 외형·노출 태그가 관찰됐습니다: " + ", ".join(blocked),

@@ -51,6 +51,11 @@ MALE_TOPLESS_ALLOWED = ("nipples", "topless")
 # 나이 관련 태그는 차단하지 않고 근거로만 남긴다. SD·4등신 같은 그림체가 있어(사용자 결정 2026-10-14) child·chibi만으로 막지 않는다.
 AGE_REVIEW_TAGS = ("child", "aged_down", "chibi")
 SAFETY_THRESHOLD = 0.5
+# 노출 검사 방식(D-158, 2026-10-23 사용자 "배포 단계가 아니면 제약을 두지 않는다 — 투명하게 다 작동하는지 알아야 나중에 제한할 때 오염을 막는다").
+# "record"(배포 전): 노출 태그는 막지 않고 기록만 한다(trace의 exposure). "block"(배포 때): 이전 규칙(D-125·D-134) 그대로.
+# 어느 방식이든 막는 것: loli·shota, 그리고 어려 보이는 신호(AGE_REVIEW_TAGS)와 노출이 함께 잡힌 경우.
+EXPOSURE_POLICY = "record"
+EXPOSURE_POLICIES = ("record", "block")
 NO_PROPS = "Do not add weapons or held props unless the request asks for them. "
 KEEP_OUTFIT = "Keep the character's outfit exactly as in image 1: the same garments, colors, patterns and details. "
 KEEP_FACE = "Keep the face, hairstyle, hair color and head accessories the same as in image 1 and as in the head close-up in image 2. "
@@ -144,11 +149,21 @@ def check_request(text):
                 judge="rule", note="문장 패턴 검사는 보조 정보이며 사용자가 연출 범위를 확인해야 합니다.")
 
 
-def safety_observation(scores):
-    """태그 점수에서 차단 근거와 사람 확인용 근거를 나눈다. 통과는 안전 보장이 아니다(사람 체크가 최종)."""
+def safety_observation(scores, policy=None):
+    """태그 점수에서 차단 근거·사람 확인용 근거·노출 기록을 나눈다. 통과는 안전 보장이 아니다(사람 체크가 최종).
+    policy: EXPOSURE_POLICY(기본 "record") 또는 "block". 반환 dict(blocked, review, exposure, policy)."""
+    policy = policy or EXPOSURE_POLICY
+    if policy not in EXPOSURE_POLICIES:
+        raise ValueError("노출 검사 방식 오류")
     scores = scores or {}
-    blocked = sorted(k for k in (*EXPOSURE_TAGS, *AGE_BLOCK_TAGS) if float(scores.get(k, 0.0)) >= SAFETY_THRESHOLD)
+    exposure = {k: round(float(scores[k]), 3) for k in EXPOSURE_TAGS if float(scores.get(k, 0.0)) >= SAFETY_THRESHOLD}
     review = {k: round(float(scores[k]), 3) for k in AGE_REVIEW_TAGS if float(scores.get(k, 0.0)) >= SAFETY_THRESHOLD}
+    age_blocked = sorted(k for k in AGE_BLOCK_TAGS if float(scores.get(k, 0.0)) >= SAFETY_THRESHOLD)
+    if policy == "record":
+        # 배포 전: 노출은 기록만. 단 어려 보이는 신호(loli·shota 또는 child·aged_down·chibi)와 노출이 함께면 막는다 — 단계와 무관.
+        blocked = sorted({*age_blocked, *(exposure if (age_blocked or review) else ())})
+        return dict(blocked=blocked, review=review, exposure=exposure, policy=policy)
+    blocked = sorted({*exposure, *age_blocked})
     # 성인 남성 상의 탈의는 흔하고 노출 차단 대상이 아니다(사용자 결정 2026-10-16). 남성·상의 탈의 남성 태그가 확실할 때만
     # nipples·topless를 차단에서 빼고 기록한다. 다른 노출 태그와 나이 차단(loli·shota)은 그대로.
     if (float(scores.get("1boy", 0.0)) >= 0.7 and float(scores.get("topless_male", 0.0)) >= SAFETY_THRESHOLD
@@ -157,7 +172,7 @@ def safety_observation(scores):
             if tag in blocked:
                 blocked.remove(tag)
                 review[tag] = round(float(scores[tag]), 3)
-    return dict(blocked=blocked, review=review)
+    return dict(blocked=blocked, review=review, exposure=exposure, policy=policy)
 
 
 def mentions_background(text):

@@ -195,6 +195,7 @@ def test_missing_analysis_is_unmeasurable_and_no_source_masks_are_used(tmp_path,
 
 
 def test_unsafe_result_cannot_be_approved(tmp_path,fake_models,monkeypatch):
+    monkeypatch.setattr("genai_lab.free_generation.EXPOSURE_POLICY", "block")     # 배포 때 방식(D-158)
     base,_ = fake_models
     readings = iter([{"long_hair":.9}, {"nude":.9}, {"nude":.9}])
     monkeypatch.setattr(pipeline,"measure_result_scores",lambda *a:next(readings))
@@ -226,6 +227,7 @@ def test_source_snapshot_survives_changes_to_original(tmp_path,fake_models):
 
 
 def test_confirmed_adult_still_rejects_forbidden_input_observation(tmp_path,fake_models,monkeypatch):
+    monkeypatch.setattr("genai_lab.free_generation.EXPOSURE_POLICY", "block")     # 배포 때 방식(D-158)
     base,calls=fake_models
     monkeypatch.setattr(pipeline,"measure_result_scores",lambda *a:{"nude":.9})
     with pytest.raises(ValueError,match="금지"):
@@ -264,13 +266,14 @@ def test_requested_composition_is_not_overridden_with_full_body():
 def test_safety_observation_blocks_exposure_but_only_records_age_style_tags():
     # 검토 2번: 태거 어휘에 있는 노출 태그로 차단한다. child·chibi는 SD·4등신 그림체가 있어 차단하지 않고 근거로만 남긴다
     from genai_lab.free_generation import safety_observation
-    assert safety_observation({"completely_nude": .9, "topless": .6})["blocked"] == ["completely_nude", "topless"]
+    assert safety_observation({"completely_nude": .9, "topless": .6}, "block")["blocked"] == ["completely_nude", "topless"]
     observed = safety_observation({"child": .8, "chibi": .7, "1girl": .9})
     assert observed["blocked"] == [] and observed["review"] == {"child": .8, "chibi": .7}
     assert safety_observation({"loli": .6})["blocked"] == ["loli"]
 
 
 def test_result_with_completely_nude_is_blocked(tmp_path,fake_models,monkeypatch):
+    monkeypatch.setattr("genai_lab.free_generation.EXPOSURE_POLICY", "block")     # 배포 때 방식(D-158)
     base,_ = fake_models
     readings = iter([{"long_hair":.9}, {"completely_nude":.9}, {"completely_nude":.9}])
     monkeypatch.setattr(pipeline,"measure_result_scores",lambda *a:next(readings))
@@ -600,11 +603,11 @@ def test_approval_requires_finish_quality_and_records_it(tmp_path,fake_models):
 def test_adult_male_topless_is_recorded_not_blocked():
     # 사용자 결정 2026-10-16: 성인 남성 상의 탈의는 차단하지 않는다. 다른 노출·여성·불확실한 경우는 그대로 차단
     from genai_lab.free_generation import safety_observation
-    male = safety_observation({"1boy": .98, "topless_male": .89, "nipples": .74})
+    male = safety_observation({"1boy": .98, "topless_male": .89, "nipples": .74}, "block")
     assert male["blocked"] == [] and male["review"]["nipples"] == .74
-    assert safety_observation({"1boy": .97, "topless_male": .04, "nipples": .86})["blocked"] == ["nipples"]
-    assert safety_observation({"1girl": .9, "nipples": .8})["blocked"] == ["nipples"]
-    assert safety_observation({"1boy": .98, "topless_male": .9, "penis": .6})["blocked"] == ["penis"]
+    assert safety_observation({"1boy": .97, "topless_male": .04, "nipples": .86}, "block")["blocked"] == ["nipples"]
+    assert safety_observation({"1girl": .9, "nipples": .8}, "block")["blocked"] == ["nipples"]
+    assert safety_observation({"1boy": .98, "topless_male": .9, "penis": .6}, "block")["blocked"] == ["penis"]
 
 
 
@@ -807,3 +810,27 @@ def test_automatic_chain_edit_base_needs_the_flag_and_is_recorded(tmp_path):
     _, record, _ = validate_inputs(base, "edited", items, "male", [], "", True, True, automatic_edit=True,
                                    confirmation_source="automatic_product")
     assert record["source"] == "automatic_product" and record["approval"]["record"]["reviewer"] == "automatic_chain"
+
+
+def test_pre_release_policy_records_exposure_but_blocks_youthful_signals():
+    # D-158: 배포 전에는 노출을 기록만(A2 셔츠 풀어 헤친 남성 nipples 거부 사례), 어려 보이는 신호와 함께면 막는다
+    from genai_lab.free_generation import EXPOSURE_POLICY, safety_observation
+    assert EXPOSURE_POLICY == "record"
+    open_shirt = safety_observation({"1boy": .97, "topless_male": .04, "nipples": .86})
+    assert open_shirt["blocked"] == [] and open_shirt["exposure"] == {"nipples": .86} and open_shirt["policy"] == "record"
+    assert safety_observation({"completely_nude": .9})["blocked"] == []
+    assert safety_observation({"completely_nude": .9, "child": .6})["blocked"] == ["completely_nude"]
+    assert safety_observation({"nipples": .7, "chibi": .8})["blocked"] == ["nipples"]
+    assert safety_observation({"loli": .6})["blocked"] == ["loli"]
+    assert safety_observation({"child": .8})["blocked"] == [] and safety_observation({"child": .8})["review"] == {"child": .8}
+    with pytest.raises(ValueError):
+        safety_observation({}, "off")
+
+
+def test_pre_release_youthful_signal_with_exposure_still_rejects_input(tmp_path,fake_models,monkeypatch):
+    # D-158: 배포 전이라도 어려 보이는 신호 + 노출 입력은 막는다
+    base,calls=fake_models
+    monkeypatch.setattr(pipeline,"measure_result_scores",lambda *a:{"nude":.9,"child":.7})
+    with pytest.raises(ValueError,match="금지"):
+        run(tmp_path,base)
+    assert not calls

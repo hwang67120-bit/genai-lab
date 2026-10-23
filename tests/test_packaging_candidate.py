@@ -79,3 +79,56 @@ def test_p5_cases_reproduce_the_request_34_scenes_from_their_seeds():
     assert [c["case"] for c in cases] == ["A3", "B2"] and cases[0]["garment"] is None and cases[1]["garment"]
     for case in cases:
         assert compose_scene(case["scene_seed"])["text"] == case["scene_text"]
+
+
+runner = load("run_candidate_gpu", "packaging/run_candidate_gpu.py")
+
+
+@pytest.mark.parametrize("row, outcome", [
+    (dict(state="ok", dev_error="얼굴·머리를 찾지 못했습니다.", new_error="얼굴·머리를 찾지 못했습니다."), "expected_refusal_reproduced"),
+    (dict(state="ok", compare=dict(all_equal=True)), "match"),
+    (dict(state="ok", compare=dict(all_equal=False)), "array_difference"),
+    (dict(state="different: 거절 문구가 다름", dev_error="a", new_error="CUDA error"), "unexpected"),
+    (dict(state="different: 개발은 거절, 후보는 분할 완료", dev_error="a"), "unexpected"),
+    (dict(state="failed", error="ImportError"), "unexpected"),
+    (dict(state="skipped: canvas SHA 불일치"), "unexpected"),
+])
+def test_p4_outcomes_separate_the_expected_refusal_from_unexpected_failures(row, outcome):
+    assert inner.classify(row) == outcome
+
+
+def test_p5_starts_only_after_a_real_p4_without_unexpected_results(tmp_path):
+    manifest = tmp_path / "m.json.gz"
+    manifest.write_bytes(b"x")
+    folder = tmp_path / "p4"
+    (folder / "segment").mkdir(parents=True)
+    names = [name for name, _ in inner.P4_DEV]
+
+    def write(run, outcomes):
+        (folder / "run-report.json").write_text(json.dumps(dict(dict(stage="p4", dry=False, manifest=str(manifest), returncode=0,
+                                                                    unchanged_after=True), **run)), encoding="utf-8")
+        rows = {n: dict(outcome=o) for n, o in zip(names, outcomes)}
+        verdict = inner.p4_verdict(rows, dry=False)
+        (folder / "segment" / "inner-p4.json").write_text(json.dumps(dict(dry=False, **verdict)), encoding="utf-8")
+
+    passing = ["match", "match", "array_difference", "match", "expected_refusal_reproduced"]
+    write({}, passing)
+    assert runner.p4_gate(folder, manifest) == ""
+    write({}, passing[:-1] + ["unexpected"])
+    assert "예상 밖" in runner.p4_gate(folder, manifest)
+    write({"dry": True}, passing)
+    assert "실제 P4" in runner.p4_gate(folder, manifest)
+    write({"unchanged_after": False}, passing)
+    assert "후보가 달라짐" in runner.p4_gate(folder, manifest)
+    with pytest.raises(SystemExit, match="--after-p4"):
+        runner.main(["p5", str(tmp_path), str(manifest), str(tmp_path), str(tmp_path / "out"), str(ROOT), "cases.json"])
+
+
+def test_p4_verdict_classifies_every_row_including_skipped_ones():
+    names = [name for name, _ in inner.P4_DEV]
+    rows = {names[0]: dict(state="skipped: canvas SHA 불일치"), names[1]: dict(state="ok", dev_error="a", new_error="a")}
+    rows.update({n: dict(state="ok", compare=dict(all_equal=True)) for n in names[2:]})
+    verdict = inner.p4_verdict(rows, dry=False)
+    assert verdict["unexpected"] == [names[0]] and not verdict["p5_allowed"]
+    assert verdict["outcomes"][names[1]] == "expected_refusal_reproduced"
+    assert not inner.p4_verdict({n: dict(state="dry") for n in names}, dry=True)["p5_allowed"]

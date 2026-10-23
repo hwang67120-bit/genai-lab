@@ -110,7 +110,33 @@ def p4(out, home, repo, dry):
                        compare=compare_parts(result["parts"], dev / "parts.npz"))
         except Exception as error:  # noqa: BLE001
             row.update(state="failed", error=f"{type(error).__name__}: {error}"[:1500], tb=traceback.format_exc()[-1500:])
+    report.update(p4_verdict(report["rows"], dry))
     return report
+
+
+def classify(row):
+    """P4 한 건의 결론(2026-10-23 사용자: 예정된 거절 재현과 예상 밖 실행 실패를 구분).
+    expected_refusal_reproduced  개발에서도 거절한 건이 같은 문구로 거절됨 → 통과
+    match                        분할 완료 + 배열이 개발 결과와 같음 → 통과
+    array_difference             분할 완료, 배열이 다름 → 실패는 아님(원인 미확정으로 보고)
+    unexpected                   그 밖(실행 오류·SHA 불일치·거절이 재현되지 않거나 문구가 다름) → P5를 시작하지 않음"""
+    state = row.get("state", "")
+    if state == "dry":
+        return "dry"
+    if state == "ok" and "dev_error" in row:
+        return "expected_refusal_reproduced"
+    if state == "ok":
+        return "match" if row.get("compare", {}).get("all_equal") else "array_difference"
+    return "unexpected"
+
+
+def p4_verdict(rows, dry):
+    for row in rows.values():               # 모든 건을 끝에서 한 번에 판정(건너뛴 건도 빠지지 않게)
+        row.setdefault("outcome", classify(row))
+    outcomes = {name: row["outcome"] for name, row in rows.items()}
+    unexpected = sorted(name for name, outcome in outcomes.items() if outcome == "unexpected")
+    return dict(outcomes=outcomes, unexpected=unexpected,
+                p5_allowed=not dry and len(rows) == len(P4_DEV) and not unexpected)
 
 
 def p5(out, cases_path, dry):

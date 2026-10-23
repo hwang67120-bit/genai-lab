@@ -4,7 +4,9 @@
 - 환경 변수는 처음부터 만든다(`run_isolated_check.environment`와 같음): PATH = 배포 후보 runtime-main + Windows 폴더, 가짜 사용자 폴더.
   GPU 단계는 CUDA_VISIBLE_DEVICES를 지정하지 않는다(--dry는 -1로 숨김). 띄운 셸의 GPU 관련 변수는 이름만 기록하고 넘기지 않는다.
 - p5는 먼저 사용자 첫 실행 그대로(준비 화면 → 모델 폴더 선택 → 깊은 검사 → 기록) 진행한 뒤 그 기록으로 작업실을 연다.
-사용: python run_candidate_gpu.py <p4|p5> <배포 후보> <고정 목록 json.gz> <모델 폴더> <출력 폴더(새 폴더)> <저장소 루트> [<줄 목록 json>] [--dry]
+- p5(실제 실행)는 --after-p4 <P4 출력 폴더>가 가리키는 P4가 예상 밖 결과 없이 끝났을 때만 시작한다(예정된 거절 재현은 통과).
+사용: python run_candidate_gpu.py <p4|p5> <배포 후보> <고정 목록 json.gz> <모델 폴더> <출력 폴더(새 폴더)> <저장소 루트> [<줄 목록 json>]
+      [--after-p4 <P4 출력 폴더>] [--dry]
 """
 import hashlib
 import json
@@ -33,11 +35,39 @@ def verify(candidate, manifest, repo, out, label):
     return done.returncode == 0
 
 
+def p4_gate(folder, manifest):
+    """P5 시작 조건: 같은 고정 목록으로 돈 실제(dry 아님) P4가 끝났고, 예상 밖 결과가 없고, 끝난 뒤 후보가 그대로일 것."""
+    try:
+        run = json.loads((folder / "run-report.json").read_text(encoding="utf-8"))
+        inner = json.loads((folder / "segment" / "inner-p4.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        return f"P4 기록을 읽을 수 없음: {error}"
+    problems = []
+    if run.get("stage") != "p4" or run.get("dry") or inner.get("dry"):
+        problems.append("실제 P4 실행 기록이 아님")
+    if Path(run.get("manifest", "")).resolve() != manifest.resolve():
+        problems.append("다른 고정 목록으로 돈 P4")
+    if run.get("returncode") != 0 or not run.get("unchanged_after") or run.get("error") or inner.get("error"):
+        problems.append("P4 실행기 오류 또는 끝난 뒤 후보가 달라짐")
+    if not inner.get("p5_allowed"):
+        problems.append(f"P4 예상 밖 결과: {inner.get('unexpected')}")
+    return "; ".join(problems)
+
+
 def main(argv):
     dry = "--dry" in argv
     argv = [a for a in argv if a != "--dry"]
+    after_p4 = None
+    if "--after-p4" in argv:                       # P5는 통과한 P4 기록이 있어야 시작한다(2026-10-23 사용자)
+        i = argv.index("--after-p4")
+        after_p4 = Path(argv[i + 1])
+        argv = argv[:i] + argv[i + 2:]
     stage, candidate, manifest, home, out, repo = argv[0], *(Path(a) for a in argv[1:6])
     cases = Path(argv[6]) if len(argv) > 6 else None
+    if stage == "p5" and not dry:
+        problem = "P4 기록 폴더(--after-p4)가 필요함" if after_p4 is None else p4_gate(after_p4, manifest)
+        if problem:
+            raise SystemExit(f"P5를 시작하지 않습니다 — {problem}")
     if out.exists():
         raise SystemExit(f"출력 폴더가 이미 있습니다(새 폴더로): {out}")
     out.mkdir(parents=True)

@@ -17,6 +17,7 @@
 | `packages/` | 관찰 모듈 → 배포 패키지·버전·라이선스 표시(`main.json`·`pose.json`) → `packaging/requirements-*.txt` | — | — | `package_list.py` |
 | `model-home/` | 모델 폴더 배치 확인(D-171): 빈 폴더·분석 모델만·전체(시험용 복사본 `D:\genai-test\model-home-20261023`) 점검(`check.json`, Qwen SHA 포함)과 제품 단계 장면 4개 재관찰, 요약 `summary-*.json` | 숨김 | Qwen 생성, 머리 분할 | `model_home_check.py`·`scenarios.py` |
 | `packages/evidence-main.json` | opencv·PySide6·setuptools 사용 근거(불러온 파일이 어느 배포 기록과 해시가 같은지) | — | — | `package_evidence.py` |
+| `d172/` | HF 토큰 차단·필수 모델 공통 검사(D-172) 확인: 빈 폴더·WD 태거 없는 폴더(문구 수정 전·후)·전체 폴더(준비 화면 수준 SHA) 점검, 전체 폴더 제품 단계. 사용자 토큰 파일 열기 0회 | 숨김 | Qwen 생성, 머리 분할 | `model_home_check.py`·`scenarios.py` |
 
 - 각 폴더: `opens.jsonl`(원자료: 열린 파일 기록), `status.json`(단계 결과·대신한 단계), `console.log`.
 - `summary-first-gpu-on.json`, `summary-gpu-hidden.json`: `scripts/product_file_trace/summarize.py`로 만든 분류 요약.

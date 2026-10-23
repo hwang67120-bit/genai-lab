@@ -207,6 +207,8 @@ SCENARIOS = dict(base4=scenario_base4, outfit_retry=scenario_outfit_retry, hair_
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     name, out = argv[0], Path(argv[1])
+    from genai_lab.child_env import isolate_hf_credentials
+    isolate_hf_credentials()          # 작업실(gui_main)과 같게: 사용자 허깅페이스 토큰을 읽지 않는다(D-172)
     if os.environ.get("CUDA_VISIBLE_DEVICES") != "-1":      # PowerShell에서 빈 값은 변수 삭제가 된다 → -1로 숨긴다
         raise SystemExit("GPU를 숨기고 실행하세요(CUDA_VISIBLE_DEVICES=-1).")
     import torch

@@ -34,6 +34,8 @@ def step(record, name, fn):
 
 def main(argv):
     out, full_sha = Path(argv[0]), "--sha" in argv
+    from genai_lab.child_env import isolate_hf_credentials
+    isolate_hf_credentials()          # 작업실(gui_main)과 같게(D-172)
     record = dict(model_home=os.environ.get("GENAI_MODEL_HOME"), gpu_visible=None)
     import torch
     record["gpu_visible"] = torch.cuda.is_available()
@@ -51,9 +53,13 @@ def main(argv):
         step(record, "analyze_base", base)
         work = Path(tempfile.mkdtemp(prefix="model-home-check-"))
         step(record, "analyze_inputs", lambda: sorted(studio_generation.analyze_inputs(CHAR, GARM, work / "inputs", rt, require_face=False))[:12])
-    if full_sha and settings["ok"]:
-        from genai_lab.qwen_pose_settings import validate_model_files
-        step(record, "qwen_model_sha", lambda: validate_model_files(load_qwen_settings(rt.qwen_settings)))
+    if rt is not None:          # D-172 공통 검사(사용자 화면 시작 전과 같은 함수) — 흐름별, 빠진 것 전체 목록
+        from genai_lab import model_check
+        from genai_lab.qwen_pose_settings import QwenPoseSettings
+        for flow in ("staging", "outfit"):
+            step(record, f"model_check_{flow}", lambda flow=flow: model_check.check_models(rt, QwenPoseSettings.load(rt.qwen_settings), flow))
+        if full_sha:            # 준비 화면 수준(분석 모델 SHA + 기존 Qwen SHA 대조)
+            step(record, "model_check_deep", lambda: model_check.check_models(rt, QwenPoseSettings.load(rt.qwen_settings), "outfit", deep=True))
     out.write_text(json.dumps(record, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
 
 

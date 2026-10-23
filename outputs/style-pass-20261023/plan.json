@@ -1,0 +1,16 @@
+{
+  "style_lora": "anime_borrowed",
+  "strength": 1.0,
+  "variants": ["style"],
+  "cases": [
+    {"case": "A1", "image": "outputs/product-run-20261022/runs/95b024bedc324175bb835344f3da64c5/free-generation/qwen-2/raw.png",
+     "sha256": "fd5dff972d3491cf3283a764462d0e00482db3bad0e35e6bc6f1745c703cdd8d", "original_seconds": 4324,
+     "judged": "요청 34 사용자 '정상 생성'(quality_pass true)"},
+    {"case": "A3", "image": "outputs/product-run-20261022/runs/eaf9b7c7102c4a67ad3859c611e01762/free-generation/qwen/raw.png",
+     "sha256": "091184c905bb1e81b85903a1bff93d3c0cc8350476378125e95ad801bcd2eef1", "original_seconds": 2190,
+     "judged": "요청 34 사용자 '정상 생성'(quality_pass true)"},
+    {"case": "B2", "image": "outputs/product-run-20261022/runs/b5cb43fef5bf4277a15f16db4fd23644/free-generation/qwen/raw.png",
+     "sha256": "8b36371aa99326142d13ac24e4675b6080f9d44a86c043cede3351522581c560", "original_seconds": 6506,
+     "judged": "요청 34 사용자 '정상 생성'(quality_pass true)"}
+  ]
+}

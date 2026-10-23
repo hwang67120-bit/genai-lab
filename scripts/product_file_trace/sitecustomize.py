@@ -28,7 +28,18 @@ if _LOG:
                 f.write(json.dumps(dict(pid=os.getpid(), argv0=sys.argv[0] if sys.argv else "", kind=kind, path=p),
                                    ensure_ascii=False) + "\n")
 
+    _NET_EVENTS = ("socket.connect", "socket.getaddrinfo", "socket.sendto", "socket.gethostbyname", "urllib.Request",
+                   "http.client.connect")
+
     def _hook(event, args):
+        if event in _NET_EVENTS:                       # 외부 연결 시도(파이썬 수준, D-174) — 결과와 상관없이 시도 자체를 남긴다
+            try:
+                with _lock:
+                    with open(_LOG, "a", encoding="utf-8") as f:
+                        f.write(json.dumps(dict(pid=os.getpid(), kind="net", event=event, args=repr(args)[:300]), ensure_ascii=False) + "\n")
+            except Exception:
+                pass
+            return
         if event == "open" and args and args[0] != _LOG and isinstance(args[0], (str, bytes, os.PathLike)):
             mode = args[1] if len(args) > 1 and isinstance(args[1], str) else "r"
             if "r" in mode and "+" not in mode and "w" not in mode and "a" not in mode:
@@ -120,6 +131,31 @@ if _LOG:
                 pass
             _popen_init(self, args, *a, **k)
         subprocess.Popen.__init__ = _traced_popen
+
+    # 선택: 프로세스 연결 표본(GENAI_OPEN_TRACE_NET=1, D-174). 운영체제가 보는 이 프로세스의 TCP/UDP 연결을 0.5초마다 —
+    # 파이썬 밖(C 확장)에서 연 연결도 열려 있는 동안이면 잡힌다. 아주 짧은 연결은 빠질 수 있다.
+    if os.environ.get("GENAI_OPEN_TRACE_NET") == "1":
+        def _sample_net():
+            import time
+            try:
+                import psutil
+            except ImportError:
+                return
+            proc, seen = psutil.Process(os.getpid()), set()
+            while True:
+                try:
+                    for c in proc.net_connections(kind="inet"):
+                        key = (c.laddr, c.raddr, c.status)
+                        if key not in seen:
+                            seen.add(key)
+                            with _lock:
+                                with open(_LOG, "a", encoding="utf-8") as f:
+                                    f.write(json.dumps(dict(pid=os.getpid(), kind="net-sample", laddr=str(c.laddr), raddr=str(c.raddr),
+                                                            status=c.status), ensure_ascii=False) + "\n")
+                except Exception:
+                    pass
+                time.sleep(0.5)
+        threading.Thread(target=_sample_net, name="open-trace-net", daemon=True).start()
 
     # 선택: 열린 핸들 표본(GENAI_OPEN_TRACE_HANDLES=1). C 확장이 직접 연 파일 중 '열려 있는 동안' 잡히는 것만 보인다
     # (열었다 바로 닫은 파일·핸들 없이 매핑된 파일은 빠진다). 위 기록에 없는 파일이 여기서 나오면 관찰 도구가 놓친 범위다.

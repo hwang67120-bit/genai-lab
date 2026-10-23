@@ -22,19 +22,23 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
+# 대신 쓸 기존 결과 그림·분할의 위치(배포 후보에서 돌릴 때는 저장소 outputs를 가리킨다 — 앱이 쓰는 파일이 아니라 시험 입력)
+DATA = Path(os.environ.get("GENAI_TRACE_DATA_ROOT") or ROOT)
 
-DOWNLOADS = Path.home() / "Downloads"
+DOWNLOADS = Path(os.environ.get("GENAI_TRACE_DOWNLOADS") or Path.home() / "Downloads")   # 시험 입력 그림(가짜 사용자 폴더로 돌 때 지정)
 B2_CHAR = DOWNLOADS / "참조 이미지" / "86a72742408d9b4d04f5fb23fb0b93bd.jpg"
 B2_GARM = DOWNLOADS / "참조 의상" / "4b750036a001e45a39973c408855e970.jpg"
-B2_RUN = ROOT / "outputs/product-run-20261022/runs/b5cb43fef5bf4277a15f16db4fd23644"
+B2_RUN = DATA / "outputs/product-run-20261022/runs/b5cb43fef5bf4277a15f16db4fd23644"
 B2_FEATURES = {"hair_length": ["short_hair"], "hair_style": None, "hair_color": ["black_hair"], "eye_color": None,
                "head_accessories": None, "skin": None}
-RED_RUN = ROOT / "outputs/studio-runs/4b0e5e2cbf3a4bad850d0f17b6cf94f7"          # 10/23 GUI: 두 시도 모두 머리색 위반 → 머리색 복원 후보
-M6_TRIAL = ROOT / "outputs/style-trial-20261023"                                  # 요청 35 M6 없음: hair_auto auto_selected
+RED_RUN = DATA / "outputs/studio-runs/4b0e5e2cbf3a4bad850d0f17b6cf94f7"          # 10/23 GUI: 두 시도 모두 머리색 위반 → 머리색 복원 후보
+M6_TRIAL = DATA / "outputs/style-trial-20261023"                                  # 요청 35 M6 없음: hair_auto auto_selected
 MEMORY_CHARACTER = DOWNLOADS / "참조 이미지" / "26a8fe98706769af46e75e8663658909.jpg"  # 캐릭터 기억에 등록된 성인 캐릭터
 
 
 def mark(stage):
+    if not os.environ.get("GENAI_OPEN_TRACE"):      # 기록 도구 없이 돌 때(배포용 설정 확인)는 표시만 건너뛴다
+        return
     with open(os.environ["GENAI_OPEN_TRACE"], "a", encoding="utf-8") as f:
         f.write(json.dumps(dict(stage=stage, t=time.time()), ensure_ascii=False) + "\n")
 
@@ -156,7 +160,7 @@ def scenario_hair_auto(out):
     from genai_lab.scene_composer import compose_scene
     free.run_free_generation_edit = fake_qwen(M6_TRIAL / "runs/M6-none/qwen/raw.png")
     patch_segmentation(M6_TRIAL / "runs/M6-none")
-    return [("D_hair_auto", lambda: free.run_free_generation(ROOT / case["base"], case["features"], compose_scene(case["scene_seed"])["text"],
+    return [("D_hair_auto", lambda: free.run_free_generation(DATA / case["base"], case["features"], compose_scene(case["scene_seed"])["text"],
                                                               base_kind="original", gender=case["gender"], body_parts=list(case["body_parts"]),
                                                               confirmed=True, adult_confirmed=True, settings=settings, runtime=runtime,
                                                               directory=out / "D", selection_seed=42,

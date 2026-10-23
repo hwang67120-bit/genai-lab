@@ -1,0 +1,18 @@
+{
+ "decision_line": "시작 판단: studio · 배포판=True · D:\\genai-test\\모델 폴더 (공백 한글)\\model home 20261023",
+ "running_when_checked": true,
+ "processes": [
+  {
+   "pid": 6216,
+   "exe": "D:\\genai-test\\배포 후보 GenAILab-20261023\\runtime-main\\python.exe",
+   "cmd": [
+    "D:\\genai-test\\배포 후보 GenAILab-20261023\\runtime-main\\python.exe",
+    "D:\\genai-test\\배포 후보 GenAILab-20261023\\app\\gui_main.py"
+   ]
+  }
+ ],
+ "output": [
+  "캐릭터 작업실을 여는 중입니다. 창이 뜰 때까지 10~20초 걸립니다...",
+  "시작 판단: studio · 배포판=True · D:\\genai-test\\모델 폴더 (공백 한글)\\model home 20261023"
+ ]
+}

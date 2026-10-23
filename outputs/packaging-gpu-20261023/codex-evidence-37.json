@@ -1,0 +1,2586 @@
+{
+  "collected": "2026-10-24 03:20:46+0900",
+  "scope": "Python 3.10 candidate validation only; not final release approval",
+  "p4": {
+    "run": {
+      "stage": "p4",
+      "dry": false,
+      "candidate": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed",
+      "manifest": "Z:\\genai-lab\\outputs\\packaging-gpu-20261023\\candidate-manifest.json.gz",
+      "model_home": "D:\\genai-test\\model-home-20261023",
+      "after_p4": null,
+      "p4_review": null,
+      "started": "2026-10-24 00:38:55",
+      "launching_shell_gpu_vars": [],
+      "inner_sha256": "ea0344d3763c6eb38f2db182b16515a40b0aa75d760f20d02d1118f335058387",
+      "seconds": 80.9,
+      "unchanged_after": true,
+      "process": {
+        "exit_codes": {
+          "p4": 0
+        },
+        "normal_exit": true,
+        "note": "결과 판정과 별개. 0이 아니면 결과가 좋아도 정상 종료로 처리하지 않는다"
+      },
+      "result": {
+        "outcomes": {
+          "B2-outfit-parts": "pass",
+          "B2-base-parts": "pass",
+          "B2-result-parts": "pass",
+          "A3-base-parts": "pass",
+          "A3-result-parts": "pass"
+        },
+        "unexpected": [],
+        "review_needed": [],
+        "p5_allowed": true,
+        "p5_allowed_after_review": true
+      },
+      "finished": "2026-10-24 00:41:22"
+    },
+    "outer": {
+      "stage": "p4",
+      "launcher_exit_code": 0,
+      "finished": "2026-10-24T00:41:22.3147676+09:00",
+      "normal_exit": true
+    },
+    "inner": {
+      "stage": "p4",
+      "dry": false,
+      "executable": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\python.exe",
+      "analysis_python": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\python.exe",
+      "analysis_python_in_candidate": true,
+      "semantic_repo": "D:\\genai-test\\model-home-20261023\\tools\\see-through",
+      "semantic_checkpoint": "D:\\genai-test\\model-home-20261023\\hf\\models--24yearsold--l2d_sam_iter2\\snapshots\\0b0608310fb7a89e32ecd7397147a249540cf1e7\\checkpoint-18000.pt",
+      "semantic_in_model_home": true,
+      "rows": {
+        "B2-outfit-parts": {
+          "dev_dir": "Z:\\genai-lab\\outputs\\product-run-20261022\\runs\\b5cb43fef5bf4277a15f16db4fd23644\\outfit-edit\\parts",
+          "canvas_sha_match": true,
+          "dev": {
+            "protect_px": 18727,
+            "face_px": 5809,
+            "accessory_px": 0,
+            "segmenter": {
+              "max_reserved_gib": 5.078125,
+              "max_allocated_gib": 4.662505149841309,
+              "checkpoint_sha256": "dda82b916f6c340bc5a6c3a077ff1214f9906906abe3707b1076d55b508f253f"
+            }
+          },
+          "state": "ok",
+          "seconds": 24.3,
+          "new": {
+            "protect_px": 18727,
+            "face_px": 5809,
+            "accessory_px": 0,
+            "segmenter": {
+              "max_reserved_gib": 5.078125,
+              "max_allocated_gib": 4.662505149841309,
+              "checkpoint_sha256": "dda82b916f6c340bc5a6c3a077ff1214f9906906abe3707b1076d55b508f253f"
+            }
+          },
+          "compare": {
+            "same_file_sha": true,
+            "keys_only_new": [],
+            "keys_only_dev": [],
+            "arrays": {
+              "bottomwear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "ears": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "earwear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "eyes": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "eyewear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "face": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "footwear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "hair": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "handwear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "headwear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "legwear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "mouth": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "neck": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "neckwear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "nose": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "objects": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "tail": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "topwear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "wings": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              }
+            },
+            "all_equal": true
+          },
+          "outcome": "pass",
+          "outcome_reason": "배열이 개발 결과와 같음"
+        },
+        "B2-base-parts": {
+          "dev_dir": "Z:\\genai-lab\\outputs\\product-run-20261022\\runs\\b5cb43fef5bf4277a15f16db4fd23644\\free-generation\\base-parts",
+          "canvas_sha_match": true,
+          "dev": {
+            "protect_px": 18625,
+            "face_px": 5691,
+            "accessory_px": 0,
+            "segmenter": {
+              "max_reserved_gib": 5.078125,
+              "max_allocated_gib": 4.662505149841309,
+              "checkpoint_sha256": "dda82b916f6c340bc5a6c3a077ff1214f9906906abe3707b1076d55b508f253f"
+            }
+          },
+          "state": "ok",
+          "seconds": 13.7,
+          "new": {
+            "protect_px": 18625,
+            "face_px": 5691,
+            "accessory_px": 0,
+            "segmenter": {
+              "max_reserved_gib": 5.078125,
+              "max_allocated_gib": 4.662505149841309,
+              "checkpoint_sha256": "dda82b916f6c340bc5a6c3a077ff1214f9906906abe3707b1076d55b508f253f"
+            }
+          },
+          "compare": {
+            "same_file_sha": true,
+            "keys_only_new": [],
+            "keys_only_dev": [],
+            "arrays": {
+              "bottomwear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "ears": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "earwear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "eyes": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "eyewear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "face": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "footwear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "hair": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "handwear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "headwear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "legwear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "mouth": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "neck": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "neckwear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "nose": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "objects": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "tail": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "topwear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "wings": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              }
+            },
+            "all_equal": true
+          },
+          "outcome": "pass",
+          "outcome_reason": "배열이 개발 결과와 같음"
+        },
+        "B2-result-parts": {
+          "dev_dir": "Z:\\genai-lab\\outputs\\product-run-20261022\\runs\\b5cb43fef5bf4277a15f16db4fd23644\\free-generation\\result-analysis\\parts",
+          "canvas_sha_match": true,
+          "dev": {
+            "protect_px": 12945,
+            "face_px": 4239,
+            "accessory_px": 0,
+            "segmenter": {
+              "max_reserved_gib": 5.078125,
+              "max_allocated_gib": 4.662505149841309,
+              "checkpoint_sha256": "dda82b916f6c340bc5a6c3a077ff1214f9906906abe3707b1076d55b508f253f"
+            }
+          },
+          "state": "ok",
+          "seconds": 13.6,
+          "new": {
+            "protect_px": 12945,
+            "face_px": 4239,
+            "accessory_px": 0,
+            "segmenter": {
+              "max_reserved_gib": 5.078125,
+              "max_allocated_gib": 4.662505149841309,
+              "checkpoint_sha256": "dda82b916f6c340bc5a6c3a077ff1214f9906906abe3707b1076d55b508f253f"
+            }
+          },
+          "compare": {
+            "same_file_sha": true,
+            "keys_only_new": [],
+            "keys_only_dev": [],
+            "arrays": {
+              "bottomwear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "ears": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "earwear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "eyes": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "eyewear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "face": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "footwear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "hair": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "handwear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "headwear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "legwear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "mouth": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "neck": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "neckwear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "nose": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "objects": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "tail": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "topwear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "wings": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              }
+            },
+            "all_equal": true
+          },
+          "outcome": "pass",
+          "outcome_reason": "배열이 개발 결과와 같음"
+        },
+        "A3-base-parts": {
+          "dev_dir": "Z:\\genai-lab\\outputs\\product-run-20261022\\runs\\eaf9b7c7102c4a67ad3859c611e01762\\free-generation\\base-parts",
+          "canvas_sha_match": true,
+          "dev": {
+            "protect_px": 39471,
+            "face_px": 8929,
+            "accessory_px": 1098,
+            "segmenter": {
+              "max_reserved_gib": 5.078125,
+              "max_allocated_gib": 4.662505149841309,
+              "checkpoint_sha256": "dda82b916f6c340bc5a6c3a077ff1214f9906906abe3707b1076d55b508f253f"
+            }
+          },
+          "state": "ok",
+          "seconds": 13.8,
+          "new": {
+            "protect_px": 39471,
+            "face_px": 8929,
+            "accessory_px": 1098,
+            "segmenter": {
+              "max_reserved_gib": 5.078125,
+              "max_allocated_gib": 4.662505149841309,
+              "checkpoint_sha256": "dda82b916f6c340bc5a6c3a077ff1214f9906906abe3707b1076d55b508f253f"
+            }
+          },
+          "compare": {
+            "same_file_sha": true,
+            "keys_only_new": [],
+            "keys_only_dev": [],
+            "arrays": {
+              "bottomwear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "ears": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "earwear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "eyes": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "eyewear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "face": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "footwear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "hair": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "handwear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "headwear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "legwear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "mouth": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "neck": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "neckwear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "nose": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "objects": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "tail": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "topwear": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              },
+              "wings": {
+                "equal": true,
+                "differing": 0,
+                "size": 786432
+              }
+            },
+            "all_equal": true
+          },
+          "outcome": "pass",
+          "outcome_reason": "배열이 개발 결과와 같음"
+        },
+        "A3-result-parts": {
+          "dev_dir": "Z:\\genai-lab\\outputs\\product-run-20261022\\runs\\eaf9b7c7102c4a67ad3859c611e01762\\free-generation\\result-analysis\\parts",
+          "canvas_sha_match": true,
+          "dev_error": "얼굴·머리를 찾지 못했습니다. 이 그림은 원본 편집형 의상 교체를 쓸 수 없습니다.",
+          "dev_stage": "parts",
+          "dev_site": {
+            "file": "outfit_edit_worker.py",
+            "line": 37,
+            "function": "segment",
+            "exception": "ValueError"
+          },
+          "state": "refused",
+          "seconds": 13.1,
+          "new_error": "얼굴·머리를 찾지 못했습니다. 이 그림은 원본 편집형 의상 교체를 쓸 수 없습니다.",
+          "new_stage": "parts",
+          "new_site": {
+            "file": "outfit_edit_worker.py",
+            "line": 37,
+            "function": "segment",
+            "exception": "ValueError"
+          },
+          "outcome": "pass",
+          "outcome_reason": "같은 문구·단계·검사(outfit_edit_worker.py 37행 segment, ValueError)에서 거절 — 예정된 거절 재현"
+        }
+      },
+      "outcomes": {
+        "B2-outfit-parts": "pass",
+        "B2-base-parts": "pass",
+        "B2-result-parts": "pass",
+        "A3-base-parts": "pass",
+        "A3-result-parts": "pass"
+      },
+      "unexpected": [],
+      "review_needed": [],
+      "p5_allowed": true,
+      "p5_allowed_after_review": true,
+      "base_prefix": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main",
+      "sys_path": [
+        "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\python310.zip",
+        "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main",
+        "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\Lib\\site-packages",
+        "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\app"
+      ]
+    },
+    "memory": {
+      "peak": {
+        "file": "D:\\genai-test\\gpu-p4-20261023\\segment\\A3-base-parts\\parts\\result.json",
+        "path": ".segmenter.max_reserved_gib",
+        "gib": 5.078125
+      },
+      "over_limit": [],
+      "stopped": [],
+      "limits": [],
+      "files_scanned": 5,
+      "files": [
+        "D:\\genai-test\\gpu-p4-20261023\\segment\\A3-base-parts\\parts\\result.json",
+        "D:\\genai-test\\gpu-p4-20261023\\segment\\A3-result-parts\\parts\\worker-error.json",
+        "D:\\genai-test\\gpu-p4-20261023\\segment\\B2-base-parts\\parts\\result.json",
+        "D:\\genai-test\\gpu-p4-20261023\\segment\\B2-outfit-parts\\parts\\result.json",
+        "D:\\genai-test\\gpu-p4-20261023\\segment\\B2-result-parts\\parts\\result.json"
+      ]
+    }
+  },
+  "p5": {
+    "run": {
+      "stage": "p5",
+      "dry": false,
+      "candidate": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed",
+      "manifest": "Z:\\genai-lab\\outputs\\packaging-gpu-20261023\\candidate-manifest.json.gz",
+      "model_home": "D:\\genai-test\\model-home-20261023",
+      "after_p4": "D:\\genai-test\\gpu-p4-20261023",
+      "p4_review": null,
+      "started": "2026-10-24 00:42:00",
+      "launching_shell_gpu_vars": [],
+      "inner_sha256": "ea0344d3763c6eb38f2db182b16515a40b0aa75d760f20d02d1118f335058387",
+      "setup": {
+        "phase": "first",
+        "executable": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\python.exe",
+        "base_prefix": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main",
+        "prefix": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main",
+        "app_home": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed",
+        "appdata": "D:\\genai-test\\gpu-p5-20261023\\sandbox-profile\\Roaming",
+        "path": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main;C:\\WINDOWS\\System32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem",
+        "sys_path": [
+          "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\app\\scripts\\product_file_trace",
+          "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\python310.zip",
+          "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main",
+          "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\Lib\\site-packages",
+          "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\app"
+        ],
+        "packaged": true,
+        "decision": "setup",
+        "decision_value": "모델 폴더가 아직 준비되지 않았습니다. 받아 둔 모델 폴더를 고르고 '검사'를 누르세요.",
+        "record_path": "D:\\genai-test\\gpu-p5-20261023\\sandbox-profile\\Roaming\\GenAILab\\model-setup.json",
+        "setup_status_at_start": "상태: 모델 폴더가 아직 준비되지 않았습니다. 받아 둔 모델 폴더를 고르고 '검사'를 누르세요.",
+        "folder_set": true,
+        "check_started": true,
+        "check_finished": true,
+        "status": "상태: 모델 파일 검증 완료(2026-10-24 00:46:08, 214.6초). '작업실 열기'를 누르세요.",
+        "files_status": "모델 파일 검증: 완료(있음·크기·SHA)",
+        "gpu_status": "GPU 생성 검증: 아직 안 됨 — 이 화면은 파일만 확인합니다. 첫 '이미지 생성'에서 실제로 확인됩니다.",
+        "details": "이 폴더의 모델 파일이 목록과 같습니다(있음·크기·SHA).\nGPU 생성 검증: 아직 안 됨 — 이 화면은 파일만 확인합니다. 첫 '이미지 생성'에서 실제로 확인됩니다.",
+        "open_enabled": true,
+        "open_studio": true,
+        "studio_window": "GenAILabWindow",
+        "model_home_env": "D:\\genai-test\\model-home-20261023",
+        "record": {
+          "schema": "model_setup/1",
+          "model_home": "D:\\genai-test\\model-home-20261023",
+          "status": "files_verified",
+          "checked_at": "2026-10-24 00:46:08",
+          "run_id": "38b01b8bab6044c1a35c6975ed4c174d",
+          "seconds": 214.6,
+          "fingerprint": {
+            "model_home_files": "78491b074c8b3ba775a84b2cc1e291ff2a7af759977b5b09e5456052bcfe345c",
+            "qwen_model_files": "73561d21617e1dfb136ccd0d81868217ca7d593691be35deada96e9d3477f66e",
+            "gguf_sha256": "8677bac90627adbbc11efab87b1870e701c4eb3689ee865a3de8ab81b705a723"
+          },
+          "problem_count": 0,
+          "message": "",
+          "gpu_generation_verified": false,
+          "note": "모델 파일 검증(있음·크기·SHA)일 뿐 GPU 생성 검증이 아니다. 생성 확인은 첫 생성·최종 패키징 검증 P4·P5"
+        },
+        "process_returncode": 0
+      },
+      "seconds": 9233.1,
+      "unchanged_after": true,
+      "process": {
+        "exit_codes": {
+          "setup": 0,
+          "p5": 0
+        },
+        "normal_exit": true,
+        "note": "결과 판정과 별개. 0이 아니면 결과가 좋아도 정상 종료로 처리하지 않는다"
+      },
+      "result": {
+        "cases": {
+          "A3": null,
+          "B2": null
+        }
+      },
+      "finished": "2026-10-24 03:18:36"
+    },
+    "outer": {
+      "stage": "p5",
+      "launcher_exit_code": 0,
+      "finished": "2026-10-24T03:18:36.9749600+09:00",
+      "normal_exit": true
+    },
+    "inner": {
+      "stage": "p5",
+      "dry": false,
+      "executable": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\python.exe",
+      "decision": "studio",
+      "decision_value": "D:\\genai-test\\model-home-20261023",
+      "cases": {
+        "A3": {
+          "inputs_sha_match": true,
+          "scene_text_match": true,
+          "flow": {
+            "state": "ok",
+            "character": "C:\\Users\\user\\Downloads\\참조 이미지\\4cd882bca52e28dba9e5a1ff7746191d.jpg",
+            "garment": null,
+            "elapsed_seconds": 2401,
+            "status_label": "상태: 완성했습니다. 마음에 들면 '저장'을 누르세요. 다시 만들려면 '이미지 생성'을 누르세요.",
+            "seconds": 2444,
+            "run": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e",
+            "errors": [],
+            "scene": {
+              "text": "The character is stepping forward with one hand raised in a small wave, with a dreamy look, in a garden with stone paths at golden hour. Lighting: dappled sunlight falling through leaves. Color design: a deep blue with gold accents palette in the background and lighting only. Eye-level view, natural body proportions. Full-body shot: the whole character is visible from head to feet, with a detailed background.",
+              "seed": 1216248804,
+              "version": 2,
+              "parts": {
+                "indoor": false,
+                "period": "day",
+                "place": "in a garden with stone paths",
+                "action": "stepping forward with one hand raised in a small wave",
+                "expression": "with a dreamy look",
+                "time": "at golden hour",
+                "lighting": "dappled sunlight falling through leaves",
+                "palette": "deep blue with gold accents",
+                "weather": "",
+                "camera": "eye-level view"
+              },
+              "source": "scene_composer"
+            },
+            "result": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\raw.png",
+            "saved": "D:\\genai-test\\gpu-p5-20261023\\flow\\A3-saved.png"
+          }
+        },
+        "B2": {
+          "inputs_sha_match": true,
+          "scene_text_match": true,
+          "flow": {
+            "state": "ok",
+            "character": "C:\\Users\\user\\Downloads\\참조 이미지\\86a72742408d9b4d04f5fb23fb0b93bd.jpg",
+            "garment": "C:\\Users\\user\\Downloads\\참조 의상\\4b750036a001e45a39973c408855e970.jpg",
+            "elapsed_seconds": 6481,
+            "status_label": "상태: 완성했습니다. 마음에 들면 '저장'을 누르세요. 다시 만들려면 '이미지 생성'을 누르세요.",
+            "seconds": 6536,
+            "run": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36",
+            "errors": [],
+            "scene": {
+              "text": "The character is reaching up to touch a hanging branch, with a dreamy look, in a snowy mountain village at sunset. Lighting: dappled sunlight falling through leaves. Color design: a pastel pink and mint green palette in the background and lighting only. Eye-level view, natural body proportions. Full-body shot: the whole character is visible from head to feet, with a detailed background.",
+              "seed": 2026898827,
+              "version": 2,
+              "parts": {
+                "indoor": false,
+                "period": "day",
+                "place": "in a snowy mountain village",
+                "action": "reaching up to touch a hanging branch",
+                "expression": "with a dreamy look",
+                "time": "at sunset",
+                "lighting": "dappled sunlight falling through leaves",
+                "palette": "pastel pink and mint green",
+                "weather": "",
+                "camera": "eye-level view"
+              },
+              "source": "scene_composer"
+            },
+            "result": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\raw.png",
+            "saved": "D:\\genai-test\\gpu-p5-20261023\\flow\\B2-saved.png"
+          }
+        }
+      },
+      "runtime": {
+        "analysis_python": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\python.exe",
+        "pose_python": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-pose\\python.exe",
+        "qwen_settings": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\app\\configs\\qwen_edit_settings.model_home.json",
+        "qwen_python": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\python.exe",
+        "model_home": "D:\\genai-test\\model-home-20261023"
+      },
+      "quick_check_staging": true,
+      "quick_check_outfit": true,
+      "base_prefix": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main",
+      "sys_path": [
+        "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\app",
+        "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\app\\scripts",
+        "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\python310.zip",
+        "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main",
+        "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\Lib\\site-packages",
+        "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\app"
+      ]
+    },
+    "summary": {
+      "state": "finished",
+      "started": "2026-10-24 00:46:45",
+      "cases": {
+        "A3": {
+          "state": "ok",
+          "character": "C:\\Users\\user\\Downloads\\참조 이미지\\4cd882bca52e28dba9e5a1ff7746191d.jpg",
+          "garment": null,
+          "elapsed_seconds": 2401,
+          "status_label": "상태: 완성했습니다. 마음에 들면 '저장'을 누르세요. 다시 만들려면 '이미지 생성'을 누르세요.",
+          "seconds": 2444,
+          "run": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e",
+          "errors": [],
+          "scene": {
+            "text": "The character is stepping forward with one hand raised in a small wave, with a dreamy look, in a garden with stone paths at golden hour. Lighting: dappled sunlight falling through leaves. Color design: a deep blue with gold accents palette in the background and lighting only. Eye-level view, natural body proportions. Full-body shot: the whole character is visible from head to feet, with a detailed background.",
+            "seed": 1216248804,
+            "version": 2,
+            "parts": {
+              "indoor": false,
+              "period": "day",
+              "place": "in a garden with stone paths",
+              "action": "stepping forward with one hand raised in a small wave",
+              "expression": "with a dreamy look",
+              "time": "at golden hour",
+              "lighting": "dappled sunlight falling through leaves",
+              "palette": "deep blue with gold accents",
+              "weather": "",
+              "camera": "eye-level view"
+            },
+            "source": "scene_composer"
+          },
+          "result": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\raw.png",
+          "saved": "D:\\genai-test\\gpu-p5-20261023\\flow\\A3-saved.png"
+        },
+        "B2": {
+          "state": "ok",
+          "character": "C:\\Users\\user\\Downloads\\참조 이미지\\86a72742408d9b4d04f5fb23fb0b93bd.jpg",
+          "garment": "C:\\Users\\user\\Downloads\\참조 의상\\4b750036a001e45a39973c408855e970.jpg",
+          "elapsed_seconds": 6481,
+          "status_label": "상태: 완성했습니다. 마음에 들면 '저장'을 누르세요. 다시 만들려면 '이미지 생성'을 누르세요.",
+          "seconds": 6536,
+          "run": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36",
+          "errors": [],
+          "scene": {
+            "text": "The character is reaching up to touch a hanging branch, with a dreamy look, in a snowy mountain village at sunset. Lighting: dappled sunlight falling through leaves. Color design: a pastel pink and mint green palette in the background and lighting only. Eye-level view, natural body proportions. Full-body shot: the whole character is visible from head to feet, with a detailed background.",
+            "seed": 2026898827,
+            "version": 2,
+            "parts": {
+              "indoor": false,
+              "period": "day",
+              "place": "in a snowy mountain village",
+              "action": "reaching up to touch a hanging branch",
+              "expression": "with a dreamy look",
+              "time": "at sunset",
+              "lighting": "dappled sunlight falling through leaves",
+              "palette": "pastel pink and mint green",
+              "weather": "",
+              "camera": "eye-level view"
+            },
+            "source": "scene_composer"
+          },
+          "result": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\raw.png",
+          "saved": "D:\\genai-test\\gpu-p5-20261023\\flow\\B2-saved.png"
+        }
+      },
+      "finished": "2026-10-24 03:16:25"
+    },
+    "setup": {
+      "phase": "first",
+      "executable": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\python.exe",
+      "base_prefix": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main",
+      "prefix": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main",
+      "app_home": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed",
+      "appdata": "D:\\genai-test\\gpu-p5-20261023\\sandbox-profile\\Roaming",
+      "path": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main;C:\\WINDOWS\\System32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem",
+      "sys_path": [
+        "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\app\\scripts\\product_file_trace",
+        "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\python310.zip",
+        "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main",
+        "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\Lib\\site-packages",
+        "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\app"
+      ],
+      "packaged": true,
+      "decision": "setup",
+      "decision_value": "모델 폴더가 아직 준비되지 않았습니다. 받아 둔 모델 폴더를 고르고 '검사'를 누르세요.",
+      "record_path": "D:\\genai-test\\gpu-p5-20261023\\sandbox-profile\\Roaming\\GenAILab\\model-setup.json",
+      "setup_status_at_start": "상태: 모델 폴더가 아직 준비되지 않았습니다. 받아 둔 모델 폴더를 고르고 '검사'를 누르세요.",
+      "folder_set": true,
+      "check_started": true,
+      "check_finished": true,
+      "status": "상태: 모델 파일 검증 완료(2026-10-24 00:46:08, 214.6초). '작업실 열기'를 누르세요.",
+      "files_status": "모델 파일 검증: 완료(있음·크기·SHA)",
+      "gpu_status": "GPU 생성 검증: 아직 안 됨 — 이 화면은 파일만 확인합니다. 첫 '이미지 생성'에서 실제로 확인됩니다.",
+      "details": "이 폴더의 모델 파일이 목록과 같습니다(있음·크기·SHA).\nGPU 생성 검증: 아직 안 됨 — 이 화면은 파일만 확인합니다. 첫 '이미지 생성'에서 실제로 확인됩니다.",
+      "open_enabled": true,
+      "open_studio": true,
+      "studio_window": "GenAILabWindow",
+      "model_home_env": "D:\\genai-test\\model-home-20261023",
+      "record": {
+        "schema": "model_setup/1",
+        "model_home": "D:\\genai-test\\model-home-20261023",
+        "status": "files_verified",
+        "checked_at": "2026-10-24 00:46:08",
+        "run_id": "38b01b8bab6044c1a35c6975ed4c174d",
+        "seconds": 214.6,
+        "fingerprint": {
+          "model_home_files": "78491b074c8b3ba775a84b2cc1e291ff2a7af759977b5b09e5456052bcfe345c",
+          "qwen_model_files": "73561d21617e1dfb136ccd0d81868217ca7d593691be35deada96e9d3477f66e",
+          "gguf_sha256": "8677bac90627adbbc11efab87b1870e701c4eb3689ee865a3de8ab81b705a723"
+        },
+        "problem_count": 0,
+        "message": "",
+        "gpu_generation_verified": false,
+        "note": "모델 파일 검증(있음·크기·SHA)일 뿐 GPU 생성 검증이 아니다. 생성 확인은 첫 생성·최종 패키징 검증 P4·P5"
+      }
+    },
+    "cases": {
+      "A3": {
+        "flow": {
+          "state": "ok",
+          "character": "C:\\Users\\user\\Downloads\\참조 이미지\\4cd882bca52e28dba9e5a1ff7746191d.jpg",
+          "garment": null,
+          "elapsed_seconds": 2401,
+          "status_label": "상태: 완성했습니다. 마음에 들면 '저장'을 누르세요. 다시 만들려면 '이미지 생성'을 누르세요.",
+          "seconds": 2444,
+          "run": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e",
+          "errors": [],
+          "scene": {
+            "text": "The character is stepping forward with one hand raised in a small wave, with a dreamy look, in a garden with stone paths at golden hour. Lighting: dappled sunlight falling through leaves. Color design: a deep blue with gold accents palette in the background and lighting only. Eye-level view, natural body proportions. Full-body shot: the whole character is visible from head to feet, with a detailed background.",
+            "seed": 1216248804,
+            "version": 2,
+            "parts": {
+              "indoor": false,
+              "period": "day",
+              "place": "in a garden with stone paths",
+              "action": "stepping forward with one hand raised in a small wave",
+              "expression": "with a dreamy look",
+              "time": "at golden hour",
+              "lighting": "dappled sunlight falling through leaves",
+              "palette": "deep blue with gold accents",
+              "weather": "",
+              "camera": "eye-level view"
+            },
+            "source": "scene_composer"
+          },
+          "result": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\raw.png",
+          "saved": "D:\\genai-test\\gpu-p5-20261023\\flow\\A3-saved.png"
+        },
+        "scene": {
+          "text": "The character is stepping forward with one hand raised in a small wave, with a dreamy look, in a garden with stone paths at golden hour. Lighting: dappled sunlight falling through leaves. Color design: a deep blue with gold accents palette in the background and lighting only. Eye-level view, natural body proportions. Full-body shot: the whole character is visible from head to feet, with a detailed background.",
+          "seed": 1216248804,
+          "version": 2,
+          "parts": {
+            "indoor": false,
+            "period": "day",
+            "place": "in a garden with stone paths",
+            "action": "stepping forward with one hand raised in a small wave",
+            "expression": "with a dreamy look",
+            "time": "at golden hour",
+            "lighting": "dappled sunlight falling through leaves",
+            "palette": "deep blue with gold accents",
+            "weather": "",
+            "camera": "eye-level view"
+          },
+          "source": "scene_composer"
+        },
+        "saved": {
+          "new": "D:\\genai-test\\gpu-p5-20261023\\flow\\A3-saved.png",
+          "dev": "Z:\\genai-lab\\outputs\\product-run-20261022\\A3-saved.png",
+          "new_sha256": "1daa0ce2d0c4437fd59ebee4150ad759e44c79ddd28686235b3b723c99c17ad5",
+          "dev_sha256": "1daa0ce2d0c4437fd59ebee4150ad759e44c79ddd28686235b3b723c99c17ad5",
+          "file_equal": true,
+          "size_new": [
+            896,
+            1184
+          ],
+          "size_dev": [
+            896,
+            1184
+          ],
+          "mode_new": "RGB",
+          "mode_dev": "RGB",
+          "pixel_equal": true,
+          "differing_pixels": 0,
+          "total_pixels": 1060864,
+          "differing_ratio": 0.0,
+          "max_channel_difference": 0
+        },
+        "memory": {
+          "peak": {
+            "file": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000001.json",
+            "path": ".text_encode_memory.reserved_bytes",
+            "gib": 6.3671875
+          },
+          "over_limit": [],
+          "stopped": [],
+          "limits": [
+            {
+              "file": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\memory.json",
+              "limit_gib": 6.5
+            }
+          ],
+          "files_scanned": 47,
+          "files": [
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\base-parts\\result.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\memory.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000001.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000002.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000003.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000004.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000005.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000006.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000007.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000008.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000009.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000010.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000011.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000012.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000013.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000014.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000015.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000016.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000017.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000018.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000019.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000020.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000021.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000022.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000023.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000024.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000025.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000026.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000027.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000028.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000029.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000030.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000031.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000032.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000033.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000034.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000035.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000036.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000037.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000038.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000039.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000040.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000041.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000042.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\run.final.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\run.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\result-analysis\\parts\\worker-error.json"
+          ]
+        },
+        "stages": {
+          "free-generation": {
+            "trace": {
+              "status": "user_approved",
+              "selected_attempt": 1,
+              "elapsed_seconds": 2434.417,
+              "attempts": [
+                {
+                  "number": 1,
+                  "seed": 42,
+                  "selection_seed": 42,
+                  "status": "completed",
+                  "retry_reason": null,
+                  "retry_items": [],
+                  "violation_score": 0,
+                  "hair_auto": {
+                    "reason": "결과 분할 없음"
+                  },
+                  "hair_restore": null
+                }
+              ]
+            },
+            "dev_trace": {
+              "status": "user_approved",
+              "selected_attempt": 1,
+              "elapsed_seconds": 2186.297,
+              "attempts": [
+                {
+                  "number": 1,
+                  "seed": 42,
+                  "selection_seed": 42,
+                  "status": "completed",
+                  "retry_reason": null,
+                  "retry_items": [],
+                  "violation_score": 0,
+                  "hair_auto": {
+                    "reason": "결과 분할 없음"
+                  },
+                  "hair_restore": null
+                }
+              ]
+            },
+            "workers": [
+              {
+                "directory": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen",
+                "seed": 42,
+                "status": "completed",
+                "seconds": 2087.831439600006,
+                "call_arguments": {
+                  "height": 1184,
+                  "width": 896,
+                  "true_cfg_scale": 4.0,
+                  "guidance_scale": 1.0,
+                  "num_inference_steps": 40,
+                  "num_images_per_prompt": 1,
+                  "seed": 42,
+                  "generator_device": "cpu",
+                  "positive": "Keep the same character as in image 1. The character has white hair; white eyes; dark brown skin; keep these exactly. Keep the exact skin tone as in image 1; do not make the skin lighter or darker. Keep the exact hair colors and where each color appears as in image 1; do not add new hair colors. Keep the face, hairstyle, hair color and head accessories the same as in image 1 and as in the head close-up in image 2. Keep the character's outfit exactly as in image 1: the same garments, colors, patterns and details. The character is male. Keep his body shape and proportions as in image 1. The character is stepping forward with one hand raised in a small wave, with a dreamy look, in a garden with stone paths at golden hour. Lighting: dappled sunlight falling through leaves. Color design: a deep blue with gold accents palette in the background and lighting only. Eye-level view, natural body proportions. Full-body shot: the whole character is visible from head to feet, with a detailed background. Keep the character's own hair, eye, skin and outfit colors exactly as in image 1; the scene lighting must not change or wash out these colors. Do not add weapons or held props unless the request asks for them. ",
+                  "negative": "animal tail, animal ears, wings",
+                  "images": 2
+                },
+                "call_arguments_equal": true,
+                "actual_python": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\python.exe",
+                "package_paths": {
+                  "torch": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\Lib\\site-packages",
+                  "diffusers": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\Lib\\site-packages",
+                  "transformers": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\Lib\\site-packages",
+                  "bitsandbytes": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\Lib\\site-packages",
+                  "gguf": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\Lib\\site-packages"
+                },
+                "versions": {
+                  "torch": "2.9.1+cu128",
+                  "diffusers": "0.38.0",
+                  "transformers": "4.57.6",
+                  "bitsandbytes": "0.50.2",
+                  "gguf": "0.19.0"
+                },
+                "models": {
+                  "manifest_sha256": "73561d21617e1dfb136ccd0d81868217ca7d593691be35deada96e9d3477f66e",
+                  "files_checked": 27,
+                  "gguf_sha256": "8677bac90627adbbc11efab87b1870e701c4eb3689ee865a3de8ab81b705a723"
+                },
+                "memory_request": {
+                  "reserved_limit_gib": 6.5,
+                  "vae_tiling": true,
+                  "text_encoder_lm_head": "cpu"
+                },
+                "memory": {
+                  "peak": {
+                    "file": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000001.json",
+                    "path": ".text_encode_memory.reserved_bytes",
+                    "gib": 6.3671875
+                  },
+                  "over_limit": [],
+                  "stopped": [],
+                  "limits": [
+                    {
+                      "file": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\memory.json",
+                      "limit_gib": 6.5
+                    }
+                  ],
+                  "files_scanned": 45,
+                  "files": [
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\memory.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000001.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000002.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000003.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000004.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000005.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000006.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000007.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000008.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000009.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000010.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000011.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000012.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000013.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000014.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000015.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000016.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000017.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000018.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000019.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000020.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000021.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000022.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000023.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000024.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000025.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000026.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000027.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000028.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000029.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000030.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000031.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000032.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000033.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000034.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000035.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000036.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000037.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000038.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000039.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000040.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000041.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\progress\\000000042.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\run.final.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\run.json"
+                  ]
+                },
+                "memory_stopped": null,
+                "launcher": {
+                  "status": "awaiting_review",
+                  "request_sha256": "c0becc1a8ad360c7ed32d39e54ade4f89f562c28277b06b61cd2d6c6f6dcfb01",
+                  "gpu_sequence": [
+                    {
+                      "stage": "before_qwen",
+                      "probe": {
+                        "cuda_initialized": false
+                      }
+                    }
+                  ],
+                  "final_return_eligible": false,
+                  "command": [
+                    "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\python.exe",
+                    "-m",
+                    "genai_lab.qwen_pose_worker",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\request.json"
+                  ],
+                  "pid": 23404,
+                  "raw_sha256": "091184c905bb1e81b85903a1bff93d3c0cc8350476378125e95ad801bcd2eef1",
+                  "product_transform": {
+                    "version": 2,
+                    "kind": "resize_to_approved_basis",
+                    "raw_size": [
+                      896,
+                      1184
+                    ],
+                    "size": [
+                      768,
+                      1024
+                    ],
+                    "offset": [
+                      0,
+                      0
+                    ],
+                    "canvas": [
+                      768,
+                      1024
+                    ],
+                    "scale": [
+                      0.8571428571428571,
+                      0.8648648648648649
+                    ],
+                    "pixel_coordinates": "centers: (input + 0.5) * scale - 0.5",
+                    "filter": "LANCZOS"
+                  },
+                  "product_sha256": "249940c1b7010af0356c526aefb5ee2ce3100f7e69407e8092fd0a89eb20e564",
+                  "basis_sha256": "8836ae835798b8c72fdb1a19e572a74b829c6b2908851dc3d37d206d4a043db0"
+                },
+                "model_inputs_new": {
+                  "prompt.txt": "4ff4de51be208f22b7c1883445d579cf6692ba48036c0a2264b6728ec4e0a8be",
+                  "vae_picture1_896x1184.png": "377cff2a5523a8e368d63027d5075dfadafa973160b2c92712a8c02ced0f8351",
+                  "vae_picture2_832x1248.png": "b94d8488d7f4ca9601f31867759af2507d649f790a5bab9d5307de5be4c80e88",
+                  "vl_picture1_320x448.png": "b95a862c9628bf12745c313a0cfdde2c015236bd9c1a31fd3cff993e955f1d48",
+                  "vl_picture2_320x480.png": "d5a3a82dc939c0b05009700d9a1e3ffe901930c43538b953333328cd33cd33ad"
+                },
+                "model_inputs_dev": {
+                  "prompt.txt": "4ff4de51be208f22b7c1883445d579cf6692ba48036c0a2264b6728ec4e0a8be",
+                  "vae_picture1_896x1184.png": "377cff2a5523a8e368d63027d5075dfadafa973160b2c92712a8c02ced0f8351",
+                  "vae_picture2_832x1248.png": "b94d8488d7f4ca9601f31867759af2507d649f790a5bab9d5307de5be4c80e88",
+                  "vl_picture1_320x448.png": "b95a862c9628bf12745c313a0cfdde2c015236bd9c1a31fd3cff993e955f1d48",
+                  "vl_picture2_320x480.png": "d5a3a82dc939c0b05009700d9a1e3ffe901930c43538b953333328cd33cd33ad"
+                },
+                "model_inputs_equal": true,
+                "request_sha_new": "0a07f65a61ac39169d162367d6fee485166991c8679cce73e8d2435a9743c856",
+                "request_sha_dev": "432be0904b405c3212a62f9075495e3a794d01e8102ac46415a06a4d5c141da5",
+                "raw": {
+                  "new": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\raw.png",
+                  "dev": "Z:\\genai-lab\\outputs\\product-run-20261022\\runs\\eaf9b7c7102c4a67ad3859c611e01762\\free-generation\\qwen\\raw.png",
+                  "new_sha256": "091184c905bb1e81b85903a1bff93d3c0cc8350476378125e95ad801bcd2eef1",
+                  "dev_sha256": "091184c905bb1e81b85903a1bff93d3c0cc8350476378125e95ad801bcd2eef1",
+                  "file_equal": true,
+                  "size_new": [
+                    896,
+                    1184
+                  ],
+                  "size_dev": [
+                    896,
+                    1184
+                  ],
+                  "mode_new": "RGB",
+                  "mode_dev": "RGB",
+                  "pixel_equal": true,
+                  "differing_pixels": 0,
+                  "total_pixels": 1060864,
+                  "differing_ratio": 0.0,
+                  "max_channel_difference": 0
+                },
+                "preview": {
+                  "callback_count": 40,
+                  "indices_exact_0_to_39": true,
+                  "errors": [],
+                  "files_present": [
+                    "preview-037.png",
+                    "preview-038.png",
+                    "preview-039.png"
+                  ],
+                  "note": "preview is a latent linear colour approximation; no claim of retaining 40 independent intermediate frames"
+                },
+                "error": null,
+                "traceback": null,
+                "dev_seconds": 1927.2501770999988,
+                "settings_values": {
+                  "artifact_manifest_sha256": "73561d21617e1dfb136ccd0d81868217ca7d593691be35deada96e9d3477f66e",
+                  "offload": "group_block1",
+                  "model_revision": "6f3ccc0b56e431dc6a0c2b2039706d7d26f22cb9",
+                  "gguf_revision": "0d33d9692b4b26212297240d87b0d4719aa4fd06",
+                  "gguf_sha256": "8677bac90627adbbc11efab87b1870e701c4eb3689ee865a3de8ab81b705a723",
+                  "steps": 40,
+                  "true_cfg_scale": 4.0,
+                  "guidance_scale": 1.0,
+                  "default_seed": 209212001
+                },
+                "settings_values_dev": {
+                  "artifact_manifest_sha256": "73561d21617e1dfb136ccd0d81868217ca7d593691be35deada96e9d3477f66e",
+                  "offload": "group_block1",
+                  "model_revision": "6f3ccc0b56e431dc6a0c2b2039706d7d26f22cb9",
+                  "gguf_revision": "0d33d9692b4b26212297240d87b0d4719aa4fd06",
+                  "gguf_sha256": "8677bac90627adbbc11efab87b1870e701c4eb3689ee865a3de8ab81b705a723",
+                  "steps": 40,
+                  "true_cfg_scale": 4.0,
+                  "guidance_scale": 1.0,
+                  "default_seed": 209212001
+                }
+              }
+            ],
+            "outcome": {
+              "status": "awaiting_user_review",
+              "raw": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\raw.png",
+              "result": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\3724e27bd73f4a8e819f48376e296d3e\\free-generation\\qwen\\raw.png",
+              "result_sha256": "091184c905bb1e81b85903a1bff93d3c0cc8350476378125e95ad801bcd2eef1",
+              "selected_attempt": 1,
+              "auto_selection": null
+            },
+            "dev_outcome": {
+              "status": "awaiting_user_review",
+              "raw": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\product-run-20261022\\runs\\eaf9b7c7102c4a67ad3859c611e01762\\free-generation\\qwen\\raw.png",
+              "result": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\product-run-20261022\\runs\\eaf9b7c7102c4a67ad3859c611e01762\\free-generation\\qwen\\raw.png",
+              "result_sha256": "091184c905bb1e81b85903a1bff93d3c0cc8350476378125e95ad801bcd2eef1",
+              "selected_attempt": 1,
+              "auto_selection": null
+            },
+            "qwen_inputs": {
+              "base.png": {
+                "new_sha256": "8836ae835798b8c72fdb1a19e572a74b829c6b2908851dc3d37d206d4a043db0",
+                "dev_sha256": "8836ae835798b8c72fdb1a19e572a74b829c6b2908851dc3d37d206d4a043db0",
+                "equal": true
+              },
+              "reference.png": {
+                "new_sha256": "10778cd331baeea6aee1504976b818f7ccce1e8f13d8f226d0f11b1ce4202fa0",
+                "dev_sha256": "10778cd331baeea6aee1504976b818f7ccce1e8f13d8f226d0f11b1ce4202fa0",
+                "equal": true
+              }
+            }
+          }
+        },
+        "input_hashes": {
+          "character": {
+            "path": "C:\\Users\\user\\Downloads\\참조 이미지\\4cd882bca52e28dba9e5a1ff7746191d.jpg",
+            "actual_sha256": "7fdb138dc38f97d8b362eaf951f1d9333ce642ed98afbea6f1fef9baa7b473a2",
+            "expected_sha256": "7fdb138dc38f97d8b362eaf951f1d9333ce642ed98afbea6f1fef9baa7b473a2"
+          }
+        }
+      },
+      "B2": {
+        "flow": {
+          "state": "ok",
+          "character": "C:\\Users\\user\\Downloads\\참조 이미지\\86a72742408d9b4d04f5fb23fb0b93bd.jpg",
+          "garment": "C:\\Users\\user\\Downloads\\참조 의상\\4b750036a001e45a39973c408855e970.jpg",
+          "elapsed_seconds": 6481,
+          "status_label": "상태: 완성했습니다. 마음에 들면 '저장'을 누르세요. 다시 만들려면 '이미지 생성'을 누르세요.",
+          "seconds": 6536,
+          "run": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36",
+          "errors": [],
+          "scene": {
+            "text": "The character is reaching up to touch a hanging branch, with a dreamy look, in a snowy mountain village at sunset. Lighting: dappled sunlight falling through leaves. Color design: a pastel pink and mint green palette in the background and lighting only. Eye-level view, natural body proportions. Full-body shot: the whole character is visible from head to feet, with a detailed background.",
+            "seed": 2026898827,
+            "version": 2,
+            "parts": {
+              "indoor": false,
+              "period": "day",
+              "place": "in a snowy mountain village",
+              "action": "reaching up to touch a hanging branch",
+              "expression": "with a dreamy look",
+              "time": "at sunset",
+              "lighting": "dappled sunlight falling through leaves",
+              "palette": "pastel pink and mint green",
+              "weather": "",
+              "camera": "eye-level view"
+            },
+            "source": "scene_composer"
+          },
+          "result": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\raw.png",
+          "saved": "D:\\genai-test\\gpu-p5-20261023\\flow\\B2-saved.png"
+        },
+        "scene": {
+          "text": "The character is reaching up to touch a hanging branch, with a dreamy look, in a snowy mountain village at sunset. Lighting: dappled sunlight falling through leaves. Color design: a pastel pink and mint green palette in the background and lighting only. Eye-level view, natural body proportions. Full-body shot: the whole character is visible from head to feet, with a detailed background.",
+          "seed": 2026898827,
+          "version": 2,
+          "parts": {
+            "indoor": false,
+            "period": "day",
+            "place": "in a snowy mountain village",
+            "action": "reaching up to touch a hanging branch",
+            "expression": "with a dreamy look",
+            "time": "at sunset",
+            "lighting": "dappled sunlight falling through leaves",
+            "palette": "pastel pink and mint green",
+            "weather": "",
+            "camera": "eye-level view"
+          },
+          "source": "scene_composer"
+        },
+        "saved": {
+          "new": "D:\\genai-test\\gpu-p5-20261023\\flow\\B2-saved.png",
+          "dev": "Z:\\genai-lab\\outputs\\product-run-20261022\\B2-saved.png",
+          "new_sha256": "a355a69461e19849c34a5f47281b1d71bb04ded1480a0166cdc191128b622f1d",
+          "dev_sha256": "a355a69461e19849c34a5f47281b1d71bb04ded1480a0166cdc191128b622f1d",
+          "file_equal": true,
+          "size_new": [
+            896,
+            1184
+          ],
+          "size_dev": [
+            896,
+            1184
+          ],
+          "mode_new": "RGB",
+          "mode_dev": "RGB",
+          "pixel_equal": true,
+          "differing_pixels": 0,
+          "total_pixels": 1060864,
+          "differing_ratio": 0.0,
+          "max_channel_difference": 0
+        },
+        "memory": {
+          "peak": {
+            "file": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000001.json",
+            "path": ".text_encode_memory.reserved_bytes",
+            "gib": 6.361328125
+          },
+          "over_limit": [],
+          "stopped": [],
+          "limits": [
+            {
+              "file": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\memory.json",
+              "limit_gib": 6.5
+            },
+            {
+              "file": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\memory.json",
+              "limit_gib": 6.5
+            },
+            {
+              "file": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\memory.json",
+              "limit_gib": 6.5
+            }
+          ],
+          "files_scanned": 139,
+          "files": [
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\base-parts\\result.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\memory.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000001.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000002.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000003.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000004.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000005.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000006.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000007.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000008.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000009.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000010.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000011.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000012.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000013.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000014.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000015.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000016.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000017.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000018.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000019.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000020.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000021.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000022.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000023.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000024.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000025.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000026.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000027.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000028.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000029.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000030.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000031.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000032.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000033.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000034.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000035.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000036.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000037.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000038.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000039.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000040.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000041.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000042.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\run.final.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\run.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\memory.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000001.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000002.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000003.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000004.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000005.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000006.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000007.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000008.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000009.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000010.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000011.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000012.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000013.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000014.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000015.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000016.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000017.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000018.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000019.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000020.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000021.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000022.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000023.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000024.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000025.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000026.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000027.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000028.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000029.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000030.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000031.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000032.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000033.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000034.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000035.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000036.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000037.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000038.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000039.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000040.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000041.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000042.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\run.final.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\run.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\result-analysis\\parts\\result.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\result-analysis-2\\parts\\result.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\parts\\result.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\memory.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000001.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000002.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000003.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000004.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000005.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000006.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000007.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000008.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000009.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000010.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000011.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000012.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000013.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000014.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000015.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000016.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000017.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000018.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000019.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000020.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000021.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000022.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000023.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000024.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000025.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000026.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000027.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000028.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000029.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000030.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000031.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000032.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000033.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000034.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000035.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000036.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000037.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000038.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000039.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000040.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000041.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000042.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\run.final.json",
+            "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\run.json"
+          ]
+        },
+        "stages": {
+          "outfit-edit": {
+            "trace": {
+              "status": null,
+              "selected_attempt": null,
+              "elapsed_seconds": null,
+              "attempts": [
+                {
+                  "seed": 42,
+                  "reason": null,
+                  "composited": true,
+                  "hair_auto": null,
+                  "hair_restore": null
+                }
+              ]
+            },
+            "dev_trace": {
+              "status": null,
+              "selected_attempt": null,
+              "elapsed_seconds": null,
+              "attempts": [
+                {
+                  "seed": 42,
+                  "reason": null,
+                  "composited": true,
+                  "hair_auto": null,
+                  "hair_restore": null
+                }
+              ]
+            },
+            "workers": [
+              {
+                "directory": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen",
+                "seed": 42,
+                "status": "completed",
+                "seconds": 1948.564848799986,
+                "call_arguments": {
+                  "height": 1184,
+                  "width": 896,
+                  "true_cfg_scale": 4.0,
+                  "guidance_scale": 1.0,
+                  "num_inference_steps": 40,
+                  "num_images_per_prompt": 1,
+                  "seed": 42,
+                  "generator_device": "cpu",
+                  "positive": "Replace all of the character's current clothing in image 1, including any bodysuit, jacket, coat draped over the shoulders, tie, gloves, choker, stockings, socks and shoes, with the complete outfit shown in image 2, matching its shape, length, colors and details. Nothing from the original outfit may remain. Remove any weapon and every carried or held prop. Place the character alone on a plain pure white background with nothing else. The character is female. Keep her body shape and proportions as in image 1. Keep the character's face, hairstyle, hair color, head accessories and body proportions exactly the same as in image 1. The character has no animal ears, no tail and no wings; do not add any. Keep the character's pose exactly as in image 1, whether standing, sitting or crouching. Do not change the camera angle, framing or the character's size or position.",
+                  "negative": " ",
+                  "images": 2
+                },
+                "call_arguments_equal": true,
+                "actual_python": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\python.exe",
+                "package_paths": {
+                  "torch": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\Lib\\site-packages",
+                  "diffusers": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\Lib\\site-packages",
+                  "transformers": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\Lib\\site-packages",
+                  "bitsandbytes": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\Lib\\site-packages",
+                  "gguf": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\Lib\\site-packages"
+                },
+                "versions": {
+                  "torch": "2.9.1+cu128",
+                  "diffusers": "0.38.0",
+                  "transformers": "4.57.6",
+                  "bitsandbytes": "0.50.2",
+                  "gguf": "0.19.0"
+                },
+                "models": {
+                  "manifest_sha256": "73561d21617e1dfb136ccd0d81868217ca7d593691be35deada96e9d3477f66e",
+                  "files_checked": 27,
+                  "gguf_sha256": "8677bac90627adbbc11efab87b1870e701c4eb3689ee865a3de8ab81b705a723"
+                },
+                "memory_request": {
+                  "reserved_limit_gib": 6.5,
+                  "vae_tiling": true,
+                  "text_encoder_lm_head": "cpu"
+                },
+                "memory": {
+                  "peak": {
+                    "file": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000001.json",
+                    "path": ".text_encode_memory.reserved_bytes",
+                    "gib": 6.328125
+                  },
+                  "over_limit": [],
+                  "stopped": [],
+                  "limits": [
+                    {
+                      "file": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\memory.json",
+                      "limit_gib": 6.5
+                    }
+                  ],
+                  "files_scanned": 45,
+                  "files": [
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\memory.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000001.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000002.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000003.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000004.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000005.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000006.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000007.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000008.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000009.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000010.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000011.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000012.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000013.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000014.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000015.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000016.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000017.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000018.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000019.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000020.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000021.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000022.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000023.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000024.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000025.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000026.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000027.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000028.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000029.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000030.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000031.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000032.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000033.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000034.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000035.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000036.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000037.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000038.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000039.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000040.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000041.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\progress\\000000042.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\run.final.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\run.json"
+                  ]
+                },
+                "memory_stopped": null,
+                "launcher": {
+                  "status": "awaiting_review",
+                  "request_sha256": "b8ca37c26766ade3fdfddc607775e0ad6ab0cb13974be7626a9352850f67f200",
+                  "gpu_sequence": [
+                    {
+                      "stage": "before_qwen",
+                      "probe": {
+                        "cuda_initialized": false
+                      }
+                    }
+                  ],
+                  "final_return_eligible": false,
+                  "command": [
+                    "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\python.exe",
+                    "-m",
+                    "genai_lab.qwen_pose_worker",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\request.json"
+                  ],
+                  "pid": 35136,
+                  "raw_sha256": "fbe397cd1b02c64dc0af55bef915314282439f923c66d1bf419da6342ffa281d",
+                  "product_transform": {
+                    "version": 2,
+                    "kind": "resize_to_approved_basis",
+                    "raw_size": [
+                      896,
+                      1184
+                    ],
+                    "size": [
+                      768,
+                      1024
+                    ],
+                    "offset": [
+                      0,
+                      0
+                    ],
+                    "canvas": [
+                      768,
+                      1024
+                    ],
+                    "scale": [
+                      0.8571428571428571,
+                      0.8648648648648649
+                    ],
+                    "pixel_coordinates": "centers: (input + 0.5) * scale - 0.5",
+                    "filter": "LANCZOS"
+                  },
+                  "product_sha256": "5faf196e42794ce06b9bd90555155791029f796869dc375c9b65c583970c9a1b",
+                  "basis_sha256": "2ad30fd8534be164d68c241b9394e8c8c878249208c1ebdf445a4e8d134f27a6"
+                },
+                "model_inputs_new": {
+                  "prompt.txt": "5e76bd4eccf80ab4220adf05c6f6ca4b74dcbed18b10644372d4b235ea7d3741",
+                  "vae_picture1_896x1184.png": "5d665bfb51967d74fdaf3f50bf659661bed78ed89ce017c77d23428eb4042d52",
+                  "vae_picture2_736x1440.png": "efea7d5a783c189fa8bec79e9375f91d9b092bfa436e8a6295effdfdd6e8634d",
+                  "vl_picture1_320x448.png": "9512ae81004486aa9cd25af78277c4aaf3528822f5c2ed8ae8d230775a9bfad2",
+                  "vl_picture2_288x544.png": "6a539a3ef84ff9d38c89865b57af6842b5fb618b9aaf45e3fe14dff6cfabf86c"
+                },
+                "model_inputs_dev": {
+                  "prompt.txt": "5e76bd4eccf80ab4220adf05c6f6ca4b74dcbed18b10644372d4b235ea7d3741",
+                  "vae_picture1_896x1184.png": "5d665bfb51967d74fdaf3f50bf659661bed78ed89ce017c77d23428eb4042d52",
+                  "vae_picture2_736x1440.png": "efea7d5a783c189fa8bec79e9375f91d9b092bfa436e8a6295effdfdd6e8634d",
+                  "vl_picture1_320x448.png": "9512ae81004486aa9cd25af78277c4aaf3528822f5c2ed8ae8d230775a9bfad2",
+                  "vl_picture2_288x544.png": "6a539a3ef84ff9d38c89865b57af6842b5fb618b9aaf45e3fe14dff6cfabf86c"
+                },
+                "model_inputs_equal": true,
+                "request_sha_new": "2ec5002ea81da045a351dc70c1b4dbd228fc683bd1398f5d699c17a5d749fb87",
+                "request_sha_dev": "9a4a3e8a2cd4edb219dda8dfb4d46e86a93014aa4450f146048a2956a0c372cb",
+                "raw": {
+                  "new": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\raw.png",
+                  "dev": "Z:\\genai-lab\\outputs\\product-run-20261022\\runs\\b5cb43fef5bf4277a15f16db4fd23644\\outfit-edit\\qwen\\raw.png",
+                  "new_sha256": "fbe397cd1b02c64dc0af55bef915314282439f923c66d1bf419da6342ffa281d",
+                  "dev_sha256": "fbe397cd1b02c64dc0af55bef915314282439f923c66d1bf419da6342ffa281d",
+                  "file_equal": true,
+                  "size_new": [
+                    896,
+                    1184
+                  ],
+                  "size_dev": [
+                    896,
+                    1184
+                  ],
+                  "mode_new": "RGB",
+                  "mode_dev": "RGB",
+                  "pixel_equal": true,
+                  "differing_pixels": 0,
+                  "total_pixels": 1060864,
+                  "differing_ratio": 0.0,
+                  "max_channel_difference": 0
+                },
+                "preview": {
+                  "callback_count": 40,
+                  "indices_exact_0_to_39": true,
+                  "errors": [],
+                  "files_present": [
+                    "preview-037.png",
+                    "preview-038.png",
+                    "preview-039.png"
+                  ],
+                  "note": "preview is a latent linear colour approximation; no claim of retaining 40 independent intermediate frames"
+                },
+                "error": null,
+                "traceback": null,
+                "dev_seconds": 1882.7198414999984,
+                "settings_values": {
+                  "artifact_manifest_sha256": "73561d21617e1dfb136ccd0d81868217ca7d593691be35deada96e9d3477f66e",
+                  "offload": "group_block1",
+                  "model_revision": "6f3ccc0b56e431dc6a0c2b2039706d7d26f22cb9",
+                  "gguf_revision": "0d33d9692b4b26212297240d87b0d4719aa4fd06",
+                  "gguf_sha256": "8677bac90627adbbc11efab87b1870e701c4eb3689ee865a3de8ab81b705a723",
+                  "steps": 40,
+                  "true_cfg_scale": 4.0,
+                  "guidance_scale": 1.0,
+                  "default_seed": 209212001
+                },
+                "settings_values_dev": {
+                  "artifact_manifest_sha256": "73561d21617e1dfb136ccd0d81868217ca7d593691be35deada96e9d3477f66e",
+                  "offload": "group_block1",
+                  "model_revision": "6f3ccc0b56e431dc6a0c2b2039706d7d26f22cb9",
+                  "gguf_revision": "0d33d9692b4b26212297240d87b0d4719aa4fd06",
+                  "gguf_sha256": "8677bac90627adbbc11efab87b1870e701c4eb3689ee865a3de8ab81b705a723",
+                  "steps": 40,
+                  "true_cfg_scale": 4.0,
+                  "guidance_scale": 1.0,
+                  "default_seed": 209212001
+                }
+              }
+            ],
+            "outcome": null,
+            "dev_outcome": null,
+            "qwen_inputs": {
+              "character.png": {
+                "new_sha256": "2ad30fd8534be164d68c241b9394e8c8c878249208c1ebdf445a4e8d134f27a6",
+                "dev_sha256": "2ad30fd8534be164d68c241b9394e8c8c878249208c1ebdf445a4e8d134f27a6",
+                "equal": true
+              },
+              "conditions.json": {
+                "new_sha256": "ba6bce2c8b9ff2091e9572526ec80491d4fd5980fdf50ce85f4126f3f66d2a98",
+                "dev_sha256": "5fc775b8da93415af1d3861ef66c570b3cc120b9da6af575f9d06685f450f3d0",
+                "equal": false
+              },
+              "garment.png": {
+                "new_sha256": "e57d8048b499b20ce7d60205fc9884cc556fa523e61d24e5fc22610e8f31fb7a",
+                "dev_sha256": "e57d8048b499b20ce7d60205fc9884cc556fa523e61d24e5fc22610e8f31fb7a",
+                "equal": true
+              }
+            }
+          },
+          "free-generation": {
+            "trace": {
+              "status": "user_approved",
+              "selected_attempt": 1,
+              "elapsed_seconds": 4177.383,
+              "attempts": [
+                {
+                  "number": 1,
+                  "seed": 42,
+                  "selection_seed": 42,
+                  "status": "completed",
+                  "retry_reason": "확신 있는 특징 위반: skin",
+                  "retry_items": [
+                    "skin"
+                  ],
+                  "violation_score": 1,
+                  "hair_auto": {
+                    "reason": "무채색 계열(평균 채도 6.9)"
+                  },
+                  "hair_restore": null
+                },
+                {
+                  "number": 2,
+                  "seed": 43,
+                  "selection_seed": 42,
+                  "status": "completed",
+                  "retry_reason": "확신 있는 특징 위반: skin",
+                  "retry_items": [
+                    "skin"
+                  ],
+                  "violation_score": 1,
+                  "hair_auto": {
+                    "reason": "무채색 계열(평균 채도 6.9)"
+                  },
+                  "hair_restore": null
+                }
+              ]
+            },
+            "dev_trace": {
+              "status": "user_approved",
+              "selected_attempt": 1,
+              "elapsed_seconds": 4361.393,
+              "attempts": [
+                {
+                  "number": 1,
+                  "seed": 42,
+                  "selection_seed": 42,
+                  "status": "completed",
+                  "retry_reason": "확신 있는 특징 위반: skin",
+                  "retry_items": [
+                    "skin"
+                  ],
+                  "violation_score": 1,
+                  "hair_auto": {
+                    "reason": "무채색 계열(평균 채도 6.9)"
+                  },
+                  "hair_restore": null
+                },
+                {
+                  "number": 2,
+                  "seed": 43,
+                  "selection_seed": 42,
+                  "status": "completed",
+                  "retry_reason": "확신 있는 특징 위반: skin",
+                  "retry_items": [
+                    "skin"
+                  ],
+                  "violation_score": 1,
+                  "hair_auto": {
+                    "reason": "무채색 계열(평균 채도 6.9)"
+                  },
+                  "hair_restore": null
+                }
+              ]
+            },
+            "workers": [
+              {
+                "directory": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen",
+                "seed": 42,
+                "status": "completed",
+                "seconds": 1909.920191799989,
+                "call_arguments": {
+                  "height": 1184,
+                  "width": 896,
+                  "true_cfg_scale": 4.0,
+                  "guidance_scale": 1.0,
+                  "num_inference_steps": 40,
+                  "num_images_per_prompt": 1,
+                  "seed": 42,
+                  "generator_device": "cpu",
+                  "positive": "Keep the same character as in image 1. The character has short hair black hair; keep these exactly. Keep the exact hair colors and where each color appears as in image 1; do not add new hair colors. Keep the face, hairstyle, hair color and head accessories the same as in image 1 and as in the head close-up in image 2. Keep the character's outfit exactly as in image 1: the same garments, colors, patterns and details. The character is female. Keep her body shape and proportions as in image 1. The character is reaching up to touch a hanging branch, with a dreamy look, in a snowy mountain village at sunset. Lighting: dappled sunlight falling through leaves. Color design: a pastel pink and mint green palette in the background and lighting only. Eye-level view, natural body proportions. Full-body shot: the whole character is visible from head to feet, with a detailed background. Keep the character's own hair, eye, skin and outfit colors exactly as in image 1; the scene lighting must not change or wash out these colors. Do not add weapons or held props unless the request asks for them. ",
+                  "negative": "animal tail, animal ears, wings",
+                  "images": 2
+                },
+                "call_arguments_equal": true,
+                "actual_python": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\python.exe",
+                "package_paths": {
+                  "torch": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\Lib\\site-packages",
+                  "diffusers": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\Lib\\site-packages",
+                  "transformers": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\Lib\\site-packages",
+                  "bitsandbytes": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\Lib\\site-packages",
+                  "gguf": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\Lib\\site-packages"
+                },
+                "versions": {
+                  "torch": "2.9.1+cu128",
+                  "diffusers": "0.38.0",
+                  "transformers": "4.57.6",
+                  "bitsandbytes": "0.50.2",
+                  "gguf": "0.19.0"
+                },
+                "models": {
+                  "manifest_sha256": "73561d21617e1dfb136ccd0d81868217ca7d593691be35deada96e9d3477f66e",
+                  "files_checked": 27,
+                  "gguf_sha256": "8677bac90627adbbc11efab87b1870e701c4eb3689ee865a3de8ab81b705a723"
+                },
+                "memory_request": {
+                  "reserved_limit_gib": 6.5,
+                  "vae_tiling": true,
+                  "text_encoder_lm_head": "cpu"
+                },
+                "memory": {
+                  "peak": {
+                    "file": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000001.json",
+                    "path": ".text_encode_memory.reserved_bytes",
+                    "gib": 6.361328125
+                  },
+                  "over_limit": [],
+                  "stopped": [],
+                  "limits": [
+                    {
+                      "file": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\memory.json",
+                      "limit_gib": 6.5
+                    }
+                  ],
+                  "files_scanned": 45,
+                  "files": [
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\memory.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000001.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000002.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000003.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000004.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000005.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000006.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000007.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000008.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000009.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000010.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000011.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000012.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000013.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000014.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000015.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000016.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000017.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000018.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000019.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000020.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000021.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000022.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000023.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000024.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000025.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000026.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000027.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000028.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000029.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000030.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000031.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000032.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000033.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000034.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000035.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000036.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000037.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000038.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000039.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000040.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000041.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\progress\\000000042.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\run.final.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\run.json"
+                  ]
+                },
+                "memory_stopped": null,
+                "launcher": {
+                  "status": "awaiting_review",
+                  "request_sha256": "4d16a5d8ee1a38405bbbe52cf56df1047b8bc5e98db72d67e37af70a3e33cf72",
+                  "gpu_sequence": [
+                    {
+                      "stage": "before_qwen",
+                      "probe": {
+                        "cuda_initialized": false
+                      }
+                    }
+                  ],
+                  "final_return_eligible": false,
+                  "command": [
+                    "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\python.exe",
+                    "-m",
+                    "genai_lab.qwen_pose_worker",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\request.json"
+                  ],
+                  "pid": 22224,
+                  "raw_sha256": "8b36371aa99326142d13ac24e4675b6080f9d44a86c043cede3351522581c560",
+                  "product_transform": {
+                    "version": 2,
+                    "kind": "resize_to_approved_basis",
+                    "raw_size": [
+                      896,
+                      1184
+                    ],
+                    "size": [
+                      768,
+                      1024
+                    ],
+                    "offset": [
+                      0,
+                      0
+                    ],
+                    "canvas": [
+                      768,
+                      1024
+                    ],
+                    "scale": [
+                      0.8571428571428571,
+                      0.8648648648648649
+                    ],
+                    "pixel_coordinates": "centers: (input + 0.5) * scale - 0.5",
+                    "filter": "LANCZOS"
+                  },
+                  "product_sha256": "a9fa9f3e3cd03a449d488e960922aef1139c614d336ed8ba97e5a932a5b1f71b",
+                  "basis_sha256": "362f89b9124a8a57928e451d610a6deddb2094a41dcdae7e57c05f725017ee6d"
+                },
+                "model_inputs_new": {
+                  "prompt.txt": "d1c62b7cf39f53b95cf95ba2d1ed2d73167ddd437a2da06cb2118edb0838461e",
+                  "vae_picture1_896x1184.png": "0c6ba6ce0da29d5a538eb69de6ae7e2dc3aab5c00c2d72100f4994597e73d3e8",
+                  "vae_picture2_1056x992.png": "ea3510857c574ac7f550029a421b3d4d33e758f6e133902b6dfb3d74c8933fa1",
+                  "vl_picture1_320x448.png": "e9f3b048dd46b646f49692758d45ce2500de04ecbc3527e55c03431cb156561f",
+                  "vl_picture2_384x384.png": "1710329f971d275e50dceb7c9cf63f55949e2aa2d13b3bd514555bae0f02df4a"
+                },
+                "model_inputs_dev": {
+                  "prompt.txt": "d1c62b7cf39f53b95cf95ba2d1ed2d73167ddd437a2da06cb2118edb0838461e",
+                  "vae_picture1_896x1184.png": "0c6ba6ce0da29d5a538eb69de6ae7e2dc3aab5c00c2d72100f4994597e73d3e8",
+                  "vae_picture2_1056x992.png": "ea3510857c574ac7f550029a421b3d4d33e758f6e133902b6dfb3d74c8933fa1",
+                  "vl_picture1_320x448.png": "e9f3b048dd46b646f49692758d45ce2500de04ecbc3527e55c03431cb156561f",
+                  "vl_picture2_384x384.png": "1710329f971d275e50dceb7c9cf63f55949e2aa2d13b3bd514555bae0f02df4a"
+                },
+                "model_inputs_equal": true,
+                "request_sha_new": "5948f9831cbe942736334bf42a430c9918c0640ef6b32850c52416bc9368c4da",
+                "request_sha_dev": "3c273949ff4b7f942e0b546cc7fa76f880a93f6ea1d2d502e716febcbf5d1ef1",
+                "raw": {
+                  "new": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\raw.png",
+                  "dev": "Z:\\genai-lab\\outputs\\product-run-20261022\\runs\\b5cb43fef5bf4277a15f16db4fd23644\\free-generation\\qwen\\raw.png",
+                  "new_sha256": "8b36371aa99326142d13ac24e4675b6080f9d44a86c043cede3351522581c560",
+                  "dev_sha256": "8b36371aa99326142d13ac24e4675b6080f9d44a86c043cede3351522581c560",
+                  "file_equal": true,
+                  "size_new": [
+                    896,
+                    1184
+                  ],
+                  "size_dev": [
+                    896,
+                    1184
+                  ],
+                  "mode_new": "RGB",
+                  "mode_dev": "RGB",
+                  "pixel_equal": true,
+                  "differing_pixels": 0,
+                  "total_pixels": 1060864,
+                  "differing_ratio": 0.0,
+                  "max_channel_difference": 0
+                },
+                "preview": {
+                  "callback_count": 40,
+                  "indices_exact_0_to_39": true,
+                  "errors": [],
+                  "files_present": [
+                    "preview-037.png",
+                    "preview-038.png",
+                    "preview-039.png"
+                  ],
+                  "note": "preview is a latent linear colour approximation; no claim of retaining 40 independent intermediate frames"
+                },
+                "error": null,
+                "traceback": null,
+                "dev_seconds": 1943.9315263000026,
+                "settings_values": {
+                  "artifact_manifest_sha256": "73561d21617e1dfb136ccd0d81868217ca7d593691be35deada96e9d3477f66e",
+                  "offload": "group_block1",
+                  "model_revision": "6f3ccc0b56e431dc6a0c2b2039706d7d26f22cb9",
+                  "gguf_revision": "0d33d9692b4b26212297240d87b0d4719aa4fd06",
+                  "gguf_sha256": "8677bac90627adbbc11efab87b1870e701c4eb3689ee865a3de8ab81b705a723",
+                  "steps": 40,
+                  "true_cfg_scale": 4.0,
+                  "guidance_scale": 1.0,
+                  "default_seed": 209212001
+                },
+                "settings_values_dev": {
+                  "artifact_manifest_sha256": "73561d21617e1dfb136ccd0d81868217ca7d593691be35deada96e9d3477f66e",
+                  "offload": "group_block1",
+                  "model_revision": "6f3ccc0b56e431dc6a0c2b2039706d7d26f22cb9",
+                  "gguf_revision": "0d33d9692b4b26212297240d87b0d4719aa4fd06",
+                  "gguf_sha256": "8677bac90627adbbc11efab87b1870e701c4eb3689ee865a3de8ab81b705a723",
+                  "steps": 40,
+                  "true_cfg_scale": 4.0,
+                  "guidance_scale": 1.0,
+                  "default_seed": 209212001
+                }
+              },
+              {
+                "directory": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2",
+                "seed": 43,
+                "status": "completed",
+                "seconds": 1877.139750900009,
+                "call_arguments": {
+                  "height": 1184,
+                  "width": 896,
+                  "true_cfg_scale": 4.0,
+                  "guidance_scale": 1.0,
+                  "num_inference_steps": 40,
+                  "num_images_per_prompt": 1,
+                  "seed": 43,
+                  "generator_device": "cpu",
+                  "positive": "Keep the same character as in image 1. The character has short hair black hair; keep these exactly. Keep the exact hair colors and where each color appears as in image 1; do not add new hair colors. Keep the face, hairstyle, hair color and head accessories the same as in image 1 and as in the head close-up in image 2. Keep the character's outfit exactly as in image 1: the same garments, colors, patterns and details. The character is female. Keep her body shape and proportions as in image 1. The character is reaching up to touch a hanging branch, with a dreamy look, in a snowy mountain village at sunset. Lighting: dappled sunlight falling through leaves. Color design: a pastel pink and mint green palette in the background and lighting only. Eye-level view, natural body proportions. Full-body shot: the whole character is visible from head to feet, with a detailed background. Keep the character's own hair, eye, skin and outfit colors exactly as in image 1; the scene lighting must not change or wash out these colors. Do not add weapons or held props unless the request asks for them. ",
+                  "negative": "animal tail, animal ears, wings",
+                  "images": 2
+                },
+                "call_arguments_equal": true,
+                "actual_python": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\python.exe",
+                "package_paths": {
+                  "torch": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\Lib\\site-packages",
+                  "diffusers": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\Lib\\site-packages",
+                  "transformers": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\Lib\\site-packages",
+                  "bitsandbytes": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\Lib\\site-packages",
+                  "gguf": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\Lib\\site-packages"
+                },
+                "versions": {
+                  "torch": "2.9.1+cu128",
+                  "diffusers": "0.38.0",
+                  "transformers": "4.57.6",
+                  "bitsandbytes": "0.50.2",
+                  "gguf": "0.19.0"
+                },
+                "models": {
+                  "manifest_sha256": "73561d21617e1dfb136ccd0d81868217ca7d593691be35deada96e9d3477f66e",
+                  "files_checked": 27,
+                  "gguf_sha256": "8677bac90627adbbc11efab87b1870e701c4eb3689ee865a3de8ab81b705a723"
+                },
+                "memory_request": {
+                  "reserved_limit_gib": 6.5,
+                  "vae_tiling": true,
+                  "text_encoder_lm_head": "cpu"
+                },
+                "memory": {
+                  "peak": {
+                    "file": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000001.json",
+                    "path": ".text_encode_memory.reserved_bytes",
+                    "gib": 6.361328125
+                  },
+                  "over_limit": [],
+                  "stopped": [],
+                  "limits": [
+                    {
+                      "file": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\memory.json",
+                      "limit_gib": 6.5
+                    }
+                  ],
+                  "files_scanned": 45,
+                  "files": [
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\memory.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000001.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000002.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000003.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000004.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000005.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000006.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000007.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000008.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000009.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000010.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000011.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000012.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000013.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000014.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000015.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000016.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000017.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000018.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000019.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000020.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000021.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000022.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000023.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000024.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000025.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000026.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000027.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000028.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000029.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000030.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000031.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000032.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000033.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000034.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000035.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000036.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000037.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000038.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000039.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000040.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000041.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\progress\\000000042.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\run.final.json",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\run.json"
+                  ]
+                },
+                "memory_stopped": null,
+                "launcher": {
+                  "status": "awaiting_review",
+                  "request_sha256": "91dc5240f3aa31cf9ebef8081e19a7b1fbc9db0e389ff810e37f3bb0c4c26c78",
+                  "gpu_sequence": [
+                    {
+                      "stage": "before_qwen",
+                      "probe": {
+                        "cuda_initialized": false
+                      }
+                    }
+                  ],
+                  "final_return_eligible": false,
+                  "command": [
+                    "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\python.exe",
+                    "-m",
+                    "genai_lab.qwen_pose_worker",
+                    "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\request.json"
+                  ],
+                  "pid": 28568,
+                  "raw_sha256": "bfcce1aca37f6aac90def9b8afabe6798cb482f08332a261a354f664c19535bb",
+                  "product_transform": {
+                    "version": 2,
+                    "kind": "resize_to_approved_basis",
+                    "raw_size": [
+                      896,
+                      1184
+                    ],
+                    "size": [
+                      768,
+                      1024
+                    ],
+                    "offset": [
+                      0,
+                      0
+                    ],
+                    "canvas": [
+                      768,
+                      1024
+                    ],
+                    "scale": [
+                      0.8571428571428571,
+                      0.8648648648648649
+                    ],
+                    "pixel_coordinates": "centers: (input + 0.5) * scale - 0.5",
+                    "filter": "LANCZOS"
+                  },
+                  "product_sha256": "b0518ada2837e5072a8501a090585bfefcc9836e0966b219a8287d0ad4c23514",
+                  "basis_sha256": "362f89b9124a8a57928e451d610a6deddb2094a41dcdae7e57c05f725017ee6d"
+                },
+                "model_inputs_new": {
+                  "prompt.txt": "d1c62b7cf39f53b95cf95ba2d1ed2d73167ddd437a2da06cb2118edb0838461e",
+                  "vae_picture1_896x1184.png": "0c6ba6ce0da29d5a538eb69de6ae7e2dc3aab5c00c2d72100f4994597e73d3e8",
+                  "vae_picture2_1056x992.png": "ea3510857c574ac7f550029a421b3d4d33e758f6e133902b6dfb3d74c8933fa1",
+                  "vl_picture1_320x448.png": "e9f3b048dd46b646f49692758d45ce2500de04ecbc3527e55c03431cb156561f",
+                  "vl_picture2_384x384.png": "1710329f971d275e50dceb7c9cf63f55949e2aa2d13b3bd514555bae0f02df4a"
+                },
+                "model_inputs_dev": {
+                  "prompt.txt": "d1c62b7cf39f53b95cf95ba2d1ed2d73167ddd437a2da06cb2118edb0838461e",
+                  "vae_picture1_896x1184.png": "0c6ba6ce0da29d5a538eb69de6ae7e2dc3aab5c00c2d72100f4994597e73d3e8",
+                  "vae_picture2_1056x992.png": "ea3510857c574ac7f550029a421b3d4d33e758f6e133902b6dfb3d74c8933fa1",
+                  "vl_picture1_320x448.png": "e9f3b048dd46b646f49692758d45ce2500de04ecbc3527e55c03431cb156561f",
+                  "vl_picture2_384x384.png": "1710329f971d275e50dceb7c9cf63f55949e2aa2d13b3bd514555bae0f02df4a"
+                },
+                "model_inputs_equal": true,
+                "request_sha_new": "5a2ed49262c254ab8e6ec7b07393466af470caa16011ee6399cc219b8090df9c",
+                "request_sha_dev": "7a8b076265f24cb6a4765670206a55749b2691c2715ba8f1f8d216aed352d389",
+                "raw": {
+                  "new": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\raw.png",
+                  "dev": "Z:\\genai-lab\\outputs\\product-run-20261022\\runs\\b5cb43fef5bf4277a15f16db4fd23644\\free-generation\\qwen-2\\raw.png",
+                  "new_sha256": "bfcce1aca37f6aac90def9b8afabe6798cb482f08332a261a354f664c19535bb",
+                  "dev_sha256": "bfcce1aca37f6aac90def9b8afabe6798cb482f08332a261a354f664c19535bb",
+                  "file_equal": true,
+                  "size_new": [
+                    896,
+                    1184
+                  ],
+                  "size_dev": [
+                    896,
+                    1184
+                  ],
+                  "mode_new": "RGB",
+                  "mode_dev": "RGB",
+                  "pixel_equal": true,
+                  "differing_pixels": 0,
+                  "total_pixels": 1060864,
+                  "differing_ratio": 0.0,
+                  "max_channel_difference": 0
+                },
+                "preview": {
+                  "callback_count": 40,
+                  "indices_exact_0_to_39": true,
+                  "errors": [],
+                  "files_present": [
+                    "preview-037.png",
+                    "preview-038.png",
+                    "preview-039.png"
+                  ],
+                  "note": "preview is a latent linear colour approximation; no claim of retaining 40 independent intermediate frames"
+                },
+                "error": null,
+                "traceback": null,
+                "dev_seconds": 1913.5947852000027,
+                "settings_values": {
+                  "artifact_manifest_sha256": "73561d21617e1dfb136ccd0d81868217ca7d593691be35deada96e9d3477f66e",
+                  "offload": "group_block1",
+                  "model_revision": "6f3ccc0b56e431dc6a0c2b2039706d7d26f22cb9",
+                  "gguf_revision": "0d33d9692b4b26212297240d87b0d4719aa4fd06",
+                  "gguf_sha256": "8677bac90627adbbc11efab87b1870e701c4eb3689ee865a3de8ab81b705a723",
+                  "steps": 40,
+                  "true_cfg_scale": 4.0,
+                  "guidance_scale": 1.0,
+                  "default_seed": 209212001
+                },
+                "settings_values_dev": {
+                  "artifact_manifest_sha256": "73561d21617e1dfb136ccd0d81868217ca7d593691be35deada96e9d3477f66e",
+                  "offload": "group_block1",
+                  "model_revision": "6f3ccc0b56e431dc6a0c2b2039706d7d26f22cb9",
+                  "gguf_revision": "0d33d9692b4b26212297240d87b0d4719aa4fd06",
+                  "gguf_sha256": "8677bac90627adbbc11efab87b1870e701c4eb3689ee865a3de8ab81b705a723",
+                  "steps": 40,
+                  "true_cfg_scale": 4.0,
+                  "guidance_scale": 1.0,
+                  "default_seed": 209212001
+                }
+              }
+            ],
+            "outcome": {
+              "status": "awaiting_user_review",
+              "raw": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\raw.png",
+              "result": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\raw.png",
+              "result_sha256": "8b36371aa99326142d13ac24e4675b6080f9d44a86c043cede3351522581c560",
+              "selected_attempt": 1,
+              "auto_selection": null
+            },
+            "dev_outcome": {
+              "status": "awaiting_user_review",
+              "raw": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\product-run-20261022\\runs\\b5cb43fef5bf4277a15f16db4fd23644\\free-generation\\qwen\\raw.png",
+              "result": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\product-run-20261022\\runs\\b5cb43fef5bf4277a15f16db4fd23644\\free-generation\\qwen\\raw.png",
+              "result_sha256": "8b36371aa99326142d13ac24e4675b6080f9d44a86c043cede3351522581c560",
+              "selected_attempt": 1,
+              "auto_selection": null
+            },
+            "qwen_inputs": {
+              "base.png": {
+                "new_sha256": "362f89b9124a8a57928e451d610a6deddb2094a41dcdae7e57c05f725017ee6d",
+                "dev_sha256": "362f89b9124a8a57928e451d610a6deddb2094a41dcdae7e57c05f725017ee6d",
+                "equal": true
+              },
+              "reference.png": {
+                "new_sha256": "952d9e8eb9a163847652c407b40f48c5ac2cf49a961c81505d4fc25d6d890230",
+                "dev_sha256": "952d9e8eb9a163847652c407b40f48c5ac2cf49a961c81505d4fc25d6d890230",
+                "equal": true
+              }
+            }
+          }
+        },
+        "input_hashes": {
+          "character": {
+            "path": "C:\\Users\\user\\Downloads\\참조 이미지\\86a72742408d9b4d04f5fb23fb0b93bd.jpg",
+            "actual_sha256": "0ae6d2168fd4bbbd3e1cc56c21f6ed79a44e8d54ef9be4794534b393e56b9b2f",
+            "expected_sha256": "0ae6d2168fd4bbbd3e1cc56c21f6ed79a44e8d54ef9be4794534b393e56b9b2f"
+          },
+          "garment": {
+            "path": "C:\\Users\\user\\Downloads\\참조 의상\\4b750036a001e45a39973c408855e970.jpg",
+            "actual_sha256": "71832bdb0afb7ad7d0b24f1cd4aebe94a6482bb5203f5fcfd79c1e7db6c41fc8",
+            "expected_sha256": "71832bdb0afb7ad7d0b24f1cd4aebe94a6482bb5203f5fcfd79c1e7db6c41fc8"
+          }
+        }
+      }
+    }
+  },
+  "source_integrity": {
+    "start_head": "6473095ed059c2e7281c398157e1d62fc705db1e",
+    "end_head": "6473095ed059c2e7281c398157e1d62fc705db1e",
+    "checked": 1136,
+    "changes": [],
+    "git_status_before": "?? .claude/\n?? approved-bases/\n?? character.review.json\n?? docs/STORAGE_RECOVERY_20261016.md\n?? inputs/training_candidates/\n?? scripts/audit_garment_delivery.py\n?? tests/.msys0000000000c0db8cca91612bcdc302d8\n?? tests/test_garment_delivery_audit.py\n",
+    "git_status_after": "?? .claude/\n?? approved-bases/\n?? character.review.json\n?? docs/STORAGE_RECOVERY_20261016.md\n?? inputs/training_candidates/\n?? scripts/audit_garment_delivery.py\n?? tests/.msys0000000000c0db8cca91612bcdc302d8\n?? tests/test_garment_delivery_audit.py\n",
+    "refusal_code": {
+      "historical_sha256": "f80994c72e2f0bd85baba7fb596578c1391d49b5ba77e4ce22432957c250eefd",
+      "current_sha256": "f80994c72e2f0bd85baba7fb596578c1391d49b5ba77e4ce22432957c250eefd",
+      "candidate_manifest_entry": {
+        "size": 2664,
+        "sha256": "f80994c72e2f0bd85baba7fb596578c1391d49b5ba77e4ce22432957c250eefd"
+      }
+    }
+  },
+  "process_observation": {
+    "observed": "2026-10-24T03:20:50.7165470+09:00",
+    "processes": [
+      {
+        "ProcessId": 5972,
+        "ParentProcessId": 39664,
+        "CommandLine": "\"D:\\genai-cache\\venv\\Scripts\\python.exe\" -X utf8 C:\\Users\\user\\.codex\\visualizations\\2026\\09\\16\\01a0a967-02b7-7f31-9719-aa82a8e8f790\\request37_collect.py"
+      },
+      {
+        "ProcessId": 39148,
+        "ParentProcessId": 5972,
+        "CommandLine": "\"C:\\Program Files\\Python310\\python.exe\" -X utf8 C:\\Users\\user\\.codex\\visualizations\\2026\\09\\16\\01a0a967-02b7-7f31-9719-aa82a8e8f790\\request37_collect.py"
+      }
+    ]
+  },
+  "checks": {
+    "p4_all_pass": true,
+    "saved_both": true,
+    "four_workers_completed": true,
+    "caps_at_most_6_5": true,
+    "measured_reserved_at_most_6_5": true,
+    "no_memory_stopped": true,
+    "worker_python_in_candidate": true,
+    "worker_packages_in_candidate": true,
+    "actual_calls_match_dev": true,
+    "settings_values_match_dev": true,
+    "cpu_model_inputs_match_dev": true,
+    "cpu_qwen_images_match_dev": true,
+    "raw_sha_match_dev": true,
+    "saved_sha_match_dev": true,
+    "retry_and_selection_match_dev": true,
+    "input_sha_match": true,
+    "candidate_unchanged": true,
+    "source_unchanged": true,
+    "normal_process_exit": true
+  },
+  "differences": [
+    {
+      "file": "B2/outfit-edit/qwen-inputs/conditions.json",
+      "fields": [
+        "input_facts.garment_reference.path",
+        "input_facts.garment_reference.source"
+      ],
+      "classification": "expected path-only bookkeeping difference",
+      "evidence": "Only these two paths differ; PNG inputs, all model_inputs hashes, actual call arguments and every raw SHA are identical.",
+      "unresolved": false
+    }
+  ],
+  "reporting_exception": {
+    "file": "D:\\genai-test\\gpu-p5-20261023\\run-report.json",
+    "field": "result.cases.A3/B2",
+    "value": null,
+    "cause": "Outer summary reads cases.<id>.state, but the inner report stores cases.<id>.flow.state.",
+    "verified_using": [
+      "flow/summary.json",
+      "flow/inner-p5.json cases.<id>.flow",
+      "actual saved files and SHA",
+      "process.exit_codes",
+      "outer launcher exit file"
+    ],
+    "candidate_edited": false
+  },
+  "verdict": {
+    "p4": "통과",
+    "p5": "통과",
+    "p6": "통과",
+    "final_release_approval": false,
+    "human_quality_judgement": null
+  }
+}

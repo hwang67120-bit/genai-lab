@@ -105,7 +105,7 @@
 **미완료 (끝난 것으로 보지 않음)** — 4절 표: 노출 검사 'record'(배포 전 'block'으로), 최종 배포 Python(3.10 지원 종료), 다른 PC 설치(P7), 준비 화면 2단계, 개발 실행 경로의 child_env GPU 미확인, 빌드 도구의 미추적 파일 복사, 속도 개선(요청 38·39).
 
 **병합 전에 사용자가 정할 것**
-1. 이 PR이 main에서 `docs/PROJECT_SCOPE.md`·`docs/SCENARIOS.md`를 지운다(개발 브랜치 26317f7f에서 지워짐). 그대로 둘지, 되살릴지.
+1. ~~이 PR이 main에서 `docs/PROJECT_SCOPE.md`·`docs/SCENARIOS.md`를 지운다~~ → **정함(10/24, D-181):** 현행 문서로 되살리지 않고 `docs/history/`에 초기 설계 기록으로 원문 그대로 보존(지금과 다른 범위 표시, 요구사항 대응표). 유효한데 현행 문서에 없던 요구사항은 FREE_GENERATION_CONTRACT 12절로 옮김. 옛 자리는 지운 채 둔다.
 2. 루트 인계 문서 11개(`QWEN_*`·`TAIL_*`)를 그대로 둘지, `docs/` 아래로 옮길지(지금은 그대로).
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)

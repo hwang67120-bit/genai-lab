@@ -60,6 +60,15 @@ class QwenPoseSettings:
         manifest = values.get("artifact_manifest")
         if manifest and not Path(manifest).is_absolute():  # 프로젝트 기본 설정(configs/)은 같은 폴더의 명세를 가리킨다
             values["artifact_manifest"] = str((Path(path).resolve().parent / manifest).resolve())
+        # 설치형 설정(qwen_edit_settings.model_home.json): 모델 경로는 모델 폴더(GENAI_MODEL_HOME) 기준 상대 경로,
+        # 실행 환경 "@app"은 앱 자신의 Python. 절대 경로 설정(기존)은 그대로 쓴다.
+        from genai_lab.model_home import resolve_in_home
+        for key in ("model_root", "gguf_file"):
+            if values.get(key) and not Path(values[key]).is_absolute():
+                values[key] = str(resolve_in_home(values[key]))
+        if values.get("python_executable") == "@app":
+            import sys
+            values["python_executable"] = sys.executable
         return cls(**values)
 
     def record(self):

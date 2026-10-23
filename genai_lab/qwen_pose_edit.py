@@ -157,8 +157,12 @@ def run_pose_edit(request, directory, workflow, *, cancelled=lambda: False, pope
 
 
 def _run_image_edit(request, directory, workflow, spec, *, cancelled=lambda: False,
-                    popen=subprocess.Popen, on_progress=lambda _: None):
-    """프로세스 수명 관리 공통부다. 호출부가 자세·꼬리 입력 규칙을 검증한다."""
+                    popen=subprocess.Popen, on_progress=lambda _: None, session=None):
+    """프로세스 수명 관리 공통부다. 호출부가 자세·꼬리 입력 규칙을 검증한다.
+    session(D-180, qwen_session.QwenSession)이 이 요청을 받으면 새 프로세스 대신 세션 프로세스에 작업으로 보낸다.
+    성공하면 세션 프로세스는 다음 작업을 위해 남고, 실패·취소면 세션을 끝낸다."""
+    if session is not None and not session.accepts(request):
+        session = None
     settings = QwenPoseSettings(**request["settings"])
     if cancelled():
         raise RuntimeError("실행 전 취소")
@@ -183,6 +187,9 @@ def _run_image_edit(request, directory, workflow, spec, *, cancelled=lambda: Fal
         created = True
         write_json(directory / "request.json", request)
         write_json(directory / "launcher.json", record)
+        if session is not None:
+            return _run_in_session(request, directory, record, session, spec, basis_size,
+                                   cancelled=cancelled, on_progress=on_progress)
         command = [settings.python_executable, "-m", "genai_lab.qwen_pose_worker", str(directory / "request.json")]
         env = child_environment()                   # 필요한 이름만(PYTHONPATH 등은 넘기지 않음) + 오프라인 고정(D-170)
         creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
@@ -232,13 +239,54 @@ def _run_image_edit(request, directory, workflow, spec, *, cancelled=lambda: Fal
                 process.kill()
                 process.wait()
         workflow.phase = "finished"
+        if session is not None and record["status"] in ("failed", "cancelled"):
+            session.kill()                          # 실패·취소 뒤 세션 상태를 다음 요청에 넘기지 않는다
         if created:
             try:
                 finalize_stopped_run(directory, record["request_sha256"],
                     cancelled=record["status"] == "cancelled", error=record.get("error", "Worker ended without a final record"),
-                    returncode=process.returncode if process is not None else None)
+                    returncode=process.returncode if process is not None else
+                        (session.process.poll() if session is not None and session.process is not None else None))
             except BaseException as final_error:
                 record.update(status="failed", final_record_error=str(final_error))
                 raise
             finally:
                 write_json(directory / "launcher.json", record)
+
+
+def _run_in_session(request, directory, record, session, spec, basis_size, *, cancelled, on_progress):
+    """세션 프로세스에 작업 하나를 보내고, 작업 프로세스가 그 요청 폴더의 최종 기록(run.final.json·run.json)을 다 쓴 뒤 남기는
+    완료 표시(job-N.done.json)를 기다린다. 쓰는 중인 run.json을 되풀이해 열지 않는다(qwen_record_io)."""
+    job = session.submit(directory / "request.json", request)
+    (directory / "worker.log").write_text(f"세션 작업 프로세스 기록: {session.control / 'worker.log'} (작업 {job})\n", encoding="utf-8")
+    record.update(status="running", command=session.command, pid=session.process.pid,
+                  session=dict(control=str(session.control), job=job))
+    write_json(directory / "launcher.json", record)
+    final_path = directory / "run.final.json"
+    done = session.control / f"job-{job:06d}.done.json"     # 작업 프로세스가 두 최종 기록을 다 쓴 뒤 만든다
+    last_progress = None
+    while not done.exists():
+        if cancelled():
+            (directory / "cancel.request").touch()
+            session.kill()
+            raise RuntimeError("사용자가 Qwen 실행을 취소했습니다.")
+        if not session.alive():
+            raise RuntimeError(f"Qwen 세션 프로세스가 끝났습니다(exit={session.process.poll()}); 세션 worker.log 확인")
+        progress = latest_progress(directory)
+        if progress is not None and progress[0] != last_progress:
+            try:
+                on_progress(progress[1])
+                last_progress = progress[0]
+            except (OSError, ValueError): pass
+        time.sleep(.2)
+    result = json.loads(final_path.read_text(encoding="utf-8"))
+    if result.get("status") != "completed" or result.get("request_sha256") != record["request_sha256"]:
+        raise RuntimeError("불완전하거나 다른 요청의 Qwen 결과(세션)")
+    if (result.get("session") or {}).get("job") != job:
+        raise RuntimeError("세션 작업 번호가 맞지 않습니다")
+    if file_sha(directory / "raw.png") != result.get("raw_sha256"):
+        raise RuntimeError("Qwen 원시 결과 SHA 불일치")
+    derived = product_preview(directory / "raw.png", directory / "product.png", basis_size=basis_size)
+    record.update(status="awaiting_review", raw_sha256=result["raw_sha256"], product_transform=derived,
+                  product_sha256=file_sha(directory / "product.png"), basis_sha256=spec.image_sha256)
+    return directory / "product.png"

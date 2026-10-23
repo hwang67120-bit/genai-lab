@@ -436,46 +436,61 @@ def run_free_generation(base_path, character_features, request_text="", *, base_
             directory=directory, runtime=runtime, cancelled=cancelled, progress=progress, popen=popen, trace=trace, persist=persist, selection_seed=selection_seed,
             pose_guidance=pose_guidance, experiment=experiment, automatic_edit=automatic_edit_base,
             confirmation_source=confirmation_source, style_trial=style_trial)
-        for number, seed in enumerate(SEEDS, 1):
-            if cancelled():
-                raise RuntimeError("사용자 취소")
-            suffix = "" if number == 1 else f"-{number}"
-            qwen = directory / f"qwen{suffix}"
-            request = make_free_request(spec, settings=settings, seed=seed)
-            attempt = dict(number=number, seed=seed, selection_seed=spec.selection_seed, status="generating",
-                           request=request, actual_images=[dict(path=spec.image_path, sha256=spec.image_sha256),
-                                                         dict(path=spec.reference_path, sha256=spec.reference_sha256),
-                                                         *([dict(path=spec.skeleton_path, sha256=spec.skeleton_sha256)] if spec.skeleton_path else [])])
-            trace["attempts"].append(attempt)
-            trace["status"] = "generating"
-            persist()
-            progress(f"상태: 자유 생성 {number}/{len(SEEDS)} · 약 30분")
-            run_free_generation_edit(request, qwen, FreeGenerationWorkflow(spec), cancelled=cancelled, popen=popen,
-                                     on_progress=lambda data: progress(f"상태: 자유 생성 · {len(data.get('steps', []))}/40"))
-            raw = qwen / "raw.png"
-            if (qwen / "run.json").exists():
-                attempt["worker_record"] = json.loads((qwen / "run.json").read_text(encoding="utf-8"))
-            progress("상태: 생성 결과 자체의 부위·특징 확인 중")
-            trace["status"] = "verifying"
-            persist()
-            observation = observe_result(features, raw, directory / f"result-analysis{suffix}", runtime,
-                                         cancelled=cancelled, popen=popen, skip=assembled["request_conflicts"],
-                                         base_scores=assembled["base_scores"], request_text=assembled["staging_text"],
-                                         skeleton=assembled["skeleton"])
-            judgement = condition_judgements(assembled["conditions"], observation, number, raw)
-            restore = hair_restore_candidate(features, raw, directory / f"result-analysis{suffix}", observation)
-            auto = hair_auto_candidate(features, directory, raw, directory / f"result-analysis{suffix}", observation)
-            attempt.update(status="completed", raw=str(raw), raw_sha256=sha(raw), observation=observation, judgements=judgement,
-                           hair_restore=restore, hair_auto=auto)
-            persist()
-            # 확신 있는 위반만 재시도한다(D-126 ⑤). 경계값·엇갈림·가림·요청 충돌·의상 태그 차이는 사람 확인으로 남긴다.
-            reasons = retry_reasons(observation["verification"])
-            unsafe = observation["safety"]["status"] == "violated"
-            attempt["retry_reason"] = ("안전 태그 차단" if unsafe else ("확신 있는 특징 위반: " + ", ".join(reasons) if reasons else None))
-            attempt["retry_items"] = reasons
-            attempt["violation_score"] = 1000 if unsafe else len(reasons)
-            if not attempt["retry_reason"] or (experiment or {}).get("single_attempt"):
-                break
+        session = None          # D-180: seed만 다른 재시도에 작업 프로세스 재사용(기본 꺼짐 — GENAI_QWEN_SESSION_REUSE=1)
+        from genai_lab.qwen_session import QwenSession, session_enabled
+        if session_enabled() and not (experiment or {}).get("single_attempt") and not spec.accelerator and not spec.style_lora:
+            session = QwenSession(settings, directory / "qwen-session", popen=popen)
+            trace["qwen_session"] = dict(enabled=True, control=str(session.control))
+        try:
+            for number, seed in enumerate(SEEDS, 1):
+                if cancelled():
+                    raise RuntimeError("사용자 취소")
+                suffix = "" if number == 1 else f"-{number}"
+                qwen = directory / f"qwen{suffix}"
+                request = make_free_request(spec, settings=settings, seed=seed)
+                attempt = dict(number=number, seed=seed, selection_seed=spec.selection_seed, status="generating",
+                               request=request, actual_images=[dict(path=spec.image_path, sha256=spec.image_sha256),
+                                                             dict(path=spec.reference_path, sha256=spec.reference_sha256),
+                                                             *([dict(path=spec.skeleton_path, sha256=spec.skeleton_sha256)] if spec.skeleton_path else [])])
+                trace["attempts"].append(attempt)
+                trace["status"] = "generating"
+                persist()
+                progress(f"상태: 자유 생성 {number}/{len(SEEDS)} · 약 30분")
+                run_free_generation_edit(request, qwen, FreeGenerationWorkflow(spec), cancelled=cancelled, popen=popen,
+                                         on_progress=lambda data: progress(f"상태: 자유 생성 · {len(data.get('steps', []))}/40"),
+                                         session=session)
+                raw = qwen / "raw.png"
+                if (qwen / "run.json").exists():
+                    attempt["worker_record"] = json.loads((qwen / "run.json").read_text(encoding="utf-8"))
+                progress("상태: 생성 결과 자체의 부위·특징 확인 중")
+                trace["status"] = "verifying"
+                persist()
+                observation = observe_result(features, raw, directory / f"result-analysis{suffix}", runtime,
+                                             cancelled=cancelled, popen=popen, skip=assembled["request_conflicts"],
+                                             base_scores=assembled["base_scores"], request_text=assembled["staging_text"],
+                                             skeleton=assembled["skeleton"])
+                judgement = condition_judgements(assembled["conditions"], observation, number, raw)
+                restore = hair_restore_candidate(features, raw, directory / f"result-analysis{suffix}", observation)
+                auto = hair_auto_candidate(features, directory, raw, directory / f"result-analysis{suffix}", observation)
+                attempt.update(status="completed", raw=str(raw), raw_sha256=sha(raw), observation=observation, judgements=judgement,
+                               hair_restore=restore, hair_auto=auto)
+                persist()
+                # 확신 있는 위반만 재시도한다(D-126 ⑤). 경계값·엇갈림·가림·요청 충돌·의상 태그 차이는 사람 확인으로 남긴다.
+                reasons = retry_reasons(observation["verification"])
+                unsafe = observation["safety"]["status"] == "violated"
+                attempt["retry_reason"] = ("안전 태그 차단" if unsafe else ("확신 있는 특징 위반: " + ", ".join(reasons) if reasons else None))
+                attempt["retry_items"] = reasons
+                attempt["violation_score"] = 1000 if unsafe else len(reasons)
+                if not attempt["retry_reason"] or (experiment or {}).get("single_attempt"):
+                    break
+        except BaseException:
+            if session is not None:
+                session.kill()              # 실패·취소: 세션 상태를 남기지 않는다
+                trace["qwen_session"].update(session.record())
+            raise
+        if session is not None:
+            session.close()                 # 시도가 끝나면 작업 프로세스를 내린다(다음 단계와 GPU를 나눠 쓰지 않게)
+            trace["qwen_session"].update(session.record())
         # 두 시도 모두 위반이면 위반이 적은 시도를 먼저 보여 준다(같으면 앞 시도). 어느 쪽을 쓸지는 사람이 고른다(candidates).
         chosen = min(trace["attempts"], key=lambda a: a["violation_score"]) if attempt["retry_reason"] else attempt
         raw, observation, judgement = Path(chosen["raw"]), chosen["observation"], chosen["judgements"]

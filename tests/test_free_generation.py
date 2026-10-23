@@ -834,3 +834,80 @@ def test_pre_release_youthful_signal_with_exposure_still_rejects_input(tmp_path,
     with pytest.raises(ValueError,match="금지"):
         run(tmp_path,base)
     assert not calls
+
+
+class RecordingSession:
+    """세션 대신 기록만(D-180). 실제 작업 프로세스는 띄우지 않는다."""
+    made = []
+
+    def __init__(self, settings, control, popen=None):
+        self.control, self.events = Path(control), []
+        RecordingSession.made.append(self)
+
+    def close(self):
+        self.events.append("close")
+
+    def kill(self):
+        self.events.append("kill")
+
+    def record(self):
+        return dict(control=str(self.control), jobs=2)
+
+
+def retry_twice(monkeypatch):
+    monkeypatch.setattr(pipeline, "retry_reasons", lambda verification: ["skin"])
+
+
+def test_session_is_off_by_default_and_retries_keep_their_own_requests(tmp_path, fake_models, monkeypatch):
+    base, calls = fake_models
+    monkeypatch.delenv("GENAI_QWEN_SESSION_REUSE", raising=False)
+    retry_twice(monkeypatch)
+    seen = []
+    original = pipeline.run_free_generation_edit
+    monkeypatch.setattr(pipeline, "run_free_generation_edit", lambda r, d, f, **k: seen.append(k["session"]) or original(r, d, f, **k))
+    result = run(tmp_path, base)
+    trace = json.loads(Path(result["trace"]).read_text(encoding="utf-8"))
+    assert seen == [None, None] and "qwen_session" not in trace
+    seeds = [c[1]["seed"] for c in calls if c[0] == "qwen"]
+    assert seeds == [42, 43]
+
+
+def test_session_on_reuses_one_session_for_both_attempts_and_closes_it(tmp_path, fake_models, monkeypatch):
+    base, calls = fake_models
+    monkeypatch.setenv("GENAI_QWEN_SESSION_REUSE", "1")
+    retry_twice(monkeypatch)
+    import genai_lab.qwen_session as qwen_session
+    RecordingSession.made = []
+    monkeypatch.setattr(qwen_session, "QwenSession", RecordingSession)
+    seen = []
+    original = pipeline.run_free_generation_edit
+    monkeypatch.setattr(pipeline, "run_free_generation_edit", lambda r, d, f, **k: seen.append(k["session"]) or original(r, d, f, **k))
+    result = run(tmp_path, base)
+    trace = json.loads(Path(result["trace"]).read_text(encoding="utf-8"))
+    session = RecordingSession.made[0]
+    assert len(RecordingSession.made) == 1 and seen == [session, session] and session.events == ["close"]
+    assert trace["qwen_session"]["enabled"] is True and trace["qwen_session"]["jobs"] == 2
+    requests = [c[1] for c in calls if c[0] == "qwen"]
+    assert [r["seed"] for r in requests] == [42, 43] and requests[0]["prompt"] == requests[1]["prompt"]
+
+
+def test_session_is_killed_when_an_attempt_fails(tmp_path, fake_models, monkeypatch):
+    base, _ = fake_models
+    monkeypatch.setenv("GENAI_QWEN_SESSION_REUSE", "1")
+    import genai_lab.qwen_session as qwen_session
+    RecordingSession.made = []
+    monkeypatch.setattr(qwen_session, "QwenSession", RecordingSession)
+    monkeypatch.setattr(pipeline, "run_free_generation_edit", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("memory stopped")))
+    with pytest.raises(Exception):
+        run(tmp_path, base)
+    assert RecordingSession.made[0].events == ["kill"]
+
+
+def test_session_is_not_used_for_single_attempt_experiments(tmp_path, fake_models, monkeypatch):
+    base, _ = fake_models
+    monkeypatch.setenv("GENAI_QWEN_SESSION_REUSE", "1")
+    import genai_lab.qwen_session as qwen_session
+    RecordingSession.made = []
+    monkeypatch.setattr(qwen_session, "QwenSession", RecordingSession)
+    run(tmp_path, base, experiment=dict(single_attempt=True))
+    assert RecordingSession.made == []

@@ -14,7 +14,7 @@
 - **배울 것:** 핵심 4항목(빛의 방향, 입체적인 명암, 머리카락 표현, 의상 재질)을 바꾸면서 보호 특징은 유지하는 것(1절).
   - 보호 특징에는 이번에 깨진 드레드락, 머리 배색, 피부톤, 발광 눈이 들어간다.
 - **방식:** 생성 한 번에 적용하는 경로(② 자세·장면 단계에 LoRA)를 우선한다(4절).
-- **다음 할 일:** 자료 준비 경로를 사용자가 고르고, 자료 요건표(2-3)를 채운다. 자료가 채워지기 전에는 내려받기·학습·GPU를 하지 않는다.
+- **다음 할 일(10/23 사용자 결정 반영):** 자료 경로 = 학습 허용 라이선스 자료 묶음, 목표 = 참고 4번 방향. 바로 쓸 묶음은 없어 업체 문의가 다음이다(6절). 자료가 채워지기 전에는 내려받기·구매·학습·GPU를 하지 않는다.
 
 ---
 
@@ -185,3 +185,69 @@ STYLE_STAGE_DESIGN 4-2(허가 증빙·안전 검사·캡션·해상도)를 그�
 **사용자에게 필요한 결정(자료가 준비될 때까지 다른 작업은 하지 않음):**
 1. 허가 자료를 어떤 경로로 준비할지: 작가 의뢰 / 본인 그림 / 학습 허용 라이선스 자료 묶음
 2. 그 자료의 목표 그림체(참고 4번 방향)
+
+## 6. 자료 후보 조사 — 학습 허용 라이선스 자료 묶음 (2026-10-23)
+
+> 사용자 결정: 자료 경로 = **학습 허용 라이선스 자료 묶음**, 목표 그림체 = **참고 4번 방향**(단순 배경에서도 완성도가 드러나는 명암·머릿결·옷 주름과 재질).
+> 범위: 웹 조사만. 내려받기·문의 발송·구매는 하지 않았다. 아래 라이선스는 검색으로 확인한 표시이며, **라이선스 원문·계약서 확인 전**이다(STYLE_STAGE_DESIGN 4-1 규칙).
+
+### 6-1. 결론
+
+- **바로 쓸 수 있는 묶음은 찾지 못했다.** 2-3 자료 요건표를 채울 만한 '애니풍 + 입체 명암 + 다양성 + 학습·상업 이용 허가'를 모두 갖춘 공개 묶음이 없다.
+  - 공개된 애니 그림 묶음(Danbooru·Zerochan·Konachan 계열 등)은 수집 그림이다. 묶음 자체에 MIT·CC 표시가 있어도 작가 허가 근거가 없어 쓰지 않는다.
+- **현실적인 길은 유료 학습 데이터 업체에 '맞춤 묶음'을 요청하는 것이다.**
+  - 업체가 기여자에게서 학습·상업 이용 허가를 받았다고 밝힌 곳이 있다(Shutterstock, Wirestock, PIXTA).
+  - 단, 애니풍 그림을 다루는지, 작은 회사·개인에게 파는지, 가격은 공개돼 있지 않다 → **문의가 필요하다.**
+- 무료 CC0·퍼블릭 도메인 자료는 허가 문제는 없지만, 목표 그림체(애니풍 4번 방향)와 맞는 것이 적다.
+
+### 6-2. 후보 표
+
+| 후보 | 종류 | 허가 표시(원문 확인 전) | 애니풍·4번 방향 | 다양성(2-3) | 비용 | 판단 |
+|---|---|---|---|---|---|---|
+| Shutterstock 데이터 라이선스 | 유료 업체, 그림·벡터 포함 5억 장 이상 | 모든 자료에 기여자의 학습·상업 이용 허가가 있다고 표시 | 모름(일러스트 다수, 애니풍 비중 불명) | 검색·선별로 맞출 수 있을 가능성 | 비공개, 샘플 묶음부터 시작 가능하다고 표시 | **문의 1순위** |
+| Wirestock | 유료 업체, 창작자 70만 명(일러스트레이터 포함) | 창작자가 AI 학습 이용에 동의(옵트인)하고 보상받는다고 표시 | 모름. 맞춤 의뢰(새로 그려 받기) 가능하다고 표시 | **맞춤 의뢰라 요건표대로 주문 가능**(가능하다면 가장 잘 맞음) | 비공개 | **문의 1순위** |
+| PIXTA 기계학습용 데이터셋 | 유료 업체(일본), 맞춤 선별·새 촬영 제공 | 사진 묶음은 촬영자에게서 기계학습 허가를 받았다고 표시. **일러스트에 같은 허가가 있는지는 확인 못 함** | 일본 일러스트 자료가 많을 것으로 보이나 확인 필요 | 맞춤 선별 가능하다고 표시 | 사진 묶음 예: 1,000장 99,000엔. 일러스트는 비공개 | 문의 2순위 |
+| Spawning Source.Plus | 학습용 자료 큐레이션 플랫폼 | 퍼블릭 도메인·CC0 약 4천만 장(도서관·박물관 위주). 작가 옵트인 묶음은 아직 정리 중으로 보도됨 | 거의 없음(고전 회화·사진 위주) | 낮음 | 무료 묶음 있음 | 보조 — 애니풍 아님 |
+| Mitsua art-museums-pd-440k | 공개 묶음 | 원본 CC0·퍼블릭 도메인, 설명 문장 CC BY 4.0 | 아님(고전 회화). 빛·명암·재질 표현은 강함 | 낮음 | 무료 | 보조 — 섞으면 유화풍으로 끌릴 위험 |
+| Mitsua vrm-color-concept-550k | 공개 묶음(VRoid 3D 렌더) | **CC BY-NC 4.0(비상업)** | 3D 툰 렌더라 4번 방향과 다름 | 중간 | 무료 | **제외** — 비상업 조건 |
+| OpenGameArt CC0 캐릭터 그림 | 공개 자료(게임용) | 자료마다 CC0 등 표시 | 일부 애니·비주얼노벨풍, 품질 제각각 | 낮음(장수 적음) | 무료 | 보조 — 장수·품질 부족 |
+| Danbooru·Zerochan·Konachan 계열 묶음 | 공개 묶음(수집) | 묶음에 MIT 등 표시가 있어도 작가 허가 근거 없음 | 애니풍 | 높음 | 무료 | **제외** — 허가 근거 없음(7절) |
+| AI 생성 그림 묶음(예: Z-Image로 만든 묶음) | 공개 묶음 | 라이선스 표시 없음 또는 불명 | AI 화풍 그 자체 | — | — | **제외** — 목표(AI 티 줄이기)와 반대 |
+
+### 6-3. 다음 할 일 — 문의 (사용자 승인 필요)
+
+문의를 보내는 것은 외부로 나가는 일이라 **사용자가 직접 보내거나, 보내도 된다고 승인한 뒤에만** 한다. 아래는 문의 초안이다.
+
+**물어볼 것:**
+1. 애니메이션·만화풍 캐릭터 일러스트를 다루는가? 샘플을 볼 수 있는가?
+2. 라이선스 원문: AI 모델 학습(LoRA 미세조정), 학습 자료로 변형본 생성(2-2 방식 ②), 학습한 모델로 만든 그림의 상업 이용이 모두 허용되는가?
+3. 기여자 동의 증빙: 그림마다 동의 기록이 있는가?
+4. 맞춤 선별 또는 새로 그려 받기: 2-3 요건표(어두운 피부, 드레드락 등 비직모, 옅은 색조가 섞인 머리, 발광 눈·오드아이, 천·가죽·금속 재질, 광원 방향이 분명한 그림, 단순 배경)를 맞출 수 있는가?
+5. 수량 40~60장 소량 구매가 가능한가? 가격과 기간은?
+6. AI 생성 그림이 섞여 있지 않다는 보증이 있는가?
+
+**문의 초안(영문, Shutterstock·Wirestock용):**
+
+> Subject: Licensed anime-style illustration dataset for LoRA fine-tuning (40–60 images)
+>
+> Hello. We are building a character image generation tool and want to fine-tune a style LoRA on licensed illustrations only.
+> We are looking for 40–60 hand-drawn (not AI-generated) anime/manga-style full-body character illustrations, single character, mostly simple backgrounds, with clear light direction, volumetric shading, detailed hair strands, and distinct fabric/leather/metal materials. We also need diversity: dark skin tones, non-straight hair such as dreadlocks or braids, multi-tone hair, and unusual eyes such as glowing eyes or heterochromia, with no more than 3 images per character.
+> Could you tell us: (1) whether you carry or can commission such work, with samples; (2) whether the license covers model training, creating derivative images for training pairs, and commercial use of outputs; (3) how contributor consent is documented per image; (4) pricing and minimum order for a small purchase.
+> Thank you.
+
+**문의 초안(일본어, PIXTA용):** 같은 내용으로 '機械学習用途(LoRA追加学習)・学習用の派生画像作成・生成物の商用利用の許諾、イラストのクリエイター同意の記録、40〜60点の小口購入可否と価格'을 묻는다(보내기 전 사용자 확인).
+
+### 6-4. 이 조사로 바뀌지 않는 것
+
+- 추천은 그대로 **자료 준비 필요**(5-3). 문의 답을 받아 2-3 요건표를 채울 수 있다고 확인되기 전에는 내려받기·구매·학습을 하지 않는다.
+- 구매는 사용자가 항목·금액을 확인한 뒤에만 한다.
+
+### 6-5. 조사 출처 (2026-10-23 검색)
+
+- [Shutterstock 데이터 라이선스](https://www.shutterstock.com/data-licensing/foundation-multimodal)
+- [Wirestock — AI 학습용 맞춤 데이터](https://wirestock.io/ai-labs) · [창작자 수익 안내](https://wirestock.io/gen-ai-resources/earn-money-ai-training-datasets-creators)
+- [PIXTA 기계학습용 데이터셋](https://pixta.jp/machinelearning-dataset) · [작업원 화상 데이터셋 보도자료](https://prtimes.jp/main/html/rd/p/000000355.000008963.html)
+- [Spawning Source.Plus 발표](https://spawning.substack.com/p/announcing-sourceplus-a-curation) · [TechCrunch 보도](https://techcrunch.com/2024/06/11/spawning-wants-to-build-more-ethical-ai-training-data-sets/)
+- [Mitsua vrm-color-concept-550k](https://huggingface.co/datasets/Mitsua/vrm-color-concept-550k/blame/main/README.md) · [Mitsua art-museums-pd-440k](https://huggingface.co/datasets/Mitsua/art-museums-pd-440k/commit/d5b173239b31d91e88cecea8a4711176ed136ffc)
+- [OpenGameArt 캐릭터 이미지 세트(예)](https://opengameart.org/content/character-imageset)
+- [nyanko7/danbooru2023](https://huggingface.co/datasets/nyanko7/danbooru2023) · [zerochan-archive](https://huggingface.co/datasets/zerochan-archive/zerochan)

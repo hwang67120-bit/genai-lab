@@ -2,6 +2,7 @@
 
 > 범위: 설계만. 내려받기·설치·학습·GPU 실행은 하지 않았다. 지도: [ROADMAP.md](ROADMAP.md) '지금 지도' 4절의 2번.
 > 이 단계 중에 생기는 다른 문제는 보류 목록으로 보낸다(지도 6절 규칙).
+> 직접 학습 설계(2026-10-23, 추천 '자료 준비 필요'): [STYLE_TRAINING_DESIGN.md](STYLE_TRAINING_DESIGN.md)(D-163).
 
 ## 결론
 

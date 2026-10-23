@@ -1,13 +1,13 @@
 # 요청36 그림체 후처리 시험 A 기술보고
 
-실행 완료: A1·A3·B2 세 장의 후처리가 끝났고, 새 결과의 사용자 판정은 대기 중이다.
+실행 완료: A1·A3·B2 세 장의 후처리가 끝났고, Codex 관찰과 별도 저장된 사용자 판정 기록을 분리했다.
 
 - 배치 실행: 2026-10-23 14:02:20 ~ 2026-10-23 15:26:25 KST, 1시간 24분 5초.
 - 완료 근거: batch-status finished, summary.json, 세 작업 run.final.json completed, 실제 raw 결과 존재 및 SHA 일치, 정상 요약 stdout·빈 stderr, Windows Get-CimInstance에서 실행기·Qwen 프로세스 없음(2026-10-23 15:34:52 KST). 실행기 자체 종료 코드는 따로 수집하지 않아 0이라고 추정하지 않는다.
 - 지정 scripts/check_runtime_env.py는 종료 코드0·필수 항목 이상0. 선택 controlnet_aux 부재는 필수 항목 이상이 아니다. --sha는 실행하지 않아 전체 모델 SHA를 새로 검증했다는 주장은 하지 않는다.
-- 승인 HEAD755687e2aed5057b140ff10f69913bead4a9f017. 코드·설정269개, 요청서·plan 및 입력3개 SHA와 git status가 시작 전과 같다. 실행 중 운영 코드·설정 수정이나 커밋·설치·다운로드는 없었다.
+- 승인 HEAD755687e2aed5057b140ff10f69913bead4a9f017. 첫 완료 검증에서 코드·설정269개, 요청서·plan 및 입력3개 SHA와 git status가 시작 전과 같았다. 이후 문서·판정 기록 커밋은 아래 별도 기록했다. Codex가 실행 중 운영 코드·설정을 수정하거나 커밋·설치·다운로드한 일은 없다.
 - plan의 A1·A3·B2 세 입력에 variant style만 각1회 실행했다. 대조군·강도/seed/지시문 탐색·재실행·시험B/C·다른LoRA 실행 없음. 자동 특징 분석을 하지 않았다.
-- 입력은 세 장이며 2줄 기준은 세 장 중 두 줄 이상이라는 사용자의 사전 판정 기준이다. 처음 두 입력으로 잘못 설명한 부분은 실행 전에 정정했고 계획대로 세 장을 실행했다.
+- 입력은 세 장이며 2줄 기준은 세 장 중 두 줄 이상이라는 사용자의 사전 판정 기준이다.
 
 ## 비교표와 근거
 
@@ -134,3 +134,10 @@ completed는 변환 파일 생성 완료를 뜻하며 사용자 판정을 대신
 
 - codex-audit/before.json·after.json에 코드·설정269개, 고정 요청서·plan, 입력3개 SHA 및 시작/종료 git status를 보존했다. runtime-env-check, preflight, 실행기 PID 기록, 완료 프로세스 확인과 주기별 snapshot도 있다.
 - 각 runs 폴더의 입력 복사·request·run/run.final·progress·memory·style_modules·worker.log·raw·preview를 보존했다. C 표시 폴더에 입력3장·결과3장·모듈3개와 보고 자료를 SHA 대조해 복사했다. display-manifest-36.json이 검증 근거다.
+
+## 완료 뒤 저장소와 사용자 판정 기록
+
+- 배치 종료15:26:25와 실제 프로세스 종료확인15:34:52 이후, 15:44:38에 문서·판정 기록 커밋953f3b6bd3d8715c3e3e536a96b0d5b6655497cb가 추가된 것을 확인했다. Codex가 만든 커밋이 아니다. 승인 실행 코드·설정269개, 요청서·plan, 입력3개의 SHA는 여전히 같다. 단순 HEAD 차이를 GPU 실행 오류로 분류하지 않았다. codex-audit/post-report-repository.json에 근거를 보존했다.
+- [별도로 저장된 사용자 판정 원문](judgement-user.json)을 읽기 전용으로 보존하고 SHA 03773d69c91016ff0448d65c3b27f3073ec45bc5bac9885ffddac8378d3dfad4로 C 사본과 대조했다. 파일에는 reviewer=user, basis=사용자가 Claude 관찰에 동의라고 적혀 있다. 본 Codex가 이 판정을 생성하거나 기존 파일을 변경하지 않았다.
+- 해당 기록의 decision 원문: 1/3 → 이번 LoRA(anime_borrowed) 검토 종료. 후처리 구조 후보로 남기지 않음
+- 위 입력 대비 관찰 여덟 항목은 Codex의 시각 관찰로 남기며 판정 파일과 합쳐 새 채점이나 결론을 만들지 않았다. 기존 판정이 저장되어 있으므로 같은 판정을 다시 요청하지 않는다. 시험B/C·추가GPU·다른LoRA로 이어가지 않는다.

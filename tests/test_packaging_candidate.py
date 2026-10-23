@@ -186,3 +186,9 @@ def test_p4_verdict_classifies_every_row_including_skipped_ones():
     assert verdict["unexpected"] == [names[0]] and not verdict["p5_allowed"] and not verdict["p5_allowed_after_review"]
     assert verdict["outcomes"][names[1]] == "pass" and "예정된 거절" in rows[names[1]]["outcome_reason"]
     assert not inner.p4_verdict({n: dict(state="dry") for n in names}, dry=True)["p5_allowed"]
+
+
+def test_p5_summary_reads_the_flow_state_of_each_row():
+    data = dict(cases=dict(A3=dict(inputs_sha_match=True, flow=dict(state="ok")), B2=dict(state="skipped: 입력 SHA 다름")))
+    assert runner.summarize_inner("p5", data) == dict(cases=dict(A3="ok", B2="skipped: 입력 SHA 다름"))
+    assert runner.summarize_inner("p4", dict(outcomes={"a": "pass"}, p5_allowed=True)) == dict(outcomes={"a": "pass"}, p5_allowed=True)

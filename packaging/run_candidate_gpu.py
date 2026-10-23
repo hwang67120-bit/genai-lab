@@ -66,6 +66,16 @@ def review_problems(review_path, rows):
     return problems
 
 
+def summarize_inner(stage, data):
+    """안쪽 결과 기록의 요약. P5 줄 상태는 실제 흐름 기록(cases.<줄>.flow.state)에 있고, 건너뛴 줄·dry만 cases.<줄>.state에 있다
+    (요청 37에서 Codex가 찾은 요약 누락 — 판정에는 영향 없었음)."""
+    if stage == "p4":
+        return {k: data.get(k) for k in ("outcomes", "unexpected", "review_needed", "p5_allowed", "p5_allowed_after_review", "error")
+                if k in data}
+    cases = {name: ((row or {}).get("flow") or {}).get("state") or (row or {}).get("state") for name, row in (data.get("cases") or {}).items()}
+    return dict(cases=cases, **({"error": data["error"]} if data.get("error") else {}))
+
+
 def p4_gate(folder, manifest, review_path=None):
     """P5 시작 조건: 같은 고정 목록으로 돈 실제(dry 아님) P4가 정상 종료했고, 예상 밖 실패가 없고,
     검토 필요 건은 모두 근거와 함께 해결됐고, 끝난 뒤 후보가 그대로일 것. 문제가 없으면 빈 문자열."""
@@ -147,13 +157,8 @@ def main(argv):
     report["process"] = dict(exit_codes=exit_codes, normal_exit=bool(exit_codes) and all(c == 0 for c in exit_codes.values()),
                              note="결과 판정과 별개. 0이 아니면 결과가 좋아도 정상 종료로 처리하지 않는다")
     inner_report = out / ("segment" if stage == "p4" else "flow") / f"inner-{stage}{'-dry' if dry else ''}.json"
-    if inner_report.is_file():
-        data = json.loads(inner_report.read_text(encoding="utf-8"))
-        report["result"] = {k: data.get(k) for k in ("outcomes", "unexpected", "review_needed", "p5_allowed", "p5_allowed_after_review",
-                                                     "error") if k in data} or {"cases": {k: (v or {}).get("state") for k, v in
-                                                                                         (data.get("cases") or {}).items()}}
-    else:
-        report["result"] = dict(error="안쪽 결과 기록 없음")
+    report["result"] = (summarize_inner(stage, json.loads(inner_report.read_text(encoding="utf-8"))) if inner_report.is_file()
+                        else dict(error="안쪽 결과 기록 없음"))
     report["finished"] = time.strftime("%Y-%m-%d %H:%M:%S")
     (out / "run-report.json").write_text(json.dumps(report, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
     print(json.dumps({k: report.get(k) for k in ("stage", "dry", "process", "result", "seconds", "unchanged_after", "error")},

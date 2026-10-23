@@ -8,6 +8,7 @@
 import hashlib
 import json
 import os
+import re
 import shutil
 import sys
 import time
@@ -23,6 +24,11 @@ P4_DEV = (("B2-outfit-parts", "b5cb43fef5bf4277a15f16db4fd23644/outfit-edit/part
           ("A3-base-parts", "eaf9b7c7102c4a67ad3859c611e01762/free-generation/base-parts"),
           ("A3-result-parts", "eaf9b7c7102c4a67ad3859c611e01762/free-generation/result-analysis/parts"))
 DEV_RUNS = "outputs/product-run-20261022/runs"
+# 분할 작업 프로세스가 '얼굴·머리를 찾지 못함'으로 거절하는 검사(outfit_edit_worker.segment: 보호 영역 또는 얼굴 영역이 비어 있음).
+# 요청 34 이후 이 파일은 바뀌지 않았고(1eb011f9..D-176) 후보 안의 파일도 같다 → 같은 파일·함수·줄·오류 종류면 같은 검사에서 거절한 것이다.
+FRAME = re.compile(r'File "[^"]*[\\/](?P<file>[^"\\/]+)", line (?P<line>\d+), in (?P<func>\w+)')
+EXCEPTION = re.compile(r"^(?P<type>[A-Za-z_][\w.]*(Error|Exception)):", re.M)
+NEAR_PX = 3            # 경계 흔들림으로 볼 거리(픽셀) — 이보다 멀리 생기거나 사라진 영역을 '실질적 차이 후보'로 센다
 
 
 def sha(path):
@@ -58,6 +64,81 @@ def compare_parts(new_npz, dev_npz):
     return out
 
 
+def dilate(mask, radius):
+    import numpy as np
+    padded = np.pad(mask, radius)
+    out = np.zeros_like(mask)
+    h, w = mask.shape
+    for dy in range(2 * radius + 1):
+        for dx in range(2 * radius + 1):
+            out |= padded[dy:dy + h, dx:dx + w]
+    return out
+
+
+def region_difference(new, dev):
+    """한 영역(불 배열)의 차이를 '머리 영역 누락'·'배경 포함' 판단에 쓰는 수치로. 판정은 사람이 그림과 함께 한다."""
+    import numpy as np
+    new, dev = new.astype(bool), dev.astype(bool)
+    union = int((new | dev).sum())
+    return dict(dev_px=int(dev.sum()), new_px=int(new.sum()), iou=round(float((new & dev).sum()) / union, 4) if union else 1.0,
+                missing_px=int((dev & ~new).sum()),                               # 개발에는 있고 후보에는 없음
+                added_px=int((new & ~dev).sum()),                                 # 후보에만 있음
+                missing_far_px=int((dev & ~dilate(new, NEAR_PX)).sum()),          # 경계 흔들림보다 먼 누락 → 머리 영역 누락 후보
+                added_far_px=int((new & ~dilate(dev, NEAR_PX)).sum()))            # 경계 흔들림보다 먼 추가 → 배경 포함 후보
+
+
+def substantive_evidence(new_npz, dev_npz, canvas, work):
+    """배열이 다를 때: 보호 영역(머리·얼굴·장식)과 부위별 차이 수치 + 겹쳐 본 그림(초록 둘 다, 빨강 개발에만, 파랑 후보에만)."""
+    import numpy as np
+    from PIL import Image
+    from genai_lab.outfit_edit import HEAD_ACCESSORIES, HEAD_KEEP
+    from genai_lab.outfit_edit_worker import FACE_PARTS
+    new, dev = np.load(new_npz), np.load(dev_npz)
+    shared = sorted(set(new.files) & set(dev.files))
+
+    def union(data, names):
+        names = [n for n in names if n in data.files]
+        return np.logical_or.reduce([data[n].astype(bool) for n in names]) if names else None
+
+    regions = {}
+    for label, names in (("protect", HEAD_KEEP + HEAD_ACCESSORIES), ("face", FACE_PARTS)):
+        a, b = union(new, names), union(dev, names)
+        if a is not None and b is not None and a.shape == b.shape:
+            regions[label] = region_difference(a, b)
+    parts = {k: region_difference(new[k], dev[k]) for k in shared if new[k].shape == dev[k].shape and not np.array_equal(new[k], dev[k])}
+    pictures = []
+    for label, names in (("protect", HEAD_KEEP + HEAD_ACCESSORIES),):
+        a, b = union(new, names), union(dev, names)
+        if a is None or b is None or a.shape != b.shape:
+            continue
+        with Image.open(canvas) as image:
+            base = np.asarray(image.convert("RGB")).astype(np.float32) * 0.45
+        colour = np.zeros_like(base)
+        colour[a & b] = (0, 200, 0)
+        colour[b & ~a] = (255, 0, 0)
+        colour[a & ~b] = (0, 90, 255)
+        mixed = np.where((a | b)[..., None], base * 0.4 + colour * 0.6, base).clip(0, 255).astype(np.uint8)
+        path = work / f"diff-{label}.png"
+        Image.fromarray(mixed).save(path)
+        pictures.append(str(path))
+    return dict(regions=regions, parts=parts, pictures=pictures,
+                note="빨강 = 개발에만(후보에서 빠짐), 파랑 = 후보에만(새로 들어감). '먼' 수치는 경계에서 3픽셀보다 먼 차이")
+
+
+def refusal_site(log_path):
+    """작업 프로세스 기록(worker.log)의 오류 추적에서 거절한 자리: 마지막 프레임(파일·줄·함수) + 오류 종류. 메시지 인코딩과 무관."""
+    try:
+        text = Path(log_path).read_bytes().decode("utf-8", errors="replace")
+    except OSError:
+        return None
+    frames = list(FRAME.finditer(text))
+    exceptions = list(EXCEPTION.finditer(text))
+    if not frames or not exceptions:
+        return None
+    last = frames[-1]
+    return dict(file=last["file"], line=int(last["line"]), function=last["func"], exception=exceptions[-1]["type"])
+
+
 def p4(out, home, repo, dry):
     os.environ["GENAI_MODEL_HOME"] = str(home)
     from genai_lab.outfit_edit_pipeline import segment_canvas
@@ -79,8 +160,9 @@ def p4(out, home, repo, dry):
                 dev_result = json.loads((dev / "result.json").read_text(encoding="utf-8"))
                 row["dev"] = dict(protect_px=dev_result["protect_px"], face_px=dev_result["face_px"],
                                   accessory_px=dev_result["accessory_px"], segmenter=dev_result["segmenter"])
-            else:       # 개발 실행에서도 분할이 거절한 건(A3 결과 분석: 얼굴·머리 못 찾음) → 같은 거절이 나오는지 본다
-                row["dev_error"] = json.loads((dev / "worker-error.json").read_text(encoding="utf-8"))["error"]
+            else:       # 개발 실행에서도 분할이 거절한 건(A3 결과 분석: 얼굴·머리 못 찾음) → 같은 이유로 거절되는지 본다
+                dev_error = json.loads((dev / "worker-error.json").read_text(encoding="utf-8"))
+                row.update(dev_error=dev_error["error"], dev_stage=dev_error.get("stage"), dev_site=refusal_site(dev / "worker.log"))
             if not row["canvas_sha_match"]:
                 row["state"] = "skipped: canvas SHA 불일치"
                 continue
@@ -96,18 +178,20 @@ def p4(out, home, repo, dry):
             if "dev_error" in row:
                 try:
                     segment_canvas(prepared, work / "parts", runtime)
-                    row.update(state="different: 개발은 거절, 후보는 분할 완료", seconds=round(time.time() - start, 1))
+                    row.update(state="refusal_not_reproduced", seconds=round(time.time() - start, 1))
                 except ValueError as error:
                     error_file = work / "parts" / "worker-error.json"
-                    new_error = json.loads(error_file.read_text(encoding="utf-8"))["error"] if error_file.is_file() else str(error)
-                    row.update(state="ok" if new_error == row["dev_error"] else "different: 거절 문구가 다름",
-                               seconds=round(time.time() - start, 1), new_error=new_error)
+                    new_error = json.loads(error_file.read_text(encoding="utf-8")) if error_file.is_file() else dict(error=str(error))
+                    row.update(state="refused", seconds=round(time.time() - start, 1), new_error=new_error.get("error"),
+                               new_stage=new_error.get("stage"), new_site=refusal_site(work / "parts" / "worker.log"))
                 continue
             result = segment_canvas(prepared, work / "parts", runtime)
             row.update(state="ok", seconds=round(time.time() - start, 1),
                        new=dict(protect_px=result["protect_px"], face_px=result["face_px"], accessory_px=result["accessory_px"],
                                 segmenter=result["segmenter"]),
                        compare=compare_parts(result["parts"], dev / "parts.npz"))
+            if not row["compare"]["all_equal"]:
+                row["evidence"] = substantive_evidence(result["parts"], dev / "parts.npz", local, work)
         except Exception as error:  # noqa: BLE001
             row.update(state="failed", error=f"{type(error).__name__}: {error}"[:1500], tb=traceback.format_exc()[-1500:])
     report.update(p4_verdict(report["rows"], dry))
@@ -115,28 +199,43 @@ def p4(out, home, repo, dry):
 
 
 def classify(row):
-    """P4 한 건의 결론(2026-10-23 사용자: 예정된 거절 재현과 예상 밖 실행 실패를 구분).
-    expected_refusal_reproduced  개발에서도 거절한 건이 같은 문구로 거절됨 → 통과
-    match                        분할 완료 + 배열이 개발 결과와 같음 → 통과
-    array_difference             분할 완료, 배열이 다름 → 실패는 아님(원인 미확정으로 보고)
-    unexpected                   그 밖(실행 오류·SHA 불일치·거절이 재현되지 않거나 문구가 다름) → P5를 시작하지 않음"""
+    """P4 한 건의 결론(2026-10-24 사용자: 통과 / 검토 필요 / 예상 밖 실패).
+    pass          분할 완료 + 배열이 개발 결과와 같음, 또는 개발에서도 거절한 건이 같은 문구·같은 단계·같은 검사(파일·줄·함수·오류 종류)로 거절됨
+    review_needed 실행은 정상인데 결과가 다름 — 배열 차이(수치·겹친 그림을 보고 실질적 차이인지 사람이 확인), 거절이 재현되지 않음,
+                  같은 문구지만 거절 자리를 확인할 수 없음. 해결 전에는 P5를 시작하지 않음
+    unexpected    실행 실패: 오류, 캔버스 SHA 불일치, 다른 문구·다른 검사로 거절(예: CUDA 오류)
+    반환: (결론, 설명)"""
     state = row.get("state", "")
     if state == "dry":
-        return "dry"
-    if state == "ok" and "dev_error" in row:
-        return "expected_refusal_reproduced"
+        return "dry", ""
     if state == "ok":
-        return "match" if row.get("compare", {}).get("all_equal") else "array_difference"
-    return "unexpected"
+        if row.get("compare", {}).get("all_equal"):
+            return "pass", "배열이 개발 결과와 같음"
+        return "review_needed", "배열이 다름 — 수치·겹친 그림으로 머리 영역 누락·배경 포함 같은 실질적 차이인지 확인"
+    if state == "refusal_not_reproduced":
+        return "review_needed", "개발은 거절했는데 후보는 분할을 끝냄"
+    if state == "refused":
+        if row.get("new_error") != row.get("dev_error") or row.get("new_stage") != row.get("dev_stage"):
+            return "unexpected", "다른 문구 또는 다른 단계에서 실패"
+        if row.get("dev_site") and row.get("new_site") and row["dev_site"] == row["new_site"]:
+            return "pass", "같은 문구·단계·검사({file} {line}행 {function}, {exception})에서 거절 — 예정된 거절 재현".format(**row["new_site"])
+        if row.get("dev_site") and row.get("new_site"):
+            return "unexpected", "같은 문구지만 다른 자리에서 거절"
+        return "review_needed", "같은 문구지만 거절 자리를 기록에서 확인하지 못함"
+    return "unexpected", "실행 실패: " + state
 
 
 def p4_verdict(rows, dry):
     for row in rows.values():               # 모든 건을 끝에서 한 번에 판정(건너뛴 건도 빠지지 않게)
-        row.setdefault("outcome", classify(row))
+        if "outcome" not in row:
+            row["outcome"], row["outcome_reason"] = classify(row)
     outcomes = {name: row["outcome"] for name, row in rows.items()}
     unexpected = sorted(name for name, outcome in outcomes.items() if outcome == "unexpected")
-    return dict(outcomes=outcomes, unexpected=unexpected,
-                p5_allowed=not dry and len(rows) == len(P4_DEV) and not unexpected)
+    review = sorted(name for name, outcome in outcomes.items() if outcome == "review_needed")
+    complete = not dry and len(rows) == len(P4_DEV)
+    return dict(outcomes=outcomes, unexpected=unexpected, review_needed=review,
+                p5_allowed=complete and not unexpected and not review,
+                p5_allowed_after_review=complete and not unexpected)
 
 
 def p5(out, cases_path, dry):

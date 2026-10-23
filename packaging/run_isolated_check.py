@@ -44,6 +44,7 @@ def run_phase(candidate, phase, out, home, env, picture=None):
     (out / f"console-{phase}.log").write_text(done.stdout + "\n--- stderr ---\n" + done.stderr, encoding="utf-8")
     report = out / f"report-{phase}.json"
     result = json.loads(report.read_text(encoding="utf-8")) if report.exists() else dict(error="보고 없음", returncode=done.returncode)
+    result["process_returncode"] = done.returncode      # 결과와 별개로 프로세스 종료 코드(2026-10-24 사용자)
     print(phase, done.returncode, result.get("decision"), result.get("error", "ok"), flush=True)
     return result
 

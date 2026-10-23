@@ -1,0 +1,41 @@
+{
+ "job_done_marker": false,
+ "seconds": 617.1,
+ "returncode": 1,
+ "run_status": "starting",
+ "error": "",
+ "models_checked": false,
+ "samples": [
+  {
+   "t": 571.9,
+   "cpu": 0.2,
+   "rss_mib": 25.0
+  },
+  {
+   "t": 577.0,
+   "cpu": 0.2,
+   "rss_mib": 25.0
+  },
+  {
+   "t": 582.0,
+   "cpu": 0.2,
+   "rss_mib": 25.0
+  },
+  {
+   "t": 587.0,
+   "cpu": 0.2,
+   "rss_mib": 25.0
+  },
+  {
+   "t": 592.0,
+   "cpu": 0.2,
+   "rss_mib": 25.0
+  },
+  {
+   "t": 597.0,
+   "cpu": 0.2,
+   "rss_mib": 25.0
+  }
+ ],
+ "log_tail": ""
+}

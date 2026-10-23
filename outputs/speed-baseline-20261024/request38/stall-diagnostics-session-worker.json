@@ -1,0 +1,40 @@
+{
+ "pid": 33956,
+ "ppid": 35464,
+ "status": "running",
+ "created": "06:20:34",
+ "checked": "06:54:36",
+ "cpu_seconds_in_10s": 0.0,
+ "cpu_total": 0.19,
+ "rss_mib": 24.8,
+ "threads": [
+  {
+   "id": 33396,
+   "user": 0.05,
+   "system": 0.09
+  },
+  {
+   "id": 19480,
+   "user": 0.0,
+   "system": 0.0
+  },
+  {
+   "id": 26292,
+   "user": 0.0,
+   "system": 0.0
+  }
+ ],
+ "open_files": [
+  "C:\\Windows\\System32\\ko-KR\\kernel32.dll.mui",
+  "D:\\genai-test\\session-reuse-20261024\\flow\\runs\\7ab810fcb7594a86847a4b172b0ce25b\\free-generation\\qwen-session\\worker.log",
+  "C:\\Windows\\System32\\ko-KR\\KernelBase.dll.mui"
+ ],
+ "cmdline": [
+  "C:\\Program Files\\Python310\\python.exe",
+  "-m",
+  "genai_lab.qwen_pose_worker",
+  "--session",
+  "D:\\genai-test\\session-reuse-20261024\\flow\\runs\\7ab810fcb7594a86847a4b172b0ce25b\\free-generation\\qwen-session"
+ ],
+ "exe": "C:\\Program Files\\Python310\\python.exe"
+}

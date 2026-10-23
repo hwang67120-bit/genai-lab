@@ -1,0 +1,112 @@
+{
+ "started": "2026-10-24 05:43:39",
+ "python": "D:\\genai-cache\\venv\\Scripts\\python.exe",
+ "case": "B2",
+ "session_env": "1",
+ "flow": {
+  "state": "failed",
+  "seconds": 4262,
+  "run": "D:\\genai-test\\session-reuse-20261024\\flow\\runs\\7ab810fcb7594a86847a4b172b0ce25b",
+  "saved": null,
+  "errors": [
+   "Qwen 세션 프로세스가 끝났습니다(exit=1); 세션 worker.log 확인 | Traceback (most recent call last):\n  File \"\\\\192.168.0.109\\win_g\\genai-lab\\genai_lab\\studio_controller.py\", line 882, in run\n    self.result = self.action(self.stop.is_set, self.progress.emit)\n  File \"\\\\192.168.0.109\\win_g\\genai-lab\\genai_lab\\studio_product.py\", line 249, in operation\n    return run_free_generation(base, ident[\"features\"], scene[\"text\"], base_kind=base_kind, gender=ident[\"gender\"],\n  File \"\\\\192.168.0.109\\win_g\\genai-lab\\genai_lab\\free_generation_pipeline.py\", line 459, in run_free_generation\n    run_free_generation_edit(request, qwen, FreeGenerationWorkflow(spec), cancelled=cancelled, popen=popen,\n  File \"\\\\192.168.0.109\\win_g\\genai-lab\\genai_lab\\qwen_free_generation.py\", line 187, in run_free_generation_edit\n    return _run_image_edit(request, directory, workflow, spec, **kwargs)\n  File \"\\\\192.168.0.109\\win_g\\genai-lab\\genai_lab\\qwen_pose_edit.py\", line 191, in _run_image_edit\n    return _run_in_session(request, directory, record, session, spec, basis_size,\n  File \"\\\\192.168.0.109\\win_g\\genai-lab\\genai_lab\\qwen_pose_edit.py\", line 274, in _run_in_session\n    raise RuntimeError(f\"Qwen 세션 프로세스가 끝났습니다(exit={session.process.poll()}); 세션 worker.log 확인\")\nRuntimeError: Qwen 세션 프로세스가 끝났습니다(exit=1); 세션 worker.log 확인\n"
+  ]
+ },
+ "baseline_run": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36",
+ "image_sha_comparison": {
+  "outfit-edit/qwen/raw.png": {
+   "exists": true,
+   "baseline": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\raw.png",
+   "same": true,
+   "new_sha256": "fbe397cd1b02c64dc0af55bef915314282439f923c66d1bf419da6342ffa281d",
+   "baseline_sha256": "fbe397cd1b02c64dc0af55bef915314282439f923c66d1bf419da6342ffa281d"
+  },
+  "free-generation/qwen/raw.png": {
+   "exists": false,
+   "baseline": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\raw.png",
+   "same": false,
+   "new_sha256": null,
+   "baseline_sha256": "8b36371aa99326142d13ac24e4675b6080f9d44a86c043cede3351522581c560"
+  },
+  "free-generation/qwen-2/raw.png": {
+   "exists": false,
+   "baseline": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\raw.png",
+   "same": false,
+   "new_sha256": null,
+   "baseline_sha256": "bfcce1aca37f6aac90def9b8afabe6798cb482f08332a261a354f664c19535bb"
+  }
+ },
+ "saved_same_as_request37": false,
+ "workers": {
+  "outfit-edit/qwen/raw.png": {
+   "status": "completed",
+   "seed": 42,
+   "seconds": 1778.7241247000056,
+   "stage_seconds": {
+    "text_encode": 17.8975065999839,
+    "pipeline_load": 90.1382336000097,
+    "generation": 1669.9977046999848
+   },
+   "session": null,
+   "files_rechecked": true,
+   "text_encode_reused": null,
+   "pipeline_reused": null,
+   "session_memory_at_start": null,
+   "peak_reserved_gib": 6.328
+  },
+  "free-generation/qwen/raw.png": {
+   "status": "failed",
+   "seed": null,
+   "seconds": null,
+   "stage_seconds": null,
+   "session": {
+    "control": "D:\\genai-test\\session-reuse-20261024\\flow\\runs\\7ab810fcb7594a86847a4b172b0ce25b\\free-generation\\qwen-session",
+    "job": 1,
+    "pid": 33956
+   },
+   "files_rechecked": true,
+   "text_encode_reused": null,
+   "pipeline_reused": null,
+   "session_memory_at_start": null,
+   "peak_reserved_gib": null
+  }
+ },
+ "session_jobs": [],
+ "memory": {
+  "device_used_peak_gib": 7.883,
+  "device_used_before_gib": 1.396,
+  "device_total_gib": 7.996,
+  "process_gpu_peak_gib": {
+   "studio": {
+    "dedicated": 0.0,
+    "shared": 0.0
+   },
+   "segmentation": {
+    "dedicated": 5.184,
+    "shared": 0.076
+   },
+   "qwen_single": {
+    "dedicated": 6.44,
+    "shared": 0.076
+   }
+  },
+  "session_and_segmentation_together": {
+   "samples": 0,
+   "dedicated_sum_peak_gib": null
+  },
+  "ram_peak_gib": {
+   "studio": 0.995,
+   "other": 1.406,
+   "segmentation": 4.282,
+   "qwen_single": 26.483,
+   "qwen_session": 0.024
+  },
+  "sample_counts": {
+   "device_and_ram": 4208,
+   "process_counters": 4217
+  },
+  "note": "device = 장치 전체(다른 프로그램 포함). process = Windows 카운터(CUDA 문맥 포함). PyTorch reserved는 작업 프로세스 memory.json에 따로 있다"
+ },
+ "sha_result": "불일치 — 원인 조사 필요(품질 실패·성공으로 처리하지 않음): ['free-generation/qwen/raw.png', 'free-generation/qwen-2/raw.png']",
+ "finished": "2026-10-24 06:55:05"
+}

@@ -1,0 +1,38 @@
+{
+ "phase": "moved",
+ "executable": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\python.exe",
+ "base_prefix": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main",
+ "prefix": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main",
+ "app_home": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed",
+ "appdata": "D:\\genai-test\\p2p3-20261023-embed\\sandbox-profile-trace\\Roaming",
+ "path": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main;C:\\WINDOWS\\System32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem",
+ "sys_path": [
+  "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\app\\scripts\\product_file_trace",
+  "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\python310.zip",
+  "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main",
+  "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\Lib\\site-packages",
+  "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\app"
+ ],
+ "packaged": true,
+ "decision": "setup",
+ "decision_value": "기록된 모델 폴더를 찾을 수 없습니다(옮겼거나 지웠을 수 있습니다): D:\\genai-test\\모델 폴더 (공백 한글)\\model home 20261023\n옮겼다면 새 위치를 고르고 다시 검사하세요.",
+ "record_path": "D:\\genai-test\\p2p3-20261023-embed\\sandbox-profile-trace\\Roaming\\GenAILab\\model-setup.json",
+ "record": {
+  "schema": "model_setup/1",
+  "model_home": "D:\\genai-test\\모델 폴더 (공백 한글)\\model home 20261023",
+  "status": "files_verified",
+  "checked_at": "2026-10-23 23:05:12",
+  "run_id": "4f149d2955934281bef5868309ca8bb4",
+  "seconds": 217.9,
+  "fingerprint": {
+   "model_home_files": "78491b074c8b3ba775a84b2cc1e291ff2a7af759977b5b09e5456052bcfe345c",
+   "qwen_model_files": "73561d21617e1dfb136ccd0d81868217ca7d593691be35deada96e9d3477f66e",
+   "gguf_sha256": "8677bac90627adbbc11efab87b1870e701c4eb3689ee865a3de8ab81b705a723"
+  },
+  "problem_count": 0,
+  "message": "",
+  "gpu_generation_verified": false,
+  "note": "모델 파일 검증(있음·크기·SHA)일 뿐 GPU 생성 검증이 아니다. 생성 확인은 첫 생성·최종 패키징 검증 P4·P5"
+ },
+ "setup_status_at_start": "상태: 기록된 모델 폴더를 찾을 수 없습니다(옮겼거나 지웠을 수 있습니다): D:\\genai-test\\모델 폴더 (공백 한글)\\model home 20261023\n옮겼다면 새 위치를 고르고 다시 검사하세요."
+}

@@ -20,6 +20,7 @@
 | `d172/` | HF 토큰 차단·필수 모델 공통 검사(D-172) 확인: 빈 폴더·WD 태거 없는 폴더(문구 수정 전·후)·전체 폴더(준비 화면 수준 SHA) 점검, 전체 폴더 제품 단계. 사용자 토큰 파일 열기 0회 | 숨김 | Qwen 생성, 머리 분할 | `model_home_check.py`·`scenarios.py` |
 | `setup-screen/` | 최초 모델 준비 화면(D-173) CPU 검증: 실제 검사 프로세스로 전체 폴더 깊은 검사·40초 뒤 취소·WD 없는 폴더, 화면 멈춤 여부(타이머), 시작 판단. 기록은 시험용 파일 | 숨김 | — | `setup_screen_check.py` |
 | `p2p3/` | 배포 후보 격리 검증(D-174 P1~P3): `run2/`(release·trace 4단계, 판정 `results/trace-verdict.json`, 실행기 `results/launcher/`), `attempt1-missing-run-py/`(첫 시도 — run.py 누락), `candidate-build-report.json`. 가짜 사용자 폴더의 기록 JSON 포함 | 숨김 | Qwen 생성, 머리 분할 | `packaging/run_isolated_check.py`·`analyze_isolated_trace.py`·`launcher_check.py` |
+| `p2p3-embed/` | 공식 내장형 Python 후보 P1~P3 재확인(D-175): `run/`(release·trace 4단계·판정·실행기, 첫 시도 실패 기록 포함), 기존 후보와 비교(`old-vs-embed-candidate.json`·`compare-cpu-stages-*.txt`·`opened-files-diff.txt`·`opens-count.txt`), 기존 후보 고정 목록(`old-copy-candidate-manifest.json.gz`), 비교 스크립트 `tools/`, `candidate-build-report.json`. 새 후보 고정 목록은 `../packaging-gpu-20261023/` | 숨김 | Qwen 생성, 머리 분할 | `packaging/build_candidate.py --embed-zip`·`freeze_candidate.py`·`run_isolated_check.py` |
 
 - 각 폴더: `opens.jsonl`(원자료: 열린 파일 기록), `status.json`(단계 결과·대신한 단계), `console.log`.
 - `summary-first-gpu-on.json`, `summary-gpu-hidden.json`: `scripts/product_file_trace/summarize.py`로 만든 분류 요약.

@@ -166,6 +166,6 @@ def test_startup_decision(tmp_path):
 
 def test_studio_start_keeps_the_quick_check_and_routes_through_the_decision():
     source = (ROOT / "gui_main.py").read_text(encoding="utf-8")
-    assert "startup_decision(quick_check=current_paths_pass)" in source and "--model-setup" in source
+    assert "startup_decision(quick_check=None if packaged else current_paths_pass, packaged=packaged)" in source and "--model-setup" in source
     product = (ROOT / "genai_lab/studio_product.py").read_text(encoding="utf-8")
     assert "model_check.require_product_models(" in product                     # '이미지 생성' 전 빠른 검사 유지

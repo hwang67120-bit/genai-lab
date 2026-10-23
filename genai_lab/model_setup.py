@@ -121,21 +121,35 @@ def verified_home(record=None):
     return home if home.is_dir() else None
 
 
-def startup_decision(environ=None, record=None, quick_check=None):
+def startup_decision(environ=None, record=None, quick_check=None, packaged=False):
     """작업실 시작 때: ('studio', 모델 폴더 또는 None) 또는 ('setup', 이유).
     - 사용자가 GENAI_MODEL_HOME을 직접 정했으면 그대로(검사는 '이미지 생성' 전 빠른 검사).
     - 검증 완료 기록이 있으면 그 폴더로 작업실.
-    - 기록이 없어도 지금 경로가 빠른 검사를 통과하면 작업실(개발 PC 기존 사용 방식 유지).
-    - 그 밖에는 준비 화면."""
+    - 개발 실행만: 기록이 없어도 지금 경로가 빠른 검사를 통과하면 작업실(개발 PC 기존 사용 방식 유지).
+      배포판(packaged)은 이 우회를 쓰지 않는다 — 기록이 없으면 준비 화면(D-174).
+    - 그 밖에는 준비 화면. 이유 문장은 화면에 그대로 보인다(옮긴·없는 폴더, 목록 바뀜 구분)."""
     environ = os.environ if environ is None else environ
     if environ.get(ENV):
         return "studio", Path(environ[ENV])
+    record = load_record() if record is None else record
     home = verified_home(record)
     if home is not None:
         return "studio", home
-    if quick_check is not None and quick_check():
+    if not packaged and quick_check is not None and quick_check():
         return "studio", None
-    return "setup", "모델 파일 검증 기록이 없거나 맞지 않습니다."
+    return "setup", setup_reason(record)
+
+
+def setup_reason(record):
+    """준비 화면 첫 안내: 기록이 없음 / 기록된 폴더를 찾을 수 없음 / 검사 목록이 바뀜 / 지난 검사 실패."""
+    if not record:
+        return "모델 폴더가 아직 준비되지 않았습니다. 받아 둔 모델 폴더를 고르고 '검사'를 누르세요."
+    if record.get("status") != FILES_VERIFIED:
+        return "지난 검사에서 모델 파일에 문제가 있었습니다. 고친 뒤 '재검사'를 누르세요."
+    if not Path(record["model_home"]).is_dir():
+        return (f"기록된 모델 폴더를 찾을 수 없습니다(옮겼거나 지웠을 수 있습니다): {record['model_home']}\n"
+                "옮겼다면 새 위치를 고르고 다시 검사하세요.")
+    return "앱의 모델 목록이 바뀌어 다시 검사해야 합니다. '재검사'를 누르세요."
 
 
 def current_paths_pass():

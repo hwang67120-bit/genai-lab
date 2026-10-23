@@ -26,7 +26,7 @@ def default_command(home, out, run_id):
 
 
 class ModelSetupWindow(QWidget):
-    def __init__(self, on_ready=None, *, command=default_command, record_file=None):
+    def __init__(self, on_ready=None, *, command=default_command, record_file=None, reason=""):
         super().__init__()
         self.setWindowTitle("모델 준비")
         self.resize(760, 560)
@@ -68,6 +68,8 @@ class ModelSetupWindow(QWidget):
         saved = model_setup.load_record(record_file)
         if saved and Path(saved["model_home"]).is_dir():
             self.set_folder(saved["model_home"])
+        if reason:                         # 시작 판단의 이유(처음·옮긴 폴더·목록 바뀜·지난 실패)를 먼저 보인다
+            self.status.setText("상태: " + reason)
         self.refresh()
 
     # 상태

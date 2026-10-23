@@ -6844,10 +6844,14 @@ def open_studio(home=None):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    from genai_lab.app_home import app_home
     from genai_lab.model_setup import current_paths_pass, startup_decision
-    # D-173: 검증된 모델 폴더 기록 → 그 폴더로 작업실. 기록이 없어도 지금 경로가 빠른 검사를 통과하면 작업실(개발 PC 방식 유지).
-    # 그 밖에는(또는 --model-setup) 최초 모델 준비 화면.
-    decision, value = ("setup", "요청") if "--model-setup" in sys.argv else startup_decision(quick_check=current_paths_pass)
+    # D-173: 검증된 모델 폴더 기록 → 그 폴더로 작업실. 개발 실행은 기록이 없어도 지금 경로가 빠른 검사를 통과하면 작업실.
+    # D-174: 배포판(GENAI_APP_HOME)은 그 우회 없이 기록이 없으면 준비 화면. 그 밖에는(또는 --model-setup) 준비 화면.
+    packaged = app_home() is not None
+    decision, value = (("setup", "") if "--model-setup" in sys.argv
+                       else startup_decision(quick_check=None if packaged else current_paths_pass, packaged=packaged))
+    print(f"시작 판단: {decision} · 배포판={packaged} · {value}", flush=True)    # 실행 기록(실행기 검증 D-174)
     windows = []
     if decision == "studio":
         windows.append(open_studio(value))
@@ -6856,7 +6860,7 @@ if __name__ == "__main__":
         def ready(home):
             windows.append(open_studio(home))
             setup.close()
-        setup = ModelSetupWindow(on_ready=ready)
+        setup = ModelSetupWindow(on_ready=ready, reason=value)
         setup.show()
         setup.raise_()
         setup.activateWindow()

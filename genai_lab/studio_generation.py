@@ -24,6 +24,7 @@ from genai_lab.studio_background import read_background
 from genai_lab.skin_tone import SkinRecommendationSettings
 from genai_lab.model_home import L2D_SAM_SNAPSHOT, model_home, model_path
 from genai_lab.child_env import child_environment
+from genai_lab.app_home import app_home, runtime_python
 
 
 def digest(path):
@@ -38,7 +39,7 @@ def record(path, value):
 class StudioRuntime:
     # 배포 경로는 한곳에서 관리한다. 패키지 설치나 모델 다운로드는 하지 않는다.
     # 모델 경로는 GENAI_MODEL_HOME(모델 폴더 한 곳)이 있으면 그 아래 배치에서, 없으면 아래 기존 경로에서 찾는다(model_home.py).
-    pose_python: Path = Path("D:/genai-cache/catvton-venv/Scripts/python.exe")
+    pose_python: Path = field(default_factory=lambda: runtime_python("pose") or Path("D:/genai-cache/catvton-venv/Scripts/python.exe"))
     pose_models: Path = field(default_factory=lambda: model_path("pose_models", "D:/genai-cache/huggingface/easy-dwpose/checkpoints"))
     model_cache: Path = field(default_factory=lambda: model_path("model_cache", "D:/genai-cache/huggingface"))
     # 모델 폴더가 없을 때는 기존 머리 검출 캐시(저장소 outputs 아래)를 그대로 쓴다. 다른 PC에는 없으므로 설치형은 모델 폴더를 쓴다.
@@ -58,7 +59,7 @@ class StudioRuntime:
     head_paste_timeout: float = 1200.0
     # D-101: 원본 편집(Qwen) 실행 설정. 사용자가 고르지 않는다. 배포마다 GENAI_STUDIO_RUNTIME의 qwen_settings로 바꿀 수 있다.
     qwen_settings: Path = field(default_factory=lambda: Path(__file__).resolve().parents[1] / "configs" / (
-        "qwen_edit_settings.model_home.json" if model_home() is not None else "qwen_edit_settings.json"))
+        "qwen_edit_settings.model_home.json" if model_home() is not None or app_home() is not None else "qwen_edit_settings.json"))
     skin_recommendation: SkinRecommendationSettings = field(default_factory=SkinRecommendationSettings)
     garment_warnings: GarmentWarningSettings = field(default_factory=GarmentWarningSettings.load)
 

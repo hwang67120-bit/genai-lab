@@ -34,9 +34,16 @@ def model_home():
 
 
 def model_path(key, legacy):
-    """모델 폴더가 정해졌으면 배치 경로, 아니면 기존 경로."""
+    """모델 폴더가 정해졌으면 배치 경로, 아니면 기존 경로. 배포판(GENAI_APP_HOME)은 기존(개발) 경로로 넘어가지 않는다(D-174):
+    모델 폴더가 없으면 설치 폴더 안의 없는 자리를 가리켜 검사가 '없음'으로 막게 한다."""
     home = model_home()
-    return home / LAYOUT[key] if home is not None else Path(legacy)
+    if home is not None:
+        return home / LAYOUT[key]
+    from genai_lab.app_home import app_home
+    packaged = app_home()
+    if packaged is not None:
+        return packaged / "모델 폴더 미설정" / LAYOUT[key]
+    return Path(legacy)
 
 
 def resolve_in_home(value):

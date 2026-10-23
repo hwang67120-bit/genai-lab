@@ -40,6 +40,8 @@ def main(argv):
             if "stage" in d:
                 stage = d["stage"]
                 continue
+            if "path" not in d:          # popen(하위 프로세스 기록)은 실행 환경 요약(env_report.py)에서 본다
+                continue
             rows.append(dict(d, stage=f"{scenario}:{stage}"))
     files = defaultdict(lambda: dict(stages=set(), kinds=set()))
     for r in rows:

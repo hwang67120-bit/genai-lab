@@ -84,6 +84,42 @@ if _LOG:
 
     sys.meta_path.insert(0, _Finder())
 
+    # 실행 환경 기록(GENAI_OPEN_TRACE_MODULES=1, D-169): 프로세스가 끝날 때 실제 Python·경로·불러온 모듈 위치를,
+    # 하위 프로세스를 띄울 때 명령·작업 폴더·PYTHONPATH 전달 여부를 남긴다.
+    if os.environ.get("GENAI_OPEN_TRACE_MODULES") == "1":
+        import atexit
+        import subprocess
+
+        def _dump_modules():
+            modules = {}
+            for name, module in list(sys.modules.items()):
+                origin = getattr(module, "__file__", None)
+                if origin:
+                    modules[name] = origin
+            record = dict(pid=os.getpid(), argv=sys.argv, executable=sys.executable, prefix=sys.prefix,
+                          base_prefix=sys.base_prefix, version=sys.version, path=list(sys.path), cwd=os.getcwd(),
+                          pythonpath=os.environ.get("PYTHONPATH"), modules=modules)
+            target = os.path.join(os.path.dirname(_LOG), f"modules-{os.getpid()}.json")
+            with open(target, "w", encoding="utf-8") as f:
+                json.dump(record, f, ensure_ascii=False, indent=1)
+        atexit.register(_dump_modules)
+
+        _popen_init = subprocess.Popen.__init__
+
+        def _traced_popen(self, args, *a, **k):
+            env = k.get("env")
+            try:
+                with _lock:
+                    with open(_LOG, "a", encoding="utf-8") as f:
+                        f.write(json.dumps(dict(pid=os.getpid(), kind="popen", args=[str(x) for x in args] if isinstance(args, (list, tuple)) else str(args),
+                                                cwd=str(k.get("cwd")) if k.get("cwd") else None,
+                                                env_pythonpath=(env if env is not None else os.environ).get("PYTHONPATH")),
+                                           ensure_ascii=False) + "\n")
+            except Exception:
+                pass
+            _popen_init(self, args, *a, **k)
+        subprocess.Popen.__init__ = _traced_popen
+
     # 선택: 열린 핸들 표본(GENAI_OPEN_TRACE_HANDLES=1). C 확장이 직접 연 파일 중 '열려 있는 동안' 잡히는 것만 보인다
     # (열었다 바로 닫은 파일·핸들 없이 매핑된 파일은 빠진다). 위 기록에 없는 파일이 여기서 나오면 관찰 도구가 놓친 범위다.
     if os.environ.get("GENAI_OPEN_TRACE_HANDLES") == "1":

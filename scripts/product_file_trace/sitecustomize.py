@@ -98,7 +98,8 @@ if _LOG:
                     modules[name] = origin
             record = dict(pid=os.getpid(), argv=sys.argv, executable=sys.executable, prefix=sys.prefix,
                           base_prefix=sys.base_prefix, version=sys.version, path=list(sys.path), cwd=os.getcwd(),
-                          pythonpath=os.environ.get("PYTHONPATH"), modules=modules)
+                          pythonpath=os.environ.get("PYTHONPATH"), env_keys=sorted(os.environ.keys()),   # 값은 남기지 않는다
+                          modules=modules)
             target = os.path.join(os.path.dirname(_LOG), f"modules-{os.getpid()}.json")
             with open(target, "w", encoding="utf-8") as f:
                 json.dump(record, f, ensure_ascii=False, indent=1)

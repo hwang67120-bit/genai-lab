@@ -12,6 +12,9 @@
 | `outfit_retry/` · `hair_restore/` · `hair_auto/` · `memory_link/` · `product_buttons/` · `base4/` | 조건부 경로 관찰 | **숨김**(`CUDA_VISIBLE_DEVICES=-1`, `torch.cuda.is_available()=False` 확인) | Qwen 생성, 머리 분할(CUDA 필요) | `scripts/product_file_trace/scenarios.py` + 핸들 표본 |
 | `env-probe/` | 실행 환경 점검(D-169): 환경마다 기반 Python·경로·.pth·모듈 불러오기와 출처(격리 실행 / 실제 실행 조건) | 숨김 | — | `env_probe.py` |
 | `env-base4/` · `env-startup/` | 사용자 화면 단계·시작 화면을 다시 돌리며 프로세스별 Python·모듈 위치(`modules-<pid>.json`)·하위 프로세스 명령(`opens.jsonl`의 popen) 기록, 요약 `env-report.json` | 숨김 | Qwen 생성, 머리 분할 | `scenarios.py` + `GENAI_OPEN_TRACE_MODULES=1`, `env_report.py` |
+| `env-base4-explicit/` | 하위 프로세스 명시적 환경 변수(D-170) 검증: 부모에 시험용 변수(VIRTUAL_ENV·CONDA_PREFIX·PYTHONSTARTUP·임의 토큰)를 넣고 네 단계 재실행, 하위 프로세스 `env_keys`(이름만) 기록 | 숨김 | Qwen 생성, 머리 분할 | `scenarios.py` + `GENAI_CHILD_ENV_EXTRA` |
+| `worker-imports/` | Qwen·머리 분할 작업 프로세스의 함수 안 import까지 불러온 모듈(모델 안 올림) | 숨김 | — | `worker_imports.py` |
+| `packages/` | 관찰 모듈 → 배포 패키지·버전·라이선스 표시(`main.json`·`pose.json`) → `packaging/requirements-*.txt` | — | — | `package_list.py` |
 
 - 각 폴더: `opens.jsonl`(원자료: 열린 파일 기록), `status.json`(단계 결과·대신한 단계), `console.log`.
 - `summary-first-gpu-on.json`, `summary-gpu-hidden.json`: `scripts/product_file_trace/summarize.py`로 만든 분류 요약.

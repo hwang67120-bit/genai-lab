@@ -59,12 +59,15 @@ def _sha(path):
     return h.hexdigest()
 
 
-def check_models(runtime, settings, flow, *, deep=False, manifest_path=MANIFEST):
-    """flow('outfit'|'staging')에 필요한 모델 → dict(ok, problems, locations). problems: 구성·경로·문제(없음/크기 다름/SHA 다름)."""
+def check_models(runtime, settings, flow, *, deep=False, manifest_path=MANIFEST, progress=None):
+    """flow('outfit'|'staging')에 필요한 모델 → dict(ok, problems, locations). problems: 구성·경로·문제(없음/크기 다름/SHA 다름).
+    progress: 구성마다 진행 문장을 받는 함수(준비 화면용, 검사 내용은 같다)."""
     manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
     by_key = {c["key"]: c for c in manifest["components"]}
     problems, locations = [], {}
     for key in FLOWS[flow]:
+        if progress is not None:
+            progress(f"{LABELS[key]} 확인 중" + (" — 약 28GB SHA 대조, 몇 분 걸립니다" if key == "qwen" and deep else ""))
         if key == "qwen":
             problems += _check_qwen(settings, deep, locations)
             continue

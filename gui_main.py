@@ -6831,10 +6831,33 @@ class GenAILabWindow(QMainWindow):
         self.worker = None
         self.worker_thread = None
 
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
+def open_studio(home=None):
+    """작업실 창. home이 있으면 그 모델 폴더(GENAI_MODEL_HOME)로. '이미지 생성' 전 빠른 검사는 그대로 돈다(D-172)."""
+    if home is not None:
+        os.environ["GENAI_MODEL_HOME"] = str(home)
     window = GenAILabWindow()
     window.show()
     window.raise_()             # 다른 창 뒤에 열려 안 보이는 일을 막는다(2026-10-22 사용자 "UI 화면이 안 나와")
     window.activateWindow()
+    return window
+
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    from genai_lab.model_setup import current_paths_pass, startup_decision
+    # D-173: 검증된 모델 폴더 기록 → 그 폴더로 작업실. 기록이 없어도 지금 경로가 빠른 검사를 통과하면 작업실(개발 PC 방식 유지).
+    # 그 밖에는(또는 --model-setup) 최초 모델 준비 화면.
+    decision, value = ("setup", "요청") if "--model-setup" in sys.argv else startup_decision(quick_check=current_paths_pass)
+    windows = []
+    if decision == "studio":
+        windows.append(open_studio(value))
+    else:
+        from genai_lab.model_setup_ui import ModelSetupWindow
+        def ready(home):
+            windows.append(open_studio(home))
+            setup.close()
+        setup = ModelSetupWindow(on_ready=ready)
+        setup.show()
+        setup.raise_()
+        setup.activateWindow()
     sys.exit(app.exec())

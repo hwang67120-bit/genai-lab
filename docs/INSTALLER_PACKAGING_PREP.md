@@ -1,74 +1,157 @@
-# 설치형 앱 패키징 준비 — 구성 요소·용량·배포 라이선스 1차 목록 (2026-10-23)
+# 설치형 앱 패키징 준비 (2026-10-23)
 
-> 지도 4절 병행 갈래(D-165). 범위: 지금 PC의 실제 구성을 읽어 목록만 만들었다. 코드·설정 변경, 설치·내려받기, GPU 실행은 하지 않았다.
-> 목표 형태: **무료 설치형 Windows 앱, 서버 없이 사용자 PC에서 오프라인 실행**(DEPLOYMENT_API_COMPATIBILITY.md 2차 목표와 같은 방향).
+> 지도 4절 병행 갈래(D-165·D-166). 새 GPU 시험·구매·외부 발송·공개 배포는 하지 않았다. 공유 캐시·기존 실행 환경은 지우거나 옮기지 않았다.
+> 목표 형태: **무료 설치형 Windows 앱 + 최초 모델 준비, 준비 뒤에는 서버 없이 오프라인 실행**(사용자 결정 10/23).
 
 ## 결론
 
-- **제품 실행에 필요한 것은 약 37GiB다**(모델 약 30GiB + Python 실행 환경 약 7GiB). 설치 파일 하나에 다 넣기는 크다.
-  - 후보: 앱(작은 설치 파일) + **첫 실행 때 모델 받기**(고정 리비전·SHA 대조, 받은 뒤에는 오프라인). 결정은 사용자 몫이다.
-- **제품 경로 모델의 라이선스는 대부분 Apache-2.0·MIT다.** 재배포 가능 — 고지·라이선스 문서 동봉 의무가 있다.
-  - 예외: `deepghs/ccip_onnx`는 **OpenRAIL** → 재배포 시 사용 제한 조항을 최종 사용자에게 전달해야 한다.
-  - see-through 원본 저장소의 라이선스 파일은 **아직 확인 못 했다**(포크는 Apache-2.0이라고 적음).
-- **패키징 전에 고칠 것 5가지**(2절): 네트워크 공유 폴더를 가리키는 모델 경로, 설정 속 절대 경로, 실행 환경 3개, 개발용 패키지가 섞인 실행 환경, 제품에 안 쓰는 모델이 같은 캐시에 섞임.
+- **설치 방식은 '앱 + 최초 모델 준비'로 설계한다**(4절). 최초 준비는 ① 내려받기 ② 이미 있는 모델 폴더 지정 두 길이 있고, 준비가 끝나면 네트워크 없이 실행한다.
+- **제품 의존 파일 목록은 '최소 목록'까지 확인했다**(2절). 완전한 목록이라고 확정하지 않는다.
+  - CPU 실행 관찰: 제품 단계가 실제로 연 모델 파일 11개(재시도 경로 포함).
+  - 정적 확인: Qwen 작업 프로세스가 여는 파일(이번 관찰에서는 기존 결과 그림으로 대신해 실행하지 않음).
+  - 조건부·미관찰: 실행 조건에 따라 열릴 수 있으나 이번에 지나가지 않은 경로.
+- **경로 수정(모델만) 반영:** `GENAI_MODEL_HOME`(모델 폴더 한 곳)을 정하면 제품 모델을 그 아래 정해진 배치에서 찾는다(3절). 정하지 않으면 지금 경로를 그대로 쓴다 — 이 PC 동작은 바뀌지 않는다.
+- 실행 환경(Python 3개) 정리는 모델과 분리해 다음 단계로 둔다(1-2).
 
-## 1. 구성 요소
+## 1. 조사 목록 — 모델과 실행 환경을 나눈다
 
-### 1-1. 모델 (제품 경로 — 실행 환경 점검 `scripts/check_runtime_env.py` 기준)
+### 1-1. 모델 (용량·출처·라이선스는 HF 표시, 2026-10-23)
 
-| 구성 요소 | 지금 위치 | 용량 | 출처·리비전 | 라이선스(HF 표시) | 설치 묶음 |
+| 구성 요소 | 지금 위치 | 용량 | 출처·리비전 | 라이선스 | 제품 필요 근거 |
 |---|---|---|---|---|---|
-| Qwen-Image-Edit-2511(문자 인코더·VAE·설정 등) | `D:/genai-cache/models/Qwen-Image-Edit-2511` | 15.70GiB | Qwen/Qwen-Image-Edit-2511 @6f3ccc0b | Apache-2.0 | 필요 |
-| Qwen 변환기 GGUF Q4_K_M | `D:/genai-cache/models/Qwen-Image-Edit-2511-GGUF/…Q4_K_M.gguf` | 12.34GiB | unsloth/Qwen-Image-Edit-2511-GGUF @0d33d969 | Apache-2.0 | 필요 |
-| 머리 분할 체크포인트 | `D:\genai-cache\huggingface\models--24yearsold--l2d_sam_iter2` | 1.21GiB | 24yearsold/l2d_sam_iter2 | Apache-2.0 | 필요 |
-| 머리 분할 코드(see-through) | `D:\genai-cache\tools\see-through` | 0.02GiB | shitagaki-lab/see-through @df019de5 | **확인 필요**(원본 LICENSE 파일) | 필요 |
-| WD 태거 v3 | `D:\genai-cache\huggingface\models--SmilingWolf--wd-vit-tagger-v3` | 0.35GiB | SmilingWolf/wd-vit-tagger-v3 | Apache-2.0 | 필요 |
-| 관절 분석 DWPose | `D:\genai-cache\huggingface\easy-dwpose`(0.33) · `models--yzd-v--DWPose`(0.33) | 0.33~0.66GiB | yzd-v/DWPose | Apache-2.0 | 필요(같은 가중치 두 벌인지 확인 필요) |
-| 캐릭터 분할 anime-seg | `D:\genai-cache\huggingface\models--skytnt--anime-seg` | 0.16GiB | skytnt/anime-seg | Apache-2.0 | 제품 경로 사용 여부 확인 필요 |
-| 머리 검출 | **`\\192.168.0.109\win_g\genai-lab\outputs\…\model-cache\hub`** | 0.18GiB(아래 둘 합) | deepghs/anime_head_detection | MIT | 필요 |
-| 캐릭터 특징 비교 CCIP | 같은 곳 | (위에 포함) | deepghs/ccip_onnx | **OpenRAIL** — 사용 제한 조항 전달 | 제품 경로 사용 여부 확인 필요 |
+| Qwen-Image-Edit-2511(문자 인코더·VAE·설정 등) | `D:/genai-cache/models/Qwen-Image-Edit-2511` | 15.70GiB | Qwen/Qwen-Image-Edit-2511 @6f3ccc0b | Apache-2.0 | 정적(2-2) |
+| Qwen 변환기 GGUF Q4_K_M | `D:/genai-cache/models/Qwen-Image-Edit-2511-GGUF/…Q4_K_M.gguf` | 12.34GiB | unsloth/Qwen-Image-Edit-2511-GGUF @0d33d969 | Apache-2.0 | 정적(2-2) |
+| 머리 분할 체크포인트 l2d_sam | `D:\genai-cache\huggingface\models--24yearsold--l2d_sam_iter2` | 1.21GiB | 24yearsold/l2d_sam_iter2 | Apache-2.0 | **관찰**(옷 바꾸기·자세 장면) |
+| 머리 분할 코드 see-through | `D:\genai-cache\tools\see-through` | 0.02GiB | shitagaki-lab/see-through @df019de5 | **확인 필요**(원본 LICENSE) | 정적(작업 프로세스가 코드 불러옴, .py는 관찰 대상에서 뺌) |
+| WD 태거 v3 | `D:\genai-cache\huggingface\models--SmilingWolf--wd-vit-tagger-v3` | 0.35GiB | SmilingWolf/wd-vit-tagger-v3 @7f6b584d | Apache-2.0 | **관찰**(네 단계 모두) |
+| 관절 분석 DWPose(easy-dwpose) | `D:\genai-cache\huggingface\easy-dwpose\checkpoints` | 0.33GiB | yzd-v/DWPose 가중치 | Apache-2.0 | **관찰**(입력 분석·옷 바꾸기·자세 장면) |
+| 캐릭터 분할 anime-seg | `D:\genai-cache\huggingface\models--skytnt--anime-seg` | 0.16GiB | skytnt/anime-seg @493cb608 | Apache-2.0 | **관찰**(입력 분석) |
+| 머리 검출 | **`\\192.168.0.109\win_g\genai-lab\outputs\…\model-cache\hub`** | (0.18GiB 중 일부) | deepghs/anime_head_detection @06604fee | MIT | **관찰**(입력 분석) |
 
-**제품에 넣지 않는 것(같은 폴더에 있음):**
+**같은 캐시에 있지만 이번 관찰에서 열리지 않았고 제품 코드에서 참조도 찾지 못한 것:**
 
-| 구성 요소 | 용량 | 이유 |
+| 구성 요소 | 용량 | 판단 |
 |---|---|---|
-| 8단계 가속 LoRA(lightx2v, Apache-2.0) | 0.79GiB | 시험용(D-141). 제품은 40단계 |
-| 빌린 그림체 LoRA(anime_borrowed) | 0.22GiB | 시험 전용·학습 자료 미공개(D-159·D-162) |
-| 손 검출(deepghs/anime_hand_detection, OpenRAIL) | 0.04GiB | 오프라인 채점 전용(D-157) |
+| deepghs/ccip_onnx(OpenRAIL) | 머리 검출 캐시 안 | 코드 참조 없음 → 넣지 않는 쪽. 다른 경로에서 쓰이는지 더 확인 |
+| `models--yzd-v--DWPose`(두 번째 사본) | 0.33GiB | 제품은 easy-dwpose 쪽을 연다 → 넣지 않는 쪽 |
 
-### 1-2. 실행 환경 (Python)
+**시험 전용 — 넣지 않음:** 8단계 가속 LoRA(0.79GiB, D-141), 빌린 그림체 LoRA(0.22GiB, D-159·D-162), 손 검출(OpenRAIL, D-157).
 
-| 환경 | 용량 | 쓰임 | 메모 |
+### 1-2. 실행 환경 (Python — 이번 경로 수정 범위 밖)
+
+| 환경 | 용량 | 쓰임(관찰) | 메모 |
 |---|---|---|---|
-| `D:\genai-cache\venv` | 5.93GiB | GUI·분석(PySide6, torch 등) | 시험 도구(pytest 등)도 함께 들어 있음 |
-| `D:\genai-cache\qwen-test-venv` | 0.02GiB | Qwen 작업 프로세스 | `.pth`로 위 venv를 참조. 이름이 '시험'용 |
-| `D:\genai-cache\catvton-venv` | 0.83GiB | 관절 분석(easy_dwpose·onnxruntime) | 예전 CatVTON용 이름이 남음 |
+| `D:\genai-cache\venv` | 5.93GiB | 작업실·분석·자세 장면 후처리(이번 관찰의 주 프로세스) | 시험 도구 등 개발용 패키지 함께 있음 |
+| `D:\genai-cache\catvton-venv` | 0.83GiB | 관절 분석 하위 프로세스(easy_dwpose·onnxruntime) | 예전 CatVTON 이름이 남음 |
+| `D:\genai-cache\qwen-test-venv` | 0.02GiB | Qwen 작업 프로세스(이번 관찰에서는 대신함) | `.pth`로 venv를 참조 |
 
-- 주요 패키지 라이선스(일반적으로 알려진 값, 설치본의 LICENSE로 다시 확인): torch(BSD), diffusers·transformers(Apache-2.0), bitsandbytes·gguf·onnxruntime(MIT), **PySide6(LGPL-3.0 — 동적 연결 유지, 교체 가능하게, 라이선스 문서 동봉)**.
+- 주요 패키지 라이선스(설치본 LICENSE로 다시 확인): torch(BSD), diffusers·transformers(Apache-2.0), bitsandbytes·gguf·onnxruntime(MIT), **PySide6(LGPL-3.0 — 동적 연결 유지·교체 가능·문서 동봉)**.
+- 다음 단계: 제품용 최소 패키지 목록, 환경 수(3 → 1~2) 검토. 기존 환경은 지우지 않고 새로 만들어 비교한다.
 
-## 2. 패키징 전에 고칠 것 (발견만 — 고치는 것은 사용자 승인 뒤)
+## 2. 제품 의존 파일 목록 — 근거별로 나눈다
 
-1. **머리 검출 모델 캐시가 네트워크 공유 폴더(`\\192.168.0.109\…\outputs\…`)를 가리킨다.** 다른 PC에서는 없다 → 모델 폴더 아래로 옮기고 설정 기본값을 바꿔야 한다.
-2. **설정에 절대 경로가 박혀 있다**(`configs/qwen_edit_settings.json`의 `D:/genai-cache/…`, `StudioRuntime` 기본값). 설치 위치 기준 상대 경로나 설치 때 정하는 경로로 바꿔야 한다.
-3. **실행 환경이 3개다.** 하나로 합칠 수 있는지(관절 분석 패키지 충돌 여부) 확인해야 한다. 합치지 못하면 이름을 제품용으로 정리한다.
-4. **실행 환경에 개발용 패키지가 섞여 있다.** 제품용 최소 목록(requirements)을 따로 만들어야 한다.
-5. **제품에 안 쓰는 모델이 같은 캐시에 있다**(1-1 아래 표). 설치 묶음 목록을 '제품 경로에서 실제로 불러오는 파일'로 정하고, 그 목록을 시험으로 고정해야 한다.
+### 2-1. CPU 실행 관찰 (2026-10-23)
 
-## 3. 배포 전 이미 정해진 일 (다른 문서)
+- 방법: `CUDA_VISIBLE_DEVICES` 비움(GPU 사용 없음), 파일 열기 기록(파이썬 open 감사 + onnxruntime·safetensors·huggingface_hub·torch.load 감싸기).
+  - 대상: 사용자 화면이 부르는 네 단계를 실제 함수로 실행. Qwen 생성만 기존 B2 결과 그림(요청 34)으로 대신했다.
+  - 단계: A 입력 분석(의상 있음, 79초) · B 기준 분석(의상 없음, 7초) · C 옷 바꾸기 파이프라인(68초) · D 자세·장면 파이프라인(111초, 피부 위반으로 **재시도 경로까지 지남**) · S 작업실 시작 화면(생성 없음).
+  - 기록 도구·원자료: 대화 임시 폴더(저장소 밖). 결과 요약은 이 절.
+
+| 파일 | 단계 |
+|---|---|
+| WD 태거 `model.onnx`, `selected_tags.csv`(+ `refs/main`) | A·B·C·D |
+| DWPose `dw-ll_ucoco_384.onnx`, `yolox_l.onnx` | A·C·D |
+| l2d_sam `checkpoint-18000.pt` | C·D |
+| anime-seg `isnetis.onnx`(+ `refs/main`) | A |
+| anime_head_detection `head_detect_v2.0_s/model.onnx`, `model_type.json`(+ `refs/main`) — **네트워크 공유 폴더에서 열림** | A |
+| 프로젝트 `configs/qwen_edit_settings.json`, `configs/studio_garment_warnings.json` | 시작·전 단계 |
+| 프로젝트 `docs/FREE_GENERATION_CONTRACT.md`(trace에 SHA 기록) | D — **설치 묶음에 이 문서도 넣어야 한다** |
+| 사용자 HF 토큰 파일 `~/.cache/huggingface/token` | A~D — huggingface_hub가 오프라인에서도 읽음. 제품 동작에는 불필요 |
+
+### 2-2. 정적 확인 (코드에서 경로가 정해짐, 이번 관찰에서 실행하지 않음)
+
+| 파일 | 근거 |
+|---|---|
+| `configs/qwen_model_files.json`(명세) + 명세의 모델 파일 27개(Qwen 폴더) | `qwen_pose_settings.validate_model_files` — **실행마다 전체 SHA 계산** |
+| GGUF 파일 | 같은 함수 + `qwen_pose_worker` `from_single_file` |
+| `configs/latent_rgb_preview.json` | 생성 과정 미리보기(`generation_preview.FACTORS`) |
+| see-through 코드(`tools/see-through`) | `head_paste_worker` → `HeadSegmenter(semantic_repo, …)` |
+| 캐릭터 기억 `%APPDATA%\GenAILab\character-memory` | 사용자 데이터(`character_memory`, 앱이 만든다 — 설치 묶음 아님) |
+
+### 2-3. 조건부·미관찰 (열릴 수 있으나 이번에 지나가지 않음 — 완전성 미확정)
+
+- 옷 바꾸기 재시도(두 번째 seed), 팔·손 검사 실패 뒤 경로, 원본 머리 붙이기 실패 경로
+- 머리색 자동 보정·복원 후보(`hair_auto`·`hair_restore`)가 실제로 만들어지는 경우
+- 자세 골격 안내(`pose_guidance`, 제품 기본은 꺼짐)
+- 기억된 캐릭터 연결이 있는 입력(사용자 화면 `auto_identity`, 이번에는 파이프라인 함수를 직접 불러 지나가지 않음)
+- 작업실 개발 화면 기능(`gui_main.py`의 CatVTON·자세 참조·몸 비교 등 `D:/genai-cache/…` 고정 경로) — 사용자 화면 시작(S)에서는 열리지 않았다. 제품 버튼에서 닿지 않는지는 더 확인
+- C 확장이 직접 여는 파일(관찰 방법의 한계)
+
+## 3. 경로 수정 — 모델만 (코드 반영, 2026-10-23)
+
+- `genai_lab/model_home.py`: `GENAI_MODEL_HOME` → 모델 폴더 안 배치.
+
+| 키 | 모델 폴더 안 위치 |
+|---|---|
+| Qwen 모델 폴더 | `qwen/Qwen-Image-Edit-2511` |
+| GGUF | `qwen/Qwen-Image-Edit-2511-GGUF/qwen-image-edit-2511-Q4_K_M.gguf` |
+| HF 캐시(WD 태거·anime-seg·l2d_sam) | `hf/` |
+| DWPose | `dwpose/checkpoints` |
+| 머리 검출 캐시 | `head-detection/hub` |
+| see-through 코드 | `tools/see-through` |
+| l2d_sam 체크포인트 | `hf/models--24yearsold--l2d_sam_iter2/snapshots/0b060831…/checkpoint-18000.pt` |
+
+- `StudioRuntime` 기본값: 모델 폴더가 있으면 위 배치, 없으면 기존 경로(네트워크 공유 폴더 머리 검출 캐시 포함 — 이 PC 동작 그대로).
+- `GENAI_STUDIO_RUNTIME` 설정 파일의 명시 값은 계속 가장 우선이다.
+- Qwen 설정: 모델 폴더가 있으면 `configs/qwen_edit_settings.model_home.json`(모델 경로는 모델 폴더 기준 상대, 실행 환경 `@app` = 앱 자신의 Python)을 쓴다.
+  - 기존 `qwen_edit_settings.json`과 경로 3개만 다르다(시험으로 고정).
+  - `@app`은 임시 표기다. 앱 자신의 Python으로 Qwen 작업 프로세스가 도는지는 실행 환경 정리 단계에서 확인한다(지금은 GPU 확인 없음).
+- 잘못된 모델 폴더(상대 경로·없는 폴더)는 추측하지 않고 오류로 알린다.
+- 시험: `tests/test_model_home.py`(기존 경로 불변, 배치, 명시 설정 우선, 잘못된 값, 상대 경로 요건, 설정 차이 고정).
+
+## 4. 최초 모델 준비 설계 (설계만 — 구현 전)
+
+**흐름(앱 첫 실행, 모델 폴더가 없을 때):**
+
+```mermaid
+flowchart TD
+    A["앱 첫 실행"] --> B{"모델 폴더 설정 있음?"}
+    B -- 예 --> V["검사: 배치·크기·SHA"]
+    B -- 아니오 --> C["준비 화면"]
+    C --> D["① 내려받기<br/>저장 위치 선택 · 용량 약 30GiB 안내"]
+    C --> E["② 이미 있는 모델 폴더 지정"]
+    D --> V
+    E --> V
+    V -- 통과 --> R["준비 완료 기록<br/>이후 오프라인 실행"]
+    V -- 실패 --> F["무엇이 없는지·다른지 안내<br/>(추측해서 다른 파일을 쓰지 않음)"]
+```
+
+| 항목 | 설계 |
+|---|---|
+| 내려받기 | 허깅페이스 저장소·**고정 리비전**·파일 목록(1-1)만. 받은 파일은 SHA 대조. 이어받기·취소 지원. 받기 전 라이선스 고지·동의 화면 |
+| 기존 폴더 지정 | 사용자가 고른 폴더를 3절 배치로 검사. 배치가 다르면(예: 지금 개발 PC의 `D:\genai-cache`) 파일별 위치를 지정하는 대응표를 만들 수 있게 한다. **파일을 옮기거나 지우지 않는다** |
+| 검사 | 처음 한 번 전체 SHA 대조 → 결과를 기록(파일 크기·수정 시각·SHA). 이후 실행은 크기·수정 시각이 같으면 SHA를 다시 계산하지 않는 방식을 검토(지금은 실행마다 약 28GB SHA 계산 — 메모리·속도 갈래 후보) |
+| 오프라인 | 준비 뒤에는 `HF_HUB_OFFLINE=1` 등으로 네트워크 없이. 이미 하위 분석 프로세스는 오프라인 설정으로 돈다 |
+| 고지 | 1-1 라이선스 목록·고지문을 앱 '정보' 화면과 설치 폴더에 둔다. OpenRAIL 모델은 넣지 않는 쪽 |
+| 저장 위치 | 기본은 사용자가 고른 드라이브. 용량 부족이면 시작 전에 알림 |
+
+**결정이 남은 것:** 내려받기 출처(허깅페이스 직접 / 자체 배포 서버), 파일별 대응표 화면을 첫 판에 넣을지.
+
+## 5. 배포 전 이미 정해진 일 (다른 문서)
 
 - 노출 검사를 `"block"`으로 되돌리고 판정 방식을 다시 만든다(지도 보류 목록, D-158).
 - AI 생성 표시(PNG 파일 정보)는 이미 저장마다 들어간다(D-152).
 - 그림체 LoRA를 넣는다면 학습 자료의 앱 배포·오프라인 실행 권리를 확인한 뒤다(STYLE_TRAINING_DESIGN 6-3).
 
-## 4. 다음 단계 후보 (사용자 선택)
+## 6. 다음 단계 후보
 
-| 순서 | 내용 | GPU | 비고 |
-|---|---|---|---|
-| ① | 제품 경로가 실제로 여는 모델 파일 목록을 CPU 시험으로 고정(가짜 실행 + 파일 열기 기록) | 없음 | anime-seg·CCIP·DWPose 두 벌 여부가 여기서 정해진다 |
-| ② | 2절 1·2번(경로) 수정: 모델 폴더 한 곳 + 설정의 상대 경로 | 없음 | 코드 변경 — 시험 후 커밋 |
-| ③ | 설치 방식 결정: 한 묶음 / 앱 + 첫 실행 모델 받기 | 없음 | 사용자 결정 |
-| ④ | 제품용 최소 실행 환경 만들기(새 venv에서 점검 통과) | 없음 | 설치 작업 — 승인 필요 |
-| ⑤ | 다른 PC 설치 → 첫 생성(배포 호환성) | 있음 | 지도 4절 2번 |
+| 순서 | 내용 | GPU |
+|---|---|---|
+| ① | 2-3 조건부 경로를 CPU로 더 지나가게 해 관찰 범위 넓히기(옷 바꾸기 재시도, 머리색 보정 후보, 기억 연결) | 없음 |
+| ② | 모델 폴더 배치로 실제 파일을 갖춘 시험 폴더를 만들어 CPU 단계 재관찰(공유 캐시는 읽기만, 복사본은 시험 폴더에) | 없음 |
+| ③ | 최초 모델 준비 화면·검사 구현(4절) | 없음 |
+| ④ | 실행 환경 정리(1-2) | 없음 |
+| ⑤ | 다른 PC 설치 → 첫 생성(배포 호환성) | 있음 — 승인 필요 |
 
 ## 출처 (라이선스 표시, 2026-10-23 확인)
 

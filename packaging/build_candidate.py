@@ -6,11 +6,13 @@
   <출력>/GenAILab.cmd   실행기(GENAI_APP_HOME을 설치 폴더로 두고 runtime-main으로 작업실 실행)
 
 패키지는 각 배포의 설치 기록(RECORD)에 적힌 파일만 원래 환경 site-packages에서 복사한다(목록 밖 패키지는 넣지 않음).
-최종 배포에서는 Python 본체를 공식 내장형 배포판으로 바꾼다(내려받기 승인 뒤). 이 후보는 P1~P3 검증용이다.
+시스템 설치본 복사 후보는 P1~P3 검증용이었다(D-174). 공식 내장형 배포판은 --embed-zip(서명 검증한 zip만, D-175).
 사용: python build_candidate.py <출력 폴더> <저장소 루트> <주 환경 site-packages> <관절 환경 site-packages> [<시스템 Python 폴더>]
+      [--embed-zip <python-3.10.6-embed-amd64.zip>]   ← 공식 내장형 배포판을 쓸 때(D-175, 검증한 zip만)
 """
 import csv
 import json
+import zipfile
 import re
 import shutil
 import sys
@@ -20,6 +22,12 @@ from pathlib import Path
 # 경로에 섞인다(이 PC: 다른 프로젝트의 torch 2.5.1). 공식 내장형 배포판의 기본값과 같다.
 PTH = """Lib
 DLLs
+Lib\\site-packages
+..\\app
+"""
+# 공식 내장형(embeddable) 배포판용: 표준 라이브러리는 python310.zip, 확장 모듈(.pyd)은 실행 파일 옆(.)에 있다(D-175)
+EMBED_PTH = """python310.zip
+.
 Lib\\site-packages
 ..\\app
 """
@@ -59,6 +67,15 @@ def copy_core(python_home, target):
     (target / "python310._pth").write_text(PTH, encoding="utf-8")
 
 
+def extract_embed(embed_zip, target):
+    """공식 내장형 zip을 그대로 풀고 경로 고정 파일만 우리 것으로 바꾼다(zip 안 ._pth는 이름이 같아 덮어씀)."""
+    target.mkdir(parents=True)
+    with zipfile.ZipFile(embed_zip) as archive:
+        archive.extractall(target)
+    (target / "Lib" / "site-packages").mkdir(parents=True)
+    (target / "python310._pth").write_text(EMBED_PTH, encoding="utf-8")
+
+
 def copy_packages(site, requirements, target_site):
     dist_infos = {normalize(p.name.split("-")[0]): p for p in site.glob("*.dist-info")}
     copied, missing, files = [], [], 0
@@ -95,15 +112,23 @@ def copy_app(repo, target):
 
 
 def main(argv):
+    embed_zip = None
+    if "--embed-zip" in argv:                      # 공식 내장형 배포판(D-175)
+        i = argv.index("--embed-zip")
+        embed_zip = Path(argv[i + 1])
+        argv = argv[:i] + argv[i + 2:]
     out, repo, main_site, pose_site = (Path(a) for a in argv[:4])
     python_home = Path(argv[4]) if len(argv) > 4 else Path(r"C:\Program Files\Python310")
     if out.exists():
         raise SystemExit(f"이미 있습니다(덮어쓰지 않음): {out}")
-    report = dict(python_home=str(python_home), version_file=(python_home / "python.exe").stat().st_size)
+    report = dict(python_home=str(python_home), embed_zip=str(embed_zip) if embed_zip else None)
     for kind, site, req in (("main", main_site, repo / "packaging/requirements-main.txt"),
                             ("pose", pose_site, repo / "packaging/requirements-pose.txt")):
         runtime = out / f"runtime-{kind}"
-        copy_core(python_home, runtime)
+        if embed_zip is not None:
+            extract_embed(embed_zip, runtime)
+        else:
+            copy_core(python_home, runtime)
         report[kind] = copy_packages(site, req, runtime / "Lib" / "site-packages")
         print(kind, report[kind], flush=True)
     copy_app(repo, out)

@@ -1,0 +1,15 @@
+{
+  "status": "failed",
+  "gates_executed": false,
+  "final_return_eligible": false,
+  "session": {
+    "control": "D:\\genai-test\\session-reuse-20261024\\flow\\runs\\7ab810fcb7594a86847a4b172b0ce25b\\free-generation\\qwen-session",
+    "job": 1,
+    "pid": 33956
+  },
+  "request_sha256": "72d7766aae65742c3fb781e8664f239cfce51739715f8c3489b6393285d19cc6",
+  "error": "Qwen 세션 프로세스가 끝났습니다(exit=1); 세션 worker.log 확인",
+  "recovered_by_parent": true,
+  "metrics_incomplete": true,
+  "worker_returncode": 1
+}

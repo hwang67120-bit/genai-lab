@@ -1,0 +1,1 @@
+﻿{"seconds": {"check_runtime_versions": 0.01, "validate_model_files": 193.07, "import_torch": 11.92, "import_diffusers": 23.15, "import_transformers": 0.0}, "gib": 28.04, "gib_per_s": 0.145}

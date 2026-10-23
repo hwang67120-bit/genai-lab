@@ -93,7 +93,7 @@ STYLE_STAGE_DESIGN 4-2(허가 증빙·안전 검사·캡션·해상도)를 그�
 
 | 유형 | 최소 | 이유 |
 |---|---|---|
-| 목표 그림체 그림 전체 | 40~60장(같은 그림체) | 4-2의 20~50장에 다양성 칸을 채울 여유 |
+| 목표 그림체 그림 전체 | 시범 40~60장(같은 그림체) | 4-2의 20~50장에 다양성 칸을 채울 여유. **이 수량으로 성공한다는 근거는 없다** — 시범 결과로 늘릴지 정한다 |
 | 어두운 피부톤 캐릭터 | 8장 이상 | A1 피부톤 실패 |
 | 드레드락·땋은 머리·강한 곱슬 등 비직모 형태 | 6장 이상 | A1 드레드락 실패 |
 | 여러 색·옅은 색조가 섞인 머리(분홍빛 흰머리 등) | 6장 이상 | A3·N1 머리 배색 실패 |
@@ -193,7 +193,7 @@ STYLE_STAGE_DESIGN 4-2(허가 증빙·안전 검사·캡션·해상도)를 그�
 
 ### 6-1. 결론
 
-- **바로 쓸 수 있는 묶음은 찾지 못했다.** 2-3 자료 요건표를 채울 만한 '애니풍 + 입체 명암 + 다양성 + 학습·상업 이용 허가'를 모두 갖춘 공개 묶음이 없다.
+- **이번 웹 조사 범위에서는 바로 쓸 수 있는 묶음을 찾지 못했다.** 2-3 자료 요건표의 '애니풍 + 입체 명암 + 다양성 + 학습·상업 이용·앱 배포 허가'를 모두 갖춘 공개 묶음이 확인되지 않았다는 뜻이다. 공개 자료가 전혀 없다는 뜻은 아니며, 조사를 넓히면 나올 수 있다.
   - 공개된 애니 그림 묶음(Danbooru·Zerochan·Konachan 계열 등)은 수집 그림이다. 묶음 자체에 MIT·CC 표시가 있어도 작가 허가 근거가 없어 쓰지 않는다.
 - **현실적인 길은 유료 학습 데이터 업체에 '맞춤 묶음'을 요청하는 것이다.**
   - 업체가 기여자에게서 학습·상업 이용 허가를 받았다고 밝힌 곳이 있다(Shutterstock, Wirestock, PIXTA).
@@ -214,32 +214,106 @@ STYLE_STAGE_DESIGN 4-2(허가 증빙·안전 검사·캡션·해상도)를 그�
 | Danbooru·Zerochan·Konachan 계열 묶음 | 공개 묶음(수집) | 묶음에 MIT 등 표시가 있어도 작가 허가 근거 없음 | 애니풍 | 높음 | 무료 | **제외** — 허가 근거 없음(7절) |
 | AI 생성 그림 묶음(예: Z-Image로 만든 묶음) | 공개 묶음 | 라이선스 표시 없음 또는 불명 | AI 화풍 그 자체 | — | — | **제외** — 목표(AI 티 줄이기)와 반대 |
 
-### 6-3. 다음 할 일 — 문의 (사용자 승인 필요)
+### 6-3. 다음 할 일 — 문의 (사용자 승인 필요, 2026-10-23 설치형 앱 배포 기준으로 보완)
 
-문의를 보내는 것은 외부로 나가는 일이라 **사용자가 직접 보내거나, 보내도 된다고 승인한 뒤에만** 한다. 아래는 문의 초안이다.
+문의를 보내는 것은 외부로 나가는 일이라 **사용자가 직접 보내거나, 보내도 된다고 승인한 뒤에만** 한다. 아래는 초안이다. 문의·구매·학습은 아직 하지 않는다.
 
-**물어볼 것:**
-1. 애니메이션·만화풍 캐릭터 일러스트를 다루는가? 샘플을 볼 수 있는가?
-2. 라이선스 원문: AI 모델 학습(LoRA 미세조정), 학습 자료로 변형본 생성(2-2 방식 ②), 학습한 모델로 만든 그림의 상업 이용이 모두 허용되는가?
-3. 기여자 동의 증빙: 그림마다 동의 기록이 있는가?
-4. 맞춤 선별 또는 새로 그려 받기: 2-3 요건표(어두운 피부, 드레드락 등 비직모, 옅은 색조가 섞인 머리, 발광 눈·오드아이, 천·가죽·금속 재질, 광원 방향이 분명한 그림, 단순 배경)를 맞출 수 있는가?
-5. 수량 40~60장 소량 구매가 가능한가? 가격과 기간은?
-6. AI 생성 그림이 섞여 있지 않다는 보증이 있는가?
+**배포 전제(문의에 그대로 밝힌다):**
+- 제품은 **무료 설치형 앱**이다(Windows, 서버 없이 사용자 PC에서 **오프라인 실행**).
+- 학습한 그림체 LoRA(가중치 파일)를 **앱 설치 묶음에 넣어 최종 사용자에게 배포**한다.
+- 최종 사용자는 앱으로 만든 그림을 저장·사용한다(개인·상업 이용 가능성 포함).
+- 학습 자료 원본 그림은 앱에 넣지 않는다.
 
-**문의 초안(영문, Shutterstock·Wirestock용):**
+**물어볼 것(가격만 받지 않는다):**
 
-> Subject: Licensed anime-style illustration dataset for LoRA fine-tuning (40–60 images)
+| 묶음 | 질문 |
+|---|---|
+| A. 권리 | 1. AI 모델 학습(LoRA 미세조정)이 허용되는가? |
+| | 2. 학습용 변형본 생성이 허용되는가? (자료 그림을 우리 모델로 다시 그려 '입력 ↔ 원본' 짝을 만드는 것) |
+| | 3. **학습한 LoRA·가중치를 무료 설치형 앱에 포함해 최종 사용자에게 재배포**하는 것이 허용되는가? 배포 수·지역·기간 제한이 있는가? |
+| | 4. **최종 사용자 PC에서 서버 연결 없이 오프라인으로 실행**하는 것이 허용되는가? 실행마다 인증·로그 전송 같은 의무가 있는가? |
+| | 5. 앱 사용자가 만든 결과 그림의 상업 이용이 허용되는가? 우리 쪽과 최종 사용자 쪽 각각에 대해 |
+| | 6. 계약이 끝나거나 해지되면 이미 배포한 앱·LoRA는 어떻게 되는가? |
+| | 7. 출처 표시·고지 의무가 있다면 앱 안 어디에 어떤 문구로 표시해야 하는가? |
+| B. 자료 | 8. 목표 그림체(애니·만화풍, 입체 명암·머릿결·옷 재질이 분명한 그림) **샘플**을 볼 수 있는가? |
+| | 9. 자료 구성: 그림 수, 작가 수, 캐릭터 수, 해상도, 배경 유형, 설명 문장(캡션) 포함 여부 |
+| | 10. 다양성: 어두운 피부톤, 드레드락·땋은 머리 등 비직모, 여러 색이 섞인 머리, 발광 눈·오드아이 같은 특징이 들어 있거나 맞춤으로 넣을 수 있는가? |
+| | 11. AI 생성 그림이 섞여 있지 않다는 보증과, 그림마다 작가 동의 기록이 있는가? |
+| C. 조건 | 12. **최소 구매 조건**(최소 수량·금액), 소량 시범 구매 가능 여부 |
+| | 13. 맞춤 선별·새로 그려 받기의 가격·기간 |
+| | 14. **계약서·라이선스 원문**을 구매 전에 받아 볼 수 있는가? |
+
+- 수량은 **'시범 학습용으로 우선 40~60장, 결과에 따라 늘릴 수 있음'**으로 묻는다. 이 수량으로 성공한다는 근거는 없다(2-3 장수는 제안값).
+
+**문의 초안(영문 — Shutterstock·Wirestock용):**
+
+> Subject: Licensing inquiry — illustration dataset for a style LoRA bundled in a free offline desktop app
 >
-> Hello. We are building a character image generation tool and want to fine-tune a style LoRA on licensed illustrations only.
-> We are looking for 40–60 hand-drawn (not AI-generated) anime/manga-style full-body character illustrations, single character, mostly simple backgrounds, with clear light direction, volumetric shading, detailed hair strands, and distinct fabric/leather/metal materials. We also need diversity: dark skin tones, non-straight hair such as dreadlocks or braids, multi-tone hair, and unusual eyes such as glowing eyes or heterochromia, with no more than 3 images per character.
-> Could you tell us: (1) whether you carry or can commission such work, with samples; (2) whether the license covers model training, creating derivative images for training pairs, and commercial use of outputs; (3) how contributor consent is documented per image; (4) pricing and minimum order for a small purchase.
-> Thank you.
+> Hello,
+>
+> We are developing a free, installable Windows application that generates character images. It runs fully offline on the end user's PC, with no server connection. We would like to fine-tune a style LoRA only on properly licensed, human-made illustrations, and ship the trained LoRA weights inside the app installer. The original training images would not be distributed.
+>
+> We are looking for anime/manga-style full-body character illustrations (single character, mostly simple backgrounds) with clear light direction, volumetric shading, detailed hair rendering, and distinct fabric, leather and metal materials. Diversity matters to us: dark skin tones, non-straight hair (dreadlocks, braids), multi-tone hair, and unusual eyes (glowing eyes, heterochromia). For a first pilot we would start with roughly 40–60 images and may expand depending on the results.
+>
+> Could you please answer the following?
+>
+> Rights
+> 1. Is training an AI model (LoRA fine-tuning) on the images permitted?
+> 2. May we create derivative images from the licensed images (re-rendered versions used as training input pairs)?
+> 3. May we include the trained LoRA/model weights in a free installable app and redistribute them to end users? Are there limits on number of installs, territory or term?
+> 4. May end users run the app and the bundled weights offline on their own PCs, without license checks or telemetry?
+> 5. May we and our end users use images generated with the app commercially?
+> 6. What happens to already-distributed copies of the app and weights if the license ends?
+> 7. Are there attribution or notice requirements, and how should they appear in the app?
+>
+> Data
+> 8. Could you share samples close to the style described above?
+> 9. What is the composition of the available set (image count, number of artists and characters, resolution, background types, captions)?
+> 10. Do you guarantee the images are not AI-generated, and is artist consent documented per image?
+>
+> Terms
+> 11. What are the minimum purchase quantity and price? Is a small pilot purchase possible?
+> 12. Do you offer custom curation or commissioned new illustrations, and at what price and lead time?
+> 13. Could we review the full license agreement / contract text before purchasing?
+>
+> Thank you for your time.
 
-**문의 초안(일본어, PIXTA용):** 같은 내용으로 '機械学習用途(LoRA追加学習)・学習用の派生画像作成・生成物の商用利用の許諾、イラストのクリエイター同意の記録、40〜60点の小口購入可否と価格'을 묻는다(보내기 전 사용자 확인).
+**문의 초안(일본어 — PIXTA용):**
+
+> 件名：無料オフラインデスクトップアプリに同梱するスタイルLoRA用イラストデータのライセンスについて
+>
+> お世話になります。
+> 当方はキャラクター画像を生成する無料のインストール型Windowsアプリを開発しています。アプリはサーバーに接続せず、利用者のPC上で完全にオフラインで動作します。正規にライセンスされた人の手によるイラストのみでスタイルLoRAを追加学習し、学習済みLoRAの重みをアプリのインストーラーに同梱して配布したいと考えています（学習元の画像そのものは配布しません）。
+>
+> 求めているのは、アニメ・漫画風の全身キャラクターイラスト（一人、主にシンプルな背景）で、光の方向・立体的な陰影・髪の描き込み・布／革／金属の質感がはっきりしたものです。肌の色が濃いキャラクター、ドレッドヘアや編み込みなどの直毛以外の髪、複数色の髪、発光する目やオッドアイなど、特徴の多様性も重視しています。まず試験用に40〜60点程度から始め、結果に応じて増やす可能性があります。
+>
+> 以下についてご教示ください。
+>
+> 権利
+> 1. 画像を使ったAIモデルの学習（LoRA追加学習）は許諾されますか。
+> 2. 学習用の派生画像（当方のモデルで描き直した画像を学習の入力ペアとして使うこと）の作成は許諾されますか。
+> 3. 学習済みLoRA・重みを無料のインストール型アプリに同梱し、最終利用者へ再配布することは許諾されますか。配布数・地域・期間の制限はありますか。
+> 4. 最終利用者が自分のPCでアプリと同梱の重みをオフラインで（認証や利用データ送信なしに）実行することは許諾されますか。
+> 5. アプリで生成した画像を当方および最終利用者が商用利用することは可能ですか。
+> 6. 契約終了時、既に配布したアプリ・重みはどう扱われますか。
+> 7. クレジット表記などの義務がある場合、アプリ内でどのように表示すべきですか。
+>
+> データ
+> 8. 上記の方向に近いイラストのサンプルを拝見できますか。
+> 9. 提供可能なデータの構成（点数、作家数、キャラクター数、解像度、背景の種類、キャプションの有無）を教えてください。
+> 10. AI生成画像が含まれていないことの保証と、画像ごとの作家の同意記録はありますか。
+>
+> 条件
+> 11. 最低購入数量・金額と、小口の試験購入の可否を教えてください。
+> 12. カスタム選定や新規描き下ろしは可能ですか。価格と納期も教えてください。
+> 13. 購入前に契約書・ライセンスの原文を確認できますか。
+>
+> よろしくお願いいたします。
 
 ### 6-4. 이 조사로 바뀌지 않는 것
 
-- 추천은 그대로 **자료 준비 필요**(5-3). 문의 답을 받아 2-3 요건표를 채울 수 있다고 확인되기 전에는 내려받기·구매·학습을 하지 않는다.
+- 추천은 그대로 **자료 준비 필요**(5-3). 문의 답을 받아 2-3 요건표와 **앱 배포 권리(6-3 A 3·4번)**를 확인하기 전에는 내려받기·구매·학습을 하지 않는다.
+- 학습·생성물 상업 이용만 허용되고 **LoRA 재배포·오프라인 실행이 막히면 설치형 앱에 쓸 수 없다** → 그 자료는 제외한다.
 - 구매는 사용자가 항목·금액을 확인한 뒤에만 한다.
 
 ### 6-5. 조사 출처 (2026-10-23 검색)

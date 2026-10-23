@@ -23,6 +23,7 @@ from genai_lab.studio_garment_warnings import GarmentWarningSettings, garment_re
 from genai_lab.studio_background import read_background
 from genai_lab.skin_tone import SkinRecommendationSettings
 from genai_lab.model_home import L2D_SAM_SNAPSHOT, model_home, model_path
+from genai_lab.child_env import child_environment
 
 
 def digest(path):
@@ -84,8 +85,7 @@ class StudioRuntime:
 
 
 def cpu_process(command, log, cancelled, timeout):
-    env = dict(os.environ, CUDA_VISIBLE_DEVICES="", ONNX_MODE="cpu",
-               HF_HUB_OFFLINE="1", TRANSFORMERS_OFFLINE="1", PYTHONDONTWRITEBYTECODE="1")
+    env = child_environment(CUDA_VISIBLE_DEVICES="", ONNX_MODE="cpu")     # 필요한 이름만 넘기고 오프라인 고정(D-170)
     with Path(log).open("wb") as output:
         process = subprocess.Popen(command, stdout=output, stderr=subprocess.STDOUT, env=env,
             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))

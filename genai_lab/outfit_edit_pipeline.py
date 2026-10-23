@@ -12,6 +12,7 @@ import numpy as np
 from PIL import Image
 
 from genai_lab.character_features import extract_features, write_features
+from genai_lab.child_env import child_environment
 from genai_lab.character_verification import verify_result
 from genai_lab.garment_reference import prepare_garment_reference
 from genai_lab.outfit_edit import (EDIT_INTENT, HEAD_ACCESSORIES, HEAD_KEEP, SIZE, canvas, fit_white, hair_shape,
@@ -43,7 +44,7 @@ def segment_canvas(prepared, directory, runtime, *, cancelled=lambda: False, pop
     write_json(directory / "request.json", dict(canvas=prepared["canvas"], canvas_sha256=prepared["canvas_sha256"],
                semantic_repo=str(runtime.head_semantic_repo), semantic_checkpoint=str(runtime.head_semantic_checkpoint)))
     worker = Path(__file__).with_name("outfit_edit_worker.py")
-    env = dict(os.environ, HF_HUB_OFFLINE="1", TRANSFORMERS_OFFLINE="1", PYTHONDONTWRITEBYTECODE="1")
+    env = child_environment()                       # 필요한 이름만 넘기고 오프라인 고정(D-170)
     start, process = time.perf_counter(), None
     try:
         with (directory / "worker.log").open("wb") as log:
@@ -81,7 +82,7 @@ def detect_joints(image, directory, runtime, *, cancelled=lambda: False):
     directory.mkdir(parents=True, exist_ok=False)
     Image.fromarray(image).save(directory / "character.png")
     script = Path(__file__).with_name("studio_analysis.py")
-    env = dict(os.environ, HF_HUB_OFFLINE="1", PYTHONDONTWRITEBYTECODE="1")
+    env = child_environment()                       # 필요한 이름만 넘기고 오프라인 고정(D-170)
     with (directory / "pose.log").open("wb") as log:
         process = subprocess.Popen([str(runtime.pose_python), str(script), "pose", str(directory), str(runtime.pose_models),
                                     str(runtime.model_cache), str(runtime.head_cache)], stdout=log, stderr=subprocess.STDOUT,

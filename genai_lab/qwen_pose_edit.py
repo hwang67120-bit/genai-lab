@@ -11,6 +11,7 @@ import sys
 import time
 
 from PIL import Image
+from genai_lab.child_env import child_environment
 from genai_lab.qwen_preservation import PreservationSpec, file_sha, json_sha
 from genai_lab.qwen_pose_prompt import PoseEditInstructions, assemble_pose_edit_prompt
 from genai_lab.qwen_pose_settings import QwenPoseSettings, output_dimensions
@@ -183,8 +184,7 @@ def _run_image_edit(request, directory, workflow, spec, *, cancelled=lambda: Fal
         write_json(directory / "request.json", request)
         write_json(directory / "launcher.json", record)
         command = [settings.python_executable, "-m", "genai_lab.qwen_pose_worker", str(directory / "request.json")]
-        env = dict(os.environ, HF_HUB_OFFLINE="1", TRANSFORMERS_OFFLINE="1", PYTHONDONTWRITEBYTECODE="1")
-        env.pop("PYTHONPATH", None)
+        env = child_environment()                   # 필요한 이름만(PYTHONPATH 등은 넘기지 않음) + 오프라인 고정(D-170)
         creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
         with (directory / "worker.log").open("w", encoding="utf-8") as log:
             process = popen(command, cwd=str(Path(__file__).resolve().parents[1]), env=env,

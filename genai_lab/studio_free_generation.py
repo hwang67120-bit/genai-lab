@@ -13,7 +13,11 @@ from genai_lab.outfit_support import support_summary, support_warnings
 def analyze_base(path, runtime):
     """옷 참조를 요구하지 않고 선택한 기준 한 장만 CPU로 분석한다."""
     with Image.open(path) as image:
-        scores = measure_result_scores(np.asarray(image.convert("RGB")), runtime) or {}
+        scores = measure_result_scores(np.asarray(image.convert("RGB")), runtime)
+    if scores is None:      # D-172: 태거를 불러오거나 실행하지 못함 ≠ 태그가 안 나옴. 빈 태그로 진행하지 않는다
+        from genai_lab.model_check import ACTION
+        raise RuntimeError("캐릭터 태그 분석(WD 태거)을 실행하지 못해 시작하지 않았습니다. "
+                           f"모델 위치: {runtime.model_cache}\n" + ACTION)
     return dict(source=str(path), character_scores=scores, groups=dict(fixed=[], appearance=[], body=[]))
 
 

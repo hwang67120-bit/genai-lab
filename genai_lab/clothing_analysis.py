@@ -165,9 +165,10 @@ def download_wd14_model_files(
             settings.label_filename
         )
     except Exception as error:
+        from genai_lab.model_check import ACTION      # D-172: 오프라인 앱 — 내려받기를 기대하지 않고 모델 위치와 할 일을 안내
         raise ClothingDesignAnalysisError(
-            "WD14 모델 파일을 준비하지 못했습니다. "
-            "인터넷 연결과 D:/genai-cache 여유 공간을 확인하세요."
+            "캐릭터 태그 분석 모델(WD 태거) 파일이 없습니다. "
+            f"확인한 위치: {settings.cache_dir or '기본 허깅페이스 캐시'}\n" + ACTION
         ) from error
     return Path(model_path), Path(label_path)
 

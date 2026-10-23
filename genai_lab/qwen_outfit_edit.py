@@ -122,7 +122,7 @@ def load_qwen_settings(path):
                                  ("Qwen 모델 파일", settings.gguf_file, Path.is_file),
                                  ("모델 파일 명세", settings.artifact_manifest, Path.is_file)):
         if not check(Path(target)):
-            raise ValueError(f"{label}을(를) 찾지 못했습니다: {target}\n설정 파일: {path}")
+            raise ValueError(f"찾지 못했습니다 — {label}: {target}\n설정 파일: {path}")
     return settings
 
 

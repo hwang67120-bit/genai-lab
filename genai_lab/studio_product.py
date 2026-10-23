@@ -177,10 +177,14 @@ class ProductFlow:
         s, w = self.studio, self.window
         if s.task is not None or s.confirming or s.cleanup_blocked or not w.style_path:
             return
-        from genai_lab import studio_free_generation, studio_generation
+        from genai_lab import model_check, studio_free_generation, studio_generation
         from genai_lab.qwen_outfit_edit import load_qwen_settings
         try:
             s.runtime = studio_generation.StudioRuntime.from_environment()
+            # D-172 필수 모델 공통 검사(준비 화면과 같은 검사)를 먼저: 빠진 모델을 한 번에 알리고, 없거나 다르면 분석·생성을 시작하지 않는다
+            from genai_lab.qwen_pose_settings import QwenPoseSettings
+            model_check.require_product_models(s.runtime, QwenPoseSettings.load(s.runtime.qwen_settings),
+                                               garment=bool(w.selected_outfit_path))
             self.settings = load_qwen_settings(s.runtime.qwen_settings)
             s.results = None
             s.run_directory = s.output_root / uuid.uuid4().hex

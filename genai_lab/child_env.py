@@ -20,6 +20,29 @@ THREADS = ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "NUMEXP
 GPU_PREFIXES = ("CUDA_", "PYTORCH_", "NVIDIA_", "CUBLAS_", "CUDNN_")
 FIXED = {"HF_HUB_OFFLINE": "1", "TRANSFORMERS_OFFLINE": "1", "PYTHONDONTWRITEBYTECODE": "1"}
 EXTRA = "GENAI_CHILD_ENV_EXTRA"
+HF_CREDENTIALS = ("HF_TOKEN", "HUGGING_FACE_HUB_TOKEN")
+
+
+def hf_token_path(source=None):
+    """huggingface_hub가 토큰을 찾는 파일 위치를 앱 데이터의 빈 경로로(D-172). 이 파일은 만들지 않는다.
+    오프라인 설정만으로는 막히지 않는다 — 라이브러리가 요청 전에 사용자 토큰 파일(~/.cache/huggingface/token)을 먼저 읽는다."""
+    import tempfile
+    source = os.environ if source is None else source
+    base = source.get("APPDATA") or source.get("LOCALAPPDATA") or tempfile.gettempdir()
+    return os.path.join(base, "GenAILab", "hf-token-disabled", "token")
+
+
+def isolate_hf_credentials(environ=None):
+    """앱 프로세스 시작 때 한 번: 사용자 허깅페이스 인증정보를 읽지 않게 한다. 사용자 토큰 파일은 읽지도 고치지도 않는다."""
+    import sys
+    environ = os.environ if environ is None else environ
+    for name in HF_CREDENTIALS:
+        environ.pop(name, None)
+    environ["HF_TOKEN_PATH"] = hf_token_path(environ)
+    constants = sys.modules.get("huggingface_hub.constants")
+    if constants is not None:                        # 이미 불러왔으면 계산된 상수도 바꾼다
+        constants.HF_TOKEN_PATH = environ["HF_TOKEN_PATH"]
+    return environ["HF_TOKEN_PATH"]
 
 
 def child_environment(source=None, **overrides):
@@ -32,5 +55,6 @@ def child_environment(source=None, **overrides):
     if extra:
         env[EXTRA] = source[EXTRA]
     env.update(FIXED)
+    env["HF_TOKEN_PATH"] = hf_token_path(source)   # 하위 프로세스도 사용자 토큰 파일을 읽지 않는다(D-172)
     env.update({key: str(value) for key, value in overrides.items()})
     return env

@@ -4,6 +4,8 @@ import gc
 import sys
 import os
 import traceback
+from genai_lab.child_env import isolate_hf_credentials
+isolate_hf_credentials()        # D-172: 사용자 허깅페이스 토큰을 읽지 않는다(라이브러리를 불러오기 전에)
 from threading import Event
 from math import ceil, floor
 from dataclasses import replace

@@ -29,6 +29,8 @@ def test_runner_clicks_generate_and_saves_each_case(tmp_path, monkeypatch):
     character = Path(analysis["source"])
     garment = Path(analysis["directory"]) / "garment.png"
     monkeypatch.setattr(qwen_outfit_edit, "load_qwen_settings", lambda path: object())
+    from genai_lab import model_check
+    monkeypatch.setattr(model_check, "require_product_models", lambda *a, **k: None)
     monkeypatch.setattr(studio_generation, "analyze_inputs", lambda *a, **k: analysis)
     monkeypatch.setattr(free_ui, "analyze_base", lambda source, runtime: dict(source=str(source), character_scores={},
                                                                               groups=dict(fixed=[], appearance=[], body=[])))

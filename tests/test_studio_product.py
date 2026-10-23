@@ -24,6 +24,8 @@ def product_window(monkeypatch, tmp_path):
     window = GenAILabWindow()
     window.studio.output_root = tmp_path / "runs"
     monkeypatch.setattr(qwen_outfit_edit, "load_qwen_settings", lambda path: object())
+    from genai_lab import model_check
+    monkeypatch.setattr(model_check, "require_product_models", lambda *a, **k: None)   # 모델 검사는 test_model_check에서
     for name in ("confirm_outfit_edit", "confirm_inputs", "confirm_result"):
         monkeypatch.setattr(ui, name, lambda *a, **k: pytest.fail("사용자 화면은 확인 창을 띄우지 않는다"))
     monkeypatch.setattr(free_ui, "confirm_free_inputs", lambda *a, **k: pytest.fail("확인 창 없음"))

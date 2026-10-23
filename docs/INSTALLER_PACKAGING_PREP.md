@@ -12,7 +12,8 @@
   - 정적 확인: Qwen 작업 프로세스가 여는 파일(이번 관찰에서는 기존 결과 그림으로 대신해 실행하지 않음).
   - 조건부·미관찰: 실행 조건에 따라 열릴 수 있으나 이번에 지나가지 않은 경로.
 - **경로 수정(모델만) 반영:** `GENAI_MODEL_HOME`(모델 폴더 한 곳)을 정하면 제품 모델을 그 아래 정해진 배치에서 찾는다(3절). 정하지 않으면 지금 경로를 그대로 쓴다 — 이 PC 동작은 바뀌지 않는다.
-- 실행 환경 점검(1-3, CPU): **세 환경 모두 시스템 Python 3.10.6에 기대고**, Qwen 환경은 `.pth`로 주 환경 패키지를 쓴다(사실상 두 환경). 관절 분석 환경은 주 환경과 numpy·opencv·huggingface_hub 버전이 달라 지금은 둘로 둔다. Qwen 생성 호환은 GPU 확인 전.
+- 실행 환경 점검(1-3, CPU): **세 환경 모두 시스템 Python 3.10.6에 기대고**, Qwen 환경은 `.pth`로 주 환경 패키지를 쓴다(사실상 두 환경). 관절 분석 환경은 분리 유지(사용자 결정). Qwen 생성 호환은 GPU 확인 전.
+- **독립 실행 방식 추천: 공식 내장형 Python 3.10 두 벌(주·관절)**(4-1). 하위 프로세스 환경 변수는 필요한 이름만 명시적으로 넘기도록 코드 반영·CPU 검증(4-2). 제품 최소 패키지 목록 초안과 대조 도구(4-3). GPU 확인은 최종 패키징 검증 계획(4-4)에 넣었다.
 
 ## 1. 조사 목록 — 모델과 실행 환경을 나눈다
 
@@ -68,8 +69,9 @@
 **판단(설치형 구조 후보):**
 - **환경은 둘로 둔다(현재 기준):** 주 환경(작업실·분석·Qwen) + 관절 분석 환경. 하나로 합치려면 easy_dwpose를 주 환경 버전(numpy 2 등)에서 확인해야 하고, 그 확인에는 새 환경 설치가 필요하다(승인 필요).
 - Qwen 전용 환경은 따로 둘 이유가 기록상 없다(주 환경 패키지를 그대로 씀) — 합치는 쪽이 후보. 단 GPU 확인 전에는 바꾸지 않는다.
-- 하위 프로세스에 **물려줄 환경 변수를 앱이 정하는 것**이 필요하다: 지금은 분석 하위 프로세스가 사용자 PC의 PYTHONPATH 등을 그대로 받고, Qwen만 지운다(일관성 없음).
-- 설치 묶음 = 내장 Python 3.10 + 주 환경 패키지(제품 최소 목록) + 관절 환경 패키지 + 저장소 코드. 제품 최소 패키지 목록은 이번 기록의 모듈 목록(실행 관찰)으로 초안을 만들 수 있다.
+- 하위 프로세스에 물려줄 환경 변수는 앱이 정한다 → 4-2에서 반영(D-170).
+- 설치 묶음 = 내장 Python 3.10 두 벌 + 주 환경 패키지 + 관절 환경 패키지 + 앱 코드 → 4-1(방식)·4-3(목록).
+- **사용자 결정(10/23):** 관절 분석 환경은 분리 유지, easy_dwpose 주 환경 통합 시험은 보류. Qwen 환경도 지금 실행 경로 유지.
 
 ## 2. 제품 의존 파일 목록 — 근거별로 나눈다
 
@@ -177,6 +179,78 @@ flowchart TD
 
 **결정이 남은 것:** 내려받기 출처(허깅페이스 직접 / 자체 배포 서버), 파일별 대응표 화면을 첫 판에 넣을지.
 
+## 4-1. 독립 실행 패키지 방식 — 추천 (2026-10-23, D-170)
+
+> 목표(사용자): **Python을 따로 설치하지 않아도 되는 독립 실행 패키지.** 관절 분석 환경은 분리 유지, Qwen 실행 경로는 유지.
+
+**지금 구조에서 방식을 고르는 조건(1-3 관찰):**
+- 하위 프로세스가 '다른 Python 실행 파일 + 파일 경로 스크립트' 또는 '`-m` 모듈'로 뜬다(분석 `studio_analysis.py`, 머리 분할 `outfit_edit_worker.py`, Qwen `-m genai_lab.qwen_pose_worker`).
+- 실행 환경이 둘이다(주 / 관절 분석, numpy 등 버전이 다름).
+- torch·diffusers·transformers는 실행 중에 모듈을 늦게 불러오는 것이 많다. PySide6는 플러그인 폴더가 있다.
+
+| 방식 | 판단 | 이유 |
+|---|---|---|
+| **A. 공식 내장형 Python(embeddable, 3.10) 두 벌 — 추천** | 추천 | 지금의 '환경마다 다른 python.exe' 구조를 그대로 옮길 수 있다. 런타임마다 `python310._pth`로 경로를 고정하므로, 사용자 PC의 PYTHONPATH·사용자 site·다른 Python이 섞이지 않는다. 패키지는 빌드 때 그 폴더에 설치(`pip --target`)한다. 하위 프로세스 코드는 실행 파일 경로만 바꾸면 된다 |
+| B. PyInstaller·Nuitka 묶기(freeze) | 비추천 | 파일 경로 스크립트·`-m` 작업 프로세스마다 따로 실행 파일을 만들어야 하고, 실행 코드도 바꿔야 한다. torch·diffusers의 늦은 import와 큰 용량 때문에 빠진 모듈을 찾는 시행착오가 크다 |
+| C. 지금 venv 폴더 복사 | 불가 | `pyvenv.cfg`가 시스템 Python(`C:\Program Files\Python310`)을 가리켜 다른 PC에서 돌지 않는다(1-3) |
+| D. conda-pack 등 | 보류 | 가능하지만 conda를 새로 들여야 하고, A로 충분하다 |
+
+**A안 배치(초안):**
+
+```
+GenAILab/
+  runtime-main/   python.exe(내장형 3.10) + python310._pth + Lib/site-packages ← packaging/requirements-main.txt
+  runtime-pose/   python.exe(내장형 3.10) + python310._pth + Lib/site-packages ← packaging/requirements-pose.txt
+  app/            genai_lab/ · scripts/(제품에 쓰는 것) · configs/ · gui_main.py · docs/FREE_GENERATION_CONTRACT.md · 라이선스 고지
+  GenAILab.exe    작은 실행기(runtime-main\pythonw.exe app\gui_main.py) — 방식은 빌드 때 정함
+모델 폴더(최초 준비, 4절) — GENAI_MODEL_HOME
+사용자 데이터 — %APPDATA%\GenAILab
+```
+
+- 두 런타임의 `._pth`에 `app` 폴더를 넣는다. `._pth`가 있으면 모듈 경로가 그 파일 내용으로 고정되므로, 지금 Qwen `-m` 실행이 작업 폴더(저장소 루트)에 기대는 부분을 `._pth`의 `app` 줄로 대신한다(작업 폴더가 경로에 들어가는지는 빌드 때 P2에서 확인).
+- 실행 설정: `pose_python = runtime-pose\python.exe`, `analysis_python = runtime-main\python.exe`. Qwen은 **지금 실행 경로 유지**(설정의 `python_executable`) — 패키지에서는 그 값이 `runtime-main\python.exe`가 된다. Qwen 전용 런타임은 만들지 않는다(지금도 주 환경 패키지를 씀, 1-3).
+- 하위 프로세스 환경 변수는 앱이 정한다(4-2).
+- 확인할 것(빌드·검증 때): VC++ 런타임 DLL(내장형에 vcruntime140 포함, 나머지 확인), PySide6 플러그인 경로, torch CUDA DLL(휠 안에 포함). NVIDIA 드라이버는 사용자 PC에 있어야 한다(설치 요건으로 안내).
+- 용량(대략): 모델 약 30GiB(최초 준비) + 런타임 두 벌(현재 환경 기준 약 7GiB, 목록 정리 뒤 줄어듦).
+
+## 4-2. 하위 프로세스 환경 변수 (코드 반영, 2026-10-23, D-170)
+
+- `genai_lab/child_env.py` `child_environment()`: 부모 환경을 통째로 넘기지 않고 **필요한 이름만** 넘긴 뒤 제품 고정값을 덮어쓴다. 전부 지우지 않는다.
+
+| 넘기는 것 | 이유 |
+|---|---|
+| Windows·사용자 폴더·임시 폴더·실행 경로: SYSTEMROOT·WINDIR·COMSPEC·PATH·PATHEXT·TEMP·TMP·USERPROFILE·APPDATA·LOCALAPPDATA·PROGRAMDATA·PROGRAMFILES 등, 프로세서 정보 | Python·torch·onnxruntime이 DLL·임시 파일·사용자 폴더를 찾는다. 표준 platform 모듈은 COMSPEC로 `ver`를 실행한다 |
+| GPU·스레드: `CUDA_*`·`PYTORCH_*`·`NVIDIA_*`·`CUBLAS_*`·`CUDNN_*`, OMP·MKL·OPENBLAS·NUMEXPR 스레드 수 | 사용자가 정했으면 따른다 |
+| 앱 설정: `GENAI_MODEL_HOME`·`GENAI_CHARACTER_MEMORY`·`GENAI_STUDIO_RUNTIME`·`GENAI_QWEN_SETTINGS`·`GENAI_VISION_SETTINGS`·`GENAI_STUDIO_DEVELOPER`, `HF_HOME`·`HF_HUB_CACHE` | 코드가 읽는 설정 |
+| **고정값(덮어씀):** `HF_HUB_OFFLINE=1`·`TRANSFORMERS_OFFLINE=1`·`PYTHONDONTWRITEBYTECODE=1` | 오프라인 실행, 앱 폴더에 캐시 파일을 쓰지 않음 |
+
+- **넘기지 않는 예:** `PYTHONPATH`·`PYTHONHOME`·`PYTHONSTARTUP`·`VIRTUAL_ENV`·`CONDA_*`, 다른 프로그램의 토큰 등. 개발 중 더 넘길 것은 `GENAI_CHILD_ENV_EXTRA`에 이름을 적을 때만(관찰 도구가 사용).
+- 적용한 곳(제품 경로 4곳): 분석 실행기(`cpu_process`, 관절·특징), 머리 분할 작업 프로세스, 관절 검사, Qwen 작업 프로세스. 개발 화면 전용 호출은 바꾸지 않았다. `cpu_process`를 함께 쓰는 개발 기능(정체성 측정·마무리·비율)도 같은 구성을 받는다.
+- **CPU 검증:** 부모에 시험용 변수(VIRTUAL_ENV·CONDA_PREFIX·PYTHONSTARTUP·임의 토큰)를 넣고 사용자 화면 네 단계를 다시 돌렸다(`env-base4-explicit`). 하위 프로세스 7개 모두 정상, 시험용 변수는 하나도 넘어가지 않음, 받은 변수 107개 → 40~41개. 실제 하위 Python 시작 시험(`tests/test_child_env.py`) 포함.
+- PATH는 지금 부모 값을 그대로 넘긴다. 패키지에서는 앱 런타임 폴더 + Windows 시스템 폴더로 좁히는 것을 검증 계획에 넣는다(5절 이후 최종 검증).
+- **GPU 작업 프로세스(Qwen·머리 분할)를 이 구성으로 실제 실행한 것은 아직 없다** → 최종 패키징 검증 계획(4-4)의 GPU 항목.
+
+## 4-3. 제품 최소 패키지 목록 (초안, 2026-10-23, D-170)
+
+- `packaging/requirements-main.txt`(67개), `packaging/requirements-pose.txt`(24개) — 지금 개발 PC 환경의 버전 그대로 고정.
+- 근거: 사용자 화면 단계를 실제로 돌린 프로세스가 불러온 모듈 + 작업 프로세스 불러오기 점검(Qwen 작업 프로세스의 함수 안 import, 머리 분할의 see-through 코드). 원자료 `outputs/product-file-trace-20261023/packages/`.
+- 대조 도구 `scripts/check_product_packages.py`: 세 환경 모두 목록과 설치 버전 일치(문제 0). Qwen 환경도 주 환경 목록과 같음(.pth).
+- **safetensors 0.9.0rc1(시험판)은 확인된 버전 그대로 고정했다.** 안정판 교체는 이번 정리와 섞지 않는다. 교체한다면 별도 과제로: 근거(시험판 사용 위험·안정판 출시 여부) + 검증 범위(GGUF·LoRA 불러오기, Qwen 생성 같은 seed 결과 비교 — GPU).
+- 확인이 남은 것(목록에 표시): opencv 두 종류(cv2를 함께 제공 — 하나만 넣는 쪽), PySide6 분할 패키지(WebEngine·Pdf 등은 아마 불필요), setuptools(pkg_resources 사용 여부).
+- 관찰하지 않은 지연 import는 빠질 수 있다 → 깨끗한 런타임에 목록대로 설치해 CPU·GPU 단계를 돌려 확정한다(4-4).
+
+## 4-4. 최종 패키징 검증 계획 (GPU 포함 — 실행은 승인 뒤)
+
+| 순서 | 검증 | GPU | 통과 기준 |
+|---|---|---|---|
+| P1 | 내장형 런타임 두 벌에 목록대로 설치(빌드 PC), `check_product_packages.py` | 없음 | 문제 0 |
+| P2 | 패키지 배치에서 CPU 단계(관찰 도구 `scenarios.py` base4·조건부 장면) — 시스템 Python을 PATH에서 뺀 상태 | 없음 | 모든 프로세스의 `sys.base_prefix`가 패키지 런타임, 시스템 Python·개발 venv 파일을 하나도 열지 않음 |
+| P3 | 모델 폴더(`GENAI_MODEL_HOME`) + 시험용 캐시·사용자 폴더 분리 + 네트워크 끊고 CPU 단계 | 없음 | 공유 캐시를 열지 않음, 누락 파일 목록 0 |
+| P4 | **머리 분할 작업 프로세스**(GPU 필요)를 패키지 런타임·명시적 환경 변수로 실행 | 있음 | 분할 결과가 개발 환경 결과와 같음, 최고 예약 메모리 기록 |
+| P5 | **Qwen 작업 프로세스**를 패키지 런타임(`runtime-main\python.exe`)·명시적 환경 변수로 실행 — 사용자 화면 흐름 2줄(의상 있음·없음) | 있음 | 생성 완료, 메모리 상한 6.5GiB 이하, 같은 입력·seed에서 개발 환경 결과와 비교(같은 버전이면 같은 그림을 기대 — 다르면 원인 기록) |
+| P6 | PATH를 앱 런타임 + Windows 시스템 폴더로 좁혀 P4·P5 반복 | 있음 | 같은 결과 |
+| P7 | 다른 PC(깨끗한 Windows)에서 설치 → 최초 모델 준비 → 첫 생성(배포 호환성) | 있음 | 지도 다음 단계 |
+
 ## 5. 배포 전 이미 정해진 일 (다른 문서)
 
 - 노출 검사를 `"block"`으로 되돌리고 판정 방식을 다시 만든다(지도 보류 목록, D-158).
@@ -188,7 +262,8 @@ flowchart TD
 | 순서 | 내용 | GPU |
 |---|---|---|
 | ~~①~~ | ~~조건부 경로 CPU 관찰~~ — 2-4(10/23) | — |
-| ~~②~~ | ~~실행 환경 확인(CPU)~~ — 1-3(10/23). 남은 것: ②-a 제품 최소 패키지 목록 초안(실행 관찰 모듈 목록으로, CPU) · ②-b 하위 프로세스 환경 변수를 앱이 정하기(코드) · ②-c Python을 함께 넣는 방식 결정(사용자) · ②-d easy_dwpose를 주 환경 버전에서 확인(새 환경 설치 — 승인 필요) · ②-e `@app`으로 Qwen 생성(GPU — 승인 필요) | ②-a·b 없음 |
+| ~~②~~ | ~~실행 환경 확인(CPU)~~ — 1-3. ~~②-a 최소 패키지 목록~~ 4-3 · ~~②-b 하위 프로세스 환경 변수~~ 4-2 · ②-c 방식: 내장형 Python 두 벌 추천(4-1) · ②-d easy_dwpose 주 환경 통합: **보류**(사용자) · ②-e Qwen 생성 확인: 최종 검증 계획 4-4 P5 | — |
+| ②-f | 패키지 목록 정리: opencv 둘 중 하나, PySide6 분할 패키지, setuptools 필요 여부(CPU — 깨끗한 런타임 설치로 확인) | 없음 |
 | ③ | **모델 폴더 배치 재관찰:** 시험용 모델 폴더(복사본) + 시험용 캐시·사용자 경로로 분리, 기존 공유 캐시가 보이지 않게, 네트워크 없이 CPU 단계가 도는지. 결과로 누락 파일·준비 완료 검사 기준·사용자 안내 문구를 정함 | 없음 |
 | ④ | 최초 모델 준비 화면·검사 구현(4절) — ③의 검사 결과에 연결 | 없음 |
 | ⑤ | 다른 PC 설치 → 첫 생성(배포 호환성) | 있음 — 승인 필요 |

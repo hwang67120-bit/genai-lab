@@ -7,8 +7,16 @@
   "reading": "차이가 없다 — LoRA 없음과 그림체 LoRA(0.6·1.0)의 색감이 비슷하다",
   "questions": {
     "style_changed": "no",
-    "identity_broken": "not_answered",
+    "identity_broken": [
+      "K-0.6",
+      "M7-0.6"
+    ],
     "less_ai_look": "no_difference"
   },
-  "note": "시험 전용 판정. 품질 기준선·운영 집계·D-118 판정 20건에 넣지 않는다(STYLE_STAGE_DESIGN 3-3)."
+  "note": "시험 전용 판정. 품질 기준선·운영 집계·D-118 판정 20건에 넣지 않는다(STYLE_STAGE_DESIGN 3-3).",
+  "identity_verbatim": "K 하고 M7에 동일성이 깨졌는데 0.6 강도에서 깨졌고 1.0 은 유지 됐는데",
+  "identity_kept": [
+    "K-1.0",
+    "M7-1.0"
+  ]
 }

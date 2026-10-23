@@ -1,0 +1,22 @@
+{
+  "A_analyze_inputs": {
+    "state": "ok",
+    "seconds": 79.0,
+    "result": "None"
+  },
+  "B_analyze_base": {
+    "state": "ok",
+    "seconds": 7.1,
+    "result": "None"
+  },
+  "C_outfit_pipeline": {
+    "state": "ok",
+    "seconds": 68.3,
+    "result": "None"
+  },
+  "D_free_generation": {
+    "state": "ok",
+    "seconds": 111.1,
+    "result": "awaiting_user_review"
+  }
+}

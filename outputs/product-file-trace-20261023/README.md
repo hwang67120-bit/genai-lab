@@ -1,0 +1,22 @@
+# 제품 의존 파일 관찰 원자료 (2026-10-23)
+
+설치형 패키징 준비(docs/INSTALLER_PACKAGING_PREP.md 2절, D-166·D-168)의 근거 자료. "왜 이 파일을 설치 목록에 넣었는가"를 다시 확인할 때 쓴다.
+
+## 폴더
+
+| 폴더 | 무엇 | GPU | 대신한 단계 | 도구 |
+|---|---|---|---|---|
+| `base4-first/` | 사용자 화면 네 단계(A 입력 분석·B 기준 분석·C 옷 바꾸기·D 자세 장면) 첫 관찰 | **켜져 있었음**(PowerShell 빈 값 = 변수 삭제). 머리 분할 4회 GPU, 각 최고 예약 5.08GiB | Qwen 생성 | `run_trace.py`(첫 판, 핸들 표본 없음) |
+| `startup-first/` | 작업실 사용자 화면 시작(생성 없음) | 켜져 있었음(생성·분할 없음) | — | `run_startup.py` |
+| `aborted-cuda-env-20261023/` | 두 번째 관찰 첫 시도 — GPU 숨김 검사에서 시작 전에 멈춤(실행 없음) | — | — | `scripts/product_file_trace/scenarios.py` |
+| `outfit_retry/` · `hair_restore/` · `hair_auto/` · `memory_link/` · `product_buttons/` · `base4/` | 조건부 경로 관찰 | **숨김**(`CUDA_VISIBLE_DEVICES=-1`, `torch.cuda.is_available()=False` 확인) | Qwen 생성, 머리 분할(CUDA 필요) | `scripts/product_file_trace/scenarios.py` + 핸들 표본 |
+
+- 각 폴더: `opens.jsonl`(원자료: 열린 파일 기록), `status.json`(단계 결과·대신한 단계), `console.log`.
+- `summary-first-gpu-on.json`, `summary-gpu-hidden.json`: `scripts/product_file_trace/summarize.py`로 만든 분류 요약.
+- `product_buttons/product-controls.json`: 사용자 화면에 보이는 조작 목록.
+- 저장소에 넣지 않은 것: 단계별 실행 결과 그림·중간 파일, **캐릭터 기억 사본**(`memory_link/character-memory-copy`, 사용자 데이터).
+
+## 읽는 법
+
+- 열린 파일 = 그 실행 경로에서 쓴 근거. 열리지 않은 파일 = 그 실행에서 쓰지 않았다는 뜻일 뿐, 제품 전체에서 불필요하다는 뜻이 아니다.
+- 파이썬 open 감사와 몇몇 라이브러리 감싸기로 기록한다. 핸들 표본은 열려 있는 동안만 잡는다. 열었다 바로 닫은 C 확장 파일은 빠질 수 있다.

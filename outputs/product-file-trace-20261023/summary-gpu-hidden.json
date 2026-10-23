@@ -1,0 +1,506 @@
+{
+ "other": {
+  "C:\\Users\\user\\.cache\\huggingface\\token": {
+   "stages": [
+    "base4:A_analyze_inputs",
+    "base4:B_analyze_base",
+    "base4:C_outfit_pipeline",
+    "base4:D_free_generation",
+    "hair_auto:D_hair_auto",
+    "hair_restore:D_hair_restore",
+    "outfit_retry:C_outfit_retry"
+   ],
+   "kinds": [
+    "open"
+   ]
+  },
+  "C:\\Windows\\System32\\ko-KR\\KernelBase.dll.mui": {
+   "stages": [
+    "base4:A_analyze_inputs",
+    "base4:setup",
+    "hair_auto:setup",
+    "hair_restore:setup",
+    "memory_link:setup",
+    "outfit_retry:setup",
+    "product_buttons:setup"
+   ],
+   "kinds": [
+    "handle"
+   ]
+  },
+  "C:\\Windows\\System32\\ko-KR\\kernel32.dll.mui": {
+   "stages": [
+    "base4:A_analyze_inputs",
+    "base4:setup",
+    "hair_auto:setup",
+    "hair_restore:setup",
+    "memory_link:setup",
+    "outfit_retry:setup",
+    "product_buttons:setup"
+   ],
+   "kinds": [
+    "handle"
+   ]
+  },
+  "C:\\Windows\\System32\\ko-KR\\tzres.dll.mui": {
+   "stages": [
+    "base4:A_analyze_inputs"
+   ],
+   "kinds": [
+    "handle"
+   ]
+  },
+  "C:\\Windows\\apppatch\\DirectXApps.sdb": {
+   "stages": [
+    "base4:A_analyze_inputs",
+    "base4:B_analyze_base",
+    "hair_auto:D_hair_auto",
+    "hair_restore:D_hair_restore",
+    "outfit_retry:C_outfit_retry"
+   ],
+   "kinds": [
+    "handle"
+   ]
+  },
+  "nul": {
+   "stages": [
+    "base4:A_analyze_inputs",
+    "base4:C_outfit_pipeline",
+    "base4:D_free_generation",
+    "base4:setup",
+    "hair_auto:D_hair_auto",
+    "hair_auto:setup",
+    "hair_restore:D_hair_restore",
+    "hair_restore:setup",
+    "memory_link:setup",
+    "outfit_retry:C_outfit_retry",
+    "outfit_retry:setup",
+    "product_buttons:setup"
+   ],
+   "kinds": [
+    "open"
+   ]
+  }
+ },
+ "user_data": {
+  "C:\\Users\\user\\AppData\\Roaming\\GenAILab\\character-memory\\characters\\099747fef7654558b77365c4c69e28c9.json": {
+   "stages": [
+    "memory_link:setup"
+   ],
+   "kinds": [
+    "open"
+   ]
+  },
+  "C:\\Users\\user\\AppData\\Roaming\\GenAILab\\character-memory\\characters\\80744bc78ecc4bc7b8f9aef7763dc48c.json": {
+   "stages": [
+    "memory_link:setup"
+   ],
+   "kinds": [
+    "open"
+   ]
+  },
+  "C:\\Users\\user\\AppData\\Roaming\\GenAILab\\character-memory\\characters\\fa882a75b27945558a7fc8cdb299bd3a.json": {
+   "stages": [
+    "memory_link:setup"
+   ],
+   "kinds": [
+    "open"
+   ]
+  },
+  "C:\\Users\\user\\AppData\\Roaming\\GenAILab\\character-memory\\log.jsonl": {
+   "stages": [
+    "memory_link:setup"
+   ],
+   "kinds": [
+    "open"
+   ]
+  },
+  "Z:\\genai-lab\\outputs\\product-file-trace-20261023\\memory_link\\character-memory-copy\\characters\\099747fef7654558b77365c4c69e28c9.json": {
+   "stages": [
+    "memory_link:M_auto_identity"
+   ],
+   "kinds": [
+    "open"
+   ]
+  },
+  "Z:\\genai-lab\\outputs\\product-file-trace-20261023\\memory_link\\character-memory-copy\\characters\\80744bc78ecc4bc7b8f9aef7763dc48c.json": {
+   "stages": [
+    "memory_link:M_auto_identity"
+   ],
+   "kinds": [
+    "open"
+   ]
+  },
+  "Z:\\genai-lab\\outputs\\product-file-trace-20261023\\memory_link\\character-memory-copy\\characters\\fa882a75b27945558a7fc8cdb299bd3a.json": {
+   "stages": [
+    "memory_link:M_auto_identity"
+   ],
+   "kinds": [
+    "open"
+   ]
+  }
+ },
+ "user_input": {
+  "C:\\Users\\user\\Downloads\\143960292_19.jpg": {
+   "stages": [
+    "hair_restore:D_hair_restore"
+   ],
+   "kinds": [
+    "handle",
+    "open"
+   ]
+  },
+  "C:\\Users\\user\\Downloads\\참조 의상\\4b750036a001e45a39973c408855e970.jpg": {
+   "stages": [
+    "base4:A_analyze_inputs",
+    "base4:C_outfit_pipeline",
+    "outfit_retry:C_outfit_retry"
+   ],
+   "kinds": [
+    "open"
+   ]
+  },
+  "C:\\Users\\user\\Downloads\\참조 이미지\\26a8fe98706769af46e75e8663658909.jpg": {
+   "stages": [
+    "memory_link:M_auto_identity"
+   ],
+   "kinds": [
+    "open"
+   ]
+  },
+  "C:\\Users\\user\\Downloads\\참조 이미지\\86a72742408d9b4d04f5fb23fb0b93bd.jpg": {
+   "stages": [
+    "base4:A_analyze_inputs",
+    "base4:B_analyze_base",
+    "base4:C_outfit_pipeline",
+    "base4:D_free_generation",
+    "outfit_retry:C_outfit_retry"
+   ],
+   "kinds": [
+    "open"
+   ]
+  }
+ },
+ "model": {
+  "D:\\Model\\genai-cache\\huggingface\\models--SmilingWolf--wd-vit-tagger-v3\\snapshots\\7f6b584d0bd3f55c4531f14ba3d4761b2bccdc0f\\selected_tags.csv": {
+   "stages": [
+    "base4:C_outfit_pipeline",
+    "hair_restore:D_hair_restore"
+   ],
+   "kinds": [
+    "handle"
+   ]
+  },
+  "D:\\genai-cache\\huggingface\\easy-dwpose\\checkpoints\\dw-ll_ucoco_384.onnx": {
+   "stages": [
+    "base4:A_analyze_inputs",
+    "base4:C_outfit_pipeline",
+    "base4:D_free_generation",
+    "hair_auto:D_hair_auto",
+    "hair_restore:D_hair_restore",
+    "outfit_retry:C_outfit_retry"
+   ],
+   "kinds": [
+    "onnx"
+   ]
+  },
+  "D:\\genai-cache\\huggingface\\easy-dwpose\\checkpoints\\yolox_l.onnx": {
+   "stages": [
+    "base4:A_analyze_inputs",
+    "base4:C_outfit_pipeline",
+    "base4:D_free_generation",
+    "hair_auto:D_hair_auto",
+    "hair_restore:D_hair_restore",
+    "outfit_retry:C_outfit_retry"
+   ],
+   "kinds": [
+    "onnx"
+   ]
+  },
+  "D:\\genai-cache\\huggingface\\models--SmilingWolf--wd-vit-tagger-v3\\refs\\main": {
+   "stages": [
+    "base4:A_analyze_inputs",
+    "base4:B_analyze_base",
+    "base4:C_outfit_pipeline",
+    "base4:D_free_generation",
+    "hair_auto:D_hair_auto",
+    "hair_restore:D_hair_restore",
+    "outfit_retry:C_outfit_retry"
+   ],
+   "kinds": [
+    "open"
+   ]
+  },
+  "D:\\genai-cache\\huggingface\\models--SmilingWolf--wd-vit-tagger-v3\\snapshots\\7f6b584d0bd3f55c4531f14ba3d4761b2bccdc0f\\model.onnx": {
+   "stages": [
+    "base4:A_analyze_inputs",
+    "base4:B_analyze_base",
+    "base4:C_outfit_pipeline",
+    "base4:D_free_generation",
+    "hair_auto:D_hair_auto",
+    "hair_restore:D_hair_restore",
+    "outfit_retry:C_outfit_retry"
+   ],
+   "kinds": [
+    "hf_download",
+    "onnx"
+   ]
+  },
+  "D:\\genai-cache\\huggingface\\models--SmilingWolf--wd-vit-tagger-v3\\snapshots\\7f6b584d0bd3f55c4531f14ba3d4761b2bccdc0f\\selected_tags.csv": {
+   "stages": [
+    "base4:A_analyze_inputs",
+    "base4:B_analyze_base",
+    "base4:C_outfit_pipeline",
+    "base4:D_free_generation",
+    "hair_auto:D_hair_auto",
+    "hair_restore:D_hair_restore",
+    "outfit_retry:C_outfit_retry"
+   ],
+   "kinds": [
+    "hf_download",
+    "open"
+   ]
+  },
+  "D:\\genai-cache\\huggingface\\models--skytnt--anime-seg\\refs\\main": {
+   "stages": [
+    "base4:A_analyze_inputs"
+   ],
+   "kinds": [
+    "open"
+   ]
+  },
+  "D:\\genai-cache\\huggingface\\models--skytnt--anime-seg\\snapshots\\493cb60893f47441b26ec4fb9a306bce9e342982\\isnetis.onnx": {
+   "stages": [
+    "base4:A_analyze_inputs"
+   ],
+   "kinds": [
+    "hf_download",
+    "onnx"
+   ]
+  },
+  "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\pose-identity-20260927\\identity-v2\\model-cache\\hub\\models--deepghs--anime_head_detection\\refs\\main": {
+   "stages": [
+    "base4:A_analyze_inputs"
+   ],
+   "kinds": [
+    "handle",
+    "open"
+   ]
+  },
+  "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\pose-identity-20260927\\identity-v2\\model-cache\\hub\\models--deepghs--anime_head_detection\\snapshots\\06604feee81983792a57c21081e539c0ae229833\\head_detect_v2.0_s\\model.onnx": {
+   "stages": [
+    "base4:A_analyze_inputs"
+   ],
+   "kinds": [
+    "hf_download",
+    "onnx"
+   ]
+  },
+  "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\pose-identity-20260927\\identity-v2\\model-cache\\hub\\models--deepghs--anime_head_detection\\snapshots\\06604feee81983792a57c21081e539c0ae229833\\head_detect_v2.0_s\\model_type.json": {
+   "stages": [
+    "base4:A_analyze_inputs"
+   ],
+   "kinds": [
+    "hf_download",
+    "open"
+   ]
+  }
+ },
+ "project": {
+  "\\\\192.168.0.109\\win_g\\genai-lab\\configs\\qwen_edit_settings.json": {
+   "stages": [
+    "base4:setup",
+    "hair_auto:setup",
+    "hair_restore:setup",
+    "outfit_retry:setup"
+   ],
+   "kinds": [
+    "handle",
+    "open"
+   ]
+  },
+  "\\\\192.168.0.109\\win_g\\genai-lab\\configs\\qwen_model_files.json": {
+   "stages": [
+    "hair_restore:setup"
+   ],
+   "kinds": [
+    "handle"
+   ]
+  },
+  "\\\\192.168.0.109\\win_g\\genai-lab\\configs\\studio_garment_warnings.json": {
+   "stages": [
+    "base4:setup",
+    "hair_auto:setup",
+    "hair_restore:setup",
+    "outfit_retry:setup",
+    "product_buttons:P_product_controls"
+   ],
+   "kinds": [
+    "handle",
+    "open"
+   ]
+  },
+  "\\\\192.168.0.109\\win_g\\genai-lab\\docs\\FREE_GENERATION_CONTRACT.md": {
+   "stages": [
+    "base4:D_free_generation",
+    "hair_auto:D_hair_auto",
+    "hair_restore:D_hair_restore"
+   ],
+   "kinds": [
+    "open"
+   ]
+  }
+ },
+ "existing_results": {
+  "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\eval-smoke-26\\sources\\M6-hoodie.jpg": {
+   "stages": [
+    "hair_auto:D_hair_auto"
+   ],
+   "kinds": [
+    "handle",
+    "open"
+   ]
+  },
+  "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\product-run-20261022\\runs\\b5cb43fef5bf4277a15f16db4fd23644\\free-generation\\base-parts\\parts.npz": {
+   "stages": [
+    "base4:D_free_generation"
+   ],
+   "kinds": [
+    "handle",
+    "open"
+   ]
+  },
+  "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\product-run-20261022\\runs\\b5cb43fef5bf4277a15f16db4fd23644\\free-generation\\qwen\\raw.png": {
+   "stages": [
+    "base4:D_free_generation"
+   ],
+   "kinds": [
+    "handle",
+    "open"
+   ]
+  },
+  "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\product-run-20261022\\runs\\b5cb43fef5bf4277a15f16db4fd23644\\free-generation\\result-analysis-2\\parts\\parts.npz": {
+   "stages": [
+    "base4:D_free_generation"
+   ],
+   "kinds": [
+    "open"
+   ]
+  },
+  "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\product-run-20261022\\runs\\b5cb43fef5bf4277a15f16db4fd23644\\free-generation\\result-analysis\\parts\\parts.npz": {
+   "stages": [
+    "base4:D_free_generation"
+   ],
+   "kinds": [
+    "open"
+   ]
+  },
+  "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\product-run-20261022\\runs\\b5cb43fef5bf4277a15f16db4fd23644\\outfit-edit\\parts\\parts.npz": {
+   "stages": [
+    "base4:C_outfit_pipeline",
+    "outfit_retry:C_outfit_retry"
+   ],
+   "kinds": [
+    "open"
+   ]
+  },
+  "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\product-run-20261022\\runs\\b5cb43fef5bf4277a15f16db4fd23644\\outfit-edit\\qwen\\raw.png": {
+   "stages": [
+    "base4:C_outfit_pipeline",
+    "outfit_retry:C_outfit_retry"
+   ],
+   "kinds": [
+    "handle",
+    "open"
+   ]
+  },
+  "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\studio-runs\\4b0e5e2cbf3a4bad850d0f17b6cf94f7\\free-generation\\base-parts\\parts.npz": {
+   "stages": [
+    "hair_restore:D_hair_restore"
+   ],
+   "kinds": [
+    "open"
+   ]
+  },
+  "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\studio-runs\\4b0e5e2cbf3a4bad850d0f17b6cf94f7\\free-generation\\qwen-2\\raw.png": {
+   "stages": [
+    "hair_restore:D_hair_restore"
+   ],
+   "kinds": [
+    "handle",
+    "open"
+   ]
+  },
+  "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\studio-runs\\4b0e5e2cbf3a4bad850d0f17b6cf94f7\\free-generation\\qwen\\raw.png": {
+   "stages": [
+    "hair_restore:D_hair_restore"
+   ],
+   "kinds": [
+    "open"
+   ]
+  },
+  "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\studio-runs\\4b0e5e2cbf3a4bad850d0f17b6cf94f7\\free-generation\\result-analysis-2\\parts\\parts.npz": {
+   "stages": [
+    "hair_restore:D_hair_restore"
+   ],
+   "kinds": [
+    "open"
+   ]
+  },
+  "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\studio-runs\\4b0e5e2cbf3a4bad850d0f17b6cf94f7\\free-generation\\result-analysis\\parts\\parts.npz": {
+   "stages": [
+    "hair_restore:D_hair_restore"
+   ],
+   "kinds": [
+    "open"
+   ]
+  },
+  "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\studio-runs\\4b0e5e2cbf3a4bad850d0f17b6cf94f7\\free-generation\\trace.json": {
+   "stages": [
+    "hair_restore:setup"
+   ],
+   "kinds": [
+    "open"
+   ]
+  },
+  "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\style-trial-20261023\\cases.json": {
+   "stages": [
+    "hair_auto:setup"
+   ],
+   "kinds": [
+    "open"
+   ]
+  },
+  "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\style-trial-20261023\\runs\\M6-none\\base-parts\\parts.npz": {
+   "stages": [
+    "hair_auto:D_hair_auto"
+   ],
+   "kinds": [
+    "open"
+   ]
+  },
+  "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\style-trial-20261023\\runs\\M6-none\\qwen\\raw.png": {
+   "stages": [
+    "hair_auto:D_hair_auto"
+   ],
+   "kinds": [
+    "open"
+   ]
+  },
+  "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\style-trial-20261023\\runs\\M6-none\\result-analysis\\parts\\parts.npz": {
+   "stages": [
+    "hair_auto:D_hair_auto"
+   ],
+   "kinds": [
+    "handle",
+    "open"
+   ]
+  }
+ },
+ "environment_file_counts": {
+  "기타": 1,
+  "D:\\Model\\genai-cache\\venv": 1,
+  "D:\\genai-cache\\catvton-venv": 50,
+  "D:\\genai-cache\\venv": 123
+ }
+}

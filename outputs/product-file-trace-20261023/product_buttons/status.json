@@ -1,0 +1,14 @@
+{
+  "scenario": "product_buttons",
+  "qwen": "substituted (기존 결과 그림)",
+  "segmentation": "substituted (기존 분할 결과, CUDA 필요 단계)",
+  "gpu": "hidden (CUDA_VISIBLE_DEVICES=-1, torch.cuda.is_available()=False)",
+  "P_product_controls": {
+    "state": "ok",
+    "seconds": 22.8,
+    "result": {
+      "controls": 7,
+      "menu_actions": 0
+    }
+  }
+}

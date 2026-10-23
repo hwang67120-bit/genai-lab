@@ -4,19 +4,23 @@
   "trial": "style_lora_borrowed",
   "reviewer": "user",
   "verbatim": "장이가 없어 둘다 색감이 비슷해",
-  "reading": "차이가 없다 — LoRA 없음과 그림체 LoRA(0.6·1.0)의 색감이 비슷하다",
+  "reading": "그림체 차이가 없다 — LoRA 없음과 그림체 LoRA(0.6·1.0)의 색감이 비슷하다",
   "questions": {
     "style_changed": "no",
     "identity_broken": [
       "K-0.6",
       "M7-0.6"
     ],
-    "less_ai_look": "no_difference"
+    "identity_kept": [
+      "K-1.0",
+      "M7-1.0"
+    ],
+    "identity_not_mentioned": [
+      "N1",
+      "M6"
+    ],
+    "less_ai_look": "not_answered_directly"
   },
   "note": "시험 전용 판정. 품질 기준선·운영 집계·D-118 판정 20건에 넣지 않는다(STYLE_STAGE_DESIGN 3-3).",
-  "identity_verbatim": "K 하고 M7에 동일성이 깨졌는데 0.6 강도에서 깨졌고 1.0 은 유지 됐는데",
-  "identity_kept": [
-    "K-1.0",
-    "M7-1.0"
-  ]
+  "identity_verbatim": "K 하고 M7에 동일성이 깨졌는데 0.6 강도에서 깨졌고 1.0 은 유지 됐는데"
 }

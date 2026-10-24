@@ -1,0 +1,157 @@
+{
+ "started": "2026-10-24 16:35:24",
+ "python": "D:\\genai-cache\\venv\\Scripts\\python.exe",
+ "case": "B2",
+ "session_env": "1",
+ "flow": {
+  "state": "ok",
+  "seconds": 6549,
+  "run": "D:\\genai-test\\session-reuse-20261024b\\flow\\runs\\f8a3de355b8640e88fe70c39b16a1e49",
+  "saved": "D:\\genai-test\\session-reuse-20261024b\\flow\\B2-saved.png",
+  "errors": []
+ },
+ "baseline_run": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36",
+ "image_sha_comparison": {
+  "outfit-edit/qwen/raw.png": {
+   "exists": true,
+   "baseline": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\outfit-edit\\qwen\\raw.png",
+   "same": true,
+   "new_sha256": "fbe397cd1b02c64dc0af55bef915314282439f923c66d1bf419da6342ffa281d",
+   "baseline_sha256": "fbe397cd1b02c64dc0af55bef915314282439f923c66d1bf419da6342ffa281d"
+  },
+  "free-generation/qwen/raw.png": {
+   "exists": true,
+   "baseline": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen\\raw.png",
+   "same": true,
+   "new_sha256": "8b36371aa99326142d13ac24e4675b6080f9d44a86c043cede3351522581c560",
+   "baseline_sha256": "8b36371aa99326142d13ac24e4675b6080f9d44a86c043cede3351522581c560"
+  },
+  "free-generation/qwen-2/raw.png": {
+   "exists": true,
+   "baseline": "D:\\genai-test\\gpu-p5-20261023\\flow\\runs\\fc81f47c46614507a0282250382f1e36\\free-generation\\qwen-2\\raw.png",
+   "same": true,
+   "new_sha256": "bfcce1aca37f6aac90def9b8afabe6798cb482f08332a261a354f664c19535bb",
+   "baseline_sha256": "bfcce1aca37f6aac90def9b8afabe6798cb482f08332a261a354f664c19535bb"
+  }
+ },
+ "saved_same_as_request37": true,
+ "workers": {
+  "outfit-edit/qwen/raw.png": {
+   "status": "completed",
+   "seed": 42,
+   "seconds": 2037.9333987,
+   "stage_seconds": {
+    "text_encode": 23.61150869999983,
+    "pipeline_load": 97.49661680000008,
+    "generation": 1915.996106399999
+   },
+   "session": null,
+   "files_rechecked": true,
+   "text_encode_reused": null,
+   "pipeline_reused": null,
+   "session_memory_at_start": null,
+   "peak_reserved_gib": 6.328
+  },
+  "free-generation/qwen/raw.png": {
+   "status": "completed",
+   "seed": 42,
+   "seconds": 1940.9139688999985,
+   "stage_seconds": {
+    "text_encode": 12.941556699999637,
+    "pipeline_load": 69.71867780000139,
+    "generation": 1857.510645299999
+   },
+   "session": {
+    "control": "D:\\genai-test\\session-reuse-20261024b\\flow\\runs\\f8a3de355b8640e88fe70c39b16a1e49\\free-generation\\qwen-session",
+    "job": 1,
+    "pid": 30588
+   },
+   "files_rechecked": true,
+   "text_encode_reused": null,
+   "pipeline_reused": null,
+   "session_memory_at_start": {
+    "allocated_bytes": 0,
+    "reserved_bytes": 0
+   },
+   "peak_reserved_gib": 6.361
+  },
+  "free-generation/qwen-2/raw.png": {
+   "status": "completed",
+   "seed": 43,
+   "seconds": 1897.5968379999995,
+   "stage_seconds": {
+    "generation": 1897.120702799999
+   },
+   "session": {
+    "control": "D:\\genai-test\\session-reuse-20261024b\\flow\\runs\\f8a3de355b8640e88fe70c39b16a1e49\\free-generation\\qwen-session",
+    "job": 2,
+    "pid": 30588
+   },
+   "files_rechecked": false,
+   "text_encode_reused": {
+    "from_job": 1,
+    "note": "지시문·입력 그림이 같아 첫 작업의 임베딩을 그대로 씀"
+   },
+   "pipeline_reused": {
+    "from_job": 1,
+    "note": "불러 둔 변환기·VAE·블록 오프로드를 그대로 씀"
+   },
+   "session_memory_at_start": {
+    "allocated_bytes": 22418944,
+    "reserved_bytes": 134217728
+   },
+   "peak_reserved_gib": 2.74
+  }
+ },
+ "session_jobs": [
+  {
+   "status": "completed",
+   "code": 0
+  },
+  {
+   "status": "completed",
+   "code": 0
+  }
+ ],
+ "memory": {
+  "device_used_peak_gib": 7.848,
+  "device_used_before_gib": 1.378,
+  "device_total_gib": 7.996,
+  "process_gpu_peak_gib": {
+   "studio": {
+    "dedicated": 0.0,
+    "shared": 0.0
+   },
+   "segmentation": {
+    "dedicated": 5.184,
+    "shared": 0.076
+   },
+   "qwen_single": {
+    "dedicated": 6.44,
+    "shared": 0.076
+   },
+   "qwen_session": {
+    "dedicated": 6.473,
+    "shared": 0.076
+   }
+  },
+  "session_and_segmentation_together": {
+   "samples": 24,
+   "dedicated_sum_peak_gib": 5.423
+  },
+  "ram_peak_gib": {
+   "studio": 1.076,
+   "other": 1.409,
+   "segmentation": 4.282,
+   "qwen_single": 26.337,
+   "qwen_session": 26.245
+  },
+  "sample_counts": {
+   "device_and_ram": 6416,
+   "process_counters": 6433
+  },
+  "note": "device = 장치 전체(다른 프로그램 포함). process = Windows 카운터(CUDA 문맥 포함). PyTorch reserved는 작업 프로세스 memory.json에 따로 있다"
+ },
+ "sha_result": "모두 같음",
+ "finished": "2026-10-24 18:24:52"
+}

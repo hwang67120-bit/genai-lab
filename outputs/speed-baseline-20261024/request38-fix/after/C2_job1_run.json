@@ -1,0 +1,15 @@
+{
+  "status": "completed",
+  "gates_executed": false,
+  "final_return_eligible": false,
+  "session": {
+    "control": "D:\\genai-test\\session-cpu-check-20261024\\C2",
+    "job": 1,
+    "pid": 3632
+  },
+  "request_sha256": "2bfd14f43d17fc7cea24e0917a8879b4b2f880b8baeec1b9d90fbaad655e71bd",
+  "fake_generation": {
+    "numpy": "2.2.6",
+    "cache_job": 1
+  }
+}

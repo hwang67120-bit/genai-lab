@@ -12,7 +12,7 @@ import traceback
 
 from genai_lab.qwen_preservation import PreservationSpec, file_sha, json_sha
 from genai_lab.qwen_pose_prompt import PoseEditInstructions, assemble_pose_edit_prompt
-from genai_lab.qwen_pose_settings import QwenPoseSettings, check_runtime_versions, output_dimensions, validate_model_files
+from genai_lab.qwen_pose_settings import OFFLOAD_ARGS, QwenPoseSettings, check_runtime_versions, output_dimensions, validate_model_files
 from genai_lab.qwen_record_io import write_json, publish_progress, write_terminal
 
 
@@ -345,7 +345,7 @@ def generate(request, directory, record, cache=None):
                 pipe.vae.enable_tiling()
                 record["vae_tiling"] = True
             tr.enable_group_offload(onload_device=torch.device("cuda"), offload_device=torch.device("cpu"),
-                                    offload_type="block_level", num_blocks_per_group=1)
+                                    offload_type="block_level", **OFFLOAD_ARGS[settings.offload])   # group_block1 = 지금과 같은 인자
             stage("transformer_loaded")
             record["stage_seconds"]["pipeline_load"] = time.perf_counter() - tick
         record["scheduler"] = {"class": type(pipe.scheduler).__name__, "config": dict(pipe.scheduler.config)}

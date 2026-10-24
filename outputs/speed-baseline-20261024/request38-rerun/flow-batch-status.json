@@ -1,0 +1,36 @@
+{
+  "state": "running",
+  "started": "2026-10-24 16:35:28",
+  "cases": {
+    "B2": {
+      "state": "ok",
+      "character": "C:\\Users\\user\\Downloads\\참조 이미지\\86a72742408d9b4d04f5fb23fb0b93bd.jpg",
+      "garment": "C:\\Users\\user\\Downloads\\참조 의상\\4b750036a001e45a39973c408855e970.jpg",
+      "elapsed_seconds": 6541,
+      "status_label": "상태: 완성했습니다. 마음에 들면 '저장'을 누르세요. 다시 만들려면 '이미지 생성'을 누르세요.",
+      "seconds": 6549,
+      "run": "D:\\genai-test\\session-reuse-20261024b\\flow\\runs\\f8a3de355b8640e88fe70c39b16a1e49",
+      "errors": [],
+      "scene": {
+        "text": "The character is reaching up to touch a hanging branch, with a dreamy look, in a snowy mountain village at sunset. Lighting: dappled sunlight falling through leaves. Color design: a pastel pink and mint green palette in the background and lighting only. Eye-level view, natural body proportions. Full-body shot: the whole character is visible from head to feet, with a detailed background.",
+        "seed": 2026898827,
+        "version": 2,
+        "parts": {
+          "indoor": false,
+          "period": "day",
+          "place": "in a snowy mountain village",
+          "action": "reaching up to touch a hanging branch",
+          "expression": "with a dreamy look",
+          "time": "at sunset",
+          "lighting": "dappled sunlight falling through leaves",
+          "palette": "pastel pink and mint green",
+          "weather": "",
+          "camera": "eye-level view"
+        },
+        "source": "scene_composer"
+      },
+      "result": "D:\\genai-test\\session-reuse-20261024b\\flow\\runs\\f8a3de355b8640e88fe70c39b16a1e49\\free-generation\\qwen\\raw.png",
+      "saved": "D:\\genai-test\\session-reuse-20261024b\\flow\\B2-saved.png"
+    }
+  }
+}

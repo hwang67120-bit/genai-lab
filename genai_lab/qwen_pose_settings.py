@@ -25,6 +25,16 @@ def check_runtime_versions(version=importlib.metadata.version):
     return actual
 
 
+# 블록 오프로드 설정 이름 → enable_group_offload 인자. 제품 설정 파일은 group_block1만 쓴다.
+# 나머지 둘은 요청 39 측정 전용(D-185): 채택 전에는 제품 설정 파일·기본값에 넣지 않는다.
+OFFLOAD_ARGS = {
+    "group_block1": dict(num_blocks_per_group=1),                       # 지금 제품: 블록 1개씩, 옮기기·계산 겹치지 않음
+    "group_block1_stream": dict(num_blocks_per_group=1, use_stream=True),  # 측정 전용: 다음 블록을 미리 옮김(고정 RAM 늘 수 있음)
+    "group_block2": dict(num_blocks_per_group=2),                       # 측정 전용: 한 번에 2블록
+}
+TRIAL_OFFLOADS = ("group_block1_stream", "group_block2")
+
+
 @dataclass(frozen=True)
 class QwenPoseSettings:
     python_executable: str
@@ -45,8 +55,8 @@ class QwenPoseSettings:
     def __post_init__(self):
         if not all((self.python_executable, self.model_root, self.gguf_file, self.artifact_manifest)):
             raise ValueError("Qwen 실행·모델·해시 명세 경로 설정이 필요합니다.")
-        if self.offload != "group_block1":
-            raise ValueError("검증된 group_block1 외 오프로드는 지원하지 않습니다.")
+        if self.offload not in OFFLOAD_ARGS:
+            raise ValueError("검증된 group_block1(또는 요청 39 측정 전용 이름) 외 오프로드는 지원하지 않습니다.")
         if (self.steps, self.true_cfg_scale, self.guidance_scale) != (40, 4.0, 1.0):
             raise ValueError("검증된 40단계/CFG 4.0/guidance 1.0을 사용해야 합니다.")
         for value in (self.artifact_manifest_sha256, self.gguf_sha256):

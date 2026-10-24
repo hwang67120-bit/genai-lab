@@ -87,7 +87,7 @@ def test_serve_runs_jobs_in_order_with_one_cache_and_stops_after_a_failure(tmp_p
     def run(path, cache, session):
         seen.append((Path(path).parent.name, id(cache), session["job"]))
         return (0, "completed") if session["job"] == 1 else (1, "failed")
-    code = worker.serve(control, watch=False, sleep=lambda s: None, run=run)
+    code = worker.serve(control, sleep=lambda s: None, run=run)
     assert code == 1
     assert [s[0] for s in seen] == ["r1", "r2"] and seen[0][1] == seen[1][1]       # 3번 작업은 실패 뒤라 받지 않는다
     assert json.loads((control / "job-000001.done.json").read_text(encoding="utf-8"))["status"] == "completed"
@@ -99,9 +99,81 @@ def test_serve_ends_on_close_or_when_idle(tmp_path):
     control = tmp_path / "control"
     control.mkdir()
     (control / "close").touch()
-    assert worker.serve(control, watch=False, sleep=lambda s: None, run=lambda *a, **k: pytest.fail("no job")) == 0
+    assert worker.serve(control, sleep=lambda s: None, run=lambda *a, **k: pytest.fail("no job")) == 0
+    assert json.loads((control / "session-ended.json").read_text(encoding="utf-8"))["reason"] == "close"
     (control / "close").unlink()
-    assert worker.serve(control, idle_seconds=0, watch=False, sleep=lambda s: None, run=lambda *a, **k: pytest.fail("no job")) == 0
+    assert worker.serve(control, idle_seconds=0, sleep=lambda s: None, run=lambda *a, **k: pytest.fail("no job")) == 0
+    assert json.loads((control / "session-ended.json").read_text(encoding="utf-8"))["reason"] == "idle"
+
+
+def test_parent_identity_needs_the_same_pid_and_creation_time():
+    import os
+    import psutil
+    me, created = os.getpid(), psutil.Process(os.getpid()).create_time()
+    assert worker.parent_alive(me, created)
+    assert not worker.parent_alive(me, created - 100)          # 같은 pid라도 다른 프로세스(pid 재사용)로 본다
+    assert not worker.parent_alive(2 ** 31 - 2, created)       # 없는 pid
+    assert worker.process_identity(2 ** 31 - 2) is None
+
+
+def test_serve_refuses_to_start_without_its_parent_and_records_why(tmp_path):
+    import os
+    control = tmp_path / "control"
+    control.mkdir()
+    watched = []
+    code = worker.serve(control, parent=(os.getpid(), 1.0), sleep=lambda s: None, run=lambda *a, **k: pytest.fail("no job"),
+                        watch=lambda *a: watched.append(a))
+    error = json.loads((control / "session-error.json").read_text(encoding="utf-8"))
+    assert code == 2 and error["stage"] == "start" and "실행기 프로세스를 확인할 수 없습니다" in error["error"] and watched == []
+    assert worker.serve(tmp_path / "missing", sleep=lambda s: None, run=lambda *a, **k: pytest.fail("no job")) == 2
+
+
+def test_serve_watches_a_live_parent_before_taking_jobs(tmp_path):
+    import os
+    import psutil
+    control = tmp_path / "control"
+    control.mkdir()
+    (control / "close").touch()
+    watched = []
+    parent = (os.getpid(), psutil.Process(os.getpid()).create_time())
+    assert worker.serve(control, parent=parent, sleep=lambda s: None, run=lambda *a, **k: None, watch=lambda *a: watched.append(a)) == 0
+    assert watched == [(parent[0], parent[1], control.resolve())]
+
+
+def test_a_job_that_raises_is_recorded_as_failed_instead_of_hanging(tmp_path):
+    control = tmp_path / "control"
+    control.mkdir()
+    write_json(control / "job-000001.json", dict(request=str(tmp_path / "r1" / "request.json")))
+
+    def run(path, cache, session):
+        raise SystemExit("기존 실행 결과를 덮어쓰거나 자동 재시도하지 않습니다.")
+    assert worker.serve(control, sleep=lambda s: None, run=run) == 1
+    assert json.loads((control / "job-000001.done.json").read_text(encoding="utf-8"))["status"] == "failed"
+    assert "덮어쓰거나" in json.loads((control / "session-error.json").read_text(encoding="utf-8"))["error"]
+    (control / "job-000001.done.json").unlink()
+    (control / "job-000001.json").write_text("{깨진 json", encoding="utf-8")
+    assert worker.serve(control, sleep=lambda s: None, run=lambda *a, **k: pytest.fail("not reached")) == 1
+    assert json.loads((control / "session-error.json").read_text(encoding="utf-8"))["error_type"] == "JSONDecodeError"
+
+
+def test_watcher_records_and_exits_when_the_parent_is_gone(tmp_path):
+    import os
+    import threading
+    exited = threading.Event()
+    codes = []
+    worker.watch_parent(os.getpid(), 1.0, tmp_path, interval=0.01, exit=lambda code: codes.append(code) or exited.set())
+    assert exited.wait(5) and codes == [3]
+    ended = json.loads((tmp_path / "session-ended.json").read_text(encoding="utf-8"))
+    assert ended["reason"] == "parent_gone" and ended["parent_pid"] == os.getpid()
+
+
+def test_session_arguments_are_parsed_strictly():
+    control, parent, idle = worker.parse_session_args(["--session", "c", "--parent-pid", "12", "--parent-created", "3.5"])
+    assert (control, parent, idle) == ("c", (12, 3.5), worker.SESSION_IDLE_SECONDS)
+    assert worker.parse_session_args(["--session", "c", "--idle-seconds", "3"])[2] == 3.0
+    for bad in (["--session", "c", "--parent-pid", "12"], ["--session", "c", "--other", "1"], ["--session", "c", "x"]):
+        with pytest.raises(SystemExit):
+            worker.parse_session_args(bad)
 
 
 class FakeProcess:
@@ -134,8 +206,12 @@ def test_session_starts_one_process_and_accepts_only_seed_changes(tmp_path):
     session = QwenSession(settings(), tmp_path / "qwen-session", popen=lambda c, **k: started.append(FakeProcess(c, **k)) or started[-1])
     assert session.submit(tmp_path / "q1" / "request.json", request(42)) == 1
     assert session.submit(tmp_path / "q2" / "request.json", request(43)) == 2
-    assert len(started) == 1 and started[0].command[-2:] == ["--session", str(tmp_path / "qwen-session")]
-    assert started[0].kwargs["stdin"] is subprocess.PIPE and started[0].kwargs["shell"] is False
+    import os
+    command = started[0].command
+    assert len(started) == 1 and command[command.index("--session") + 1] == str(tmp_path / "qwen-session")
+    assert int(command[command.index("--parent-pid") + 1]) == os.getpid()
+    assert worker.parent_alive(os.getpid(), float(command[command.index("--parent-created") + 1]))
+    assert started[0].kwargs["stdin"] is subprocess.DEVNULL and started[0].kwargs["shell"] is False   # 표준 입력을 열지 않는다(D-183)
     job2 = json.loads((tmp_path / "qwen-session" / "job-000002.json").read_text(encoding="utf-8"))
     assert job2["request"].endswith("request.json") and job2["request_sha256"] == json_sha(request(43))
     changed = request(43)
@@ -222,3 +298,24 @@ def test_cancel_kills_the_session(tmp_path):
         qwen_pose_edit._run_in_session(req, directory, record, session, spec, (768, 1024),
                                        cancelled=lambda: True, on_progress=lambda _: None)
     assert session.killed and (directory / "cancel.request").exists()
+
+
+def test_missing_results_are_not_comparable_rather_than_mismatched(tmp_path, monkeypatch):
+    import importlib.util
+    monkeypatch.setenv("GENAI_QWEN_SESSION_REUSE", "0")       # 실행기가 가져올 때 켜는 값을 시험 뒤 되돌린다
+    spec = importlib.util.spec_from_file_location("session_reuse_check", Path(__file__).resolve().parents[1] / "scripts/session_reuse_check.py")
+    check = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(check)
+    (tmp_path / "new" / "outfit-edit" / "qwen").mkdir(parents=True)
+    (tmp_path / "old" / "outfit-edit" / "qwen").mkdir(parents=True)
+    (tmp_path / "old" / "free-generation" / "qwen").mkdir(parents=True)
+    (tmp_path / "new" / "outfit-edit" / "qwen" / "raw.png").write_bytes(b"same")
+    (tmp_path / "old" / "outfit-edit" / "qwen" / "raw.png").write_bytes(b"same")
+    (tmp_path / "old" / "free-generation" / "qwen" / "raw.png").write_bytes(b"x")
+    rows = check.compare(tmp_path / "new", tmp_path / "old")
+    assert rows["outfit-edit/qwen/raw.png"]["same"] is True and rows["free-generation/qwen/raw.png"]["same"] is None
+    summary = check.sha_summary(rows)
+    assert summary.startswith("비교 불가") and "불일치" not in summary
+    rows["outfit-edit/qwen/raw.png"]["same"] = False
+    assert "불일치" in check.sha_summary(rows) and "비교 불가" in check.sha_summary(rows)
+    assert check.sha_summary({}) == "비교 불가 — 비교할 기록 없음"

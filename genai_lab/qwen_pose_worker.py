@@ -473,34 +473,80 @@ def run_one(path, cache=None, session=None):
     return code, record["status"]
 
 
-def watch_parent(stream):
-    """실행기가 끝나 표준 입력이 닫히면 바로 끝낸다(남은 세션 프로세스가 GPU를 붙잡지 않게)."""
+SESSION_PARENT_POLL_SECONDS = 2.0
+
+
+def process_identity(pid):
+    """(pid, 생성 시각). 그 pid의 프로세스가 없으면 None."""
+    import psutil
+    try:
+        return int(pid), psutil.Process(int(pid)).create_time()
+    except (psutil.Error, ValueError):
+        return None
+
+
+def parent_alive(pid, created):
+    """pid와 생성 시각이 둘 다 같아야 같은 부모다 — 부모가 끝난 뒤 같은 pid를 다른 프로세스가 받아도 살아 있다고 보지 않는다."""
+    identity = process_identity(pid)
+    return identity is not None and abs(identity[1] - float(created)) < 0.01
+
+
+def session_record(control, name, **fields):
+    """세션 기록(session-error.json·session-ended.json). 쓰지 못해도 종료 코드는 그대로 남는다."""
+    try:
+        write_json(Path(control) / name, dict(fields, pid=os.getpid(), at=time.strftime("%Y-%m-%d %H:%M:%S")))
+    except OSError:
+        pass
+
+
+def watch_parent(pid, created, control, *, interval=SESSION_PARENT_POLL_SECONDS, exit=os._exit):
+    """부모(실행기)를 pid·생성 시각으로 주기적으로 확인하고, 사라지면 기록을 남기고 끝낸다(D-183).
+    표준 입력을 읽지 않는다 — 막힌 표준 입력 읽기가 Windows에서 네이티브 모듈 불러오기와 교착했다(요청 38, D-182)."""
     import threading
 
-    def wait():
-        try:
-            while stream.read(1024):
-                pass
-        finally:
-            os._exit(3)
-    threading.Thread(target=wait, daemon=True).start()
+    def loop():
+        while parent_alive(pid, created):
+            time.sleep(interval)
+        session_record(control, "session-ended.json", reason="parent_gone", parent_pid=int(pid), parent_created=float(created))
+        exit(3)
+    thread = threading.Thread(target=loop, daemon=True)
+    thread.start()
+    return thread
 
 
-def serve(control, *, idle_seconds=SESSION_IDLE_SECONDS, watch=True, sleep=time.sleep, run=run_one):
+def serve(control, *, parent=None, idle_seconds=SESSION_IDLE_SECONDS, sleep=time.sleep, run=run_one, watch=watch_parent):
     """세션(D-180): control 폴더의 job-000001.json, job-000002.json…을 차례로 처리한다. close 파일이 생기면 끝낸다.
-    한 작업이라도 완료되지 않으면(실패·취소) 넘길 상태를 버리고 바로 끝낸다 — 다음 요청은 새 프로세스가 맡는다."""
+    한 작업이라도 완료되지 않으면(실패·취소) 넘길 상태를 버리고 바로 끝낸다 — 다음 요청은 새 프로세스가 맡는다.
+    parent = (pid, 생성 시각): 실행기. 시작 때 확인하고 계속 감시한다. 시작에서 실패하면 session-error.json + 종료 코드 2,
+    작업 처리 중 예외는 session-error.json + 실패 완료 표시 + 종료 코드 1(무응답으로 남지 않게, D-183)."""
     control = Path(control).resolve()
-    if watch:
-        watch_parent(sys.stdin)
+    try:
+        if not control.is_dir():
+            raise FileNotFoundError(f"세션 폴더가 없습니다: {control}")
+        if parent is not None:
+            if not parent_alive(*parent):
+                raise RuntimeError(f"실행기 프로세스를 확인할 수 없습니다(pid {parent[0]}, 생성 시각 불일치 또는 종료) — 시작하지 않음")
+            watch(parent[0], parent[1], control)
+    except BaseException as error:  # noqa: BLE001
+        session_record(control, "session-error.json", stage="start", error_type=type(error).__name__, error=str(error)[:2000],
+                       traceback=traceback.format_exc()[-3000:])
+        print(f"세션 시작 실패: {type(error).__name__}: {error}", file=sys.stderr, flush=True)
+        return 2
     cache = SessionCache()
     number, idle_since = 1, time.monotonic()
     while True:
         if (control / "close").exists():
+            session_record(control, "session-ended.json", reason="close", jobs=number - 1)
             return 0
         job = control / f"job-{number:06d}.json"
         if job.exists():
-            data = json.loads(job.read_text(encoding="utf-8"))
-            code, status = run(data["request"], cache=cache, session=dict(control=str(control), job=number, pid=os.getpid()))
+            try:
+                data = json.loads(job.read_text(encoding="utf-8"))
+                code, status = run(data["request"], cache=cache, session=dict(control=str(control), job=number, pid=os.getpid()))
+            except BaseException as error:  # noqa: BLE001 — 작업 시작 전 거부(기존 결과 덮어쓰기 등)·잘못된 작업 파일
+                code, status = 1, "failed"
+                session_record(control, "session-error.json", stage=f"job-{number:06d}", error_type=type(error).__name__,
+                               error=str(error)[:2000], traceback=traceback.format_exc()[-3000:])
             # 요청 폴더의 run.final.json·run.json을 다 쓴 뒤에 알린다(실행기가 쓰는 중인 기록을 열지 않게)
             write_json(control / f"job-{number:06d}.done.json", dict(status=status, code=code))
             if status != "completed":
@@ -508,16 +554,28 @@ def serve(control, *, idle_seconds=SESSION_IDLE_SECONDS, watch=True, sleep=time.
             number, idle_since = number + 1, time.monotonic()
             continue
         if time.monotonic() - idle_since > idle_seconds:
+            session_record(control, "session-ended.json", reason="idle", idle_seconds=idle_seconds, jobs=number - 1)
             return 0
         sleep(.2)
 
 
+def parse_session_args(args):
+    """--session CONTROL [--parent-pid N --parent-created T] [--idle-seconds S]"""
+    values = dict(zip(args[2::2], args[3::2]))
+    unknown = set(values) - {"--parent-pid", "--parent-created", "--idle-seconds"}
+    if len(args) % 2 or unknown or ("--parent-pid" in values) != ("--parent-created" in values):
+        raise SystemExit("usage: --session CONTROL [--parent-pid N --parent-created T] [--idle-seconds S]")
+    parent = (int(values["--parent-pid"]), float(values["--parent-created"])) if "--parent-pid" in values else None
+    return args[1], parent, float(values.get("--idle-seconds", SESSION_IDLE_SECONDS))
+
+
 def main(argv=None):
     args = sys.argv[1:] if argv is None else argv
-    if len(args) == 2 and args[0] == "--session":
-        return serve(args[1])
+    if len(args) >= 2 and args[0] == "--session":
+        control, parent, idle = parse_session_args(args)
+        return serve(control, parent=parent, idle_seconds=idle)
     if len(args) != 1:
-        raise SystemExit("usage: python -m genai_lab.qwen_pose_worker REQUEST.json | --session CONTROL_DIR")
+        raise SystemExit("usage: python -m genai_lab.qwen_pose_worker REQUEST.json | --session CONTROL_DIR [--parent-pid N --parent-created T]")
     return run_one(args[0])[0]
 
 

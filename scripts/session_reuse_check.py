@@ -6,6 +6,7 @@
   process  Windows 'GPU Process Memory' 카운터의 프로세스별 전용·공유 사용량(약 2초, 새로 뜬 프로세스 포함) — CUDA 문맥 포함
   ram      psutil 이 실행기 아래 모든 프로세스의 RSS·명령줄(1초)
 판정은 하지 않는다. 그림 SHA가 다르면 '불일치 — 원인 조사'로만 적는다(품질 실패·성공으로 바꾸지 않음).
+그림이 만들어지지 않았으면 '비교 불가'다 — 불일치와 구분한다(D-183).
 사용: python scripts/session_reuse_check.py <줄 목록 json> <줄 이름> <출력 폴더(새 폴더)> <요청 37 흐름 폴더>
 """
 import hashlib
@@ -142,9 +143,21 @@ def compare(run_dir, baseline_dir):
     for rel in COMPARE:
         new, old = Path(run_dir) / rel, Path(baseline_dir) / rel
         rows[rel] = dict(exists=new.exists(), baseline=str(old),
-                         same=new.exists() and old.exists() and sha(new) == sha(old),
+                         same=(sha(new) == sha(old)) if new.exists() and old.exists() else None,     # None = 비교 불가(그림 없음)
                          new_sha256=sha(new) if new.exists() else None, baseline_sha256=sha(old) if old.exists() else None)
     return rows
+
+
+def sha_summary(rows):
+    """그림 대조 요약: 같음 / 불일치(그림이 다름 — 원인 조사) / 비교 불가(그림이 없음). 품질 판정이 아니다(D-183)."""
+    mismatched = [k for k, v in rows.items() if v["same"] is False]
+    missing = [k for k, v in rows.items() if v["same"] is None]
+    parts = []
+    if mismatched:
+        parts.append(f"불일치 — 원인 조사 필요(품질 실패·성공으로 처리하지 않음): {mismatched}")
+    if missing:
+        parts.append(f"비교 불가 — 그림이 만들어지지 않음: {missing}")
+    return "모두 같음" if rows and not parts else " / ".join(parts) if parts else "비교 불가 — 비교할 기록 없음"
 
 
 def worker_records(run_dir):
@@ -204,9 +217,7 @@ def main(argv):
     finally:
         sampler.finish()
         report["memory"] = summarize_memory(out)
-        mismatched = [k for k, v in (report.get("image_sha_comparison") or {}).items() if not v["same"]]
-        report["sha_result"] = ("모두 같음" if report.get("image_sha_comparison") and not mismatched
-                                else f"불일치 — 원인 조사 필요(품질 실패·성공으로 처리하지 않음): {mismatched}" if mismatched else "비교 못 함")
+        report["sha_result"] = sha_summary(report.get("image_sha_comparison") or {})
         report["finished"] = time.strftime("%Y-%m-%d %H:%M:%S")
         (out / "report.json").write_text(json.dumps(report, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
         print(json.dumps({k: report.get(k) for k in ("sha_result", "saved_same_as_request37", "error")}, ensure_ascii=False))

@@ -6,7 +6,8 @@
 - 세션에 넣는 요청: 자유 생성, 가속·그림체 LoRA 없음, 첫 요청과 seed 밖의 내용이 같음(`qwen_pose_worker.reuse_key`). 아니면 세션을 쓰지 않는다.
 - 요청마다 새로: 요청 폴더·request.json·launcher.json, seed·생성기, 입력 그림 SHA 확인, model_inputs, 진행·미리보기 기록, 메모리 감시.
 - 한 작업이라도 완료되지 않으면(실패·취소·메모리 중단) 프로세스를 끝내고 세션을 닫는다 — 다음 요청은 새 프로세스.
-- 실행기가 끝나면(표준 입력이 닫힘) 작업 프로세스도 끝난다. 다음 작업이 30분 안에 없으면 스스로 끝난다.
+- 실행기가 끝나면 작업 프로세스도 끝난다: 실행기 pid·생성 시각을 넘겨 작업 프로세스가 2초마다 확인한다(D-183 — 표준 입력은 읽지 않는다).
+  다음 작업이 30분 안에 없으면 스스로 끝난다.
 - 기본값은 꺼짐: GPU 확인(MEMORY_OPTIMIZATION_PLAN 11.4 M4) 전에는 `GENAI_QWEN_SESSION_REUSE=1`일 때만 쓴다.
 """
 import os
@@ -29,7 +30,10 @@ class QwenSession:
     def __init__(self, settings, control, *, popen=subprocess.Popen):
         self.settings, self.control, self.popen = settings, Path(control), popen
         self.process = self.log = self.key = None
-        self.command = [settings.python_executable, "-m", "genai_lab.qwen_pose_worker", "--session", str(self.control)]
+        import psutil
+        self.parent = (os.getpid(), psutil.Process(os.getpid()).create_time())      # 작업 프로세스가 감시할 실행기(pid·생성 시각)
+        self.command = [settings.python_executable, "-m", "genai_lab.qwen_pose_worker", "--session", str(self.control),
+                        "--parent-pid", str(self.parent[0]), "--parent-created", repr(self.parent[1])]
         self.jobs = 0
         self.closed = False
 
@@ -52,7 +56,7 @@ class QwenSession:
             self.log = (self.control / "worker.log").open("w", encoding="utf-8")
             creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
             self.process = self.popen(self.command, cwd=str(Path(__file__).resolve().parents[1]), env=child_environment(),
-                                      stdin=subprocess.PIPE, stdout=self.log, stderr=subprocess.STDOUT, shell=False,
+                                      stdin=subprocess.DEVNULL, stdout=self.log, stderr=subprocess.STDOUT, shell=False,
                                       creationflags=creationflags)
         self.key = reuse_key(request)
         self.jobs += 1

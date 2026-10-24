@@ -271,7 +271,16 @@ def _run_in_session(request, directory, record, session, spec, basis_size, *, ca
             session.kill()
             raise RuntimeError("사용자가 Qwen 실행을 취소했습니다.")
         if not session.alive():
-            raise RuntimeError(f"Qwen 세션 프로세스가 끝났습니다(exit={session.process.poll()}); 세션 worker.log 확인")
+            reason = ""
+            for name in ("session-error.json", "session-ended.json"):      # 작업 프로세스가 남긴 이유(D-183)
+                if (session.control / name).exists():
+                    try:
+                        detail = json.loads((session.control / name).read_text(encoding="utf-8"))
+                        reason = f" — {detail.get('error') or detail.get('reason')}"
+                    except (OSError, ValueError):
+                        pass
+                    break
+            raise RuntimeError(f"Qwen 세션 프로세스가 끝났습니다(exit={session.process.poll()}){reason}; 세션 worker.log 확인")
         progress = latest_progress(directory)
         if progress is not None and progress[0] != last_progress:
             try:

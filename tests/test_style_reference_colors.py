@@ -1,0 +1,73 @@
+"""참조 색 맞춤(D-187 다음 단계): 원본 색으로 옮기되 참조의 명암 변화는 유지, 피부는 옷에서 빠진다."""
+import numpy as np
+
+from genai_lab.style_reference_colors import clusters, lab_to_rgb, match_part, recolor_reference, rgb_to_lab
+
+
+def test_lab_round_trip():
+    rgb = np.random.default_rng(0).integers(0, 256, (32, 32, 3), dtype=np.uint8)
+    assert np.abs(lab_to_rgb(rgb_to_lab(rgb)).astype(int) - rgb).max() <= 1
+
+
+def test_match_moves_colour_and_keeps_shading():
+    ref = np.zeros((40, 40, 3), np.uint8)
+    ref[:, :20] = (200, 200, 205)                 # light silver with two shades
+    ref[:, 20:] = (170, 170, 175)
+    src = np.full((40, 40, 3), (25, 22, 20), np.uint8)   # black hair
+    mask = np.ones((40, 40), bool)
+    lab, record = match_part(rgb_to_lab(ref), mask, rgb_to_lab(src), mask)
+    assert record["state"] == "matched"
+    out = lab_to_rgb(lab)
+    assert out.mean() < 80                           # now dark
+    assert out[:, :20].mean() > out[:, 20:].mean()   # light/dark pattern of the reference kept
+
+
+def test_two_colours_pair_by_lightness():
+    lab = rgb_to_lab(np.array([[[30, 60, 30]] * 50 + [[240, 235, 220]] * 50], np.uint8)).reshape(-1, 3)
+    label, centers = clusters(lab, 2)
+    assert centers[0, 0] < centers[1, 0] and set(label[:50]) == {0} and set(label[50:]) == {1}
+
+
+def test_skin_is_excluded_from_clothes_and_background_is_plain():
+    h, w = 60, 60
+    skin = (225, 170, 140)
+    ref = np.full((h, w, 3), skin, np.uint8)
+    ref[30:, :] = (60, 90, 160)                      # denim below
+    src = np.full((h, w, 3), (120, 85, 60), np.uint8)
+    src[30:, :] = (70, 70, 72)                       # charcoal trousers
+    face = np.zeros((h, w), bool); face[:10, :10] = True
+    bottom = np.zeros((h, w), bool); bottom[20:, :] = True   # parser also covers bare skin rows 20..29
+    parts = dict(face=face, bottomwear=bottom)
+    alpha = np.ones((h, w)); alpha[:, :5] = 0
+    plan = {"lower": dict(reference=["bottomwear"], source=["bottomwear"])}
+    out, record = recolor_reference(ref, parts, src, dict(face=face, bottomwear=bottom), plan, alpha)
+    assert record["lower"]["state"] == "matched"
+    assert np.abs(out[22, 30].astype(int) - skin).max() <= 3          # bare skin inside the parser mask untouched
+    assert out[45, 30, 2] < 110                                      # denim blue gone
+    assert tuple(out[45, 2]) == (214, 210, 202)                       # background plain
+
+
+def test_shades_of_one_colour_merge_and_largest_picks_the_wide_colour():
+    lab = np.array([[18.0, -7.2, 9.6]] * 60 + [[47.8, -11.1, 14.7]] * 60)    # T014 vest, dark and light side (measured)
+    assert len(clusters(lab, 2)[1]) == 1                               # one olive vest in two shades
+    assert len(clusters(lab, 2, merge_ab=0.0)[1]) == 2                 # the reference side keeps them apart
+    ref = np.full((20, 20, 3), (60, 90, 160), np.uint8)                # denim
+    src = np.full((20, 20, 3), (80, 78, 78), np.uint8)                 # wide grey trousers
+    src[:4] = (64, 80, 50)                                             # small olive vest hem
+    mask = np.ones((20, 20), bool)
+    out, record = match_part(rgb_to_lab(ref), mask, rgb_to_lab(src), mask, source="largest")
+    colour = lab_to_rgb(out)[10, 10].astype(int)
+    assert record["source_colours"] == 2 and abs(colour[0] - colour[2]) < 12 and abs(colour[1] - colour[2]) < 12
+
+
+def test_reference_light_and_dark_garments_pair_with_shirt_and_vest():
+    ref = np.zeros((20, 40, 3), np.uint8)
+    ref[:, :20] = (235, 235, 238)                                      # white crop top
+    ref[:, 20:] = (40, 40, 48)                                         # dark jacket / print
+    src = np.zeros((20, 40, 3), np.uint8)
+    src[:, :20] = (60, 80, 45)                                         # olive vest
+    src[:, 20:] = (240, 235, 220)                                      # ivory shirt
+    mask = np.ones((20, 40), bool)
+    out = lab_to_rgb(match_part(rgb_to_lab(ref), mask, rgb_to_lab(src), mask, k=2)[0]).astype(int)
+    assert out[10, 5, 0] > 180 and out[10, 5, 2] < out[10, 5, 0]       # white top -> ivory
+    assert out[10, 30, 1] > out[10, 30, 2] and out[10, 30].mean() < 120  # dark garment -> olive

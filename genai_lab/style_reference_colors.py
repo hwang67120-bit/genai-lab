@@ -11,12 +11,21 @@ GPU 비교 v2~v4에서 그림체 참조에 남은 색·내용(머리색·청바�
 - 분할기의 부위 이름은 그림마다 다른 옷을 가리킨다(T014: bottomwear = 조끼 아랫부분, legwear = 바지, handwear = 셔츠 소매 /
   target-02: legwear·handwear = 맨살). 그래서 계획은 이름이 아니라 역할로 묶는다: 역할마다 참조 부위들·원본 부위들,
   원본 색 고르는 법(pair = 밝기 순서 짝, largest = 가장 넓은 색 하나).
-- 피부처럼 보이는 픽셀은 옷 역할에서 뺀다(분할기가 맨살을 옷으로 잡는 경우, D-187 v4 첫 시도).
+- 피부처럼 보이는 픽셀은 옷 역할에서 뺀다(분할기가 맨살을 옷으로 잡는 경우, D-187 v4 첫 시도). 그늘진 피부도 잡도록
+  범위를 넓게 둔다(V001 시험에서 팔·어깨 그늘이 옷으로 칠해짐, 10/29).
+- 아래옷은 윗옷에서 이미 쓴 색을 원본 후보에서 뺀다(exclude_colours_of). 긴 코트 아랫자락이 bottomwear로 잡혀 바지보다
+  넓게 나온 경우(V001) 코트 색이 아래옷으로 뽑히는 것을 막는다. 빼고 남는 게 없으면(원피스) 원래 후보를 쓴다.
+- 확실하지 않으면 중립색(사용자 10/29 1번): "largest"로 고른 원본 색이 그림의 min_fraction(기본 2%) 미만이거나 남은
+  후보의 절반 미만이면 그 색을 믿지 않고 참조 부위를 회색(명암만 유지)으로 둔다. 옷이 거의 가려진 경우(V001 바지는
+  긴 코트에 가려 약 1%) 틀린 색을 밀어 넣지 않기 위함이다. 문장(특징표)이 그 부위 색을 맡는다.
+- 원본의 선화(밝기 L < 8인 검은 윤곽선)는 옷 색 후보에서 뺀다. 좁은 바지 영역에서는 윤곽선이 바지보다 많아
+  "가장 넓은 색"이 검정이 되는 경우가 있었다(V001). 남는 게 50픽셀 미만이면 빼지 않는다.
 """
 import numpy as np
 
 _M = np.array([[0.4124564, 0.3575761, 0.1804375], [0.2126729, 0.7151522, 0.0721750], [0.0193339, 0.1191920, 0.9503041]])
 _WHITE = np.array([0.95047, 1.0, 1.08883])
+INK_L = 8.0          # source pixels darker than this are outlines, not garment colour
 
 
 def rgb_to_lab(rgb):
@@ -46,8 +55,8 @@ def skin_like(rgb, face):
         return np.zeros(face.shape, bool)
     h5, h95 = np.percentile(hsv[..., 0][face], [5, 95])
     s5, s95 = np.percentile(hsv[..., 1][face], [5, 95])
-    return ((hsv[..., 0] >= h5 - 6) & (hsv[..., 0] <= h95 + 6) & (hsv[..., 1] >= max(s5 - 20, 18))
-            & (hsv[..., 1] <= s95 + 40) & (hsv[..., 2] > 50))
+    return ((hsv[..., 0] >= h5 - 8) & (hsv[..., 0] <= h95 + 8) & (hsv[..., 1] >= max(s5 - 20, 18))
+            & (hsv[..., 1] <= s95 + 60) & (hsv[..., 2] > 35))
 
 
 def clusters(lab, k, iterations=12, merge_ab=12.0):
@@ -68,17 +77,42 @@ def clusters(lab, k, iterations=12, merge_ab=12.0):
     return remap[label], centers[order]
 
 
+def neutral_part(reference_lab, reference_mask, lightness=(30.0, 82.0)):
+    """참조 부위를 무채색으로: 참조의 밝기 순서(2~98%)를 좁힌 회색 범위에 옮긴다(D-187 v4와 같은 뜻)."""
+    out = reference_lab.copy()
+    px = reference_lab[reference_mask]
+    lo, hi = np.percentile(px[:, 0], [2, 98])
+    t = np.clip((px[:, 0] - lo) / max(hi - lo, 1e-3), 0, 1)
+    px = np.stack([lightness[0] + (lightness[1] - lightness[0]) * t, np.zeros(len(px)), np.zeros(len(px))], -1)
+    out[reference_mask] = px
+    return out
+
+
 def match_part(reference_lab, reference_mask, source_lab, source_mask, k=1, source="pair", chroma_keep=0.1,
-               lightness_ratio=(0.5, 1.2)):
+               lightness_ratio=(0.5, 1.2), min_fraction=None):
     """참조 부위의 Lab을 원본 부위의 색으로 옮긴다. source="largest"면 원본을 둘로 나눠 넓은 쪽 색 하나만 쓴다.
     반환: 새 Lab(부위 밖은 그대로)과 기록."""
     out = reference_lab.copy()
     ref_px, src_px = reference_lab[reference_mask], source_lab[source_mask]
+    if (src_px[:, 0] >= INK_L).sum() >= 50:
+        src_px = src_px[src_px[:, 0] >= INK_L]                       # line art is not a garment colour
+    if len(ref_px) >= 50 and len(src_px) < 50 and source == "largest" and min_fraction is not None:
+        return neutral_part(reference_lab, reference_mask), dict(          # no evidence at all: grey, never the reference colour
+            state="neutral_uncertain", reason="source part too small to read a colour", source_pixels=int(len(src_px)))
     if len(ref_px) < 50 or len(src_px) < 50:
         return out, dict(state="skipped_too_small", reference_pixels=int(len(ref_px)), source_pixels=int(len(src_px)))
     ref_label, ref_centers = clusters(ref_px, k, merge_ab=0.0)
     src_label, src_centers = clusters(src_px, 2 if source == "largest" else k)
-    largest = int(np.bincount(src_label).argmax())
+    counts = np.bincount(src_label, minlength=len(src_centers))
+    largest = int(counts.argmax())
+    evidence = dict(source_cluster_pixels=counts.tolist(), image_pixels=int(reference_mask.size),
+                    chosen_fraction_of_image=round(float(counts[largest]) / source_mask.size, 4),
+                    chosen_share_of_candidates=round(float(counts[largest]) / max(len(src_px), 1), 3))
+    if source == "largest" and min_fraction is not None and (
+            evidence["chosen_fraction_of_image"] < min_fraction or evidence["chosen_share_of_candidates"] < 0.5):
+        return neutral_part(reference_lab, reference_mask), dict(
+            state="neutral_uncertain", reason=f"chosen colour below {min_fraction:.0%} of the image or half of the candidates",
+            source_centers=np.round(src_centers, 2).tolist(), **evidence)
     new = ref_px.copy()
     pairs = []
     for i in range(len(ref_centers)):
@@ -95,7 +129,16 @@ def match_part(reference_lab, reference_mask, source_lab, source_mask, k=1, sour
     new[:, 0] = np.clip(new[:, 0], 0, 100)
     out[reference_mask] = new
     return out, dict(state="matched", k=k, source=source, reference_colours=len(ref_centers),
-                     source_colours=len(src_centers), pairs=pairs)
+                     source_colours=len(src_centers), source_centers=np.round(src_centers, 2).tolist(), pairs=pairs, **evidence)
+
+
+def without_colours(lab, mask, centers, max_ab=12.0, max_l=25.0):
+    """mask에서 centers(다른 역할에서 이미 쓴 원본 색)와 같은 색으로 보이는 픽셀을 뺀다(색상 가깝고 밝기도 가까움)."""
+    keep = np.asarray(mask, bool).copy()
+    for c in np.asarray(centers, np.float64).reshape(-1, 3):
+        same = (np.linalg.norm(lab[..., 1:] - c[1:], axis=-1) < max_ab) & (np.abs(lab[..., 0] - c[0]) < max_l)
+        keep &= ~same
+    return keep
 
 
 def union(parts, names):
@@ -104,8 +147,10 @@ def union(parts, names):
 
 def recolor_reference(reference_rgb, reference_parts, source_rgb, source_parts, plan, background_alpha=None,
                       background_rgb=(214, 210, 202)):
-    """plan: {역할: dict(reference=[부위…], source=[부위…], k=색 수, pick="pair"|"largest", keep_skin=False)}.
-    keep_skin이 아니면(옷 역할) 양쪽 모두 피부처럼 보이는 픽셀을 뺀다. 배경 알파가 있으면 배경을 단색으로."""
+    """plan: {역할: dict(reference=[부위…], source=[부위…], k=색 수, pick="pair"|"largest", keep_skin=False,
+    exclude_colours_of=다른 역할, min_fraction=확신 기준)}. keep_skin이 아니면(옷 역할) 양쪽 모두 피부처럼 보이는 픽셀을 뺀다.
+    exclude_colours_of가 있으면 그 역할에서 쓴 원본 색을 원본 후보에서 뺀다(남는 게 50픽셀 미만이면 빼지 않음).
+    배경 알파가 있으면 배경을 단색으로."""
     ref_skin = skin_like(reference_rgb, reference_parts["face"])
     src_skin = skin_like(source_rgb, source_parts["face"])
     lab, src_lab = rgb_to_lab(reference_rgb), rgb_to_lab(source_rgb)
@@ -114,8 +159,18 @@ def recolor_reference(reference_rgb, reference_parts, source_rgb, source_parts, 
         ref_mask, src_mask = union(reference_parts, rule["reference"]), union(source_parts, rule["source"])
         if not rule.get("keep_skin", False):
             ref_mask, src_mask = ref_mask & ~ref_skin, src_mask & ~src_skin
-        lab, record[role] = match_part(lab, ref_mask, src_lab, src_mask, rule.get("k", 1), rule.get("pick", "pair"))
-        record[role].update(reference_parts=rule["reference"], source_parts=rule["source"])
+        excluded = None
+        other = rule.get("exclude_colours_of")
+        if other and record.get(other, {}).get("source_centers"):
+            narrowed = without_colours(src_lab, src_mask, record[other]["source_centers"])
+            excluded = int(src_mask.sum() - narrowed.sum())
+            if narrowed.sum() >= 50:
+                src_mask = narrowed
+            else:
+                excluded = f"kept_all ({excluded} matched {other}; one-piece)"
+        lab, record[role] = match_part(lab, ref_mask, src_lab, src_mask, rule.get("k", 1), rule.get("pick", "pair"),
+                                       min_fraction=rule.get("min_fraction"))
+        record[role].update(reference_parts=rule["reference"], source_parts=rule["source"], excluded_source_pixels=excluded)
     result = lab_to_rgb(lab).astype(np.float64)
     if background_alpha is not None:
         a = np.asarray(background_alpha, np.float64)[..., None]

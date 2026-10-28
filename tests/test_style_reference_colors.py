@@ -1,7 +1,7 @@
 """참조 색 맞춤(D-187 다음 단계): 원본 색으로 옮기되 참조의 명암 변화는 유지, 피부는 옷에서 빠진다."""
 import numpy as np
 
-from genai_lab.style_reference_colors import clusters, lab_to_rgb, match_part, recolor_reference, rgb_to_lab
+from genai_lab.style_reference_colors import clusters, lab_to_rgb, match_part, recolor_reference, rgb_to_lab, without_colours
 
 
 def test_lab_round_trip():
@@ -71,3 +71,35 @@ def test_reference_light_and_dark_garments_pair_with_shirt_and_vest():
     out = lab_to_rgb(match_part(rgb_to_lab(ref), mask, rgb_to_lab(src), mask, k=2)[0]).astype(int)
     assert out[10, 5, 0] > 180 and out[10, 5, 2] < out[10, 5, 0]       # white top -> ivory
     assert out[10, 30, 1] > out[10, 30, 2] and out[10, 30].mean() < 120  # dark garment -> olive
+
+
+def test_lower_skips_the_upper_colour_unless_nothing_else_is_left():
+    lab = rgb_to_lab(np.array([[[120, 30, 60]] * 30 + [[110, 25, 55]] * 30 + [[90, 100, 120]] * 10], np.uint8))  # coat, coat shade, trousers
+    coat = rgb_to_lab(np.array([[[120, 30, 60]]], np.uint8)).reshape(3)
+    keep = without_colours(lab, np.ones(lab.shape[:2], bool), [coat])
+    assert keep.sum() == 10                                             # only the trousers stay
+    grey, ivory = rgb_to_lab(np.array([[[80, 78, 78], [240, 235, 220]]], np.uint8))[0]
+    assert without_colours(grey[None, None], np.ones((1, 1), bool), [ivory]).all()   # grey trousers are not "ivory"
+
+
+def test_outline_pixels_are_not_a_garment_colour():
+    ref = np.full((20, 20, 3), (60, 90, 160), np.uint8)
+    src = np.full((20, 20, 3), (5, 5, 6), np.uint8)                    # mostly black outlines
+    src[:6] = (95, 105, 125)                                           # narrow blue-grey trousers
+    mask = np.ones((20, 20), bool)
+    out = lab_to_rgb(match_part(rgb_to_lab(ref), mask, rgb_to_lab(src), mask, source="largest")[0])
+    assert out.mean() > 60                                             # trousers colour, not black
+
+
+def test_uncertain_lower_colour_becomes_neutral_grey():
+    ref = np.full((50, 50, 3), (60, 90, 160), np.uint8)                # denim shorts
+    ref[25:] = (40, 60, 120)                                           # shaded half
+    src = np.full((50, 50, 3), (230, 228, 225), np.uint8)              # background (outside the mask)
+    src[:2, :10] = (95, 105, 125)                                      # a sliver of trousers: 0.8% of the image
+    mask = np.zeros((50, 50), bool); mask[:2, :10] = True
+    full = np.ones((50, 50), bool)
+    out, record = match_part(rgb_to_lab(ref), full, rgb_to_lab(src), mask, source="largest", min_fraction=0.02)
+    rgb = lab_to_rgb(out).astype(int)
+    assert record["state"] == "neutral_uncertain"
+    assert np.abs(rgb[10, 10] - rgb[10, 10].mean()).max() <= 2         # grey, no denim blue
+    assert rgb[10, 10].mean() > rgb[40, 10].mean()                    # reference light/dark kept

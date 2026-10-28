@@ -18,6 +18,10 @@ GPU 비교 v2~v4에서 그림체 참조에 남은 색·내용(머리색·청바�
 - 확실하지 않으면 중립색(사용자 10/29 1번): "largest"로 고른 원본 색이 그림의 min_fraction(기본 2%) 미만이거나 남은
   후보의 절반 미만이면 그 색을 믿지 않고 참조 부위를 회색(명암만 유지)으로 둔다. 옷이 거의 가려진 경우(V001 바지는
   긴 코트에 가려 약 1%) 틀린 색을 밀어 넣지 않기 위함이다. 문장(특징표)이 그 부위 색을 맡는다.
+- 눈(D-189): 다섯 번 모두 결과 눈이 참조의 파란 눈이 됐다. 눈 부위 안에서 색이 있는 홍채 픽셀(채도 C* ≥ 12, 흰자·동공·
+  속눈썹 제외)만 골라 화면 왼쪽·오른쪽 눈을 따로 원본의 같은 쪽 눈 색으로 맞춘다(짝눈). 한쪽 눈이 안 보이면 다른 쪽 색을 쓴다.
+  눈 부위 마스크에는 눈두덩 피부가 섞이므로 양쪽 모두 피부처럼 보이는 픽셀을 홍채에서 뺀다(T014 파란 눈이 갈색 피부와
+  평균되어 회색, 참조 분홍 눈두덩까지 칠해짐 — 첫 시도 style-reference-v6/-V001b).
 - 원본의 선화(밝기 L < 8인 검은 윤곽선)는 옷 색 후보에서 뺀다. 좁은 바지 영역에서는 윤곽선이 바지보다 많아
   "가장 넓은 색"이 검정이 되는 경우가 있었다(V001). 남는 게 50픽셀 미만이면 빼지 않는다.
 """
@@ -63,7 +67,7 @@ def clusters(lab, k, iterations=12, merge_ab=12.0):
     """Lab 픽셀을 k개로 나누고 밝기 오름차순 번호를 붙인다(재현되게 밝기 분위수로 시작).
     k=2에서 두 무리의 a·b 거리가 merge_ab보다 가까우면 같은 색의 명암 차이로 보고 하나로 합친다."""
     lab = np.asarray(lab, np.float64)
-    if k == 1 or len(lab) < k * 20:
+    if k == 1 or len(lab) < k * 20:  # noqa: tiny parts stay one colour
         return np.zeros(len(lab), int), lab.mean(0)[None]
     centers = np.stack([lab[np.argsort(lab[:, 0])[int(len(lab) * (i + 0.5) / k)]] for i in range(k)])
     for _ in range(iterations):
@@ -89,17 +93,17 @@ def neutral_part(reference_lab, reference_mask, lightness=(30.0, 82.0)):
 
 
 def match_part(reference_lab, reference_mask, source_lab, source_mask, k=1, source="pair", chroma_keep=0.1,
-               lightness_ratio=(0.5, 1.2), min_fraction=None):
+               lightness_ratio=(0.5, 1.2), min_fraction=None, min_pixels=50):
     """참조 부위의 Lab을 원본 부위의 색으로 옮긴다. source="largest"면 원본을 둘로 나눠 넓은 쪽 색 하나만 쓴다.
     반환: 새 Lab(부위 밖은 그대로)과 기록."""
     out = reference_lab.copy()
     ref_px, src_px = reference_lab[reference_mask], source_lab[source_mask]
-    if (src_px[:, 0] >= INK_L).sum() >= 50:
+    if (src_px[:, 0] >= INK_L).sum() >= min_pixels:
         src_px = src_px[src_px[:, 0] >= INK_L]                       # line art is not a garment colour
-    if len(ref_px) >= 50 and len(src_px) < 50 and source == "largest" and min_fraction is not None:
+    if len(ref_px) >= min_pixels and len(src_px) < min_pixels and source == "largest" and min_fraction is not None:
         return neutral_part(reference_lab, reference_mask), dict(          # no evidence at all: grey, never the reference colour
             state="neutral_uncertain", reason="source part too small to read a colour", source_pixels=int(len(src_px)))
-    if len(ref_px) < 50 or len(src_px) < 50:
+    if len(ref_px) < min_pixels or len(src_px) < min_pixels:
         return out, dict(state="skipped_too_small", reference_pixels=int(len(ref_px)), source_pixels=int(len(src_px)))
     ref_label, ref_centers = clusters(ref_px, k, merge_ab=0.0)
     src_label, src_centers = clusters(src_px, 2 if source == "largest" else k)
@@ -141,6 +145,42 @@ def without_colours(lab, mask, centers, max_ab=12.0, max_l=25.0):
     return keep
 
 
+def iris(lab, mask, chroma_min=12.0):
+    """눈 부위 중 색이 있는 픽셀(홍채). 흰자(채도 낮음)·동공·속눈썹(아주 어두움)·반사광(아주 밝음)은 뺀다."""
+    chroma = np.hypot(lab[..., 1], lab[..., 2])
+    return np.asarray(mask, bool) & (chroma >= chroma_min) & (lab[..., 0] > 10) & (lab[..., 0] < 92)
+
+
+def split_sides(mask):
+    """마스크를 가로 범위의 가운데에서 화면 왼쪽·오른쪽으로 나눈다. 픽셀이 너무 적으면 None."""
+    ys, xs = np.nonzero(mask)
+    if len(xs) < 40:
+        return None
+    middle = int(round((xs.min() + xs.max()) / 2))
+    left = np.asarray(mask, bool).copy()
+    left[:, middle:] = False
+    return left, np.asarray(mask, bool) & ~left
+
+
+def match_eyes(reference_lab, reference_mask, source_lab, source_mask, chroma_min=12.0, reference_skin=None, source_skin=None):
+    """참조의 왼쪽·오른쪽 홍채를 원본의 같은 쪽 홍채 색으로. 원본 한쪽이 비면 다른 쪽을 쓴다. 피부 마스크는 홍채에서 뺀다."""
+    ref_iris, src_iris = iris(reference_lab, reference_mask, chroma_min), iris(source_lab, source_mask, chroma_min)
+    if reference_skin is not None:
+        ref_iris &= ~np.asarray(reference_skin, bool)
+    if source_skin is not None:
+        src_iris &= ~np.asarray(source_skin, bool)
+    ref_sides, src_sides = split_sides(ref_iris), split_sides(src_iris)
+    if ref_sides is None or src_sides is None:
+        return reference_lab, dict(state="skipped_no_iris", reference_found=ref_sides is not None, source_found=src_sides is not None)
+    out, sides = reference_lab, {}
+    for name, ref_side, src_side, other in (("image_left", ref_sides[0], src_sides[0], src_sides[1]),
+                                            ("image_right", ref_sides[1], src_sides[1], src_sides[0])):
+        use = src_side if src_side.sum() >= 15 else other
+        out, sides[name] = match_part(out, ref_side, source_lab, use, min_pixels=15)
+        sides[name]["source_side"] = name if use is src_side else "other_side"
+    return out, dict(state="matched", sides=sides)
+
+
 def union(parts, names):
     return np.logical_or.reduce([np.asarray(parts[n], bool) for n in names])
 
@@ -148,7 +188,7 @@ def union(parts, names):
 def recolor_reference(reference_rgb, reference_parts, source_rgb, source_parts, plan, background_alpha=None,
                       background_rgb=(214, 210, 202)):
     """plan: {역할: dict(reference=[부위…], source=[부위…], k=색 수, pick="pair"|"largest", keep_skin=False,
-    exclude_colours_of=다른 역할, min_fraction=확신 기준)}. keep_skin이 아니면(옷 역할) 양쪽 모두 피부처럼 보이는 픽셀을 뺀다.
+    exclude_colours_of=다른 역할, min_fraction=확신 기준, split="left_right"(눈: 홍채를 화면 좌우로 따로))}. keep_skin이 아니면(옷 역할) 양쪽 모두 피부처럼 보이는 픽셀을 뺀다.
     exclude_colours_of가 있으면 그 역할에서 쓴 원본 색을 원본 후보에서 뺀다(남는 게 50픽셀 미만이면 빼지 않음).
     배경 알파가 있으면 배경을 단색으로."""
     ref_skin = skin_like(reference_rgb, reference_parts["face"])
@@ -157,6 +197,10 @@ def recolor_reference(reference_rgb, reference_parts, source_rgb, source_parts, 
     record = {}
     for role, rule in plan.items():
         ref_mask, src_mask = union(reference_parts, rule["reference"]), union(source_parts, rule["source"])
+        if rule.get("split") == "left_right":
+            lab, record[role] = match_eyes(lab, ref_mask, src_lab, src_mask, rule.get("chroma_min", 12.0), ref_skin, src_skin)
+            record[role].update(reference_parts=rule["reference"], source_parts=rule["source"])
+            continue
         if not rule.get("keep_skin", False):
             ref_mask, src_mask = ref_mask & ~ref_skin, src_mask & ~src_skin
         excluded = None

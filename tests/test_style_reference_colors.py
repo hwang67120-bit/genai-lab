@@ -1,7 +1,8 @@
 """참조 색 맞춤(D-187 다음 단계): 원본 색으로 옮기되 참조의 명암 변화는 유지, 피부는 옷에서 빠진다."""
 import numpy as np
 
-from genai_lab.style_reference_colors import clusters, lab_to_rgb, match_part, recolor_reference, rgb_to_lab, without_colours
+from genai_lab.style_reference_colors import (clusters, lab_to_rgb, match_eyes, match_part, recolor_reference, rgb_to_lab,
+                                              without_colours)
 
 
 def test_lab_round_trip():
@@ -103,3 +104,22 @@ def test_uncertain_lower_colour_becomes_neutral_grey():
     assert record["state"] == "neutral_uncertain"
     assert np.abs(rgb[10, 10] - rgb[10, 10].mean()).max() <= 2         # grey, no denim blue
     assert rgb[10, 10].mean() > rgb[40, 10].mean()                    # reference light/dark kept
+
+
+def test_eyes_take_each_side_colour_and_keep_white_and_pupil():
+    def two_eyes(left, right):
+        img = np.full((40, 80, 3), 235, np.uint8)                       # skin-ish white background
+        for x0, colour in ((10, left), (50, right)):
+            img[10:30, x0:x0 + 20] = (245, 245, 245)                    # sclera
+            img[14:26, x0 + 4:x0 + 16] = colour                         # iris
+            img[18:22, x0 + 8:x0 + 12] = (15, 15, 20)                   # pupil
+        return img
+    ref = two_eyes((60, 120, 220), (60, 120, 220))                      # blue / blue
+    src = two_eyes((220, 160, 40), (60, 120, 220))                      # gold / blue (odd eyes)
+    mask = np.zeros((40, 80), bool); mask[10:30, 10:30] = True; mask[10:30, 50:70] = True
+    lab, record = match_eyes(rgb_to_lab(ref), mask, rgb_to_lab(src), mask)
+    out = lab_to_rgb(lab).astype(int)
+    assert record["state"] == "matched"
+    assert out[15, 15, 0] > out[15, 15, 2] + 60                         # image-left iris now gold
+    assert out[15, 55, 2] > out[15, 55, 0] + 60                         # image-right iris stays blue
+    assert out[11, 11].min() > 230 and out[20, 20].max() < 40           # sclera and pupil untouched

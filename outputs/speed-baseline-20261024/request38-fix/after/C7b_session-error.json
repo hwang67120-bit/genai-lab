@@ -1,8 +1,0 @@
-{
-  "stage": "job-000001",
-  "error_type": "JSONDecodeError",
-  "error": "Expecting property name enclosed in double quotes: line 1 column 2 (char 1)",
-  "traceback": "Traceback (most recent call last):\n  File \"\\\\192.168.0.109\\win_g\\genai-lab\\genai_lab\\qwen_pose_worker.py\", line 544, in serve\n    data = json.loads(job.read_text(encoding=\"utf-8\"))\n  File \"C:\\Program Files\\Python310\\lib\\json\\__init__.py\", line 346, in loads\n    return _default_decoder.decode(s)\n  File \"C:\\Program Files\\Python310\\lib\\json\\decoder.py\", line 337, in decode\n    obj, end = self.raw_decode(s, idx=_w(s, 0).end())\n  File \"C:\\Program Files\\Python310\\lib\\json\\decoder.py\", line 353, in raw_decode\n    obj, end = self.scan_once(s, idx)\njson.decoder.JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)\n",
-  "pid": 37208,
-  "at": "2026-10-24 15:08:21"
-}

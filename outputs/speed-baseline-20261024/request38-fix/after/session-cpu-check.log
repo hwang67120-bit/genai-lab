@@ -1,8 +1,0 @@
-﻿C1_stalled_request 통과 {"seconds": 267.6, "exit_code": 1, "timeout": false, "run_status": "failed", "error": "Qwen CUDA 장치가 없습니다.", "models_checked": true, "done_marker": {"status": "failed", "code": 1}, "limit_seconds": 900}
-C2_two_jobs_in_order 통과 {"seconds": 4.3, "exit_code": 0, "timeout": false, "dones": [{"status": "completed", "code": 0}, {"status": "completed", "code": 0}], "jobs": [1, 2], "pids": [3632, 3632], "numpy": ["2.2.6", "2.2.6"], "ended": "close", "limit_seconds": 180}
-C3_parent_exit 통과 {"seconds_after_parent_exit": 2.0, "worker_tree": [20176, 6468], "ended": "parent_gone", "limit_seconds": 30}
-C4_cancel 통과 {"seconds_after_kill": 0.5, "worker_tree": [29208, 34696, 24828], "parent_args_in_command": true, "stdin_pipe": false, "limit_seconds": 20}
-C5_idle_timeout 통과 {"seconds": 7.9, "exit_code": 0, "timeout": false, "ended": "idle", "limit_seconds": 30}
-C6_pid_reuse_not_alive 통과 {"wrong_created": {"exit_code": 2, "error": "실행기 프로세스를 확인할 수 없습니다(pid 1428, 생성 시각 불일치 또는 종료) — 시작하지 않음"}, "exited_process": {"pid": 13988, "exit_code": 2, "error": "실행기 프로세스를 확인할 수 없습니다(pid 13988, 생성 시각 불일치 또는 종료) — 시작하지 않음"}, "limit_seconds": 30}
-C7_failures_are_recorded 통과 {"missing_folder": {"exit_code": 2, "log": "세션 시작 실패: FileNotFoundError: 세션 폴더가 없습니다: D:\\genai-test\\session-cpu-check-20261024\\C7-missing-folder\n"}, "broken_job": {"exit_code": 1, "done": {"status": "failed", "code": 1}, "error_type": "JSONDecodeError"}, "existing_output": {"exit_code": 1, "done
-통과 7 / 7

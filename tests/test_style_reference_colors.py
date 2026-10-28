@@ -159,3 +159,32 @@ def test_upper_is_matched_by_position_torso_and_arms():
     assert record["upper"]["state"] == "matched_by_position"
     assert out[60, 50, 1] > out[60, 50, 2] + 15 and out[60, 50].mean() < 120     # torso -> olive (was white)
     assert out[50, 15].mean() > 180                                               # arms -> light shirt (was dark jacket)
+
+
+def test_short_sleeves_take_the_torso_colour():
+    h, w = 100, 100
+    joints = dict(right_shoulder=[30, 20], right_elbow=[15, 50], right_wrist=[10, 80],
+                  left_shoulder=[70, 20], left_elbow=[85, 50], left_wrist=[90, 80])
+    regions = body_regions((h, w), joints)
+    skin = (190, 130, 95)
+    ref = np.full((h, w, 3), (240, 240, 240), np.uint8)
+    ref[regions["arms"]] = (30, 30, 60)                                 # reference jacket on the arms
+    src = np.full((h, w, 3), (215, 165, 50), np.uint8)                  # mustard shirt on the torso...
+    src[regions["arms"]] = skin                                         # ...bare arms (short sleeves)
+    src[:6, :6] = (20, 120, 120)                                        # a small teal object
+    face = np.zeros((h, w), bool); face[90:, 40:60] = True
+    src[90:, 40:60] = skin; ref[90:, 40:60] = skin
+    parts = dict(face=face, topwear=~face)
+    plan = {"upper": dict(reference=["topwear"], source=["topwear"], split="torso_arms")}
+    out, record = recolor_reference(ref, parts, src, parts, plan, reference_joints=joints, source_joints=joints)
+    assert record["upper"]["short_sleeves"] is True
+    sleeve = out[50, 15].astype(int)
+    assert sleeve[0] > sleeve[2] + 60                                   # reference jacket now mustard like the shirt
+
+
+def test_neutral_plan_greys_the_garment_and_keeps_its_shading():
+    ref = np.full((40, 40, 3), (60, 90, 160), np.uint8); ref[20:] = (30, 45, 90)
+    parts = dict(face=np.zeros((40, 40), bool), bottomwear=np.ones((40, 40), bool))
+    out, record = recolor_reference(ref, parts, ref, parts, {"lower": dict(reference=["bottomwear"], source=["bottomwear"], neutral=True)})
+    assert record["lower"]["state"] == "neutral_by_plan"
+    assert np.abs(out[5, 5].astype(int) - out[5, 5].mean()).max() <= 2 and out[5, 5].mean() > out[30, 5].mean()

@@ -27,7 +27,8 @@ GPU 비교 v2~v4에서 그림체 참조에 남은 색·내용(머리색·청바�
 - 위치로 짝짓기(로컬 5명 시험, 사용자 10/29): 밝기 순서로 짝지으면 참조의 몸통 옷(크롭 셔츠)·팔 옷(재킷)이 원본의
   조끼(몸통)·셔츠(팔)와 엇갈렸다(T008 조끼 하늘색, V006 블레이저 반반). 자세 관절이 있으면 팔 영역(어깨-팔꿈치-손목)을
   만들어 윗옷을 몸통·팔로 나누고, 각각 원본의 같은 위치에서 가장 넓은 색을 쓴다. 다리 영역(엉덩이-무릎-발목)은
-  아래옷 후보에 더한다(분할기가 바지를 작게 잡는 경우).
+  아래옷 후보에 더한다(분할기가 바지를 작게 잡는 경우). 원본 팔 영역에 옷보다 맨살이 많으면 반팔·민소매로 보고 팔도
+  몸통 색을 쓴다(2차에서 T009 반팔 셔츠의 팔이 책·바지 색으로 읽힘).
 - 무늬 지우기: 옷 역할은 참조 밝기에서 큰 명암(흐린 성분)은 남기고 잔무늬(글씨·그라피티 획)는 0.35배로 눌러
   ±8 안으로 자른다. 다섯 명 모두 참조 셔츠의 그라피티가 옷 무늬로 넘어왔다. 좁은 바지 영역에서는 윤곽선이 바지보다 많아
   "가장 넓은 색"이 검정이 되는 경우가 있었다(V001). 남는 게 50픽셀 미만이면 빼지 않는다.
@@ -259,17 +260,29 @@ def recolor_reference(reference_rgb, reference_parts, source_rgb, source_parts, 
             ref_mask, src_mask = ref_mask & ~ref_skin, src_mask & ~src_skin
         if rule.get("flatten"):
             lab = flatten_lightness(lab, ref_mask)
+        if rule.get("neutral"):
+            # Round 5 (design diagram): the style reference carries only shading, material and colour treatment; garment
+            # colour and shape come from a separate outfit reference, so the garment is greyed instead of recoloured.
+            lab = neutral_part(lab, ref_mask) if ref_mask.sum() >= 50 else lab
+            record[role] = dict(state="neutral_by_plan", reference_parts=rule["reference"], reference_pixels=int(ref_mask.sum()))
+            continue
         if rule.get("split") == "torso_arms" and ref_regions is not None and src_regions is not None:
             parts_record, chosen = {}, []
+            src_arms_garment = int((src_mask & src_regions["arms"]).sum())
+            src_arms_skin = int((src_skin & src_regions["arms"]).sum())
+            short_sleeves = src_arms_skin > src_arms_garment
             for region in ("torso", "arms"):
                 ref_sub = ref_mask & (ref_regions["arms"] if region == "arms" else ~ref_regions["arms"])
                 src_sub = src_mask & (src_regions["arms"] if region == "arms" else ~src_regions["arms"])
+                if region == "arms" and short_sleeves:
+                    src_sub = src_mask & ~src_regions["arms"]           # short or no sleeves: sleeves follow the torso garment
                 if src_sub.sum() < 50:
                     src_sub = src_mask                                   # region not visible in the original: whole garment
                 lab, parts_record[region] = match_part(lab, ref_sub, src_lab, src_sub, 1, "largest")
                 if parts_record[region].get("pairs"):
                     chosen.append(parts_record[region]["pairs"][0]["source_lab"])
             record[role] = dict(state="matched_by_position", regions=parts_record, source_centers=chosen,
+                                short_sleeves=short_sleeves, source_arm_pixels=dict(garment=src_arms_garment, skin=src_arms_skin),
                                 reference_parts=rule["reference"], source_parts=rule["source"])
             continue
         excluded = None

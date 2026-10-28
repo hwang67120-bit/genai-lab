@@ -1,8 +1,0 @@
-{
-  "stage": "job-000001",
-  "error_type": "SystemExit",
-  "error": "기존 실행 결과를 덮어쓰거나 자동 재시도하지 않습니다.",
-  "traceback": "Traceback (most recent call last):\n  File \"\\\\192.168.0.109\\win_g\\genai-lab\\genai_lab\\qwen_pose_worker.py\", line 545, in serve\n    code, status = run(data[\"request\"], cache=cache, session=dict(control=str(control), job=number, pid=os.getpid()))\n  File \"\\\\192.168.0.109\\win_g\\genai-lab\\genai_lab\\qwen_pose_worker.py\", line 451, in run_one\n    raise SystemExit(\"기존 실행 결과를 덮어쓰거나 자동 재시도하지 않습니다.\")\nSystemExit: 기존 실행 결과를 덮어쓰거나 자동 재시도하지 않습니다.\n",
-  "pid": 36164,
-  "at": "2026-10-24 15:08:24"
-}

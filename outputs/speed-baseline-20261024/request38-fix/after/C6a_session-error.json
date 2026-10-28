@@ -1,8 +1,0 @@
-{
-  "stage": "start",
-  "error_type": "RuntimeError",
-  "error": "실행기 프로세스를 확인할 수 없습니다(pid 1428, 생성 시각 불일치 또는 종료) — 시작하지 않음",
-  "traceback": "Traceback (most recent call last):\n  File \"\\\\192.168.0.109\\win_g\\genai-lab\\genai_lab\\qwen_pose_worker.py\", line 528, in serve\n    raise RuntimeError(f\"실행기 프로세스를 확인할 수 없습니다(pid {parent[0]}, 생성 시각 불일치 또는 종료) — 시작하지 않음\")\nRuntimeError: 실행기 프로세스를 확인할 수 없습니다(pid 1428, 생성 시각 불일치 또는 종료) — 시작하지 않음\n",
-  "pid": 11196,
-  "at": "2026-10-24 15:08:14"
-}

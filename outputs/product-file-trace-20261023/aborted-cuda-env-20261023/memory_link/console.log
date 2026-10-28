@@ -1,8 +1,0 @@
-﻿python.exe : GPU를 끄고 실행하세요(CUDA_VISIBLE_DEVICES 비움).
-At C:\Users\user\AppData\Local\Temp\claude\Z--genai-lab\d61292c6-2960-4087-8112-dc1285e061db\scratchpad\run_scenarios.p
-s1:15 char:5
-+     & D:\genai-cache\venv\Scripts\python.exe -X utf8 "$root\scripts\p ...
-+     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (GPU를 끄고 실행하세요(CUDA_VISIBLE_DEVICES 비움).:String) [], RemoteException
-    + FullyQualifiedErrorId : NativeCommandError
- 

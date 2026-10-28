@@ -1,0 +1,3384 @@
+{
+  "source_sha256": {
+    "integration-20260929/plan.json": "8ffdc6b3e8defcdd761ad41a6aa401e6d5522eba560dce182f64012d5656a12a",
+    "final-int-20261001/plan.json": "c75527374c6ec9dd581be81d62450412dc67a8d0e5ea4684ce581aaa58afb30f",
+    "slim-cost-20261001/plan.json": "301900633f1eea99461eab23abab48b4dc22434a894a34a256a9570d3ee2789f",
+    "gender-contract-20261001/plan.json": "0ae2e96dc67a4a2723dc1e83c919ce6123cafe05b73cbacf782bcb370bcdb4da",
+    "e2e-20261001/prompts.json": "4228eed08f65d7dca66e3b8bf0e33ad47d05c9f6b225d2b896cdc26387d624c4",
+    "garment-fidelity-20261001/prompts.json": "141b2592c9d94ee6214faa26c3405d7b0d731fb52fbde756c2cf8cb59e5c923a",
+    "bg-prevent-20260930/plan.json": "2e1ef8f52850995fa7938a55b2af350d3a6186b256f858c01017e8ed1a1095d6",
+    "pose-identity-20260927/generalize/characters.json": "3227967a68450350df72ff975f71fa6cee5d9034c7a58419fd0e3dd6b40270b7",
+    "pose-range-20260928/pose_tags.json": "4fd7ab4f4d4d7eed8a91dab903b79113164819ba926db3821f1334813463b111",
+    "pose-newimg-20260929/pose_tags.json": "56114f8021b740975422a2e212f4a4a03e23f1077ee2c29a9fd4fefecfacba27",
+    "e2e-20261001/analysis.json": "7282323964f58192aa564696177b176e97d3020a0af8b3fca023f49cf90c78e9"
+  },
+  "main": [
+    {
+      "id": "original_ordinary-female_KNEEL_209210101",
+      "suite": "integration-20260929",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "white camisole",
+        "black shorts"
+      ],
+      "poses": [
+        "kneeling",
+        "arm_up"
+      ],
+      "slim": true,
+      "policy": "off",
+      "positive": "1girl, white camisole, black shorts, bare legs, bare shoulders, bare arms, black hair, short hair, blue eyes, breasts, medium breasts, kneeling, arm up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, lowres, bad, text, error, missing fingers, worst quality, low quality, watermark, signature, unfinished, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, fused fingers, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "original_ordinary-female_KNEEL_209210101",
+        "original_ordinary-female_KNEEL_209210102",
+        "original_ordinary-female_KNEEL_209210103",
+        "original_ordinary-female_KNEEL_209210104"
+      ]
+    },
+    {
+      "id": "original_ordinary-female_POCKET_209210101",
+      "suite": "integration-20260929",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "white camisole",
+        "black shorts"
+      ],
+      "poses": [
+        "hands_in_pockets"
+      ],
+      "slim": true,
+      "policy": "off",
+      "positive": "1girl, white camisole, black shorts, bare legs, bare shoulders, bare arms, black hair, short hair, blue eyes, breasts, medium breasts, hands in pockets, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, lowres, bad, text, error, missing fingers, worst quality, low quality, watermark, signature, unfinished, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, fused fingers, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "original_ordinary-female_POCKET_209210101",
+        "original_ordinary-female_POCKET_209210102",
+        "original_ordinary-female_POCKET_209210103",
+        "original_ordinary-female_POCKET_209210104"
+      ]
+    },
+    {
+      "id": "original_ordinary-female_P2_209210101",
+      "suite": "integration-20260929",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "white camisole",
+        "black shorts"
+      ],
+      "poses": [
+        "hand_in_pocket"
+      ],
+      "slim": true,
+      "policy": "off",
+      "positive": "1girl, white camisole, black shorts, bare legs, bare shoulders, bare arms, black hair, short hair, blue eyes, breasts, medium breasts, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, lowres, bad, text, error, missing fingers, worst quality, low quality, watermark, signature, unfinished, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, fused fingers, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "original_ordinary-female_P2_209210101",
+        "original_ordinary-female_P2_209210102",
+        "original_ordinary-female_P2_209210103",
+        "original_ordinary-female_P2_209210104"
+      ]
+    },
+    {
+      "id": "original_ordinary-female_HIGH_209210101",
+      "suite": "integration-20260929",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "white camisole",
+        "black shorts"
+      ],
+      "poses": [
+        "from_above",
+        "holding_phone",
+        "cellphone",
+        "hand_in_pocket"
+      ],
+      "slim": true,
+      "policy": "off",
+      "positive": "1girl, white camisole, black shorts, bare legs, bare shoulders, bare arms, black hair, short hair, blue eyes, breasts, medium breasts, from above, holding phone, cellphone, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, lowres, bad, text, error, missing fingers, worst quality, low quality, watermark, signature, unfinished, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, fused fingers, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "original_ordinary-female_HIGH_209210101",
+        "original_ordinary-female_HIGH_209210102",
+        "original_ordinary-female_HIGH_209210103",
+        "original_ordinary-female_HIGH_209210104"
+      ]
+    },
+    {
+      "id": "original_ordinary-female_LOW_209210101",
+      "suite": "integration-20260929",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "white camisole",
+        "black shorts"
+      ],
+      "poses": [
+        "hands_on_own_head",
+        "arms_up"
+      ],
+      "slim": true,
+      "policy": "off",
+      "positive": "1girl, white camisole, black shorts, bare legs, bare shoulders, bare arms, black hair, short hair, blue eyes, breasts, medium breasts, hands on own head, arms up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, lowres, bad, text, error, missing fingers, worst quality, low quality, watermark, signature, unfinished, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, fused fingers, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "original_ordinary-female_LOW_209210101",
+        "original_ordinary-female_LOW_209210102",
+        "original_ordinary-female_LOW_209210103",
+        "original_ordinary-female_LOW_209210104"
+      ]
+    },
+    {
+      "id": "original_raccoon_KNEEL_209210101",
+      "suite": "integration-20260929",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "white camisole",
+        "black shorts"
+      ],
+      "poses": [
+        "kneeling",
+        "arm_up"
+      ],
+      "slim": false,
+      "policy": "off",
+      "positive": "white camisole, black shorts, bare legs, bare shoulders, bare arms, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, kneeling, arm up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, lowres, bad, text, error, missing fingers, worst quality, low quality, watermark, signature, unfinished, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, fused fingers, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "original_raccoon_KNEEL_209210101",
+        "original_raccoon_KNEEL_209210102",
+        "original_raccoon_KNEEL_209210103",
+        "original_raccoon_KNEEL_209210104"
+      ]
+    },
+    {
+      "id": "original_raccoon_POCKET_209210101",
+      "suite": "integration-20260929",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "white camisole",
+        "black shorts"
+      ],
+      "poses": [
+        "hands_in_pockets"
+      ],
+      "slim": false,
+      "policy": "off",
+      "positive": "white camisole, black shorts, bare legs, bare shoulders, bare arms, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, hands in pockets, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, lowres, bad, text, error, missing fingers, worst quality, low quality, watermark, signature, unfinished, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, fused fingers, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "original_raccoon_POCKET_209210101",
+        "original_raccoon_POCKET_209210102",
+        "original_raccoon_POCKET_209210103",
+        "original_raccoon_POCKET_209210104"
+      ]
+    },
+    {
+      "id": "original_raccoon_P2_209210101",
+      "suite": "integration-20260929",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "white camisole",
+        "black shorts"
+      ],
+      "poses": [
+        "hand_in_pocket"
+      ],
+      "slim": false,
+      "policy": "off",
+      "positive": "white camisole, black shorts, bare legs, bare shoulders, bare arms, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, lowres, bad, text, error, missing fingers, worst quality, low quality, watermark, signature, unfinished, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, fused fingers, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "original_raccoon_P2_209210101",
+        "original_raccoon_P2_209210102",
+        "original_raccoon_P2_209210103",
+        "original_raccoon_P2_209210104"
+      ]
+    },
+    {
+      "id": "original_raccoon_HIGH_209210101",
+      "suite": "integration-20260929",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "white camisole",
+        "black shorts"
+      ],
+      "poses": [
+        "from_above",
+        "holding_phone",
+        "cellphone",
+        "hand_in_pocket"
+      ],
+      "slim": false,
+      "policy": "off",
+      "positive": "white camisole, black shorts, bare legs, bare shoulders, bare arms, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, from above, holding phone, cellphone, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, lowres, bad, text, error, missing fingers, worst quality, low quality, watermark, signature, unfinished, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, fused fingers, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "original_raccoon_HIGH_209210101",
+        "original_raccoon_HIGH_209210102",
+        "original_raccoon_HIGH_209210103",
+        "original_raccoon_HIGH_209210104"
+      ]
+    },
+    {
+      "id": "original_raccoon_LOW_209210101",
+      "suite": "integration-20260929",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "white camisole",
+        "black shorts"
+      ],
+      "poses": [
+        "hands_on_own_head",
+        "arms_up"
+      ],
+      "slim": false,
+      "policy": "off",
+      "positive": "white camisole, black shorts, bare legs, bare shoulders, bare arms, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, hands on own head, arms up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, lowres, bad, text, error, missing fingers, worst quality, low quality, watermark, signature, unfinished, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, fused fingers, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "original_raccoon_LOW_209210101",
+        "original_raccoon_LOW_209210102",
+        "original_raccoon_LOW_209210103",
+        "original_raccoon_LOW_209210104"
+      ]
+    },
+    {
+      "id": "ferrari_ordinary-female_KNEEL_209210101",
+      "suite": "integration-20260929",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "bodysuit",
+        "black bodysuit",
+        "jacket",
+        "yellow jacket",
+        "long sleeves",
+        "hoodie"
+      ],
+      "poses": [
+        "kneeling",
+        "arm_up"
+      ],
+      "slim": true,
+      "policy": "off",
+      "positive": "1girl, bodysuit, black bodysuit, jacket, yellow jacket, long sleeves, hoodie, black hair, short hair, blue eyes, breasts, medium breasts, kneeling, arm up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, lowres, bad, text, error, missing fingers, worst quality, low quality, watermark, signature, unfinished, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, fused fingers, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "ferrari_ordinary-female_KNEEL_209210101",
+        "ferrari_ordinary-female_KNEEL_209210102",
+        "ferrari_ordinary-female_KNEEL_209210103",
+        "ferrari_ordinary-female_KNEEL_209210104"
+      ]
+    },
+    {
+      "id": "ferrari_ordinary-female_POCKET_209210101",
+      "suite": "integration-20260929",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "bodysuit",
+        "black bodysuit",
+        "jacket",
+        "yellow jacket",
+        "long sleeves",
+        "hoodie"
+      ],
+      "poses": [
+        "hands_in_pockets"
+      ],
+      "slim": true,
+      "policy": "off",
+      "positive": "1girl, bodysuit, black bodysuit, jacket, yellow jacket, long sleeves, hoodie, black hair, short hair, blue eyes, breasts, medium breasts, hands in pockets, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, lowres, bad, text, error, missing fingers, worst quality, low quality, watermark, signature, unfinished, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, fused fingers, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "ferrari_ordinary-female_POCKET_209210101",
+        "ferrari_ordinary-female_POCKET_209210102",
+        "ferrari_ordinary-female_POCKET_209210103",
+        "ferrari_ordinary-female_POCKET_209210104"
+      ]
+    },
+    {
+      "id": "ferrari_ordinary-female_P2_209210101",
+      "suite": "integration-20260929",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "bodysuit",
+        "black bodysuit",
+        "jacket",
+        "yellow jacket",
+        "long sleeves",
+        "hoodie"
+      ],
+      "poses": [
+        "hand_in_pocket"
+      ],
+      "slim": true,
+      "policy": "off",
+      "positive": "1girl, bodysuit, black bodysuit, jacket, yellow jacket, long sleeves, hoodie, black hair, short hair, blue eyes, breasts, medium breasts, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, lowres, bad, text, error, missing fingers, worst quality, low quality, watermark, signature, unfinished, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, fused fingers, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "ferrari_ordinary-female_P2_209210101",
+        "ferrari_ordinary-female_P2_209210102",
+        "ferrari_ordinary-female_P2_209210103",
+        "ferrari_ordinary-female_P2_209210104"
+      ]
+    },
+    {
+      "id": "ferrari_ordinary-female_HIGH_209210101",
+      "suite": "integration-20260929",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "bodysuit",
+        "black bodysuit",
+        "jacket",
+        "yellow jacket",
+        "long sleeves",
+        "hoodie"
+      ],
+      "poses": [
+        "from_above",
+        "holding_phone",
+        "cellphone",
+        "hand_in_pocket"
+      ],
+      "slim": true,
+      "policy": "off",
+      "positive": "1girl, bodysuit, black bodysuit, jacket, yellow jacket, long sleeves, hoodie, black hair, short hair, blue eyes, breasts, medium breasts, from above, holding phone, cellphone, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, lowres, bad, text, error, missing fingers, worst quality, low quality, watermark, signature, unfinished, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, fused fingers, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "ferrari_ordinary-female_HIGH_209210101",
+        "ferrari_ordinary-female_HIGH_209210102",
+        "ferrari_ordinary-female_HIGH_209210103",
+        "ferrari_ordinary-female_HIGH_209210104"
+      ]
+    },
+    {
+      "id": "ferrari_ordinary-female_LOW_209210101",
+      "suite": "integration-20260929",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "bodysuit",
+        "black bodysuit",
+        "jacket",
+        "yellow jacket",
+        "long sleeves",
+        "hoodie"
+      ],
+      "poses": [
+        "hands_on_own_head",
+        "arms_up"
+      ],
+      "slim": true,
+      "policy": "off",
+      "positive": "1girl, bodysuit, black bodysuit, jacket, yellow jacket, long sleeves, hoodie, black hair, short hair, blue eyes, breasts, medium breasts, hands on own head, arms up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, lowres, bad, text, error, missing fingers, worst quality, low quality, watermark, signature, unfinished, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, fused fingers, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "ferrari_ordinary-female_LOW_209210101",
+        "ferrari_ordinary-female_LOW_209210102",
+        "ferrari_ordinary-female_LOW_209210103",
+        "ferrari_ordinary-female_LOW_209210104"
+      ]
+    },
+    {
+      "id": "ferrari_raccoon_KNEEL_209210101",
+      "suite": "integration-20260929",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "bodysuit",
+        "black bodysuit",
+        "jacket",
+        "yellow jacket",
+        "long sleeves",
+        "hoodie"
+      ],
+      "poses": [
+        "kneeling",
+        "arm_up"
+      ],
+      "slim": false,
+      "policy": "off",
+      "positive": "bodysuit, black bodysuit, jacket, yellow jacket, long sleeves, hoodie, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, kneeling, arm up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, lowres, bad, text, error, missing fingers, worst quality, low quality, watermark, signature, unfinished, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, fused fingers, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "ferrari_raccoon_KNEEL_209210101",
+        "ferrari_raccoon_KNEEL_209210102",
+        "ferrari_raccoon_KNEEL_209210103",
+        "ferrari_raccoon_KNEEL_209210104"
+      ]
+    },
+    {
+      "id": "ferrari_raccoon_POCKET_209210101",
+      "suite": "integration-20260929",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "bodysuit",
+        "black bodysuit",
+        "jacket",
+        "yellow jacket",
+        "long sleeves",
+        "hoodie"
+      ],
+      "poses": [
+        "hands_in_pockets"
+      ],
+      "slim": false,
+      "policy": "off",
+      "positive": "bodysuit, black bodysuit, jacket, yellow jacket, long sleeves, hoodie, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, hands in pockets, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, lowres, bad, text, error, missing fingers, worst quality, low quality, watermark, signature, unfinished, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, fused fingers, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "ferrari_raccoon_POCKET_209210101",
+        "ferrari_raccoon_POCKET_209210102",
+        "ferrari_raccoon_POCKET_209210103",
+        "ferrari_raccoon_POCKET_209210104"
+      ]
+    },
+    {
+      "id": "ferrari_raccoon_P2_209210101",
+      "suite": "integration-20260929",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "bodysuit",
+        "black bodysuit",
+        "jacket",
+        "yellow jacket",
+        "long sleeves",
+        "hoodie"
+      ],
+      "poses": [
+        "hand_in_pocket"
+      ],
+      "slim": false,
+      "policy": "off",
+      "positive": "bodysuit, black bodysuit, jacket, yellow jacket, long sleeves, hoodie, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, lowres, bad, text, error, missing fingers, worst quality, low quality, watermark, signature, unfinished, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, fused fingers, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "ferrari_raccoon_P2_209210101",
+        "ferrari_raccoon_P2_209210102",
+        "ferrari_raccoon_P2_209210103",
+        "ferrari_raccoon_P2_209210104"
+      ]
+    },
+    {
+      "id": "ferrari_raccoon_HIGH_209210101",
+      "suite": "integration-20260929",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "bodysuit",
+        "black bodysuit",
+        "jacket",
+        "yellow jacket",
+        "long sleeves",
+        "hoodie"
+      ],
+      "poses": [
+        "from_above",
+        "holding_phone",
+        "cellphone",
+        "hand_in_pocket"
+      ],
+      "slim": false,
+      "policy": "off",
+      "positive": "bodysuit, black bodysuit, jacket, yellow jacket, long sleeves, hoodie, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, from above, holding phone, cellphone, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, lowres, bad, text, error, missing fingers, worst quality, low quality, watermark, signature, unfinished, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, fused fingers, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "ferrari_raccoon_HIGH_209210101",
+        "ferrari_raccoon_HIGH_209210102",
+        "ferrari_raccoon_HIGH_209210103",
+        "ferrari_raccoon_HIGH_209210104"
+      ]
+    },
+    {
+      "id": "ferrari_raccoon_LOW_209210101",
+      "suite": "integration-20260929",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "bodysuit",
+        "black bodysuit",
+        "jacket",
+        "yellow jacket",
+        "long sleeves",
+        "hoodie"
+      ],
+      "poses": [
+        "hands_on_own_head",
+        "arms_up"
+      ],
+      "slim": false,
+      "policy": "off",
+      "positive": "bodysuit, black bodysuit, jacket, yellow jacket, long sleeves, hoodie, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, hands on own head, arms up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, lowres, bad, text, error, missing fingers, worst quality, low quality, watermark, signature, unfinished, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, fused fingers, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "ferrari_raccoon_LOW_209210101",
+        "ferrari_raccoon_LOW_209210102",
+        "ferrari_raccoon_LOW_209210103",
+        "ferrari_raccoon_LOW_209210104"
+      ]
+    },
+    {
+      "id": "crop_ordinary-female_KNEEL_209210101",
+      "suite": "integration-20260929",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "thighhighs",
+        "shorts",
+        "white shorts",
+        "gloves",
+        "elbow gloves",
+        "crop top",
+        "white thighhighs",
+        "white gloves"
+      ],
+      "poses": [
+        "kneeling",
+        "arm_up"
+      ],
+      "slim": true,
+      "policy": "off",
+      "positive": "1girl, thighhighs, shorts, white shorts, gloves, elbow gloves, crop top, white thighhighs, white gloves, midriff, black hair, short hair, blue eyes, breasts, medium breasts, kneeling, arm up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, lowres, bad, text, error, missing fingers, worst quality, low quality, watermark, signature, unfinished, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, fused fingers, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "crop_ordinary-female_KNEEL_209210101",
+        "crop_ordinary-female_KNEEL_209210102",
+        "crop_ordinary-female_KNEEL_209210103",
+        "crop_ordinary-female_KNEEL_209210104"
+      ]
+    },
+    {
+      "id": "crop_ordinary-female_POCKET_209210101",
+      "suite": "integration-20260929",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "thighhighs",
+        "shorts",
+        "white shorts",
+        "gloves",
+        "elbow gloves",
+        "crop top",
+        "white thighhighs",
+        "white gloves"
+      ],
+      "poses": [
+        "hands_in_pockets"
+      ],
+      "slim": true,
+      "policy": "off",
+      "positive": "1girl, thighhighs, shorts, white shorts, gloves, elbow gloves, crop top, white thighhighs, white gloves, midriff, black hair, short hair, blue eyes, breasts, medium breasts, hands in pockets, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, lowres, bad, text, error, missing fingers, worst quality, low quality, watermark, signature, unfinished, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, fused fingers, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "crop_ordinary-female_POCKET_209210101",
+        "crop_ordinary-female_POCKET_209210102",
+        "crop_ordinary-female_POCKET_209210103",
+        "crop_ordinary-female_POCKET_209210104"
+      ]
+    },
+    {
+      "id": "crop_ordinary-female_P2_209210101",
+      "suite": "integration-20260929",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "thighhighs",
+        "shorts",
+        "white shorts",
+        "gloves",
+        "elbow gloves",
+        "crop top",
+        "white thighhighs",
+        "white gloves"
+      ],
+      "poses": [
+        "hand_in_pocket"
+      ],
+      "slim": true,
+      "policy": "off",
+      "positive": "1girl, thighhighs, shorts, white shorts, gloves, elbow gloves, crop top, white thighhighs, white gloves, midriff, black hair, short hair, blue eyes, breasts, medium breasts, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, lowres, bad, text, error, missing fingers, worst quality, low quality, watermark, signature, unfinished, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, fused fingers, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "crop_ordinary-female_P2_209210101",
+        "crop_ordinary-female_P2_209210102",
+        "crop_ordinary-female_P2_209210103",
+        "crop_ordinary-female_P2_209210104"
+      ]
+    },
+    {
+      "id": "crop_ordinary-female_HIGH_209210101",
+      "suite": "integration-20260929",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "thighhighs",
+        "shorts",
+        "white shorts",
+        "gloves",
+        "elbow gloves",
+        "crop top",
+        "white thighhighs",
+        "white gloves"
+      ],
+      "poses": [
+        "from_above",
+        "holding_phone",
+        "cellphone",
+        "hand_in_pocket"
+      ],
+      "slim": true,
+      "policy": "off",
+      "positive": "1girl, thighhighs, shorts, white shorts, gloves, elbow gloves, crop top, white thighhighs, white gloves, midriff, black hair, short hair, blue eyes, breasts, medium breasts, from above, holding phone, cellphone, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, lowres, bad, text, error, missing fingers, worst quality, low quality, watermark, signature, unfinished, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, fused fingers, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "crop_ordinary-female_HIGH_209210101",
+        "crop_ordinary-female_HIGH_209210102",
+        "crop_ordinary-female_HIGH_209210103",
+        "crop_ordinary-female_HIGH_209210104"
+      ]
+    },
+    {
+      "id": "crop_ordinary-female_LOW_209210101",
+      "suite": "integration-20260929",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "thighhighs",
+        "shorts",
+        "white shorts",
+        "gloves",
+        "elbow gloves",
+        "crop top",
+        "white thighhighs",
+        "white gloves"
+      ],
+      "poses": [
+        "hands_on_own_head",
+        "arms_up"
+      ],
+      "slim": true,
+      "policy": "off",
+      "positive": "1girl, thighhighs, shorts, white shorts, gloves, elbow gloves, crop top, white thighhighs, white gloves, midriff, black hair, short hair, blue eyes, breasts, medium breasts, hands on own head, arms up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, lowres, bad, text, error, missing fingers, worst quality, low quality, watermark, signature, unfinished, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, fused fingers, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "crop_ordinary-female_LOW_209210101",
+        "crop_ordinary-female_LOW_209210102",
+        "crop_ordinary-female_LOW_209210103",
+        "crop_ordinary-female_LOW_209210104"
+      ]
+    },
+    {
+      "id": "crop_raccoon_KNEEL_209210101",
+      "suite": "integration-20260929",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "thighhighs",
+        "shorts",
+        "white shorts",
+        "gloves",
+        "elbow gloves",
+        "crop top",
+        "white thighhighs",
+        "white gloves"
+      ],
+      "poses": [
+        "kneeling",
+        "arm_up"
+      ],
+      "slim": false,
+      "policy": "off",
+      "positive": "thighhighs, shorts, white shorts, gloves, elbow gloves, crop top, white thighhighs, white gloves, midriff, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, kneeling, arm up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, lowres, bad, text, error, missing fingers, worst quality, low quality, watermark, signature, unfinished, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, fused fingers, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "crop_raccoon_KNEEL_209210101",
+        "crop_raccoon_KNEEL_209210102",
+        "crop_raccoon_KNEEL_209210103",
+        "crop_raccoon_KNEEL_209210104"
+      ]
+    },
+    {
+      "id": "crop_raccoon_POCKET_209210101",
+      "suite": "integration-20260929",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "thighhighs",
+        "shorts",
+        "white shorts",
+        "gloves",
+        "elbow gloves",
+        "crop top",
+        "white thighhighs",
+        "white gloves"
+      ],
+      "poses": [
+        "hands_in_pockets"
+      ],
+      "slim": false,
+      "policy": "off",
+      "positive": "thighhighs, shorts, white shorts, gloves, elbow gloves, crop top, white thighhighs, white gloves, midriff, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, hands in pockets, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, lowres, bad, text, error, missing fingers, worst quality, low quality, watermark, signature, unfinished, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, fused fingers, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "crop_raccoon_POCKET_209210101",
+        "crop_raccoon_POCKET_209210102",
+        "crop_raccoon_POCKET_209210103",
+        "crop_raccoon_POCKET_209210104"
+      ]
+    },
+    {
+      "id": "crop_raccoon_P2_209210101",
+      "suite": "integration-20260929",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "thighhighs",
+        "shorts",
+        "white shorts",
+        "gloves",
+        "elbow gloves",
+        "crop top",
+        "white thighhighs",
+        "white gloves"
+      ],
+      "poses": [
+        "hand_in_pocket"
+      ],
+      "slim": false,
+      "policy": "off",
+      "positive": "thighhighs, shorts, white shorts, gloves, elbow gloves, crop top, white thighhighs, white gloves, midriff, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, lowres, bad, text, error, missing fingers, worst quality, low quality, watermark, signature, unfinished, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, fused fingers, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "crop_raccoon_P2_209210101",
+        "crop_raccoon_P2_209210102",
+        "crop_raccoon_P2_209210103",
+        "crop_raccoon_P2_209210104"
+      ]
+    },
+    {
+      "id": "crop_raccoon_HIGH_209210101",
+      "suite": "integration-20260929",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "thighhighs",
+        "shorts",
+        "white shorts",
+        "gloves",
+        "elbow gloves",
+        "crop top",
+        "white thighhighs",
+        "white gloves"
+      ],
+      "poses": [
+        "from_above",
+        "holding_phone",
+        "cellphone",
+        "hand_in_pocket"
+      ],
+      "slim": false,
+      "policy": "off",
+      "positive": "thighhighs, shorts, white shorts, gloves, elbow gloves, crop top, white thighhighs, white gloves, midriff, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, from above, holding phone, cellphone, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, lowres, bad, text, error, missing fingers, worst quality, low quality, watermark, signature, unfinished, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, fused fingers, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "crop_raccoon_HIGH_209210101",
+        "crop_raccoon_HIGH_209210102",
+        "crop_raccoon_HIGH_209210103",
+        "crop_raccoon_HIGH_209210104"
+      ]
+    },
+    {
+      "id": "crop_raccoon_LOW_209210101",
+      "suite": "integration-20260929",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "thighhighs",
+        "shorts",
+        "white shorts",
+        "gloves",
+        "elbow gloves",
+        "crop top",
+        "white thighhighs",
+        "white gloves"
+      ],
+      "poses": [
+        "hands_on_own_head",
+        "arms_up"
+      ],
+      "slim": false,
+      "policy": "off",
+      "positive": "thighhighs, shorts, white shorts, gloves, elbow gloves, crop top, white thighhighs, white gloves, midriff, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, hands on own head, arms up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, lowres, bad, text, error, missing fingers, worst quality, low quality, watermark, signature, unfinished, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, fused fingers, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "crop_raccoon_LOW_209210101",
+        "crop_raccoon_LOW_209210102",
+        "crop_raccoon_LOW_209210103",
+        "crop_raccoon_LOW_209210104"
+      ]
+    },
+    {
+      "id": "F_original_ordinary-female_KNEEL_209210101",
+      "suite": "final-int-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "white camisole",
+        "black shorts"
+      ],
+      "poses": [
+        "kneeling",
+        "arm_up"
+      ],
+      "slim": true,
+      "policy": "ps",
+      "positive": "1girl, white camisole, black shorts, bare legs, bare shoulders, bare arms, black hair, short hair, blue eyes, slender, skinny, breasts, small breasts, kneeling, arm up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "F_original_ordinary-female_KNEEL_209210101",
+        "F_original_ordinary-female_KNEEL_209210102",
+        "F_original_ordinary-female_KNEEL_209210103",
+        "F_original_ordinary-female_KNEEL_209210104"
+      ]
+    },
+    {
+      "id": "F_original_ordinary-female_POCKET_209210101",
+      "suite": "final-int-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "white camisole",
+        "black shorts"
+      ],
+      "poses": [
+        "hands_in_pockets"
+      ],
+      "slim": true,
+      "policy": "ps",
+      "positive": "1girl, white camisole, black shorts, bare legs, bare shoulders, bare arms, black hair, short hair, blue eyes, slender, skinny, breasts, small breasts, hands in pockets, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "F_original_ordinary-female_POCKET_209210101",
+        "F_original_ordinary-female_POCKET_209210102",
+        "F_original_ordinary-female_POCKET_209210103",
+        "F_original_ordinary-female_POCKET_209210104"
+      ]
+    },
+    {
+      "id": "F_original_ordinary-female_P2_209210101",
+      "suite": "final-int-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "white camisole",
+        "black shorts"
+      ],
+      "poses": [
+        "hand_in_pocket"
+      ],
+      "slim": true,
+      "policy": "ps",
+      "positive": "1girl, white camisole, black shorts, bare legs, bare shoulders, bare arms, black hair, short hair, blue eyes, slender, skinny, breasts, small breasts, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "F_original_ordinary-female_P2_209210101",
+        "F_original_ordinary-female_P2_209210102",
+        "F_original_ordinary-female_P2_209210103",
+        "F_original_ordinary-female_P2_209210104"
+      ]
+    },
+    {
+      "id": "F_original_ordinary-female_HIGH_209210101",
+      "suite": "final-int-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "white camisole",
+        "black shorts"
+      ],
+      "poses": [
+        "from_above",
+        "holding_phone",
+        "cellphone",
+        "hand_in_pocket"
+      ],
+      "slim": true,
+      "policy": "ps",
+      "positive": "1girl, white camisole, black shorts, bare legs, bare shoulders, bare arms, black hair, short hair, blue eyes, slender, skinny, breasts, small breasts, from above, holding phone, cellphone, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "F_original_ordinary-female_HIGH_209210101",
+        "F_original_ordinary-female_HIGH_209210102",
+        "F_original_ordinary-female_HIGH_209210103",
+        "F_original_ordinary-female_HIGH_209210104"
+      ]
+    },
+    {
+      "id": "F_original_ordinary-female_LOW_209210101",
+      "suite": "final-int-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "white camisole",
+        "black shorts"
+      ],
+      "poses": [
+        "hands_on_own_head",
+        "arms_up"
+      ],
+      "slim": true,
+      "policy": "ps",
+      "positive": "1girl, white camisole, black shorts, bare legs, bare shoulders, bare arms, black hair, short hair, blue eyes, slender, skinny, breasts, small breasts, hands on own head, arms up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "F_original_ordinary-female_LOW_209210101",
+        "F_original_ordinary-female_LOW_209210102",
+        "F_original_ordinary-female_LOW_209210103",
+        "F_original_ordinary-female_LOW_209210104"
+      ]
+    },
+    {
+      "id": "F_original_raccoon_KNEEL_209210101",
+      "suite": "final-int-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "white camisole",
+        "black shorts"
+      ],
+      "poses": [
+        "kneeling",
+        "arm_up"
+      ],
+      "slim": false,
+      "policy": "ps",
+      "positive": "white camisole, black shorts, bare legs, bare shoulders, bare arms, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, kneeling, arm up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "F_original_raccoon_KNEEL_209210101",
+        "F_original_raccoon_KNEEL_209210102",
+        "F_original_raccoon_KNEEL_209210103",
+        "F_original_raccoon_KNEEL_209210104"
+      ]
+    },
+    {
+      "id": "F_original_raccoon_POCKET_209210101",
+      "suite": "final-int-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "white camisole",
+        "black shorts"
+      ],
+      "poses": [
+        "hands_in_pockets"
+      ],
+      "slim": false,
+      "policy": "ps",
+      "positive": "white camisole, black shorts, bare legs, bare shoulders, bare arms, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, hands in pockets, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "F_original_raccoon_POCKET_209210101",
+        "F_original_raccoon_POCKET_209210102",
+        "F_original_raccoon_POCKET_209210103",
+        "F_original_raccoon_POCKET_209210104"
+      ]
+    },
+    {
+      "id": "F_original_raccoon_P2_209210101",
+      "suite": "final-int-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "white camisole",
+        "black shorts"
+      ],
+      "poses": [
+        "hand_in_pocket"
+      ],
+      "slim": false,
+      "policy": "ps",
+      "positive": "white camisole, black shorts, bare legs, bare shoulders, bare arms, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "F_original_raccoon_P2_209210101",
+        "F_original_raccoon_P2_209210102",
+        "F_original_raccoon_P2_209210103",
+        "F_original_raccoon_P2_209210104"
+      ]
+    },
+    {
+      "id": "F_original_raccoon_HIGH_209210101",
+      "suite": "final-int-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "white camisole",
+        "black shorts"
+      ],
+      "poses": [
+        "from_above",
+        "holding_phone",
+        "cellphone",
+        "hand_in_pocket"
+      ],
+      "slim": false,
+      "policy": "ps",
+      "positive": "white camisole, black shorts, bare legs, bare shoulders, bare arms, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, from above, holding phone, cellphone, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "F_original_raccoon_HIGH_209210101",
+        "F_original_raccoon_HIGH_209210102",
+        "F_original_raccoon_HIGH_209210103",
+        "F_original_raccoon_HIGH_209210104"
+      ]
+    },
+    {
+      "id": "F_original_raccoon_LOW_209210101",
+      "suite": "final-int-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "white camisole",
+        "black shorts"
+      ],
+      "poses": [
+        "hands_on_own_head",
+        "arms_up"
+      ],
+      "slim": false,
+      "policy": "ps",
+      "positive": "white camisole, black shorts, bare legs, bare shoulders, bare arms, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, hands on own head, arms up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "F_original_raccoon_LOW_209210101",
+        "F_original_raccoon_LOW_209210102",
+        "F_original_raccoon_LOW_209210103",
+        "F_original_raccoon_LOW_209210104"
+      ]
+    },
+    {
+      "id": "F_ferrari_ordinary-female_KNEEL_209210101",
+      "suite": "final-int-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "bodysuit",
+        "black bodysuit",
+        "jacket",
+        "yellow jacket",
+        "long sleeves",
+        "hoodie"
+      ],
+      "poses": [
+        "kneeling",
+        "arm_up"
+      ],
+      "slim": true,
+      "policy": "ps",
+      "positive": "1girl, bodysuit, black bodysuit, jacket, yellow jacket, long sleeves, hoodie, black hair, short hair, blue eyes, slender, skinny, breasts, small breasts, kneeling, arm up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "F_ferrari_ordinary-female_KNEEL_209210101",
+        "F_ferrari_ordinary-female_KNEEL_209210102",
+        "F_ferrari_ordinary-female_KNEEL_209210103",
+        "F_ferrari_ordinary-female_KNEEL_209210104"
+      ]
+    },
+    {
+      "id": "F_ferrari_ordinary-female_POCKET_209210101",
+      "suite": "final-int-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "bodysuit",
+        "black bodysuit",
+        "jacket",
+        "yellow jacket",
+        "long sleeves",
+        "hoodie"
+      ],
+      "poses": [
+        "hands_in_pockets"
+      ],
+      "slim": true,
+      "policy": "ps",
+      "positive": "1girl, bodysuit, black bodysuit, jacket, yellow jacket, long sleeves, hoodie, black hair, short hair, blue eyes, slender, skinny, breasts, small breasts, hands in pockets, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "F_ferrari_ordinary-female_POCKET_209210101",
+        "F_ferrari_ordinary-female_POCKET_209210102",
+        "F_ferrari_ordinary-female_POCKET_209210103",
+        "F_ferrari_ordinary-female_POCKET_209210104"
+      ]
+    },
+    {
+      "id": "F_ferrari_ordinary-female_P2_209210101",
+      "suite": "final-int-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "bodysuit",
+        "black bodysuit",
+        "jacket",
+        "yellow jacket",
+        "long sleeves",
+        "hoodie"
+      ],
+      "poses": [
+        "hand_in_pocket"
+      ],
+      "slim": true,
+      "policy": "ps",
+      "positive": "1girl, bodysuit, black bodysuit, jacket, yellow jacket, long sleeves, hoodie, black hair, short hair, blue eyes, slender, skinny, breasts, small breasts, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "F_ferrari_ordinary-female_P2_209210101",
+        "F_ferrari_ordinary-female_P2_209210102",
+        "F_ferrari_ordinary-female_P2_209210103",
+        "F_ferrari_ordinary-female_P2_209210104"
+      ]
+    },
+    {
+      "id": "F_ferrari_ordinary-female_HIGH_209210101",
+      "suite": "final-int-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "bodysuit",
+        "black bodysuit",
+        "jacket",
+        "yellow jacket",
+        "long sleeves",
+        "hoodie"
+      ],
+      "poses": [
+        "from_above",
+        "holding_phone",
+        "cellphone",
+        "hand_in_pocket"
+      ],
+      "slim": true,
+      "policy": "ps",
+      "positive": "1girl, bodysuit, black bodysuit, jacket, yellow jacket, long sleeves, hoodie, black hair, short hair, blue eyes, slender, skinny, breasts, small breasts, from above, holding phone, cellphone, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "F_ferrari_ordinary-female_HIGH_209210101",
+        "F_ferrari_ordinary-female_HIGH_209210102",
+        "F_ferrari_ordinary-female_HIGH_209210103",
+        "F_ferrari_ordinary-female_HIGH_209210104"
+      ]
+    },
+    {
+      "id": "F_ferrari_ordinary-female_LOW_209210101",
+      "suite": "final-int-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "bodysuit",
+        "black bodysuit",
+        "jacket",
+        "yellow jacket",
+        "long sleeves",
+        "hoodie"
+      ],
+      "poses": [
+        "hands_on_own_head",
+        "arms_up"
+      ],
+      "slim": true,
+      "policy": "ps",
+      "positive": "1girl, bodysuit, black bodysuit, jacket, yellow jacket, long sleeves, hoodie, black hair, short hair, blue eyes, slender, skinny, breasts, small breasts, hands on own head, arms up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "F_ferrari_ordinary-female_LOW_209210101",
+        "F_ferrari_ordinary-female_LOW_209210102",
+        "F_ferrari_ordinary-female_LOW_209210103",
+        "F_ferrari_ordinary-female_LOW_209210104"
+      ]
+    },
+    {
+      "id": "F_ferrari_raccoon_KNEEL_209210101",
+      "suite": "final-int-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "bodysuit",
+        "black bodysuit",
+        "jacket",
+        "yellow jacket",
+        "long sleeves",
+        "hoodie"
+      ],
+      "poses": [
+        "kneeling",
+        "arm_up"
+      ],
+      "slim": false,
+      "policy": "ps",
+      "positive": "bodysuit, black bodysuit, jacket, yellow jacket, long sleeves, hoodie, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, kneeling, arm up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "F_ferrari_raccoon_KNEEL_209210101",
+        "F_ferrari_raccoon_KNEEL_209210102",
+        "F_ferrari_raccoon_KNEEL_209210103",
+        "F_ferrari_raccoon_KNEEL_209210104"
+      ]
+    },
+    {
+      "id": "F_ferrari_raccoon_POCKET_209210101",
+      "suite": "final-int-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "bodysuit",
+        "black bodysuit",
+        "jacket",
+        "yellow jacket",
+        "long sleeves",
+        "hoodie"
+      ],
+      "poses": [
+        "hands_in_pockets"
+      ],
+      "slim": false,
+      "policy": "ps",
+      "positive": "bodysuit, black bodysuit, jacket, yellow jacket, long sleeves, hoodie, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, hands in pockets, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "F_ferrari_raccoon_POCKET_209210101",
+        "F_ferrari_raccoon_POCKET_209210102",
+        "F_ferrari_raccoon_POCKET_209210103",
+        "F_ferrari_raccoon_POCKET_209210104"
+      ]
+    },
+    {
+      "id": "F_ferrari_raccoon_P2_209210101",
+      "suite": "final-int-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "bodysuit",
+        "black bodysuit",
+        "jacket",
+        "yellow jacket",
+        "long sleeves",
+        "hoodie"
+      ],
+      "poses": [
+        "hand_in_pocket"
+      ],
+      "slim": false,
+      "policy": "ps",
+      "positive": "bodysuit, black bodysuit, jacket, yellow jacket, long sleeves, hoodie, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "F_ferrari_raccoon_P2_209210101",
+        "F_ferrari_raccoon_P2_209210102",
+        "F_ferrari_raccoon_P2_209210103",
+        "F_ferrari_raccoon_P2_209210104"
+      ]
+    },
+    {
+      "id": "F_ferrari_raccoon_HIGH_209210101",
+      "suite": "final-int-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "bodysuit",
+        "black bodysuit",
+        "jacket",
+        "yellow jacket",
+        "long sleeves",
+        "hoodie"
+      ],
+      "poses": [
+        "from_above",
+        "holding_phone",
+        "cellphone",
+        "hand_in_pocket"
+      ],
+      "slim": false,
+      "policy": "ps",
+      "positive": "bodysuit, black bodysuit, jacket, yellow jacket, long sleeves, hoodie, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, from above, holding phone, cellphone, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "F_ferrari_raccoon_HIGH_209210101",
+        "F_ferrari_raccoon_HIGH_209210102",
+        "F_ferrari_raccoon_HIGH_209210103",
+        "F_ferrari_raccoon_HIGH_209210104"
+      ]
+    },
+    {
+      "id": "F_ferrari_raccoon_LOW_209210101",
+      "suite": "final-int-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "bodysuit",
+        "black bodysuit",
+        "jacket",
+        "yellow jacket",
+        "long sleeves",
+        "hoodie"
+      ],
+      "poses": [
+        "hands_on_own_head",
+        "arms_up"
+      ],
+      "slim": false,
+      "policy": "ps",
+      "positive": "bodysuit, black bodysuit, jacket, yellow jacket, long sleeves, hoodie, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, hands on own head, arms up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "F_ferrari_raccoon_LOW_209210101",
+        "F_ferrari_raccoon_LOW_209210102",
+        "F_ferrari_raccoon_LOW_209210103",
+        "F_ferrari_raccoon_LOW_209210104"
+      ]
+    },
+    {
+      "id": "F_crop_ordinary-female_KNEEL_209210101",
+      "suite": "final-int-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "thighhighs",
+        "shorts",
+        "white shorts",
+        "gloves",
+        "elbow gloves",
+        "crop top",
+        "white thighhighs",
+        "white gloves"
+      ],
+      "poses": [
+        "kneeling",
+        "arm_up"
+      ],
+      "slim": true,
+      "policy": "ps",
+      "positive": "1girl, thighhighs, shorts, white shorts, gloves, elbow gloves, crop top, white thighhighs, white gloves, midriff, black hair, short hair, blue eyes, slender, skinny, breasts, small breasts, kneeling, arm up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "F_crop_ordinary-female_KNEEL_209210101",
+        "F_crop_ordinary-female_KNEEL_209210102",
+        "F_crop_ordinary-female_KNEEL_209210103",
+        "F_crop_ordinary-female_KNEEL_209210104"
+      ]
+    },
+    {
+      "id": "F_crop_ordinary-female_POCKET_209210101",
+      "suite": "final-int-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "thighhighs",
+        "shorts",
+        "white shorts",
+        "gloves",
+        "elbow gloves",
+        "crop top",
+        "white thighhighs",
+        "white gloves"
+      ],
+      "poses": [
+        "hands_in_pockets"
+      ],
+      "slim": true,
+      "policy": "ps",
+      "positive": "1girl, thighhighs, shorts, white shorts, gloves, elbow gloves, crop top, white thighhighs, white gloves, midriff, black hair, short hair, blue eyes, slender, skinny, breasts, small breasts, hands in pockets, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "F_crop_ordinary-female_POCKET_209210101",
+        "F_crop_ordinary-female_POCKET_209210102",
+        "F_crop_ordinary-female_POCKET_209210103",
+        "F_crop_ordinary-female_POCKET_209210104"
+      ]
+    },
+    {
+      "id": "F_crop_ordinary-female_P2_209210101",
+      "suite": "final-int-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "thighhighs",
+        "shorts",
+        "white shorts",
+        "gloves",
+        "elbow gloves",
+        "crop top",
+        "white thighhighs",
+        "white gloves"
+      ],
+      "poses": [
+        "hand_in_pocket"
+      ],
+      "slim": true,
+      "policy": "ps",
+      "positive": "1girl, thighhighs, shorts, white shorts, gloves, elbow gloves, crop top, white thighhighs, white gloves, midriff, black hair, short hair, blue eyes, slender, skinny, breasts, small breasts, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "F_crop_ordinary-female_P2_209210101",
+        "F_crop_ordinary-female_P2_209210102",
+        "F_crop_ordinary-female_P2_209210103",
+        "F_crop_ordinary-female_P2_209210104"
+      ]
+    },
+    {
+      "id": "F_crop_ordinary-female_HIGH_209210101",
+      "suite": "final-int-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "thighhighs",
+        "shorts",
+        "white shorts",
+        "gloves",
+        "elbow gloves",
+        "crop top",
+        "white thighhighs",
+        "white gloves"
+      ],
+      "poses": [
+        "from_above",
+        "holding_phone",
+        "cellphone",
+        "hand_in_pocket"
+      ],
+      "slim": true,
+      "policy": "ps",
+      "positive": "1girl, thighhighs, shorts, white shorts, gloves, elbow gloves, crop top, white thighhighs, white gloves, midriff, black hair, short hair, blue eyes, slender, skinny, breasts, small breasts, from above, holding phone, cellphone, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "F_crop_ordinary-female_HIGH_209210101",
+        "F_crop_ordinary-female_HIGH_209210102",
+        "F_crop_ordinary-female_HIGH_209210103",
+        "F_crop_ordinary-female_HIGH_209210104"
+      ]
+    },
+    {
+      "id": "F_crop_ordinary-female_LOW_209210101",
+      "suite": "final-int-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "thighhighs",
+        "shorts",
+        "white shorts",
+        "gloves",
+        "elbow gloves",
+        "crop top",
+        "white thighhighs",
+        "white gloves"
+      ],
+      "poses": [
+        "hands_on_own_head",
+        "arms_up"
+      ],
+      "slim": true,
+      "policy": "ps",
+      "positive": "1girl, thighhighs, shorts, white shorts, gloves, elbow gloves, crop top, white thighhighs, white gloves, midriff, black hair, short hair, blue eyes, slender, skinny, breasts, small breasts, hands on own head, arms up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "F_crop_ordinary-female_LOW_209210101",
+        "F_crop_ordinary-female_LOW_209210102",
+        "F_crop_ordinary-female_LOW_209210103",
+        "F_crop_ordinary-female_LOW_209210104"
+      ]
+    },
+    {
+      "id": "F_crop_raccoon_KNEEL_209210101",
+      "suite": "final-int-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "thighhighs",
+        "shorts",
+        "white shorts",
+        "gloves",
+        "elbow gloves",
+        "crop top",
+        "white thighhighs",
+        "white gloves"
+      ],
+      "poses": [
+        "kneeling",
+        "arm_up"
+      ],
+      "slim": false,
+      "policy": "ps",
+      "positive": "thighhighs, shorts, white shorts, gloves, elbow gloves, crop top, white thighhighs, white gloves, midriff, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, kneeling, arm up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "F_crop_raccoon_KNEEL_209210101",
+        "F_crop_raccoon_KNEEL_209210102",
+        "F_crop_raccoon_KNEEL_209210103",
+        "F_crop_raccoon_KNEEL_209210104"
+      ]
+    },
+    {
+      "id": "F_crop_raccoon_POCKET_209210101",
+      "suite": "final-int-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "thighhighs",
+        "shorts",
+        "white shorts",
+        "gloves",
+        "elbow gloves",
+        "crop top",
+        "white thighhighs",
+        "white gloves"
+      ],
+      "poses": [
+        "hands_in_pockets"
+      ],
+      "slim": false,
+      "policy": "ps",
+      "positive": "thighhighs, shorts, white shorts, gloves, elbow gloves, crop top, white thighhighs, white gloves, midriff, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, hands in pockets, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "F_crop_raccoon_POCKET_209210101",
+        "F_crop_raccoon_POCKET_209210102",
+        "F_crop_raccoon_POCKET_209210103",
+        "F_crop_raccoon_POCKET_209210104"
+      ]
+    },
+    {
+      "id": "F_crop_raccoon_P2_209210101",
+      "suite": "final-int-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "thighhighs",
+        "shorts",
+        "white shorts",
+        "gloves",
+        "elbow gloves",
+        "crop top",
+        "white thighhighs",
+        "white gloves"
+      ],
+      "poses": [
+        "hand_in_pocket"
+      ],
+      "slim": false,
+      "policy": "ps",
+      "positive": "thighhighs, shorts, white shorts, gloves, elbow gloves, crop top, white thighhighs, white gloves, midriff, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "F_crop_raccoon_P2_209210101",
+        "F_crop_raccoon_P2_209210102",
+        "F_crop_raccoon_P2_209210103",
+        "F_crop_raccoon_P2_209210104"
+      ]
+    },
+    {
+      "id": "F_crop_raccoon_HIGH_209210101",
+      "suite": "final-int-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "thighhighs",
+        "shorts",
+        "white shorts",
+        "gloves",
+        "elbow gloves",
+        "crop top",
+        "white thighhighs",
+        "white gloves"
+      ],
+      "poses": [
+        "from_above",
+        "holding_phone",
+        "cellphone",
+        "hand_in_pocket"
+      ],
+      "slim": false,
+      "policy": "ps",
+      "positive": "thighhighs, shorts, white shorts, gloves, elbow gloves, crop top, white thighhighs, white gloves, midriff, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, from above, holding phone, cellphone, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "F_crop_raccoon_HIGH_209210101",
+        "F_crop_raccoon_HIGH_209210102",
+        "F_crop_raccoon_HIGH_209210103",
+        "F_crop_raccoon_HIGH_209210104"
+      ]
+    },
+    {
+      "id": "F_crop_raccoon_LOW_209210101",
+      "suite": "final-int-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "thighhighs",
+        "shorts",
+        "white shorts",
+        "gloves",
+        "elbow gloves",
+        "crop top",
+        "white thighhighs",
+        "white gloves"
+      ],
+      "poses": [
+        "hands_on_own_head",
+        "arms_up"
+      ],
+      "slim": false,
+      "policy": "ps",
+      "positive": "thighhighs, shorts, white shorts, gloves, elbow gloves, crop top, white thighhighs, white gloves, midriff, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, hands on own head, arms up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "F_crop_raccoon_LOW_209210101",
+        "F_crop_raccoon_LOW_209210102",
+        "F_crop_raccoon_LOW_209210103",
+        "F_crop_raccoon_LOW_209210104"
+      ]
+    },
+    {
+      "id": "NS_original_KNEEL_209210101",
+      "suite": "slim-cost-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "white camisole",
+        "black shorts"
+      ],
+      "poses": [
+        "kneeling",
+        "arm_up"
+      ],
+      "slim": true,
+      "policy": "ns",
+      "positive": "1girl, white camisole, black shorts, bare legs, bare shoulders, bare arms, black hair, short hair, blue eyes, slender, breasts, small breasts, kneeling, arm up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "NS_original_KNEEL_209210101",
+        "NS_original_KNEEL_209210102",
+        "NS_original_KNEEL_209210103",
+        "NS_original_KNEEL_209210104",
+        "NS_original_KNEEL_209210105",
+        "NS_original_KNEEL_209210106",
+        "NS_original_KNEEL_209210107",
+        "NS_original_KNEEL_209210108",
+        "NS_original_KNEEL_209210109",
+        "NS_original_KNEEL_209210110",
+        "NS_original_KNEEL_209210111",
+        "NS_original_KNEEL_209210112"
+      ]
+    },
+    {
+      "id": "NS_original_HIGH_209210101",
+      "suite": "slim-cost-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "white camisole",
+        "black shorts"
+      ],
+      "poses": [
+        "from_above",
+        "holding_phone",
+        "cellphone",
+        "hand_in_pocket"
+      ],
+      "slim": true,
+      "policy": "ns",
+      "positive": "1girl, white camisole, black shorts, bare legs, bare shoulders, bare arms, black hair, short hair, blue eyes, slender, breasts, small breasts, from above, holding phone, cellphone, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "NS_original_HIGH_209210101",
+        "NS_original_HIGH_209210102",
+        "NS_original_HIGH_209210103",
+        "NS_original_HIGH_209210104",
+        "NS_original_HIGH_209210105",
+        "NS_original_HIGH_209210106",
+        "NS_original_HIGH_209210107",
+        "NS_original_HIGH_209210108",
+        "NS_original_HIGH_209210109",
+        "NS_original_HIGH_209210110",
+        "NS_original_HIGH_209210111",
+        "NS_original_HIGH_209210112"
+      ]
+    },
+    {
+      "id": "NS_crop_KNEEL_209210101",
+      "suite": "slim-cost-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "thighhighs",
+        "shorts",
+        "white shorts",
+        "gloves",
+        "elbow gloves",
+        "crop top",
+        "white thighhighs",
+        "white gloves"
+      ],
+      "poses": [
+        "kneeling",
+        "arm_up"
+      ],
+      "slim": true,
+      "policy": "ns",
+      "positive": "1girl, thighhighs, shorts, white shorts, gloves, elbow gloves, crop top, white thighhighs, white gloves, midriff, black hair, short hair, blue eyes, slender, breasts, small breasts, kneeling, arm up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "NS_crop_KNEEL_209210101",
+        "NS_crop_KNEEL_209210102",
+        "NS_crop_KNEEL_209210103",
+        "NS_crop_KNEEL_209210104",
+        "NS_crop_KNEEL_209210105",
+        "NS_crop_KNEEL_209210106",
+        "NS_crop_KNEEL_209210107",
+        "NS_crop_KNEEL_209210108",
+        "NS_crop_KNEEL_209210109",
+        "NS_crop_KNEEL_209210110",
+        "NS_crop_KNEEL_209210111",
+        "NS_crop_KNEEL_209210112"
+      ]
+    },
+    {
+      "id": "NS_crop_HIGH_209210101",
+      "suite": "slim-cost-20261001",
+      "gender": "unspecified",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "short_hair",
+          "blue_eyes"
+        ],
+        "body": [
+          "breasts",
+          "medium_breasts"
+        ],
+        "fixed": []
+      },
+      "garments": [
+        "thighhighs",
+        "shorts",
+        "white shorts",
+        "gloves",
+        "elbow gloves",
+        "crop top",
+        "white thighhighs",
+        "white gloves"
+      ],
+      "poses": [
+        "from_above",
+        "holding_phone",
+        "cellphone",
+        "hand_in_pocket"
+      ],
+      "slim": true,
+      "policy": "ns",
+      "positive": "1girl, thighhighs, shorts, white shorts, gloves, elbow gloves, crop top, white thighhighs, white gloves, midriff, black hair, short hair, blue eyes, slender, breasts, small breasts, from above, holding phone, cellphone, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "body",
+      "ids": [
+        "NS_crop_HIGH_209210101",
+        "NS_crop_HIGH_209210102",
+        "NS_crop_HIGH_209210103",
+        "NS_crop_HIGH_209210104",
+        "NS_crop_HIGH_209210105",
+        "NS_crop_HIGH_209210106",
+        "NS_crop_HIGH_209210107",
+        "NS_crop_HIGH_209210108",
+        "NS_crop_HIGH_209210109",
+        "NS_crop_HIGH_209210110",
+        "NS_crop_HIGH_209210111",
+        "NS_crop_HIGH_209210112"
+      ]
+    },
+    {
+      "id": "U_original_raccoon_KNEEL_209210101",
+      "suite": "gender-contract-20261001",
+      "gender": "male",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "white camisole",
+        "black shorts"
+      ],
+      "poses": [
+        "kneeling",
+        "arm_up"
+      ],
+      "slim": false,
+      "policy": "ps",
+      "positive": "1boy, male focus, masculine silhouette, white camisole, black shorts, bare legs, bare shoulders, bare arms, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, kneeling, arm up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1girl, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "full",
+      "ids": [
+        "U_original_raccoon_KNEEL_209210101",
+        "U_original_raccoon_KNEEL_209210102",
+        "U_original_raccoon_KNEEL_209210103",
+        "U_original_raccoon_KNEEL_209210104"
+      ]
+    },
+    {
+      "id": "U_original_raccoon_P2_209210101",
+      "suite": "gender-contract-20261001",
+      "gender": "male",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "white camisole",
+        "black shorts"
+      ],
+      "poses": [
+        "hand_in_pocket"
+      ],
+      "slim": false,
+      "policy": "ps",
+      "positive": "1boy, male focus, masculine silhouette, white camisole, black shorts, bare legs, bare shoulders, bare arms, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1girl, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "full",
+      "ids": [
+        "U_original_raccoon_P2_209210101",
+        "U_original_raccoon_P2_209210102",
+        "U_original_raccoon_P2_209210103",
+        "U_original_raccoon_P2_209210104"
+      ]
+    },
+    {
+      "id": "U_original_raccoon_LOW_209210101",
+      "suite": "gender-contract-20261001",
+      "gender": "male",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "white camisole",
+        "black shorts"
+      ],
+      "poses": [
+        "hands_on_own_head",
+        "arms_up"
+      ],
+      "slim": false,
+      "policy": "ps",
+      "positive": "1boy, male focus, masculine silhouette, white camisole, black shorts, bare legs, bare shoulders, bare arms, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, hands on own head, arms up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1girl, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "full",
+      "ids": [
+        "U_original_raccoon_LOW_209210101",
+        "U_original_raccoon_LOW_209210102",
+        "U_original_raccoon_LOW_209210103",
+        "U_original_raccoon_LOW_209210104"
+      ]
+    },
+    {
+      "id": "U_ferrari_raccoon_KNEEL_209210101",
+      "suite": "gender-contract-20261001",
+      "gender": "male",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "bodysuit",
+        "black bodysuit",
+        "jacket",
+        "yellow jacket",
+        "long sleeves",
+        "hoodie"
+      ],
+      "poses": [
+        "kneeling",
+        "arm_up"
+      ],
+      "slim": false,
+      "policy": "ps",
+      "positive": "1boy, male focus, masculine silhouette, bodysuit, black bodysuit, jacket, yellow jacket, long sleeves, hoodie, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, kneeling, arm up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1girl, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "full",
+      "ids": [
+        "U_ferrari_raccoon_KNEEL_209210101",
+        "U_ferrari_raccoon_KNEEL_209210102",
+        "U_ferrari_raccoon_KNEEL_209210103",
+        "U_ferrari_raccoon_KNEEL_209210104"
+      ]
+    },
+    {
+      "id": "U_ferrari_raccoon_P2_209210101",
+      "suite": "gender-contract-20261001",
+      "gender": "male",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "bodysuit",
+        "black bodysuit",
+        "jacket",
+        "yellow jacket",
+        "long sleeves",
+        "hoodie"
+      ],
+      "poses": [
+        "hand_in_pocket"
+      ],
+      "slim": false,
+      "policy": "ps",
+      "positive": "1boy, male focus, masculine silhouette, bodysuit, black bodysuit, jacket, yellow jacket, long sleeves, hoodie, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1girl, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "full",
+      "ids": [
+        "U_ferrari_raccoon_P2_209210101",
+        "U_ferrari_raccoon_P2_209210102",
+        "U_ferrari_raccoon_P2_209210103",
+        "U_ferrari_raccoon_P2_209210104"
+      ]
+    },
+    {
+      "id": "U_ferrari_raccoon_LOW_209210101",
+      "suite": "gender-contract-20261001",
+      "gender": "male",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "bodysuit",
+        "black bodysuit",
+        "jacket",
+        "yellow jacket",
+        "long sleeves",
+        "hoodie"
+      ],
+      "poses": [
+        "hands_on_own_head",
+        "arms_up"
+      ],
+      "slim": false,
+      "policy": "ps",
+      "positive": "1boy, male focus, masculine silhouette, bodysuit, black bodysuit, jacket, yellow jacket, long sleeves, hoodie, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, hands on own head, arms up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1girl, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "full",
+      "ids": [
+        "U_ferrari_raccoon_LOW_209210101",
+        "U_ferrari_raccoon_LOW_209210102",
+        "U_ferrari_raccoon_LOW_209210103",
+        "U_ferrari_raccoon_LOW_209210104"
+      ]
+    },
+    {
+      "id": "U_crop_raccoon_KNEEL_209210101",
+      "suite": "gender-contract-20261001",
+      "gender": "male",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "thighhighs",
+        "shorts",
+        "white shorts",
+        "gloves",
+        "elbow gloves",
+        "crop top",
+        "white thighhighs",
+        "white gloves"
+      ],
+      "poses": [
+        "kneeling",
+        "arm_up"
+      ],
+      "slim": false,
+      "policy": "ps",
+      "positive": "1boy, male focus, masculine silhouette, thighhighs, shorts, white shorts, gloves, elbow gloves, crop top, white thighhighs, white gloves, midriff, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, kneeling, arm up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1girl, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "full",
+      "ids": [
+        "U_crop_raccoon_KNEEL_209210101",
+        "U_crop_raccoon_KNEEL_209210102",
+        "U_crop_raccoon_KNEEL_209210103",
+        "U_crop_raccoon_KNEEL_209210104"
+      ]
+    },
+    {
+      "id": "U_crop_raccoon_P2_209210101",
+      "suite": "gender-contract-20261001",
+      "gender": "male",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "thighhighs",
+        "shorts",
+        "white shorts",
+        "gloves",
+        "elbow gloves",
+        "crop top",
+        "white thighhighs",
+        "white gloves"
+      ],
+      "poses": [
+        "hand_in_pocket"
+      ],
+      "slim": false,
+      "policy": "ps",
+      "positive": "1boy, male focus, masculine silhouette, thighhighs, shorts, white shorts, gloves, elbow gloves, crop top, white thighhighs, white gloves, midriff, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1girl, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "full",
+      "ids": [
+        "U_crop_raccoon_P2_209210101",
+        "U_crop_raccoon_P2_209210102",
+        "U_crop_raccoon_P2_209210103",
+        "U_crop_raccoon_P2_209210104"
+      ]
+    },
+    {
+      "id": "U_crop_raccoon_LOW_209210101",
+      "suite": "gender-contract-20261001",
+      "gender": "male",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "multicolored_hair",
+          "short_hair",
+          "purple_eyes"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_tail",
+          "raccoon_ears"
+        ]
+      },
+      "garments": [
+        "thighhighs",
+        "shorts",
+        "white shorts",
+        "gloves",
+        "elbow gloves",
+        "crop top",
+        "white thighhighs",
+        "white gloves"
+      ],
+      "poses": [
+        "hands_on_own_head",
+        "arms_up"
+      ],
+      "slim": false,
+      "policy": "ps",
+      "positive": "1boy, male focus, masculine silhouette, thighhighs, shorts, white shorts, gloves, elbow gloves, crop top, white thighhighs, white gloves, midriff, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, hands on own head, arms up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1girl, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+      "comparison": "full",
+      "ids": [
+        "U_crop_raccoon_LOW_209210101",
+        "U_crop_raccoon_LOW_209210102",
+        "U_crop_raccoon_LOW_209210103",
+        "U_crop_raccoon_LOW_209210104"
+      ]
+    }
+  ],
+  "reference": [
+    {
+      "id": "S1",
+      "suite": "e2e-20261001",
+      "gender": "male",
+      "groups": {
+        "appearance": [
+          "short_hair",
+          "white_hair",
+          "grey_eyes"
+        ],
+        "body": [],
+        "fixed": []
+      },
+      "garments": [
+        "shorts",
+        "blue shirt",
+        "blue shorts",
+        "long sleeves",
+        "shirt",
+        "short shorts",
+        "crop top"
+      ],
+      "poses": [
+        "hand_in_pocket"
+      ],
+      "slim": false,
+      "policy": "ps",
+      "positive": "1boy, shorts, blue shirt, blue shorts, long sleeves, shirt, short shorts, crop top, bare legs, midriff, short hair, white hair, grey eyes, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1girl, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes"
+    },
+    {
+      "id": "S2",
+      "suite": "e2e-20261001",
+      "gender": "female",
+      "groups": {
+        "appearance": [
+          "grey_hair",
+          "short_hair",
+          "blue_eyes",
+          "aqua_eyes"
+        ],
+        "body": [
+          "small_breasts"
+        ],
+        "fixed": [
+          "animal_ears"
+        ]
+      },
+      "garments": [
+        "necktie",
+        "pants",
+        "shirt",
+        "plaid necktie",
+        "white shirt",
+        "blue pants",
+        "white footwear",
+        "short sleeves"
+      ],
+      "poses": [
+        "kneeling",
+        "arm_up"
+      ],
+      "slim": true,
+      "policy": "ps",
+      "positive": "1girl, necktie, pants, shirt, plaid necktie, white shirt, blue pants, white footwear, short sleeves, grey hair, short hair, animal ears, blue eyes, aqua eyes, slender, skinny, small breasts, kneeling, arm up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes"
+    },
+    {
+      "id": "S3",
+      "suite": "e2e-20261001",
+      "gender": "male",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "blue_eyes",
+          "short_hair"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_ears",
+          "raccoon_tail"
+        ]
+      },
+      "garments": [
+        "shirt",
+        "suspenders",
+        "pants",
+        "white shirt",
+        "shoes",
+        "black pants",
+        "jacket",
+        "black footwear"
+      ],
+      "poses": [
+        "hand_in_pocket"
+      ],
+      "slim": false,
+      "policy": "ps",
+      "positive": "1boy, shirt, suspenders, pants, white shirt, shoes, black pants, jacket, black footwear, animal ears, tail, blue hair, blue eyes, short hair, raccoon ears, raccoon tail, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1girl, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes"
+    },
+    {
+      "id": "S4",
+      "suite": "e2e-20261001",
+      "gender": "female",
+      "groups": {
+        "appearance": [
+          "long_hair",
+          "blue_eyes",
+          "blue_hair",
+          "gradient_hair",
+          "multicolored_hair",
+          "aqua_hair"
+        ],
+        "body": [],
+        "fixed": []
+      },
+      "garments": [
+        "skirt",
+        "sweater",
+        "white skirt",
+        "thighhighs",
+        "white sweater",
+        "open-chest sweater",
+        "long sleeves"
+      ],
+      "poses": [
+        "hands_on_own_head",
+        "arms_up"
+      ],
+      "slim": false,
+      "policy": "ps",
+      "positive": "1girl, skirt, sweater, white skirt, thighhighs, white sweater, open-chest sweater, long sleeves, long hair, blue eyes, blue hair, gradient hair, multicolored hair, aqua hair, hands on own head, arms up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes"
+    },
+    {
+      "id": "S5",
+      "suite": "e2e-20261001",
+      "gender": "female",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "long_hair",
+          "colored_inner_hair",
+          "grey_eyes"
+        ],
+        "body": [],
+        "fixed": []
+      },
+      "garments": [
+        "skirt",
+        "red skirt",
+        "crop top",
+        "long sleeves",
+        "shirt",
+        "pleated skirt",
+        "white shirt"
+      ],
+      "poses": [
+        "from_above",
+        "holding_phone",
+        "cellphone",
+        "hand_in_pocket"
+      ],
+      "slim": true,
+      "policy": "ps",
+      "positive": "1girl, skirt, red skirt, crop top, long sleeves, shirt, pleated skirt, white shirt, bare legs, midriff, black hair, long hair, colored inner hair, grey eyes, slender, skinny, from above, holding phone, cellphone, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes"
+    },
+    {
+      "id": "T_S1",
+      "suite": "garment-fidelity-20261001",
+      "gender": "male",
+      "groups": {
+        "appearance": [
+          "short_hair",
+          "white_hair",
+          "grey_eyes"
+        ],
+        "body": [],
+        "fixed": []
+      },
+      "garments": [
+        "aqua sweater",
+        "cropped sweater",
+        "off-shoulder sweater",
+        "long sleeves",
+        "striped sleeves",
+        "aqua shorts",
+        "short shorts",
+        "dolphin shorts",
+        "midriff"
+      ],
+      "poses": [
+        "hand_in_pocket"
+      ],
+      "slim": false,
+      "policy": "ps",
+      "positive": "1boy, male focus, masculine silhouette, aqua sweater, cropped sweater, off-shoulder sweater, long sleeves, striped sleeves, aqua shorts, short shorts, dolphin shorts, midriff, bare legs, short hair, white hair, grey eyes, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1girl, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes"
+    },
+    {
+      "id": "T_S2",
+      "suite": "garment-fidelity-20261001",
+      "gender": "female",
+      "groups": {
+        "appearance": [
+          "grey_hair",
+          "short_hair",
+          "blue_eyes",
+          "aqua_eyes"
+        ],
+        "body": [
+          "small_breasts"
+        ],
+        "fixed": [
+          "animal_ears"
+        ]
+      },
+      "garments": [
+        "white shirt",
+        "collared shirt",
+        "short sleeves",
+        "plaid necktie",
+        "light blue pants",
+        "cargo pants",
+        "baggy pants",
+        "white footwear"
+      ],
+      "poses": [
+        "kneeling",
+        "arm_up"
+      ],
+      "slim": true,
+      "policy": "ps",
+      "positive": "1girl, female focus, feminine silhouette, white shirt, collared shirt, short sleeves, plaid necktie, light blue pants, cargo pants, baggy pants, white footwear, grey hair, short hair, animal ears, blue eyes, aqua eyes, slender, skinny, small breasts, kneeling, arm up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes"
+    },
+    {
+      "id": "T_S3",
+      "suite": "garment-fidelity-20261001",
+      "gender": "male",
+      "groups": {
+        "appearance": [
+          "blue_hair",
+          "blue_eyes",
+          "short_hair"
+        ],
+        "body": [],
+        "fixed": [
+          "animal_ears",
+          "tail",
+          "raccoon_ears",
+          "raccoon_tail"
+        ]
+      },
+      "garments": [
+        "grey jacket",
+        "jacket on shoulders",
+        "white shirt",
+        "black neck ribbon",
+        "suspenders",
+        "black pants",
+        "high-waist pants",
+        "black footwear"
+      ],
+      "poses": [
+        "hand_in_pocket"
+      ],
+      "slim": false,
+      "policy": "ps",
+      "positive": "1boy, male focus, masculine silhouette, grey jacket, jacket on shoulders, white shirt, black neck ribbon, suspenders, black pants, high-waist pants, black footwear, animal ears, tail, blue hair, blue eyes, short hair, raccoon ears, raccoon tail, hand in pocket, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1girl, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes"
+    },
+    {
+      "id": "T_S4",
+      "suite": "garment-fidelity-20261001",
+      "gender": "female",
+      "groups": {
+        "appearance": [
+          "long_hair",
+          "blue_eyes",
+          "blue_hair",
+          "gradient_hair",
+          "multicolored_hair",
+          "aqua_hair"
+        ],
+        "body": [],
+        "fixed": []
+      },
+      "garments": [
+        "white tube top",
+        "crop top",
+        "white shrug (clothing)",
+        "turtleneck",
+        "long sleeves",
+        "white skirt",
+        "miniskirt",
+        "midriff"
+      ],
+      "poses": [
+        "hands_on_own_head",
+        "arms_up"
+      ],
+      "slim": false,
+      "policy": "ps",
+      "positive": "1girl, female focus, feminine silhouette, white tube top, crop top, white shrug (clothing), turtleneck, long sleeves, white skirt, miniskirt, midriff, bare legs, long hair, blue eyes, blue hair, gradient hair, multicolored hair, aqua hair, hands on own head, arms up, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes"
+    },
+    {
+      "id": "T_S5",
+      "suite": "garment-fidelity-20261001",
+      "gender": "female",
+      "groups": {
+        "appearance": [
+          "black_hair",
+          "long_hair",
+          "colored_inner_hair",
+          "grey_eyes"
+        ],
+        "body": [],
+        "fixed": []
+      },
+      "garments": [
+        "white crop top",
+        "long sleeves",
+        "shoulder cutout",
+        "buttons",
+        "red pleated skirt",
+        "miniskirt",
+        "midriff"
+      ],
+      "poses": [
+        "from_above",
+        "holding_phone",
+        "cellphone",
+        "hand_in_pocket"
+      ],
+      "slim": true,
+      "policy": "ps",
+      "positive": "1girl, female focus, feminine silhouette, white crop top, long sleeves, shoulder cutout, buttons, red pleated skirt, miniskirt, midriff, bare legs, black hair, long hair, colored inner hair, grey eyes, slender, skinny, from above, holding phone, cellphone, solo, full body, white background, simple background, coherent anatomy, best quality",
+      "negative": "1boy, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes"
+    }
+  ]
+}

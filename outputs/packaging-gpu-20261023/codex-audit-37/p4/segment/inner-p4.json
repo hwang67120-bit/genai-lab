@@ -1,0 +1,578 @@
+{
+ "stage": "p4",
+ "dry": false,
+ "executable": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\python.exe",
+ "analysis_python": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\python.exe",
+ "analysis_python_in_candidate": true,
+ "semantic_repo": "D:\\genai-test\\model-home-20261023\\tools\\see-through",
+ "semantic_checkpoint": "D:\\genai-test\\model-home-20261023\\hf\\models--24yearsold--l2d_sam_iter2\\snapshots\\0b0608310fb7a89e32ecd7397147a249540cf1e7\\checkpoint-18000.pt",
+ "semantic_in_model_home": true,
+ "rows": {
+  "B2-outfit-parts": {
+   "dev_dir": "Z:\\genai-lab\\outputs\\product-run-20261022\\runs\\b5cb43fef5bf4277a15f16db4fd23644\\outfit-edit\\parts",
+   "canvas_sha_match": true,
+   "dev": {
+    "protect_px": 18727,
+    "face_px": 5809,
+    "accessory_px": 0,
+    "segmenter": {
+     "max_reserved_gib": 5.078125,
+     "max_allocated_gib": 4.662505149841309,
+     "checkpoint_sha256": "dda82b916f6c340bc5a6c3a077ff1214f9906906abe3707b1076d55b508f253f"
+    }
+   },
+   "state": "ok",
+   "seconds": 24.3,
+   "new": {
+    "protect_px": 18727,
+    "face_px": 5809,
+    "accessory_px": 0,
+    "segmenter": {
+     "max_reserved_gib": 5.078125,
+     "max_allocated_gib": 4.662505149841309,
+     "checkpoint_sha256": "dda82b916f6c340bc5a6c3a077ff1214f9906906abe3707b1076d55b508f253f"
+    }
+   },
+   "compare": {
+    "same_file_sha": true,
+    "keys_only_new": [],
+    "keys_only_dev": [],
+    "arrays": {
+     "bottomwear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "ears": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "earwear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "eyes": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "eyewear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "face": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "footwear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "hair": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "handwear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "headwear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "legwear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "mouth": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "neck": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "neckwear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "nose": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "objects": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "tail": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "topwear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "wings": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     }
+    },
+    "all_equal": true
+   },
+   "outcome": "pass",
+   "outcome_reason": "배열이 개발 결과와 같음"
+  },
+  "B2-base-parts": {
+   "dev_dir": "Z:\\genai-lab\\outputs\\product-run-20261022\\runs\\b5cb43fef5bf4277a15f16db4fd23644\\free-generation\\base-parts",
+   "canvas_sha_match": true,
+   "dev": {
+    "protect_px": 18625,
+    "face_px": 5691,
+    "accessory_px": 0,
+    "segmenter": {
+     "max_reserved_gib": 5.078125,
+     "max_allocated_gib": 4.662505149841309,
+     "checkpoint_sha256": "dda82b916f6c340bc5a6c3a077ff1214f9906906abe3707b1076d55b508f253f"
+    }
+   },
+   "state": "ok",
+   "seconds": 13.7,
+   "new": {
+    "protect_px": 18625,
+    "face_px": 5691,
+    "accessory_px": 0,
+    "segmenter": {
+     "max_reserved_gib": 5.078125,
+     "max_allocated_gib": 4.662505149841309,
+     "checkpoint_sha256": "dda82b916f6c340bc5a6c3a077ff1214f9906906abe3707b1076d55b508f253f"
+    }
+   },
+   "compare": {
+    "same_file_sha": true,
+    "keys_only_new": [],
+    "keys_only_dev": [],
+    "arrays": {
+     "bottomwear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "ears": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "earwear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "eyes": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "eyewear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "face": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "footwear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "hair": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "handwear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "headwear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "legwear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "mouth": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "neck": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "neckwear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "nose": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "objects": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "tail": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "topwear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "wings": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     }
+    },
+    "all_equal": true
+   },
+   "outcome": "pass",
+   "outcome_reason": "배열이 개발 결과와 같음"
+  },
+  "B2-result-parts": {
+   "dev_dir": "Z:\\genai-lab\\outputs\\product-run-20261022\\runs\\b5cb43fef5bf4277a15f16db4fd23644\\free-generation\\result-analysis\\parts",
+   "canvas_sha_match": true,
+   "dev": {
+    "protect_px": 12945,
+    "face_px": 4239,
+    "accessory_px": 0,
+    "segmenter": {
+     "max_reserved_gib": 5.078125,
+     "max_allocated_gib": 4.662505149841309,
+     "checkpoint_sha256": "dda82b916f6c340bc5a6c3a077ff1214f9906906abe3707b1076d55b508f253f"
+    }
+   },
+   "state": "ok",
+   "seconds": 13.6,
+   "new": {
+    "protect_px": 12945,
+    "face_px": 4239,
+    "accessory_px": 0,
+    "segmenter": {
+     "max_reserved_gib": 5.078125,
+     "max_allocated_gib": 4.662505149841309,
+     "checkpoint_sha256": "dda82b916f6c340bc5a6c3a077ff1214f9906906abe3707b1076d55b508f253f"
+    }
+   },
+   "compare": {
+    "same_file_sha": true,
+    "keys_only_new": [],
+    "keys_only_dev": [],
+    "arrays": {
+     "bottomwear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "ears": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "earwear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "eyes": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "eyewear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "face": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "footwear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "hair": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "handwear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "headwear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "legwear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "mouth": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "neck": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "neckwear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "nose": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "objects": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "tail": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "topwear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "wings": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     }
+    },
+    "all_equal": true
+   },
+   "outcome": "pass",
+   "outcome_reason": "배열이 개발 결과와 같음"
+  },
+  "A3-base-parts": {
+   "dev_dir": "Z:\\genai-lab\\outputs\\product-run-20261022\\runs\\eaf9b7c7102c4a67ad3859c611e01762\\free-generation\\base-parts",
+   "canvas_sha_match": true,
+   "dev": {
+    "protect_px": 39471,
+    "face_px": 8929,
+    "accessory_px": 1098,
+    "segmenter": {
+     "max_reserved_gib": 5.078125,
+     "max_allocated_gib": 4.662505149841309,
+     "checkpoint_sha256": "dda82b916f6c340bc5a6c3a077ff1214f9906906abe3707b1076d55b508f253f"
+    }
+   },
+   "state": "ok",
+   "seconds": 13.8,
+   "new": {
+    "protect_px": 39471,
+    "face_px": 8929,
+    "accessory_px": 1098,
+    "segmenter": {
+     "max_reserved_gib": 5.078125,
+     "max_allocated_gib": 4.662505149841309,
+     "checkpoint_sha256": "dda82b916f6c340bc5a6c3a077ff1214f9906906abe3707b1076d55b508f253f"
+    }
+   },
+   "compare": {
+    "same_file_sha": true,
+    "keys_only_new": [],
+    "keys_only_dev": [],
+    "arrays": {
+     "bottomwear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "ears": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "earwear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "eyes": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "eyewear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "face": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "footwear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "hair": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "handwear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "headwear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "legwear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "mouth": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "neck": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "neckwear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "nose": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "objects": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "tail": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "topwear": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     },
+     "wings": {
+      "equal": true,
+      "differing": 0,
+      "size": 786432
+     }
+    },
+    "all_equal": true
+   },
+   "outcome": "pass",
+   "outcome_reason": "배열이 개발 결과와 같음"
+  },
+  "A3-result-parts": {
+   "dev_dir": "Z:\\genai-lab\\outputs\\product-run-20261022\\runs\\eaf9b7c7102c4a67ad3859c611e01762\\free-generation\\result-analysis\\parts",
+   "canvas_sha_match": true,
+   "dev_error": "얼굴·머리를 찾지 못했습니다. 이 그림은 원본 편집형 의상 교체를 쓸 수 없습니다.",
+   "dev_stage": "parts",
+   "dev_site": {
+    "file": "outfit_edit_worker.py",
+    "line": 37,
+    "function": "segment",
+    "exception": "ValueError"
+   },
+   "state": "refused",
+   "seconds": 13.1,
+   "new_error": "얼굴·머리를 찾지 못했습니다. 이 그림은 원본 편집형 의상 교체를 쓸 수 없습니다.",
+   "new_stage": "parts",
+   "new_site": {
+    "file": "outfit_edit_worker.py",
+    "line": 37,
+    "function": "segment",
+    "exception": "ValueError"
+   },
+   "outcome": "pass",
+   "outcome_reason": "같은 문구·단계·검사(outfit_edit_worker.py 37행 segment, ValueError)에서 거절 — 예정된 거절 재현"
+  }
+ },
+ "outcomes": {
+  "B2-outfit-parts": "pass",
+  "B2-base-parts": "pass",
+  "B2-result-parts": "pass",
+  "A3-base-parts": "pass",
+  "A3-result-parts": "pass"
+ },
+ "unexpected": [],
+ "review_needed": [],
+ "p5_allowed": true,
+ "p5_allowed_after_review": true,
+ "base_prefix": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main",
+ "sys_path": [
+  "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\python310.zip",
+  "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main",
+  "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\Lib\\site-packages",
+  "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\app"
+ ]
+}

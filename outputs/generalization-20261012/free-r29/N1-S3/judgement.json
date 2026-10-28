@@ -1,0 +1,25 @@
+[
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-21, judgement-29/batch-1.png #3",
+    "case": "N1-S3",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r29\\N1-S3\\qwen\\raw.png",
+      "sha256": "f2f890f1ff3f8e7f7f1a8beb2b52c40e1c4c06186df250c9f84a3eba8b4921d0"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-21T14:02:01",
+    "note": "사용자: 1묶음 전체 통과. Claude 관찰: 걷기보다 서 있는 자세",
+    "same_character": "yes",
+    "outfit": "same",
+    "request_followed": "yes",
+    "severe_defect": "none",
+    "finish_quality": "good",
+    "quality_pass": true,
+    "failure_type": null
+  }
+]

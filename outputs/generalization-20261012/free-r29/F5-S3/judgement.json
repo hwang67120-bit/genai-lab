@@ -1,0 +1,28 @@
+[
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-21, judgement-29/batch-4.png #3",
+    "case": "F5-S3",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r29\\F5-S3\\qwen\\raw.png",
+      "sha256": "24b085643051ee19334bf0d40dbebb1c7967869e20c7c06af5bb8b6c82f4ee1d"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-21T14:05:36",
+    "note": "사용자: 실패 자세(걷지 않음)",
+    "same_character": "not_judged",
+    "outfit": "not_judged",
+    "request_followed": "no",
+    "severe_defect": "not_judged",
+    "finish_quality": "not_judged",
+    "quality_pass": false,
+    "failure_type": "pose",
+    "failure_types": [
+      "pose"
+    ]
+  }
+]

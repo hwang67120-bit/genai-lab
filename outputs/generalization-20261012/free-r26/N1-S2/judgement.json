@@ -1,0 +1,46 @@
+[
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-18, review-26-batch-1.png #2",
+    "case": "N1-S2",
+    "target": {
+      "attempt": 1,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r26\\N1-S2\\qwen\\raw.png",
+      "sha256": "2aa679a1d380211b597147ca95937e67aa26701ee81cf32d07202043e5f72cf1"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-18T01:09:28",
+    "note": "사용자: 앉지 않음",
+    "same_character": "not_judged",
+    "outfit": "not_judged",
+    "request_followed": "no",
+    "severe_defect": "not_judged",
+    "finish_quality": "not_judged",
+    "quality_pass": false,
+    "failure_type": "pose"
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-18, review-26-batch-1.png #3",
+    "case": "N1-S2",
+    "target": {
+      "attempt": 2,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r26\\N1-S2\\qwen-2\\raw.png",
+      "sha256": "e4ff9d75512356948fe3a0c4701177f9cb5086f1e37894f679141bcbb07c7668"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-18T01:09:29",
+    "note": "",
+    "same_character": "yes",
+    "outfit": "same",
+    "request_followed": "yes",
+    "severe_defect": "none",
+    "finish_quality": "good",
+    "quality_pass": true,
+    "failure_type": null
+  }
+]

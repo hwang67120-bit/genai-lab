@@ -1,0 +1,51 @@
+[
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, judgement-27/batch-4.png #2",
+    "case": "M6-S2",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\M6-S2\\qwen\\raw.png",
+      "sha256": "c0dc23ddee8fa350b94846ce2ea1fcbdc13254e7d6b598eebe54a449d47cbf61"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T13:10:43",
+    "note": "사용자: Claude가 제시한 내용과 동일(판정은 Claude 해석, 사용자에게 확인 요청): 머리 진한 청록(원본 연청회색)",
+    "same_character": "partial",
+    "outfit": "not_judged",
+    "request_followed": "not_judged",
+    "severe_defect": "not_judged",
+    "finish_quality": "not_judged",
+    "quality_pass": false,
+    "failure_type": "hair",
+    "failure_types": [
+      "hair_color"
+    ]
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, judgement-27/batch-5.png #4",
+    "case": "M6-S2",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "hair_restored",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\M6-S2\\result-analysis\\hair-restored.png",
+      "sha256": "74165cdc342584520dae836b651877838c5eae40995848b548ca39e773cf12bb"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T13:12:11",
+    "note": "",
+    "same_character": "yes",
+    "outfit": "same",
+    "request_followed": "yes",
+    "severe_defect": "none",
+    "finish_quality": "good",
+    "quality_pass": true,
+    "failure_type": null
+  }
+]

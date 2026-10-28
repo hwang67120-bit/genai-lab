@@ -1,0 +1,6150 @@
+{
+  "representative_roles": {
+    "sdxl/text_encoder": {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "SDXL from_pretrained complete",
+      "checkpoint_code": "03",
+      "time": 1790234852.184663,
+      "stage": "pipeline_setup"
+    },
+    "sdxl/vae": {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "SDXL from_pretrained complete",
+      "checkpoint_code": "03",
+      "time": 1790234852.184663,
+      "stage": "pipeline_setup"
+    },
+    "sdxl/unet": {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "load_ip_adapter complete",
+      "checkpoint_code": "05",
+      "time": 1790234857.1868083,
+      "stage": "pipeline_setup"
+    },
+    "sdxl/text_encoder_2": {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "SDXL from_pretrained complete",
+      "checkpoint_code": "03",
+      "time": 1790234852.184663,
+      "stage": "pipeline_setup"
+    },
+    "ip_adapter/image_encoder": {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "load_ip_adapter complete",
+      "checkpoint_code": "05",
+      "time": 1790234857.1868083,
+      "stage": "pipeline_setup"
+    },
+    "automasker/AutoMasker.densepose_processor.predictor.model": {
+      "name": "AutoMasker.densepose_processor.predictor.model",
+      "group": "automasker",
+      "object_id": 2770654938400,
+      "bytes": 255709584,
+      "GB": 0.23814810812473297,
+      "dtype": "torch.float32",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float32@cuda:0": 255709584
+      },
+      "parameter_count": 63821090,
+      "buffer_count": 106306,
+      "class": "GeneralizedRCNN",
+      "pid": 26300,
+      "checkpoint_label": "CatVTON AutoMasker initialized",
+      "checkpoint_code": "10",
+      "time": 1790234955.6954398,
+      "stage": "startup"
+    },
+    "automasker/AutoMasker.schp_processor_atr.model": {
+      "name": "AutoMasker.schp_processor_atr.model",
+      "group": "automasker",
+      "object_id": 2770659835568,
+      "bytes": 267332104,
+      "GB": 0.24897242337465286,
+      "dtype": "torch.float32",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float32@cuda:0": 267331152,
+        "torch.int64@cuda:0": 952
+      },
+      "parameter_count": 66718260,
+      "buffer_count": 114647,
+      "class": "ResNet",
+      "pid": 26300,
+      "checkpoint_label": "CatVTON AutoMasker initialized",
+      "checkpoint_code": "10",
+      "time": 1790234955.6954398,
+      "stage": "startup"
+    },
+    "automasker/AutoMasker.schp_processor_lip.model": {
+      "name": "AutoMasker.schp_processor_lip.model",
+      "group": "automasker",
+      "object_id": 2770663357264,
+      "bytes": 267334160,
+      "GB": 0.24897433817386627,
+      "dtype": "torch.float32",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float32@cuda:0": 267333208,
+        "torch.int64@cuda:0": 952
+      },
+      "parameter_count": 66718774,
+      "buffer_count": 114647,
+      "class": "ResNet",
+      "pid": 26300,
+      "checkpoint_label": "CatVTON AutoMasker initialized",
+      "checkpoint_code": "10",
+      "time": 1790234955.6954398,
+      "stage": "startup"
+    },
+    "sam2/Sam2Model": {
+      "name": "Sam2Model",
+      "group": "sam2",
+      "object_id": 2494624875952,
+      "bytes": 125764932,
+      "GB": 0.11712772026658058,
+      "dtype": "torch.float32",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float32@cpu": 125764932
+      },
+      "parameter_count": 31440721,
+      "buffer_count": 512,
+      "class": "Sam2Model",
+      "pid": 4872,
+      "checkpoint_label": "sam2 from_pretrained complete",
+      "checkpoint_code": "07",
+      "time": 1790234971.744618,
+      "stage": "reference_analysis"
+    },
+    "grounding_dino/GroundingDinoForObjectDetection": {
+      "name": "GroundingDinoForObjectDetection",
+      "group": "grounding_dino",
+      "object_id": 2494625035696,
+      "bytes": 689235048,
+      "GB": 0.6419001594185829,
+      "dtype": "torch.float32",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float32@cpu": 688996360,
+        "torch.int64@cpu": 238688
+      },
+      "parameter_count": 172249090,
+      "buffer_count": 29836,
+      "class": "GroundingDinoForObjectDetection",
+      "pid": 4872,
+      "checkpoint_label": "grounding_dino from_pretrained complete",
+      "checkpoint_code": "06",
+      "time": 1790234974.2825797,
+      "stage": "reference_analysis"
+    }
+  },
+  "all_snapshots": [
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "SDXL from_pretrained complete",
+      "checkpoint_code": "03",
+      "time": 1790234852.184663,
+      "stage": "pipeline_setup"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "SDXL from_pretrained complete",
+      "checkpoint_code": "03",
+      "time": 1790234852.184663,
+      "stage": "pipeline_setup"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5134927368,
+      "GB": 4.782273776829243,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5134927368
+      },
+      "parameter_count": 2567463684,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "SDXL from_pretrained complete",
+      "checkpoint_code": "03",
+      "time": 1790234852.184663,
+      "stage": "pipeline_setup"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "SDXL from_pretrained complete",
+      "checkpoint_code": "03",
+      "time": 1790234852.184663,
+      "stage": "pipeline_setup"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "load_ip_adapter complete",
+      "checkpoint_code": "05",
+      "time": 1790234857.1868083,
+      "stage": "pipeline_setup"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "load_ip_adapter complete",
+      "checkpoint_code": "05",
+      "time": 1790234857.1868083,
+      "stage": "pipeline_setup"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "load_ip_adapter complete",
+      "checkpoint_code": "05",
+      "time": 1790234857.1868083,
+      "stage": "pipeline_setup"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "load_ip_adapter complete",
+      "checkpoint_code": "05",
+      "time": 1790234857.1868083,
+      "stage": "pipeline_setup"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "load_ip_adapter complete",
+      "checkpoint_code": "05",
+      "time": 1790234857.1868083,
+      "stage": "pipeline_setup"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790234858.0097654,
+      "stage": "pipeline_setup"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790234858.0097654,
+      "stage": "pipeline_setup"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790234858.0097654,
+      "stage": "pipeline_setup"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790234858.0097654,
+      "stage": "pipeline_setup"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790234858.0097654,
+      "stage": "pipeline_setup"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "reference analysis before",
+      "checkpoint_code": null,
+      "time": 1790234859.1385224,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "reference analysis before",
+      "checkpoint_code": null,
+      "time": 1790234859.1385224,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "reference analysis before",
+      "checkpoint_code": null,
+      "time": 1790234859.1385224,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "reference analysis before",
+      "checkpoint_code": null,
+      "time": 1790234859.1385224,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "reference analysis before",
+      "checkpoint_code": null,
+      "time": 1790234859.1385224,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "AutoMasker.densepose_processor.predictor.model",
+      "group": "automasker",
+      "object_id": 2770654938400,
+      "bytes": 255709584,
+      "GB": 0.23814810812473297,
+      "dtype": "torch.float32",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float32@cuda:0": 255709584
+      },
+      "parameter_count": 63821090,
+      "buffer_count": 106306,
+      "class": "GeneralizedRCNN",
+      "pid": 26300,
+      "checkpoint_label": "CatVTON AutoMasker initialized",
+      "checkpoint_code": "10",
+      "time": 1790234955.6954398,
+      "stage": "startup"
+    },
+    {
+      "name": "AutoMasker.schp_processor_atr.model",
+      "group": "automasker",
+      "object_id": 2770659835568,
+      "bytes": 267332104,
+      "GB": 0.24897242337465286,
+      "dtype": "torch.float32",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float32@cuda:0": 267331152,
+        "torch.int64@cuda:0": 952
+      },
+      "parameter_count": 66718260,
+      "buffer_count": 114647,
+      "class": "ResNet",
+      "pid": 26300,
+      "checkpoint_label": "CatVTON AutoMasker initialized",
+      "checkpoint_code": "10",
+      "time": 1790234955.6954398,
+      "stage": "startup"
+    },
+    {
+      "name": "AutoMasker.schp_processor_lip.model",
+      "group": "automasker",
+      "object_id": 2770663357264,
+      "bytes": 267334160,
+      "GB": 0.24897433817386627,
+      "dtype": "torch.float32",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float32@cuda:0": 267333208,
+        "torch.int64@cuda:0": 952
+      },
+      "parameter_count": 66718774,
+      "buffer_count": 114647,
+      "class": "ResNet",
+      "pid": 26300,
+      "checkpoint_label": "CatVTON AutoMasker initialized",
+      "checkpoint_code": "10",
+      "time": 1790234955.6954398,
+      "stage": "startup"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790234969.4715428,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790234969.4715428,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790234969.4715428,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790234969.4715428,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790234969.4715428,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790234969.932889,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790234969.932889,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790234969.932889,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790234969.932889,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790234969.932889,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790234970.2351987,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790234970.2351987,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790234970.2351987,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790234970.2351987,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790234970.2351987,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790234970.4895885,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790234970.4895885,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790234970.4895885,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790234970.4895885,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790234970.4895885,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790234970.8534865,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790234970.8534865,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790234970.8534865,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790234970.8534865,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790234970.8534865,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "sam2 from_pretrained complete",
+      "checkpoint_code": "07",
+      "time": 1790234971.744618,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "sam2 from_pretrained complete",
+      "checkpoint_code": "07",
+      "time": 1790234971.744618,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "sam2 from_pretrained complete",
+      "checkpoint_code": "07",
+      "time": 1790234971.744618,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "sam2 from_pretrained complete",
+      "checkpoint_code": "07",
+      "time": 1790234971.744618,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "sam2 from_pretrained complete",
+      "checkpoint_code": "07",
+      "time": 1790234971.744618,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "Sam2Model",
+      "group": "sam2",
+      "object_id": 2494624875952,
+      "bytes": 125764932,
+      "GB": 0.11712772026658058,
+      "dtype": "torch.float32",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float32@cpu": 125764932
+      },
+      "parameter_count": 31440721,
+      "buffer_count": 512,
+      "class": "Sam2Model",
+      "pid": 4872,
+      "checkpoint_label": "sam2 from_pretrained complete",
+      "checkpoint_code": "07",
+      "time": 1790234971.744618,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "grounding_dino from_pretrained complete",
+      "checkpoint_code": "06",
+      "time": 1790234974.2825797,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "grounding_dino from_pretrained complete",
+      "checkpoint_code": "06",
+      "time": 1790234974.2825797,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "grounding_dino from_pretrained complete",
+      "checkpoint_code": "06",
+      "time": 1790234974.2825797,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "grounding_dino from_pretrained complete",
+      "checkpoint_code": "06",
+      "time": 1790234974.2825797,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "grounding_dino from_pretrained complete",
+      "checkpoint_code": "06",
+      "time": 1790234974.2825797,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "Sam2Model",
+      "group": "sam2",
+      "object_id": 2494624875952,
+      "bytes": 125764932,
+      "GB": 0.11712772026658058,
+      "dtype": "torch.float32",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float32@cpu": 125764932
+      },
+      "parameter_count": 31440721,
+      "buffer_count": 512,
+      "class": "Sam2Model",
+      "pid": 4872,
+      "checkpoint_label": "grounding_dino from_pretrained complete",
+      "checkpoint_code": "06",
+      "time": 1790234974.2825797,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "GroundingDinoForObjectDetection",
+      "group": "grounding_dino",
+      "object_id": 2494625035696,
+      "bytes": 689235048,
+      "GB": 0.6419001594185829,
+      "dtype": "torch.float32",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float32@cpu": 688996360,
+        "torch.int64@cpu": 238688
+      },
+      "parameter_count": 172249090,
+      "buffer_count": 29836,
+      "class": "GroundingDinoForObjectDetection",
+      "pid": 4872,
+      "checkpoint_label": "grounding_dino from_pretrained complete",
+      "checkpoint_code": "06",
+      "time": 1790234974.2825797,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "reference analysis after",
+      "checkpoint_code": null,
+      "time": 1790235025.7355661,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "reference analysis after",
+      "checkpoint_code": null,
+      "time": 1790235025.7355661,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "reference analysis after",
+      "checkpoint_code": null,
+      "time": 1790235025.7355661,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "reference analysis after",
+      "checkpoint_code": null,
+      "time": 1790235025.7355661,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "reference analysis after",
+      "checkpoint_code": null,
+      "time": 1790235025.7355661,
+      "stage": "reference_analysis"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "wd14 ONNX before load",
+      "checkpoint_code": null,
+      "time": 1790235026.4496524,
+      "stage": "tagging_and_approval"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "wd14 ONNX before load",
+      "checkpoint_code": null,
+      "time": 1790235026.4496524,
+      "stage": "tagging_and_approval"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "wd14 ONNX before load",
+      "checkpoint_code": null,
+      "time": 1790235026.4496524,
+      "stage": "tagging_and_approval"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "wd14 ONNX before load",
+      "checkpoint_code": null,
+      "time": 1790235026.4496524,
+      "stage": "tagging_and_approval"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "wd14 ONNX before load",
+      "checkpoint_code": null,
+      "time": 1790235026.4496524,
+      "stage": "tagging_and_approval"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "onnx_other ONNX before load",
+      "checkpoint_code": null,
+      "time": 1790235026.9586804,
+      "stage": "tagging_and_approval"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "onnx_other ONNX before load",
+      "checkpoint_code": null,
+      "time": 1790235026.9586804,
+      "stage": "tagging_and_approval"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "onnx_other ONNX before load",
+      "checkpoint_code": null,
+      "time": 1790235026.9586804,
+      "stage": "tagging_and_approval"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "onnx_other ONNX before load",
+      "checkpoint_code": null,
+      "time": 1790235026.9586804,
+      "stage": "tagging_and_approval"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "onnx_other ONNX before load",
+      "checkpoint_code": null,
+      "time": 1790235026.9586804,
+      "stage": "tagging_and_approval"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "wd14 ONNX session created",
+      "checkpoint_code": "08",
+      "time": 1790235033.8309019,
+      "stage": "tagging_and_approval"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "wd14 ONNX session created",
+      "checkpoint_code": "08",
+      "time": 1790235033.8309019,
+      "stage": "tagging_and_approval"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "wd14 ONNX session created",
+      "checkpoint_code": "08",
+      "time": 1790235033.8309019,
+      "stage": "tagging_and_approval"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "wd14 ONNX session created",
+      "checkpoint_code": "08",
+      "time": 1790235033.8309019,
+      "stage": "tagging_and_approval"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "wd14 ONNX session created",
+      "checkpoint_code": "08",
+      "time": 1790235033.8309019,
+      "stage": "tagging_and_approval"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "Base stage before",
+      "checkpoint_code": "11",
+      "time": 1790235039.506055,
+      "stage": "base"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "Base stage before",
+      "checkpoint_code": "11",
+      "time": 1790235039.506055,
+      "stage": "base"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "Base stage before",
+      "checkpoint_code": "11",
+      "time": 1790235039.506055,
+      "stage": "base"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "Base stage before",
+      "checkpoint_code": "11",
+      "time": 1790235039.506055,
+      "stage": "base"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "Base stage before",
+      "checkpoint_code": "11",
+      "time": 1790235039.506055,
+      "stage": "base"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235040.4487875,
+      "stage": "base"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235040.4487875,
+      "stage": "base"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235040.4487875,
+      "stage": "base"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235040.4487875,
+      "stage": "base"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235040.4487875,
+      "stage": "base"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "wd14 ONNX before load",
+      "checkpoint_code": null,
+      "time": 1790235087.7791069,
+      "stage": "base"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "wd14 ONNX before load",
+      "checkpoint_code": null,
+      "time": 1790235087.7791069,
+      "stage": "base"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "wd14 ONNX before load",
+      "checkpoint_code": null,
+      "time": 1790235087.7791069,
+      "stage": "base"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float16@cuda:0": 1389319680,
+        "torch.int64@cuda:0": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "wd14 ONNX before load",
+      "checkpoint_code": null,
+      "time": 1790235087.7791069,
+      "stage": "base"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float16@cuda:0": 3689814528,
+        "torch.int64@cuda:0": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "wd14 ONNX before load",
+      "checkpoint_code": null,
+      "time": 1790235087.7791069,
+      "stage": "base"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "onnx_other ONNX before load",
+      "checkpoint_code": null,
+      "time": 1790235088.3020313,
+      "stage": "base"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "onnx_other ONNX before load",
+      "checkpoint_code": null,
+      "time": 1790235088.3020313,
+      "stage": "base"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "onnx_other ONNX before load",
+      "checkpoint_code": null,
+      "time": 1790235088.3020313,
+      "stage": "base"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float16@cuda:0": 1389319680,
+        "torch.int64@cuda:0": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "onnx_other ONNX before load",
+      "checkpoint_code": null,
+      "time": 1790235088.3020313,
+      "stage": "base"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float16@cuda:0": 3689814528,
+        "torch.int64@cuda:0": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "onnx_other ONNX before load",
+      "checkpoint_code": null,
+      "time": 1790235088.3020313,
+      "stage": "base"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "wd14 ONNX session created",
+      "checkpoint_code": "08",
+      "time": 1790235092.469215,
+      "stage": "base"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "wd14 ONNX session created",
+      "checkpoint_code": "08",
+      "time": 1790235092.469215,
+      "stage": "base"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "wd14 ONNX session created",
+      "checkpoint_code": "08",
+      "time": 1790235092.469215,
+      "stage": "base"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float16@cuda:0": 1389319680,
+        "torch.int64@cuda:0": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "wd14 ONNX session created",
+      "checkpoint_code": "08",
+      "time": 1790235092.469215,
+      "stage": "base"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float16@cuda:0": 3689814528,
+        "torch.int64@cuda:0": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "wd14 ONNX session created",
+      "checkpoint_code": "08",
+      "time": 1790235092.469215,
+      "stage": "base"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "base actual sampling before",
+      "checkpoint_code": null,
+      "time": 1790235094.2300537,
+      "stage": "base"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "base actual sampling before",
+      "checkpoint_code": null,
+      "time": 1790235094.2300537,
+      "stage": "base"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "base actual sampling before",
+      "checkpoint_code": null,
+      "time": 1790235094.2300537,
+      "stage": "base"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "base actual sampling before",
+      "checkpoint_code": null,
+      "time": 1790235094.2300537,
+      "stage": "base"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float16@cuda:0": 3689814528,
+        "torch.int64@cuda:0": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "base actual sampling before",
+      "checkpoint_code": null,
+      "time": 1790235094.2300537,
+      "stage": "base"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235158.4615338,
+      "stage": "base"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235158.4615338,
+      "stage": "base"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235158.4615338,
+      "stage": "base"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235158.4615338,
+      "stage": "base"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235158.4615338,
+      "stage": "base"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "base actual sampling after",
+      "checkpoint_code": null,
+      "time": 1790235158.8490276,
+      "stage": "base"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "base actual sampling after",
+      "checkpoint_code": null,
+      "time": 1790235158.8490276,
+      "stage": "base"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "base actual sampling after",
+      "checkpoint_code": null,
+      "time": 1790235158.8490276,
+      "stage": "base"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "base actual sampling after",
+      "checkpoint_code": null,
+      "time": 1790235158.8490276,
+      "stage": "base"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "base actual sampling after",
+      "checkpoint_code": null,
+      "time": 1790235158.8490276,
+      "stage": "base"
+    },
+    {
+      "name": "AutoMasker.densepose_processor.predictor.model",
+      "group": "automasker",
+      "object_id": 2027263853856,
+      "bytes": 255709584,
+      "GB": 0.23814810812473297,
+      "dtype": "torch.float32",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float32@cuda:0": 255709584
+      },
+      "parameter_count": 63821090,
+      "buffer_count": 106306,
+      "class": "GeneralizedRCNN",
+      "pid": 33176,
+      "checkpoint_label": "CatVTON AutoMasker initialized",
+      "checkpoint_code": "10",
+      "time": 1790235232.4929013,
+      "stage": "startup"
+    },
+    {
+      "name": "AutoMasker.schp_processor_atr.model",
+      "group": "automasker",
+      "object_id": 2027285200560,
+      "bytes": 267332104,
+      "GB": 0.24897242337465286,
+      "dtype": "torch.float32",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float32@cuda:0": 267331152,
+        "torch.int64@cuda:0": 952
+      },
+      "parameter_count": 66718260,
+      "buffer_count": 114647,
+      "class": "ResNet",
+      "pid": 33176,
+      "checkpoint_label": "CatVTON AutoMasker initialized",
+      "checkpoint_code": "10",
+      "time": 1790235232.4929013,
+      "stage": "startup"
+    },
+    {
+      "name": "AutoMasker.schp_processor_lip.model",
+      "group": "automasker",
+      "object_id": 2027890670416,
+      "bytes": 267334160,
+      "GB": 0.24897433817386627,
+      "dtype": "torch.float32",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float32@cuda:0": 267333208,
+        "torch.int64@cuda:0": 952
+      },
+      "parameter_count": 66718774,
+      "buffer_count": 114647,
+      "class": "ResNet",
+      "pid": 33176,
+      "checkpoint_label": "CatVTON AutoMasker initialized",
+      "checkpoint_code": "10",
+      "time": 1790235232.4929013,
+      "stage": "startup"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235247.160306,
+      "stage": "base"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235247.160306,
+      "stage": "base"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235247.160306,
+      "stage": "base"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235247.160306,
+      "stage": "base"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235247.160306,
+      "stage": "base"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235247.5301065,
+      "stage": "base"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235247.5301065,
+      "stage": "base"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235247.5301065,
+      "stage": "base"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235247.5301065,
+      "stage": "base"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235247.5301065,
+      "stage": "base"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235247.8213146,
+      "stage": "base"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235247.8213146,
+      "stage": "base"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235247.8213146,
+      "stage": "base"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235247.8213146,
+      "stage": "base"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235247.8213146,
+      "stage": "base"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235248.096357,
+      "stage": "base"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235248.096357,
+      "stage": "base"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235248.096357,
+      "stage": "base"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235248.096357,
+      "stage": "base"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235248.096357,
+      "stage": "base"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235248.4088385,
+      "stage": "base"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235248.4088385,
+      "stage": "base"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235248.4088385,
+      "stage": "base"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235248.4088385,
+      "stage": "base"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235248.4088385,
+      "stage": "base"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "sam2 from_pretrained complete",
+      "checkpoint_code": "07",
+      "time": 1790235249.2238553,
+      "stage": "base"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "sam2 from_pretrained complete",
+      "checkpoint_code": "07",
+      "time": 1790235249.2238553,
+      "stage": "base"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "sam2 from_pretrained complete",
+      "checkpoint_code": "07",
+      "time": 1790235249.2238553,
+      "stage": "base"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "sam2 from_pretrained complete",
+      "checkpoint_code": "07",
+      "time": 1790235249.2238553,
+      "stage": "base"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "sam2 from_pretrained complete",
+      "checkpoint_code": "07",
+      "time": 1790235249.2238553,
+      "stage": "base"
+    },
+    {
+      "name": "Sam2Model",
+      "group": "sam2",
+      "object_id": 2496173279504,
+      "bytes": 125764932,
+      "GB": 0.11712772026658058,
+      "dtype": "torch.float32",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float32@cpu": 125764932
+      },
+      "parameter_count": 31440721,
+      "buffer_count": 512,
+      "class": "Sam2Model",
+      "pid": 4872,
+      "checkpoint_label": "sam2 from_pretrained complete",
+      "checkpoint_code": "07",
+      "time": 1790235249.2238553,
+      "stage": "base"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "grounding_dino from_pretrained complete",
+      "checkpoint_code": "06",
+      "time": 1790235251.350078,
+      "stage": "base"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "grounding_dino from_pretrained complete",
+      "checkpoint_code": "06",
+      "time": 1790235251.350078,
+      "stage": "base"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "grounding_dino from_pretrained complete",
+      "checkpoint_code": "06",
+      "time": 1790235251.350078,
+      "stage": "base"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "grounding_dino from_pretrained complete",
+      "checkpoint_code": "06",
+      "time": 1790235251.350078,
+      "stage": "base"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "grounding_dino from_pretrained complete",
+      "checkpoint_code": "06",
+      "time": 1790235251.350078,
+      "stage": "base"
+    },
+    {
+      "name": "Sam2Model",
+      "group": "sam2",
+      "object_id": 2496173279504,
+      "bytes": 125764932,
+      "GB": 0.11712772026658058,
+      "dtype": "torch.float32",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float32@cpu": 125764932
+      },
+      "parameter_count": 31440721,
+      "buffer_count": 512,
+      "class": "Sam2Model",
+      "pid": 4872,
+      "checkpoint_label": "grounding_dino from_pretrained complete",
+      "checkpoint_code": "06",
+      "time": 1790235251.350078,
+      "stage": "base"
+    },
+    {
+      "name": "GroundingDinoForObjectDetection",
+      "group": "grounding_dino",
+      "object_id": 2494756607152,
+      "bytes": 689235048,
+      "GB": 0.6419001594185829,
+      "dtype": "torch.float32",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float32@cpu": 688996360,
+        "torch.int64@cpu": 238688
+      },
+      "parameter_count": 172249090,
+      "buffer_count": 29836,
+      "class": "GroundingDinoForObjectDetection",
+      "pid": 4872,
+      "checkpoint_label": "grounding_dino from_pretrained complete",
+      "checkpoint_code": "06",
+      "time": 1790235251.350078,
+      "stage": "base"
+    },
+    {
+      "name": "AutoMasker.densepose_processor.predictor.model",
+      "group": "automasker",
+      "object_id": 1864016037104,
+      "bytes": 255709584,
+      "GB": 0.23814810812473297,
+      "dtype": "torch.float32",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float32@cuda:0": 255709584
+      },
+      "parameter_count": 63821090,
+      "buffer_count": 106306,
+      "class": "GeneralizedRCNN",
+      "pid": 24900,
+      "checkpoint_label": "CatVTON AutoMasker initialized",
+      "checkpoint_code": "10",
+      "time": 1790235296.5290754,
+      "stage": "startup"
+    },
+    {
+      "name": "AutoMasker.schp_processor_atr.model",
+      "group": "automasker",
+      "object_id": 1864017133184,
+      "bytes": 267332104,
+      "GB": 0.24897242337465286,
+      "dtype": "torch.float32",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float32@cuda:0": 267331152,
+        "torch.int64@cuda:0": 952
+      },
+      "parameter_count": 66718260,
+      "buffer_count": 114647,
+      "class": "ResNet",
+      "pid": 24900,
+      "checkpoint_label": "CatVTON AutoMasker initialized",
+      "checkpoint_code": "10",
+      "time": 1790235296.5290754,
+      "stage": "startup"
+    },
+    {
+      "name": "AutoMasker.schp_processor_lip.model",
+      "group": "automasker",
+      "object_id": 1864604711712,
+      "bytes": 267334160,
+      "GB": 0.24897433817386627,
+      "dtype": "torch.float32",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float32@cuda:0": 267333208,
+        "torch.int64@cuda:0": 952
+      },
+      "parameter_count": 66718774,
+      "buffer_count": 114647,
+      "class": "ResNet",
+      "pid": 24900,
+      "checkpoint_label": "CatVTON AutoMasker initialized",
+      "checkpoint_code": "10",
+      "time": 1790235296.5290754,
+      "stage": "startup"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "Base stage after",
+      "checkpoint_code": "12",
+      "time": 1790235309.8087385,
+      "stage": "base"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "Base stage after",
+      "checkpoint_code": "12",
+      "time": 1790235309.8087385,
+      "stage": "base"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "Base stage after",
+      "checkpoint_code": "12",
+      "time": 1790235309.8087385,
+      "stage": "base"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "Base stage after",
+      "checkpoint_code": "12",
+      "time": 1790235309.8087385,
+      "stage": "base"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float16@cuda:0": 3689814528,
+        "torch.int64@cuda:0": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "Base stage after",
+      "checkpoint_code": "12",
+      "time": 1790235309.8087385,
+      "stage": "base"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "refinement stage before",
+      "checkpoint_code": "13",
+      "time": 1790235314.9640648,
+      "stage": "refinement"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "refinement stage before",
+      "checkpoint_code": "13",
+      "time": 1790235314.9640648,
+      "stage": "refinement"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "refinement stage before",
+      "checkpoint_code": "13",
+      "time": 1790235314.9640648,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "refinement stage before",
+      "checkpoint_code": "13",
+      "time": 1790235314.9640648,
+      "stage": "refinement"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float16@cuda:0": 3689814528,
+        "torch.int64@cuda:0": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "refinement stage before",
+      "checkpoint_code": "13",
+      "time": 1790235314.9640648,
+      "stage": "refinement"
+    },
+    {
+      "name": "AutoMasker.densepose_processor.predictor.model",
+      "group": "automasker",
+      "object_id": 1926293062944,
+      "bytes": 255709584,
+      "GB": 0.23814810812473297,
+      "dtype": "torch.float32",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float32@cuda:0": 255709584
+      },
+      "parameter_count": 63821090,
+      "buffer_count": 106306,
+      "class": "GeneralizedRCNN",
+      "pid": 14484,
+      "checkpoint_label": "CatVTON AutoMasker initialized",
+      "checkpoint_code": "10",
+      "time": 1790235346.7478948,
+      "stage": "startup"
+    },
+    {
+      "name": "AutoMasker.schp_processor_atr.model",
+      "group": "automasker",
+      "object_id": 1926294159024,
+      "bytes": 267332104,
+      "GB": 0.24897242337465286,
+      "dtype": "torch.float32",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float32@cuda:0": 267331152,
+        "torch.int64@cuda:0": 952
+      },
+      "parameter_count": 66718260,
+      "buffer_count": 114647,
+      "class": "ResNet",
+      "pid": 14484,
+      "checkpoint_label": "CatVTON AutoMasker initialized",
+      "checkpoint_code": "10",
+      "time": 1790235346.7478948,
+      "stage": "startup"
+    },
+    {
+      "name": "AutoMasker.schp_processor_lip.model",
+      "group": "automasker",
+      "object_id": 1926482492240,
+      "bytes": 267334160,
+      "GB": 0.24897433817386627,
+      "dtype": "torch.float32",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float32@cuda:0": 267333208,
+        "torch.int64@cuda:0": 952
+      },
+      "parameter_count": 66718774,
+      "buffer_count": 114647,
+      "class": "ResNet",
+      "pid": 14484,
+      "checkpoint_label": "CatVTON AutoMasker initialized",
+      "checkpoint_code": "10",
+      "time": 1790235346.7478948,
+      "stage": "startup"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235349.340273,
+      "stage": "refinement"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235349.340273,
+      "stage": "refinement"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235349.340273,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235349.340273,
+      "stage": "refinement"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float16@cuda:0": 3689814528,
+        "torch.int64@cuda:0": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235349.340273,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235349.6723926,
+      "stage": "refinement"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235349.6723926,
+      "stage": "refinement"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235349.6723926,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235349.6723926,
+      "stage": "refinement"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float16@cuda:0": 3689814528,
+        "torch.int64@cuda:0": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235349.6723926,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235349.9427414,
+      "stage": "refinement"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235349.9427414,
+      "stage": "refinement"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235349.9427414,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235349.9427414,
+      "stage": "refinement"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float16@cuda:0": 3689814528,
+        "torch.int64@cuda:0": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235349.9427414,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235350.220494,
+      "stage": "refinement"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235350.220494,
+      "stage": "refinement"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235350.220494,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235350.220494,
+      "stage": "refinement"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float16@cuda:0": 3689814528,
+        "torch.int64@cuda:0": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235350.220494,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235350.5596473,
+      "stage": "refinement"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235350.5596473,
+      "stage": "refinement"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235350.5596473,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235350.5596473,
+      "stage": "refinement"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float16@cuda:0": 3689814528,
+        "torch.int64@cuda:0": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): sam2 from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235350.5596473,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "sam2 from_pretrained complete",
+      "checkpoint_code": "07",
+      "time": 1790235351.132281,
+      "stage": "refinement"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "sam2 from_pretrained complete",
+      "checkpoint_code": "07",
+      "time": 1790235351.132281,
+      "stage": "refinement"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "sam2 from_pretrained complete",
+      "checkpoint_code": "07",
+      "time": 1790235351.132281,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "sam2 from_pretrained complete",
+      "checkpoint_code": "07",
+      "time": 1790235351.132281,
+      "stage": "refinement"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float16@cuda:0": 3689814528,
+        "torch.int64@cuda:0": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "sam2 from_pretrained complete",
+      "checkpoint_code": "07",
+      "time": 1790235351.132281,
+      "stage": "refinement"
+    },
+    {
+      "name": "Sam2Model",
+      "group": "sam2",
+      "object_id": 2496173197728,
+      "bytes": 125764932,
+      "GB": 0.11712772026658058,
+      "dtype": "torch.float32",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float32@cpu": 125764932
+      },
+      "parameter_count": 31440721,
+      "buffer_count": 512,
+      "class": "Sam2Model",
+      "pid": 4872,
+      "checkpoint_label": "sam2 from_pretrained complete",
+      "checkpoint_code": "07",
+      "time": 1790235351.132281,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "grounding_dino from_pretrained complete",
+      "checkpoint_code": "06",
+      "time": 1790235352.2306368,
+      "stage": "refinement"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "grounding_dino from_pretrained complete",
+      "checkpoint_code": "06",
+      "time": 1790235352.2306368,
+      "stage": "refinement"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "grounding_dino from_pretrained complete",
+      "checkpoint_code": "06",
+      "time": 1790235352.2306368,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "grounding_dino from_pretrained complete",
+      "checkpoint_code": "06",
+      "time": 1790235352.2306368,
+      "stage": "refinement"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float16@cuda:0": 3689814528,
+        "torch.int64@cuda:0": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "grounding_dino from_pretrained complete",
+      "checkpoint_code": "06",
+      "time": 1790235352.2306368,
+      "stage": "refinement"
+    },
+    {
+      "name": "Sam2Model",
+      "group": "sam2",
+      "object_id": 2496173197728,
+      "bytes": 125764932,
+      "GB": 0.11712772026658058,
+      "dtype": "torch.float32",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float32@cpu": 125764932
+      },
+      "parameter_count": 31440721,
+      "buffer_count": 512,
+      "class": "Sam2Model",
+      "pid": 4872,
+      "checkpoint_label": "grounding_dino from_pretrained complete",
+      "checkpoint_code": "06",
+      "time": 1790235352.2306368,
+      "stage": "refinement"
+    },
+    {
+      "name": "GroundingDinoForObjectDetection",
+      "group": "grounding_dino",
+      "object_id": 2496173289056,
+      "bytes": 689235048,
+      "GB": 0.6419001594185829,
+      "dtype": "torch.float32",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float32@cpu": 688996360,
+        "torch.int64@cpu": 238688
+      },
+      "parameter_count": 172249090,
+      "buffer_count": 29836,
+      "class": "GroundingDinoForObjectDetection",
+      "pid": 4872,
+      "checkpoint_label": "grounding_dino from_pretrained complete",
+      "checkpoint_code": "06",
+      "time": 1790235352.2306368,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235393.8979397,
+      "stage": "refinement"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235393.8979397,
+      "stage": "refinement"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235393.8979397,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235393.8979397,
+      "stage": "refinement"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235393.8979397,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235394.7965205,
+      "stage": "refinement"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235394.7965205,
+      "stage": "refinement"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235394.7965205,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235394.7965205,
+      "stage": "refinement"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235394.7965205,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "inpaint actual sampling before",
+      "checkpoint_code": null,
+      "time": 1790235395.264243,
+      "stage": "refinement"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "inpaint actual sampling before",
+      "checkpoint_code": null,
+      "time": 1790235395.264243,
+      "stage": "refinement"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "inpaint actual sampling before",
+      "checkpoint_code": null,
+      "time": 1790235395.264243,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "inpaint actual sampling before",
+      "checkpoint_code": null,
+      "time": 1790235395.264243,
+      "stage": "refinement"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "inpaint actual sampling before",
+      "checkpoint_code": null,
+      "time": 1790235395.264243,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235419.6521008,
+      "stage": "refinement"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235419.6521008,
+      "stage": "refinement"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235419.6521008,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235419.6521008,
+      "stage": "refinement"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235419.6521008,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "inpaint actual sampling after",
+      "checkpoint_code": null,
+      "time": 1790235420.0861862,
+      "stage": "refinement"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "inpaint actual sampling after",
+      "checkpoint_code": null,
+      "time": 1790235420.0861862,
+      "stage": "refinement"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "inpaint actual sampling after",
+      "checkpoint_code": null,
+      "time": 1790235420.0861862,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "inpaint actual sampling after",
+      "checkpoint_code": null,
+      "time": 1790235420.0861862,
+      "stage": "refinement"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "inpaint actual sampling after",
+      "checkpoint_code": null,
+      "time": 1790235420.0861862,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235422.1254084,
+      "stage": "refinement"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235422.1254084,
+      "stage": "refinement"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235422.1254084,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235422.1254084,
+      "stage": "refinement"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float16@cuda:0": 3689814528,
+        "torch.int64@cuda:0": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235422.1254084,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235422.4220574,
+      "stage": "refinement"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235422.4220574,
+      "stage": "refinement"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235422.4220574,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235422.4220574,
+      "stage": "refinement"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float16@cuda:0": 3689814528,
+        "torch.int64@cuda:0": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "processor/config preparation (not model weights): grounding_dino from_pretrained complete",
+      "checkpoint_code": null,
+      "time": 1790235422.4220574,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "grounding_dino from_pretrained complete",
+      "checkpoint_code": "06",
+      "time": 1790235423.558391,
+      "stage": "refinement"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "grounding_dino from_pretrained complete",
+      "checkpoint_code": "06",
+      "time": 1790235423.558391,
+      "stage": "refinement"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "grounding_dino from_pretrained complete",
+      "checkpoint_code": "06",
+      "time": 1790235423.558391,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "grounding_dino from_pretrained complete",
+      "checkpoint_code": "06",
+      "time": 1790235423.558391,
+      "stage": "refinement"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cuda:0",
+      "dtype_device_bytes": {
+        "torch.float16@cuda:0": 3689814528,
+        "torch.int64@cuda:0": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "grounding_dino from_pretrained complete",
+      "checkpoint_code": "06",
+      "time": 1790235423.558391,
+      "stage": "refinement"
+    },
+    {
+      "name": "GroundingDinoForObjectDetection",
+      "group": "grounding_dino",
+      "object_id": 2495197232720,
+      "bytes": 689235048,
+      "GB": 0.6419001594185829,
+      "dtype": "torch.float32",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float32@cpu": 688996360,
+        "torch.int64@cpu": 238688
+      },
+      "parameter_count": 172249090,
+      "buffer_count": 29836,
+      "class": "GroundingDinoForObjectDetection",
+      "pid": 4872,
+      "checkpoint_label": "grounding_dino from_pretrained complete",
+      "checkpoint_code": "06",
+      "time": 1790235423.558391,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235433.4195719,
+      "stage": "refinement"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235433.4195719,
+      "stage": "refinement"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235433.4195719,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235433.4195719,
+      "stage": "refinement"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235433.4195719,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235434.3623512,
+      "stage": "refinement"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235434.3623512,
+      "stage": "refinement"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235434.3623512,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235434.3623512,
+      "stage": "refinement"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "enable_model_cpu_offload complete",
+      "checkpoint_code": "04",
+      "time": 1790235434.3623512,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "refinement and its internal gates after",
+      "checkpoint_code": "14",
+      "time": 1790235434.9512603,
+      "stage": "refinement"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "refinement and its internal gates after",
+      "checkpoint_code": "14",
+      "time": 1790235434.9512603,
+      "stage": "refinement"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "refinement and its internal gates after",
+      "checkpoint_code": "14",
+      "time": 1790235434.9512603,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "refinement and its internal gates after",
+      "checkpoint_code": "14",
+      "time": 1790235434.9512603,
+      "stage": "refinement"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "refinement and its internal gates after",
+      "checkpoint_code": "14",
+      "time": 1790235434.9512603,
+      "stage": "refinement"
+    },
+    {
+      "name": "text_encoder",
+      "group": "sdxl",
+      "object_id": 2494543100416,
+      "bytes": 246121576,
+      "GB": 0.22921857982873917,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 246120960,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 123060480,
+      "buffer_count": 77,
+      "class": "CLIPTextModel",
+      "pid": 4872,
+      "checkpoint_label": "measurement and gates complete (inside finalize boundary)",
+      "checkpoint_code": "15",
+      "time": 1790235435.35287,
+      "stage": "measurement_and_gates_complete"
+    },
+    {
+      "name": "vae",
+      "group": "sdxl",
+      "object_id": 2494543100032,
+      "bytes": 167307726,
+      "GB": 0.15581746213138103,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 167307726
+      },
+      "parameter_count": 83653863,
+      "buffer_count": 0,
+      "class": "AutoencoderKL",
+      "pid": 4872,
+      "checkpoint_label": "measurement and gates complete (inside finalize boundary)",
+      "checkpoint_code": "15",
+      "time": 1790235435.35287,
+      "stage": "measurement_and_gates_complete"
+    },
+    {
+      "name": "unet",
+      "group": "sdxl",
+      "object_id": 2494561374688,
+      "bytes": 5837497864,
+      "GB": 5.4365935400128365,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 5837497864
+      },
+      "parameter_count": 2918748932,
+      "buffer_count": 0,
+      "class": "UNet2DConditionModel",
+      "pid": 4872,
+      "checkpoint_label": "measurement and gates complete (inside finalize boundary)",
+      "checkpoint_code": "15",
+      "time": 1790235435.35287,
+      "stage": "measurement_and_gates_complete"
+    },
+    {
+      "name": "text_encoder_2",
+      "group": "sdxl",
+      "object_id": 2494592154160,
+      "bytes": 1389320296,
+      "GB": 1.2939053550362587,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 1389319680,
+        "torch.int64@cpu": 616
+      },
+      "parameter_count": 694659840,
+      "buffer_count": 77,
+      "class": "CLIPTextModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "measurement and gates complete (inside finalize boundary)",
+      "checkpoint_code": "15",
+      "time": 1790235435.35287,
+      "stage": "measurement_and_gates_complete"
+    },
+    {
+      "name": "image_encoder",
+      "group": "ip_adapter",
+      "object_id": 2494596750576,
+      "bytes": 3689816584,
+      "GB": 3.43640948086977,
+      "dtype": "torch.float16",
+      "device": "cpu",
+      "dtype_device_bytes": {
+        "torch.float16@cpu": 3689814528,
+        "torch.int64@cpu": 2056
+      },
+      "parameter_count": 1844907264,
+      "buffer_count": 257,
+      "class": "CLIPVisionModelWithProjection",
+      "pid": 4872,
+      "checkpoint_label": "measurement and gates complete (inside finalize boundary)",
+      "checkpoint_code": "15",
+      "time": 1790235435.35287,
+      "stage": "measurement_and_gates_complete"
+    }
+  ],
+  "onnx_loads": [
+    {
+      "event": "onnx_load",
+      "object_id": 2770651789440,
+      "model_path": "D:\\genai-cache\\huggingface\\models--skytnt--anime-seg\\snapshots\\493cb60893f47441b26ec4fb9a306bce9e342982\\isnetis.onnx",
+      "kind": "isnet",
+      "load_rss_delta_bytes": 203636736,
+      "before_rss": {
+        "rss_bytes": 1489203200,
+        "processes": [
+          {
+            "pid": 4872,
+            "rss_bytes": 913276928
+          },
+          {
+            "pid": 33144,
+            "rss_bytes": 5124096
+          },
+          {
+            "pid": 26300,
+            "rss_bytes": 570802176
+          }
+        ],
+        "errors": []
+      },
+      "providers": [
+        "CPUExecutionProvider"
+      ],
+      "parameter_access": "unavailable; RSS load delta substitute",
+      "pid": 26300,
+      "root_pid": 4872,
+      "time": 1790234939.772458,
+      "stage": "startup"
+    },
+    {
+      "event": "onnx_load",
+      "object_id": 2494591479440,
+      "model_path": "D:\\genai-cache\\huggingface\\models--SmilingWolf--wd-vit-tagger-v3\\snapshots\\7f6b584d0bd3f55c4531f14ba3d4761b2bccdc0f\\model.onnx",
+      "kind": "wd14",
+      "load_rss_delta_bytes": 382283776,
+      "before_rss": {
+        "rss_bytes": 2859012096,
+        "processes": [
+          {
+            "pid": 4872,
+            "rss_bytes": 2859012096
+          }
+        ],
+        "errors": []
+      },
+      "providers": [
+        "CPUExecutionProvider"
+      ],
+      "parameter_access": "unavailable; RSS load delta substitute",
+      "pid": 4872,
+      "root_pid": 4872,
+      "time": 1790235033.5411227,
+      "stage": "tagging_and_approval"
+    },
+    {
+      "event": "onnx_load",
+      "object_id": 2494757094928,
+      "model_path": "D:\\genai-cache\\huggingface\\models--SmilingWolf--wd-vit-tagger-v3\\snapshots\\7f6b584d0bd3f55c4531f14ba3d4761b2bccdc0f\\model.onnx",
+      "kind": "wd14",
+      "load_rss_delta_bytes": 378400768,
+      "before_rss": {
+        "rss_bytes": 3571822592,
+        "processes": [
+          {
+            "pid": 4872,
+            "rss_bytes": 3571822592
+          }
+        ],
+        "errors": []
+      },
+      "providers": [
+        "CPUExecutionProvider"
+      ],
+      "parameter_access": "unavailable; RSS load delta substitute",
+      "pid": 4872,
+      "root_pid": 4872,
+      "time": 1790235092.2297814,
+      "stage": "base"
+    },
+    {
+      "event": "onnx_load",
+      "object_id": 2027260688416,
+      "model_path": "D:\\genai-cache\\huggingface\\models--skytnt--anime-seg\\snapshots\\493cb60893f47441b26ec4fb9a306bce9e342982\\isnetis.onnx",
+      "kind": "isnet",
+      "load_rss_delta_bytes": 201199616,
+      "before_rss": {
+        "rss_bytes": 14737104896,
+        "processes": [
+          {
+            "pid": 4872,
+            "rss_bytes": 14168481792
+          },
+          {
+            "pid": 35380,
+            "rss_bytes": 5136384
+          },
+          {
+            "pid": 33176,
+            "rss_bytes": 563486720
+          }
+        ],
+        "errors": []
+      },
+      "providers": [
+        "CPUExecutionProvider"
+      ],
+      "parameter_access": "unavailable; RSS load delta substitute",
+      "pid": 33176,
+      "root_pid": 4872,
+      "time": 1790235216.7421365,
+      "stage": "startup"
+    },
+    {
+      "event": "onnx_load",
+      "object_id": 1865899194352,
+      "model_path": "D:\\genai-cache\\huggingface\\models--skytnt--anime-seg\\snapshots\\493cb60893f47441b26ec4fb9a306bce9e342982\\isnetis.onnx",
+      "kind": "isnet",
+      "load_rss_delta_bytes": 196292608,
+      "before_rss": {
+        "rss_bytes": 15823093760,
+        "processes": [
+          {
+            "pid": 4872,
+            "rss_bytes": 15255900160
+          },
+          {
+            "pid": 12060,
+            "rss_bytes": 5160960
+          },
+          {
+            "pid": 24900,
+            "rss_bytes": 562032640
+          }
+        ],
+        "errors": []
+      },
+      "providers": [
+        "CPUExecutionProvider"
+      ],
+      "parameter_access": "unavailable; RSS load delta substitute",
+      "pid": 24900,
+      "root_pid": 4872,
+      "time": 1790235292.352479,
+      "stage": "startup"
+    },
+    {
+      "event": "onnx_load",
+      "object_id": 1928198961184,
+      "model_path": "D:\\genai-cache\\huggingface\\models--skytnt--anime-seg\\snapshots\\493cb60893f47441b26ec4fb9a306bce9e342982\\isnetis.onnx",
+      "kind": "isnet",
+      "load_rss_delta_bytes": 197435392,
+      "before_rss": {
+        "rss_bytes": 15095214080,
+        "processes": [
+          {
+            "pid": 4872,
+            "rss_bytes": 14527758336
+          },
+          {
+            "pid": 7272,
+            "rss_bytes": 5156864
+          },
+          {
+            "pid": 14484,
+            "rss_bytes": 562298880
+          }
+        ],
+        "errors": []
+      },
+      "providers": [
+        "CPUExecutionProvider"
+      ],
+      "parameter_access": "unavailable; RSS load delta substitute",
+      "pid": 14484,
+      "root_pid": 4872,
+      "time": 1790235342.7754087,
+      "stage": "startup"
+    }
+  ],
+  "representative_onnx_deltas": {
+    "isnet": {
+      "event": "onnx_load",
+      "object_id": 2770651789440,
+      "model_path": "D:\\genai-cache\\huggingface\\models--skytnt--anime-seg\\snapshots\\493cb60893f47441b26ec4fb9a306bce9e342982\\isnetis.onnx",
+      "kind": "isnet",
+      "load_rss_delta_bytes": 203636736,
+      "before_rss": {
+        "rss_bytes": 1489203200,
+        "processes": [
+          {
+            "pid": 4872,
+            "rss_bytes": 913276928
+          },
+          {
+            "pid": 33144,
+            "rss_bytes": 5124096
+          },
+          {
+            "pid": 26300,
+            "rss_bytes": 570802176
+          }
+        ],
+        "errors": []
+      },
+      "providers": [
+        "CPUExecutionProvider"
+      ],
+      "parameter_access": "unavailable; RSS load delta substitute",
+      "pid": 26300,
+      "root_pid": 4872,
+      "time": 1790234939.772458,
+      "stage": "startup"
+    },
+    "wd14": {
+      "event": "onnx_load",
+      "object_id": 2494591479440,
+      "model_path": "D:\\genai-cache\\huggingface\\models--SmilingWolf--wd-vit-tagger-v3\\snapshots\\7f6b584d0bd3f55c4531f14ba3d4761b2bccdc0f\\model.onnx",
+      "kind": "wd14",
+      "load_rss_delta_bytes": 382283776,
+      "before_rss": {
+        "rss_bytes": 2859012096,
+        "processes": [
+          {
+            "pid": 4872,
+            "rss_bytes": 2859012096
+          }
+        ],
+        "errors": []
+      },
+      "providers": [
+        "CPUExecutionProvider"
+      ],
+      "parameter_access": "unavailable; RSS load delta substitute",
+      "pid": 4872,
+      "root_pid": 4872,
+      "time": 1790235033.5411227,
+      "stage": "tagging_and_approval"
+    }
+  },
+  "summary_arithmetic": {
+    "runtime_checkpoint_02_GB": 0.5399284362792969,
+    "sdxl_logical_weights_GB": 7.115534937009215,
+    "ip_image_encoder_logical_weights_GB": 3.43640948086977,
+    "auxiliary_logical_weights_GB": 1.4951227493584156,
+    "onnx_sum_representative_load_RSS_deltas_GB": 0.5456809997558594,
+    "auxiliary_combined_GB": 2.040803749114275,
+    "unattributed_arithmetic_residual_GB": 2.8386177998036146,
+    "warning": "Logical module bytes (including GPU tensors) and RSS deltas are different quantities. Roles may not coexist, load deltas contain runtime buffers; this requested subtraction is NOT an additive physical system-RAM allocation."
+  }
+}

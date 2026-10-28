@@ -1,0 +1,78 @@
+[
+ {
+  "judge": "user",
+  "mode": "free_generation",
+  "source": "Claude 대화 2026-10-23 (요청 34 sheet.png)",
+  "case": "95b024bedc324175bb835344f3da64c5",
+  "code": "A1",
+  "target": {
+   "attempt": 2,
+   "seed": 43,
+   "variant": "raw",
+   "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\product-run-20261022\\runs\\95b024bedc324175bb835344f3da64c5\\free-generation\\qwen-2\\raw.png",
+   "sha256": "fd5dff972d3491cf3283a764462d0e00482db3bad0e35e6bc6f1745c703cdd8d"
+  },
+  "recorded_by": "user",
+  "recorded_at": "2026-10-23T00:30:00",
+  "quality_pass": true,
+  "failure_type": null,
+  "note": "사용자: 정상 생성"
+ },
+ {
+  "judge": "user",
+  "mode": "free_generation",
+  "source": "Claude 대화 2026-10-23 (요청 34 sheet.png)",
+  "case": "eaf9b7c7102c4a67ad3859c611e01762",
+  "code": "A3",
+  "target": {
+   "attempt": 1,
+   "seed": 42,
+   "variant": "raw",
+   "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\product-run-20261022\\runs\\eaf9b7c7102c4a67ad3859c611e01762\\free-generation\\qwen\\raw.png",
+   "sha256": "091184c905bb1e81b85903a1bff93d3c0cc8350476378125e95ad801bcd2eef1"
+  },
+  "recorded_by": "user",
+  "recorded_at": "2026-10-23T00:30:00",
+  "quality_pass": true,
+  "failure_type": null,
+  "note": "사용자: 정상 생성"
+ },
+ {
+  "judge": "user",
+  "mode": "free_generation",
+  "source": "Claude 대화 2026-10-23 (요청 34 sheet.png)",
+  "case": "b5cb43fef5bf4277a15f16db4fd23644",
+  "code": "B2",
+  "target": {
+   "attempt": 1,
+   "seed": 42,
+   "variant": "raw",
+   "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\product-run-20261022\\runs\\b5cb43fef5bf4277a15f16db4fd23644\\free-generation\\qwen\\raw.png",
+   "sha256": "8b36371aa99326142d13ac24e4675b6080f9d44a86c043cede3351522581c560"
+  },
+  "recorded_by": "user",
+  "recorded_at": "2026-10-23T00:30:00",
+  "quality_pass": true,
+  "failure_type": null,
+  "note": "사용자: 정상 생성"
+ },
+ {
+  "judge": "user",
+  "mode": "free_generation",
+  "source": "Claude 대화 2026-10-23 (요청 34 sheet.png)",
+  "case": "14329bd7cf1946469b8afb2c2d78e958",
+  "code": "B1",
+  "target": {
+   "attempt": 1,
+   "seed": 42,
+   "variant": "raw",
+   "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\product-run-20261022\\runs\\14329bd7cf1946469b8afb2c2d78e958\\free-generation\\qwen\\raw.png",
+   "sha256": "c4f7ef545ffc6872d22c1d8d20be2d6fab7af989ac207af5d568884331f8bfb4"
+  },
+  "recorded_by": "user",
+  "recorded_at": "2026-10-23T00:30:00",
+  "quality_pass": false,
+  "failure_type": "limbs",
+  "note": "사용자: 손이 3개(하나는 가지, 두 팔은 내려감)"
+ }
+]

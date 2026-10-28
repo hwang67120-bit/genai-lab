@@ -1,0 +1,348 @@
+{
+ "python": "D:\\genai-cache\\catvton-venv\\Scripts\\python.exe",
+ "site_packages": "D:\\Model\\genai-cache\\catvton-venv\\Lib\\site-packages",
+ "version": "3.10.6",
+ "packages": {
+  "certifi": {
+   "version": "2026.7.22",
+   "license": "MPL-2.0",
+   "import_names": [
+    "certifi"
+   ],
+   "observed_in": [
+    "modules-11068.json",
+    "modules-26924.json",
+    "modules-34960.json",
+    "modules-36632.json",
+    "modules-36776.json"
+   ]
+  },
+  "charset-normalizer": {
+   "version": "3.5.2",
+   "license": "MIT",
+   "import_names": [
+    "charset_normalizer"
+   ],
+   "observed_in": [
+    "modules-11068.json",
+    "modules-26924.json",
+    "modules-34960.json",
+    "modules-36632.json",
+    "modules-36776.json"
+   ]
+  },
+  "colorama": {
+   "version": "0.4.6",
+   "license": "",
+   "import_names": [
+    "colorama"
+   ],
+   "observed_in": [
+    "modules-11068.json",
+    "modules-26924.json",
+    "modules-34960.json",
+    "modules-36632.json",
+    "modules-36776.json"
+   ]
+  },
+  "cycler": {
+   "version": "0.12.1",
+   "license": "Copyright (c) 2015, matplotlib project\nAll rights reserved.\n\nRedistribution and ",
+   "import_names": [
+    "cycler"
+   ],
+   "observed_in": [
+    "modules-11068.json",
+    "modules-26924.json",
+    "modules-34960.json",
+    "modules-36632.json",
+    "modules-36776.json"
+   ]
+  },
+  "easy_dwpose": {
+   "version": "1.0.2",
+   "license": "",
+   "import_names": [
+    "easy_dwpose"
+   ],
+   "observed_in": [
+    "modules-11068.json",
+    "modules-26924.json",
+    "modules-34960.json",
+    "modules-36632.json",
+    "modules-36776.json"
+   ]
+  },
+  "filelock": {
+   "version": "4.1.0",
+   "license": "MIT",
+   "import_names": [
+    "filelock"
+   ],
+   "observed_in": [
+    "modules-11068.json",
+    "modules-26924.json",
+    "modules-34960.json",
+    "modules-36632.json",
+    "modules-36776.json"
+   ]
+  },
+  "huggingface-hub": {
+   "version": "0.24.7",
+   "license": "Apache",
+   "import_names": [
+    "huggingface_hub"
+   ],
+   "observed_in": [
+    "modules-11068.json",
+    "modules-26924.json",
+    "modules-34960.json",
+    "modules-36632.json",
+    "modules-36776.json"
+   ]
+  },
+  "idna": {
+   "version": "3.20",
+   "license": "BSD-3-Clause",
+   "import_names": [
+    "idna"
+   ],
+   "observed_in": [
+    "modules-11068.json",
+    "modules-26924.json",
+    "modules-34960.json",
+    "modules-36632.json",
+    "modules-36776.json"
+   ]
+  },
+  "kiwisolver": {
+   "version": "1.5.1",
+   "license": "=========================\n The Kiwi licensing terms\n=========================\nKi",
+   "import_names": [
+    "kiwisolver"
+   ],
+   "observed_in": [
+    "modules-11068.json",
+    "modules-26924.json",
+    "modules-34960.json",
+    "modules-36632.json",
+    "modules-36776.json"
+   ]
+  },
+  "matplotlib": {
+   "version": "3.10.9",
+   "license": "License agreement for matplotlib versions 1.3.0 and later\n =====================",
+   "import_names": [
+    "matplotlib"
+   ],
+   "observed_in": [
+    "modules-11068.json",
+    "modules-26924.json",
+    "modules-34960.json",
+    "modules-36632.json",
+    "modules-36776.json"
+   ]
+  },
+  "numpy": {
+   "version": "1.26.4",
+   "license": "Copyright (c) 2005-2023, NumPy Developers.\nAll rights reserved.\n\nRedistribution ",
+   "import_names": [
+    "numpy"
+   ],
+   "observed_in": [
+    "modules-11068.json",
+    "modules-26924.json",
+    "modules-34960.json",
+    "modules-36632.json",
+    "modules-36776.json"
+   ]
+  },
+  "onnxruntime": {
+   "version": "1.23.2",
+   "license": "MIT License",
+   "import_names": [
+    "onnxruntime"
+   ],
+   "observed_in": [
+    "modules-11068.json",
+    "modules-26924.json",
+    "modules-34960.json",
+    "modules-36632.json",
+    "modules-36776.json"
+   ]
+  },
+  "opencv-python": {
+   "version": "4.11.0.86",
+   "license": "Apache 2.0",
+   "import_names": [
+    "cv2"
+   ],
+   "observed_in": [
+    "modules-11068.json",
+    "modules-26924.json",
+    "modules-34960.json",
+    "modules-36632.json",
+    "modules-36776.json"
+   ]
+  },
+  "packaging": {
+   "version": "26.3",
+   "license": "Apache-2.0 OR BSD-2-Clause",
+   "import_names": [
+    "packaging"
+   ],
+   "observed_in": [
+    "modules-11068.json",
+    "modules-26924.json",
+    "modules-34960.json",
+    "modules-36632.json",
+    "modules-36776.json"
+   ]
+  },
+  "pillow": {
+   "version": "12.3.0",
+   "license": "MIT-CMU",
+   "import_names": [
+    "PIL"
+   ],
+   "observed_in": [
+    "modules-11068.json",
+    "modules-26924.json",
+    "modules-34960.json",
+    "modules-36632.json",
+    "modules-36776.json"
+   ]
+  },
+  "pyparsing": {
+   "version": "3.3.3",
+   "license": "MIT",
+   "import_names": [
+    "pyparsing"
+   ],
+   "observed_in": [
+    "modules-11068.json",
+    "modules-26924.json",
+    "modules-34960.json",
+    "modules-36632.json",
+    "modules-36776.json"
+   ]
+  },
+  "python-dateutil": {
+   "version": "2.9.0.post0",
+   "license": "Dual License",
+   "import_names": [
+    "dateutil"
+   ],
+   "observed_in": [
+    "modules-11068.json",
+    "modules-26924.json",
+    "modules-34960.json",
+    "modules-36632.json",
+    "modules-36776.json"
+   ]
+  },
+  "PyYAML": {
+   "version": "6.0.3",
+   "license": "MIT",
+   "import_names": [
+    "yaml"
+   ],
+   "observed_in": [
+    "modules-11068.json",
+    "modules-26924.json",
+    "modules-34960.json",
+    "modules-36632.json",
+    "modules-36776.json"
+   ]
+  },
+  "requests": {
+   "version": "2.34.2",
+   "license": "Apache-2.0",
+   "import_names": [
+    "charset_normalizer",
+    "idna",
+    "requests",
+    "urllib3"
+   ],
+   "observed_in": [
+    "modules-11068.json",
+    "modules-26924.json",
+    "modules-34960.json",
+    "modules-36632.json",
+    "modules-36776.json"
+   ]
+  },
+  "setuptools": {
+   "version": "84.0.0",
+   "license": "MIT",
+   "import_names": [
+    "_distutils_hack"
+   ],
+   "observed_in": [
+    "modules-11068.json",
+    "modules-26924.json",
+    "modules-34960.json",
+    "modules-36632.json",
+    "modules-36776.json"
+   ]
+  },
+  "torch": {
+   "version": "2.14.1",
+   "license": "Apache-2.0 AND Apache-2.0 WITH LLVM-exception AND BSD-2-Clause AND BSD-3-Clause ",
+   "import_names": [
+    "torch",
+    "torchgen"
+   ],
+   "observed_in": [
+    "modules-11068.json",
+    "modules-26924.json",
+    "modules-34960.json",
+    "modules-36632.json",
+    "modules-36776.json"
+   ]
+  },
+  "tqdm": {
+   "version": "4.70.1",
+   "license": "MPL-2.0 AND MIT",
+   "import_names": [
+    "tqdm"
+   ],
+   "observed_in": [
+    "modules-11068.json",
+    "modules-26924.json",
+    "modules-34960.json",
+    "modules-36632.json",
+    "modules-36776.json"
+   ]
+  },
+  "typing_extensions": {
+   "version": "4.16.0",
+   "license": "PSF-2.0",
+   "import_names": [
+    "typing_extensions"
+   ],
+   "observed_in": [
+    "modules-11068.json",
+    "modules-26924.json",
+    "modules-34960.json",
+    "modules-36632.json",
+    "modules-36776.json"
+   ]
+  },
+  "urllib3": {
+   "version": "2.8.0",
+   "license": "MIT",
+   "import_names": [
+    "urllib3"
+   ],
+   "observed_in": [
+    "modules-11068.json",
+    "modules-26924.json",
+    "modules-34960.json",
+    "modules-36632.json",
+    "modules-36776.json"
+   ]
+  }
+ },
+ "unmapped_top_level": []
+}

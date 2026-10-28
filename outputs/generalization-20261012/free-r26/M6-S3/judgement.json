@@ -1,0 +1,24 @@
+[
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-18, judgement-26/batch-7.png #1",
+    "case": "M6-S3",
+    "target": {
+      "attempt": 1,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r26\\M6-S3\\qwen\\raw.png",
+      "sha256": "256f53dc1f48b193c508ff60ba33318c2e7cf1f98ee12bdeef52867fc7fb49e4"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-18T01:30:13",
+    "note": "",
+    "same_character": "yes",
+    "outfit": "same",
+    "request_followed": "yes",
+    "severe_defect": "none",
+    "finish_quality": "good",
+    "quality_pass": true,
+    "failure_type": null
+  }
+]

@@ -1,0 +1,11 @@
+test_closed_ring_does_not_invent_endpoint (test_component_probe.ComponentTests) ... ok
+test_empty_mask_and_isolated_pixel (test_component_probe.ComponentTests) ... ok
+test_fork_keeps_all_terminals (test_component_probe.ComponentTests) ... ok
+test_perpendicular_fragments_not_linked (test_component_probe.ComponentTests) ... ok
+test_single_component_has_no_cross_component_link (test_component_probe.ComponentTests) ... ok
+test_two_fragments_preserved_and_geometry_link_is_unverified (test_component_probe.ComponentTests) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.239s
+
+OK

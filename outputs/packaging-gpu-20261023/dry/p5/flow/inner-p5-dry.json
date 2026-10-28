@@ -1,0 +1,37 @@
+{
+ "stage": "p5",
+ "dry": true,
+ "executable": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\python.exe",
+ "decision": "studio",
+ "decision_value": "D:\\genai-test\\model-home-20261023",
+ "cases": {
+  "A3": {
+   "inputs_sha_match": true,
+   "scene_text_match": true,
+   "state": "dry"
+  },
+  "B2": {
+   "inputs_sha_match": true,
+   "scene_text_match": true,
+   "state": "dry"
+  }
+ },
+ "runtime": {
+  "analysis_python": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\python.exe",
+  "pose_python": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-pose\\python.exe",
+  "qwen_settings": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\app\\configs\\qwen_edit_settings.model_home.json",
+  "qwen_python": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\python.exe",
+  "model_home": "D:\\genai-test\\model-home-20261023"
+ },
+ "quick_check_staging": true,
+ "quick_check_outfit": true,
+ "base_prefix": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main",
+ "sys_path": [
+  "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\app",
+  "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\app\\scripts",
+  "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\python310.zip",
+  "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main",
+  "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\Lib\\site-packages",
+  "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\app"
+ ]
+}

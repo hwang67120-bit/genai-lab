@@ -1,0 +1,48 @@
+[
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-18, judgement-26/batch-4.png #1",
+    "case": "M2-S4",
+    "target": {
+      "attempt": 1,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r26\\M2-S4\\qwen\\raw.png",
+      "sha256": "e8ce172fb1bb451dfe964dea6638727e671e56c8ac2ba89bcd449122c38246c6"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-18T01:23:40",
+    "note": "사용자: 실패 꼬리(원본에 없는 꼬리)",
+    "same_character": "not_judged",
+    "outfit": "not_judged",
+    "request_followed": "not_judged",
+    "severe_defect": "not_judged",
+    "finish_quality": "not_judged",
+    "quality_pass": false,
+    "failure_type": "extra_part",
+    "body_parts": "extra"
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-18, judgement-26/batch-4.png #2",
+    "case": "M2-S4",
+    "target": {
+      "attempt": 2,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r26\\M2-S4\\qwen-2\\raw.png",
+      "sha256": "d4649bfc12dc006dd51e2c90f1c872649526aba477b3314d0747017a110e0144"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-18T01:23:40",
+    "note": "사용자: 실패 꼬리",
+    "same_character": "not_judged",
+    "outfit": "not_judged",
+    "request_followed": "not_judged",
+    "severe_defect": "not_judged",
+    "finish_quality": "not_judged",
+    "quality_pass": false,
+    "failure_type": "extra_part",
+    "body_parts": "extra"
+  }
+]

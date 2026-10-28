@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "updated": "2026-09-23",
+  "entries": [
+    {
+      "file_name": "143960292_19.jpg",
+      "sha256": "df5b59198c4641224a9db78024a0d36262d70c5ec87442dff88af477ec067901",
+      "reason": "Explicit user instruction: exclude from tests and prohibit Git publication",
+      "test_allowed": false,
+      "git_publication_allowed": false,
+      "derivatives_allowed_for_publication": false,
+      "original_path": "C:\\Users\\user\\Downloads\\참조 이미지\\143960292_19.jpg"
+    }
+  ]
+}

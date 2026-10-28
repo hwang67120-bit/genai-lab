@@ -1,0 +1,46 @@
+{
+  "negative_overlap": true,
+  "rules": [
+    {
+      "id": "bottom_types",
+      "left": [
+        "pants",
+        "trousers"
+      ],
+      "right": [
+        "skirt",
+        "miniskirt",
+        "shorts"
+      ],
+      "message": "하의 종류가 함께 있습니다 — 선택한 옷과 다른 설명을 지워 주세요."
+    },
+    {
+      "id": "pants_legwear",
+      "left": [
+        "pants",
+        "trousers"
+      ],
+      "right": [
+        "thighhighs",
+        "pantyhose",
+        "kneehighs"
+      ],
+      "message": "바지와 다리 의류가 함께 있습니다 — 실제 조합인지 확인해 주세요."
+    },
+    {
+      "id": "garment_pose",
+      "terms": [
+        "hands in pockets",
+        "hand in pocket",
+        "arms crossed",
+        "crossed arms",
+        "standing",
+        "sitting",
+        "kneeling",
+        "walking",
+        "running"
+      ],
+      "message": "의상 설명에 자세·동작이 섞여 있습니다 — 자세 태그는 의상에 넣지 않습니다."
+    }
+  ]
+}

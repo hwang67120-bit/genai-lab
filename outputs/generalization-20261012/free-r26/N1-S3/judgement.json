@@ -1,0 +1,24 @@
+[
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-18, review-26-batch-1.png #4",
+    "case": "N1-S3",
+    "target": {
+      "attempt": 1,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r26\\N1-S3\\qwen\\raw.png",
+      "sha256": "a37adfc6f6be468c7b3123a85b1a6f4c2fcd870f9efa134eded20b4d824bdbbd"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-18T01:09:29",
+    "note": "사용자: 걷지 않음",
+    "same_character": "not_judged",
+    "outfit": "not_judged",
+    "request_followed": "no",
+    "severe_defect": "not_judged",
+    "finish_quality": "not_judged",
+    "quality_pass": false,
+    "failure_type": "pose"
+  }
+]

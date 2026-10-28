@@ -1,0 +1,25 @@
+[
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-21, judgement-29/batch-2.png #2",
+    "case": "K-S3",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r29\\K-S3\\qwen\\raw.png",
+      "sha256": "cf5c3b3fadd60d7a89555904a781d3c6ab1dc4408b3f5374b45bbc8fdaa0bdd2"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-21T14:02:55",
+    "note": "",
+    "same_character": "yes",
+    "outfit": "same",
+    "request_followed": "yes",
+    "severe_defect": "none",
+    "finish_quality": "good",
+    "quality_pass": true,
+    "failure_type": null
+  }
+]

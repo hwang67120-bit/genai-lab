@@ -1,0 +1,404 @@
+{
+ "processes": [
+  {
+   "pid": 14364,
+   "argv": [
+    "Z:\\genai-lab\\scripts\\product_file_trace\\scenarios.py",
+    "base4",
+    "Z:\\genai-lab\\outputs\\product-file-trace-20261023\\env-base4"
+   ],
+   "executable": "D:\\genai-cache\\venv\\Scripts\\python.exe",
+   "exe_env": "venv",
+   "base_prefix": "C:\\Program Files\\Python310",
+   "cwd": "Z:\\genai-lab",
+   "pythonpath": "Z:\\genai-lab\\scripts\\product_file_trace",
+   "module_count": 1344,
+   "module_envs": {
+    "base_python": 230,
+    "venv": 1031,
+    "repo": 55,
+    "other": 28
+   },
+   "modules_from_other_env": [
+    "_classes.py",
+    "_ops.py",
+    "shibokensupport/__init__.py",
+    "shibokensupport/feature.py",
+    "shibokensupport/signature/__init__.py",
+    "shibokensupport/signature/errorhandler.py",
+    "shibokensupport/signature/importhandler.py",
+    "shibokensupport/signature/layout.py",
+    "shibokensupport/signature/lib/__init__.py",
+    "shibokensupport/signature/lib/enum_sig.py",
+    "shibokensupport/signature/lib/pyi_generator.py",
+    "shibokensupport/signature/lib/tool.py",
+    "shibokensupport/signature/loader.py",
+    "shibokensupport/signature/mapping.py",
+    "shibokensupport/signature/parser.py",
+    "signature_bootstrap.py"
+   ],
+   "path": [
+    "\\\\192.168.0.109\\win_g\\genai-lab",
+    "Z:\\genai-lab\\scripts\\product_file_trace",
+    "Z:\\genai-lab\\scripts\\product_file_trace",
+    "C:\\Program Files\\Python310\\python310.zip",
+    "C:\\Program Files\\Python310\\DLLs",
+    "C:\\Program Files\\Python310\\lib",
+    "C:\\Program Files\\Python310",
+    "D:\\genai-cache\\venv",
+    "D:\\genai-cache\\venv\\lib\\site-packages"
+   ]
+  },
+  {
+   "pid": 15180,
+   "argv": [
+    "\\\\192.168.0.109\\win_g\\genai-lab\\genai_lab\\studio_analysis.py",
+    "pose",
+    "Z:\\genai-lab\\outputs\\product-file-trace-20261023\\env-base4\\C\\limbs\\qwen"
+   ],
+   "executable": "D:\\genai-cache\\catvton-venv\\Scripts\\python.exe",
+   "exe_env": "catvton-venv",
+   "base_prefix": "C:\\Program Files\\Python310",
+   "cwd": "Z:\\genai-lab",
+   "pythonpath": "Z:\\genai-lab\\scripts\\product_file_trace",
+   "module_count": 1433,
+   "module_envs": {
+    "base_python": 225,
+    "catvton-venv": 1196,
+    "repo": 10,
+    "other": 2
+   },
+   "modules_from_other_env": [
+    "_classes.py",
+    "_ops.py"
+   ],
+   "path": [
+    "\\\\192.168.0.109\\win_g\\genai-lab",
+    "\\\\192.168.0.109\\win_g\\genai-lab\\genai_lab",
+    "Z:\\genai-lab\\scripts\\product_file_trace",
+    "C:\\Program Files\\Python310\\python310.zip",
+    "C:\\Program Files\\Python310\\DLLs",
+    "C:\\Program Files\\Python310\\lib",
+    "C:\\Program Files\\Python310",
+    "D:\\genai-cache\\catvton-venv",
+    "D:\\genai-cache\\catvton-venv\\lib\\site-packages"
+   ]
+  },
+  {
+   "pid": 1800,
+   "argv": [
+    "\\\\192.168.0.109\\win_g\\genai-lab\\genai_lab\\studio_analysis.py",
+    "pose",
+    "Z:\\genai-lab\\outputs\\product-file-trace-20261023\\env-base4\\A\\inputs"
+   ],
+   "executable": "D:\\genai-cache\\catvton-venv\\Scripts\\python.exe",
+   "exe_env": "catvton-venv",
+   "base_prefix": "C:\\Program Files\\Python310",
+   "cwd": "Z:\\genai-lab",
+   "pythonpath": "Z:\\genai-lab\\scripts\\product_file_trace",
+   "module_count": 1433,
+   "module_envs": {
+    "base_python": 225,
+    "catvton-venv": 1196,
+    "repo": 10,
+    "other": 2
+   },
+   "modules_from_other_env": [
+    "_classes.py",
+    "_ops.py"
+   ],
+   "path": [
+    "\\\\192.168.0.109\\win_g\\genai-lab",
+    "\\\\192.168.0.109\\win_g\\genai-lab\\genai_lab",
+    "Z:\\genai-lab\\scripts\\product_file_trace",
+    "C:\\Program Files\\Python310\\python310.zip",
+    "C:\\Program Files\\Python310\\DLLs",
+    "C:\\Program Files\\Python310\\lib",
+    "C:\\Program Files\\Python310",
+    "D:\\genai-cache\\catvton-venv",
+    "D:\\genai-cache\\catvton-venv\\lib\\site-packages"
+   ]
+  },
+  {
+   "pid": 18208,
+   "argv": [
+    "\\\\192.168.0.109\\win_g\\genai-lab\\genai_lab\\studio_analysis.py",
+    "features",
+    "Z:\\genai-lab\\outputs\\product-file-trace-20261023\\env-base4\\A\\inputs"
+   ],
+   "executable": "D:\\genai-cache\\venv\\Scripts\\python.exe",
+   "exe_env": "venv",
+   "base_prefix": "C:\\Program Files\\Python310",
+   "cwd": "Z:\\genai-lab",
+   "pythonpath": "Z:\\genai-lab\\scripts\\product_file_trace",
+   "module_count": 2860,
+   "module_envs": {
+    "base_python": 253,
+    "venv": 2582,
+    "repo": 23,
+    "other": 2
+   },
+   "modules_from_other_env": [
+    "_classes.py",
+    "_ops.py"
+   ],
+   "path": [
+    "\\\\192.168.0.109\\win_g\\genai-lab",
+    "\\\\192.168.0.109\\win_g\\genai-lab\\genai_lab",
+    "Z:\\genai-lab\\scripts\\product_file_trace",
+    "C:\\Program Files\\Python310\\python310.zip",
+    "C:\\Program Files\\Python310\\DLLs",
+    "C:\\Program Files\\Python310\\lib",
+    "C:\\Program Files\\Python310",
+    "D:\\genai-cache\\venv",
+    "D:\\genai-cache\\venv\\lib\\site-packages"
+   ]
+  },
+  {
+   "pid": 18688,
+   "argv": [
+    "\\\\192.168.0.109\\win_g\\genai-lab\\genai_lab\\studio_analysis.py",
+    "pose",
+    "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\product-file-trace-20261023\\env-base4\\D\\result-analysis-2\\joints"
+   ],
+   "executable": "D:\\genai-cache\\catvton-venv\\Scripts\\python.exe",
+   "exe_env": "catvton-venv",
+   "base_prefix": "C:\\Program Files\\Python310",
+   "cwd": "Z:\\genai-lab",
+   "pythonpath": "Z:\\genai-lab\\scripts\\product_file_trace",
+   "module_count": 1433,
+   "module_envs": {
+    "base_python": 225,
+    "catvton-venv": 1196,
+    "repo": 10,
+    "other": 2
+   },
+   "modules_from_other_env": [
+    "_classes.py",
+    "_ops.py"
+   ],
+   "path": [
+    "\\\\192.168.0.109\\win_g\\genai-lab",
+    "\\\\192.168.0.109\\win_g\\genai-lab\\genai_lab",
+    "Z:\\genai-lab\\scripts\\product_file_trace",
+    "C:\\Program Files\\Python310\\python310.zip",
+    "C:\\Program Files\\Python310\\DLLs",
+    "C:\\Program Files\\Python310\\lib",
+    "C:\\Program Files\\Python310",
+    "D:\\genai-cache\\catvton-venv",
+    "D:\\genai-cache\\catvton-venv\\lib\\site-packages"
+   ]
+  },
+  {
+   "pid": 34360,
+   "argv": [
+    "\\\\192.168.0.109\\win_g\\genai-lab\\genai_lab\\studio_analysis.py",
+    "pose",
+    "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\product-file-trace-20261023\\env-base4\\D\\result-analysis\\joints"
+   ],
+   "executable": "D:\\genai-cache\\catvton-venv\\Scripts\\python.exe",
+   "exe_env": "catvton-venv",
+   "base_prefix": "C:\\Program Files\\Python310",
+   "cwd": "Z:\\genai-lab",
+   "pythonpath": "Z:\\genai-lab\\scripts\\product_file_trace",
+   "module_count": 1433,
+   "module_envs": {
+    "base_python": 225,
+    "catvton-venv": 1196,
+    "repo": 10,
+    "other": 2
+   },
+   "modules_from_other_env": [
+    "_classes.py",
+    "_ops.py"
+   ],
+   "path": [
+    "\\\\192.168.0.109\\win_g\\genai-lab",
+    "\\\\192.168.0.109\\win_g\\genai-lab\\genai_lab",
+    "Z:\\genai-lab\\scripts\\product_file_trace",
+    "C:\\Program Files\\Python310\\python310.zip",
+    "C:\\Program Files\\Python310\\DLLs",
+    "C:\\Program Files\\Python310\\lib",
+    "C:\\Program Files\\Python310",
+    "D:\\genai-cache\\catvton-venv",
+    "D:\\genai-cache\\catvton-venv\\lib\\site-packages"
+   ]
+  },
+  {
+   "pid": 34668,
+   "argv": [
+    "\\\\192.168.0.109\\win_g\\genai-lab\\genai_lab\\studio_analysis.py",
+    "pose",
+    "Z:\\genai-lab\\outputs\\product-file-trace-20261023\\env-base4\\C\\limbs\\original"
+   ],
+   "executable": "D:\\genai-cache\\catvton-venv\\Scripts\\python.exe",
+   "exe_env": "catvton-venv",
+   "base_prefix": "C:\\Program Files\\Python310",
+   "cwd": "Z:\\genai-lab",
+   "pythonpath": "Z:\\genai-lab\\scripts\\product_file_trace",
+   "module_count": 1433,
+   "module_envs": {
+    "base_python": 225,
+    "catvton-venv": 1196,
+    "repo": 10,
+    "other": 2
+   },
+   "modules_from_other_env": [
+    "_classes.py",
+    "_ops.py"
+   ],
+   "path": [
+    "\\\\192.168.0.109\\win_g\\genai-lab",
+    "\\\\192.168.0.109\\win_g\\genai-lab\\genai_lab",
+    "Z:\\genai-lab\\scripts\\product_file_trace",
+    "C:\\Program Files\\Python310\\python310.zip",
+    "C:\\Program Files\\Python310\\DLLs",
+    "C:\\Program Files\\Python310\\lib",
+    "C:\\Program Files\\Python310",
+    "D:\\genai-cache\\catvton-venv",
+    "D:\\genai-cache\\catvton-venv\\lib\\site-packages"
+   ]
+  }
+ ],
+ "popens": [
+  {
+   "pid": 14364,
+   "kind": "popen",
+   "args": "ver",
+   "cwd": null,
+   "env_pythonpath": "Z:\\genai-lab\\scripts\\product_file_trace"
+  },
+  {
+   "pid": 14364,
+   "kind": "popen",
+   "args": [
+    "D:\\genai-cache\\catvton-venv\\Scripts\\python.exe",
+    "\\\\192.168.0.109\\win_g\\genai-lab\\genai_lab\\studio_analysis.py",
+    "pose",
+    "Z:\\genai-lab\\outputs\\product-file-trace-20261023\\env-base4\\A\\inputs",
+    "D:\\genai-cache\\huggingface\\easy-dwpose\\checkpoints",
+    "D:\\genai-cache\\huggingface",
+    "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\pose-identity-20260927\\identity-v2\\model-cache\\hub"
+   ],
+   "cwd": null,
+   "env_pythonpath": "Z:\\genai-lab\\scripts\\product_file_trace"
+  },
+  {
+   "pid": 1800,
+   "kind": "popen",
+   "args": "ver",
+   "cwd": null,
+   "env_pythonpath": "Z:\\genai-lab\\scripts\\product_file_trace"
+  },
+  {
+   "pid": 14364,
+   "kind": "popen",
+   "args": [
+    "D:\\genai-cache\\venv\\Scripts\\python.exe",
+    "\\\\192.168.0.109\\win_g\\genai-lab\\genai_lab\\studio_analysis.py",
+    "features",
+    "Z:\\genai-lab\\outputs\\product-file-trace-20261023\\env-base4\\A\\inputs",
+    "D:\\genai-cache\\huggingface\\easy-dwpose\\checkpoints",
+    "D:\\genai-cache\\huggingface",
+    "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\pose-identity-20260927\\identity-v2\\model-cache\\hub"
+   ],
+   "cwd": null,
+   "env_pythonpath": "Z:\\genai-lab\\scripts\\product_file_trace"
+  },
+  {
+   "pid": 18208,
+   "kind": "popen",
+   "args": "ver",
+   "cwd": null,
+   "env_pythonpath": "Z:\\genai-lab\\scripts\\product_file_trace"
+  },
+  {
+   "pid": 14364,
+   "kind": "popen",
+   "args": [
+    "D:\\genai-cache\\catvton-venv\\Scripts\\python.exe",
+    "\\\\192.168.0.109\\win_g\\genai-lab\\genai_lab\\studio_analysis.py",
+    "pose",
+    "Z:\\genai-lab\\outputs\\product-file-trace-20261023\\env-base4\\C\\limbs\\original",
+    "D:\\genai-cache\\huggingface\\easy-dwpose\\checkpoints",
+    "D:\\genai-cache\\huggingface",
+    "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\pose-identity-20260927\\identity-v2\\model-cache\\hub"
+   ],
+   "cwd": null,
+   "env_pythonpath": "Z:\\genai-lab\\scripts\\product_file_trace"
+  },
+  {
+   "pid": 34668,
+   "kind": "popen",
+   "args": "ver",
+   "cwd": null,
+   "env_pythonpath": "Z:\\genai-lab\\scripts\\product_file_trace"
+  },
+  {
+   "pid": 14364,
+   "kind": "popen",
+   "args": [
+    "D:\\genai-cache\\catvton-venv\\Scripts\\python.exe",
+    "\\\\192.168.0.109\\win_g\\genai-lab\\genai_lab\\studio_analysis.py",
+    "pose",
+    "Z:\\genai-lab\\outputs\\product-file-trace-20261023\\env-base4\\C\\limbs\\qwen",
+    "D:\\genai-cache\\huggingface\\easy-dwpose\\checkpoints",
+    "D:\\genai-cache\\huggingface",
+    "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\pose-identity-20260927\\identity-v2\\model-cache\\hub"
+   ],
+   "cwd": null,
+   "env_pythonpath": "Z:\\genai-lab\\scripts\\product_file_trace"
+  },
+  {
+   "pid": 15180,
+   "kind": "popen",
+   "args": "ver",
+   "cwd": null,
+   "env_pythonpath": "Z:\\genai-lab\\scripts\\product_file_trace"
+  },
+  {
+   "pid": 14364,
+   "kind": "popen",
+   "args": [
+    "D:\\genai-cache\\catvton-venv\\Scripts\\python.exe",
+    "\\\\192.168.0.109\\win_g\\genai-lab\\genai_lab\\studio_analysis.py",
+    "pose",
+    "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\product-file-trace-20261023\\env-base4\\D\\result-analysis\\joints",
+    "D:\\genai-cache\\huggingface\\easy-dwpose\\checkpoints",
+    "D:\\genai-cache\\huggingface",
+    "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\pose-identity-20260927\\identity-v2\\model-cache\\hub"
+   ],
+   "cwd": null,
+   "env_pythonpath": "Z:\\genai-lab\\scripts\\product_file_trace"
+  },
+  {
+   "pid": 34360,
+   "kind": "popen",
+   "args": "ver",
+   "cwd": null,
+   "env_pythonpath": "Z:\\genai-lab\\scripts\\product_file_trace"
+  },
+  {
+   "pid": 14364,
+   "kind": "popen",
+   "args": [
+    "D:\\genai-cache\\catvton-venv\\Scripts\\python.exe",
+    "\\\\192.168.0.109\\win_g\\genai-lab\\genai_lab\\studio_analysis.py",
+    "pose",
+    "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\product-file-trace-20261023\\env-base4\\D\\result-analysis-2\\joints",
+    "D:\\genai-cache\\huggingface\\easy-dwpose\\checkpoints",
+    "D:\\genai-cache\\huggingface",
+    "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\pose-identity-20260927\\identity-v2\\model-cache\\hub"
+   ],
+   "cwd": null,
+   "env_pythonpath": "Z:\\genai-lab\\scripts\\product_file_trace"
+  },
+  {
+   "pid": 18688,
+   "kind": "popen",
+   "args": "ver",
+   "cwd": null,
+   "env_pythonpath": "Z:\\genai-lab\\scripts\\product_file_trace"
+  }
+ ]
+}

@@ -1,0 +1,21 @@
+{
+ "kind": "sha",
+ "python": "D:\\genai-test\\배포 후보 GenAILab-20261023-embed\\runtime-main\\python.exe",
+ "started": "2026-10-24 04:54:34",
+ "cuda_visible_devices": "-1",
+ "bytes": {
+  "manifest_files": 27,
+  "manifest_bytes": 16859227519,
+  "gguf_bytes": 13244758624,
+  "total": 30103986143
+ },
+ "seconds": {
+  "check_runtime_versions": 0.012151500006439164,
+  "validate_model_files": 25.688005600008182,
+  "import_torch": 2.810115499974927,
+  "import_diffusers": 8.37941779999528,
+  "import_transformers": 0.0006500999734271318
+ },
+ "sha_gib_per_second": 1.091,
+ "finished": "2026-10-24 04:55:11"
+}

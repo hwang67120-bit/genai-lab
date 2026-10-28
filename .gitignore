@@ -1,0 +1,40 @@
+# 생성 이미지와 실행 기록
+/outputs/**
+!/outputs/README.md
+
+# 로컬 오류 추적 로그
+/logs/**
+
+# 사용자가 선택한 참조 이미지
+/inputs/reference/**
+!/inputs/reference/README.md
+
+# 프로젝트 루트에 놓인 이미지
+/*.png
+/*.jpg
+/*.jpeg
+/*.webp
+
+# Python 임시 파일
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# 가상 환경
+.venv/
+venv/
+Venv/
+
+# 환경 설정과 편집기 개인 설정
+.env
+.env.*
+.vscode/
+
+# Windows 임시 파일
+Thumbs.db
+Desktop.ini
+
+# User-excluded reference and derivatives: do not force-add or publish
+**/143960292_19.*
+**/df5b59198c4641224a9db78024a0d36262d70c5ec87442dff88af477ec067901*/
+**/df5b59198c4641224a9db78024a0d36262d70c5ec87442dff88af477ec067901*

@@ -1,0 +1,24 @@
+{
+  "source": "automatic_analysis (tag 0.5 이상, 사람 확정 아님)",
+  "features": {
+    "F5-cheer": {
+      "hair_length": [
+        "long_hair"
+      ],
+      "hair_style": [
+        "ponytail",
+        "hair_intakes",
+        "ahoge"
+      ],
+      "hair_color": [
+        "black_hair",
+        "multicolored_hair"
+      ],
+      "eye_color": null,
+      "head_accessories": null,
+      "skin": [
+        "dark_skin"
+      ]
+    }
+  }
+}

@@ -1,0 +1,9 @@
+default parity: 21 / 21
+A M6-S2 ['- The character has short hair blue hair; blue eyes; head accessories: earrings; keep these exactly', '+ The character has short hair; blue eyes; head accessories: earrings; keep these exactly'] | negative ' '
+A M6-S3 ['- The character has short hair blue hair; blue eyes; head accessories: earrings; keep these exactly', '+ The character has short hair; blue eyes; head accessories: earrings; keep these exactly'] | negative ' '
+A M3-S2 ['- The character has long hair blonde hair braid; blue eyes; keep these exactly', '+ The character has long hair braid; blue eyes; keep these exactly'] | negative ' '
+A M3-S3 ['- The character has long hair blonde hair braid; blue eyes; keep these exactly', '+ The character has long hair braid; blue eyes; keep these exactly'] | negative ' '
+B M2-S4 43 ['- The character has no animal ears, no tail and no wings; do not add any'] | negative 'animal tail, animal ears, wings'
+B K-S4 43 ['- The character has no animal ears, no tail and no wings; do not add any'] | negative 'animal tail, animal ears, wings'
+B M2-S4 42 ['- The character has no animal ears, no tail and no wings; do not add any'] | negative 'animal tail, animal ears, wings'
+B K-S4 42 ['- The character has no animal ears, no tail and no wings; do not add any'] | negative 'animal tail, animal ears, wings'

@@ -1,0 +1,9 @@
+{
+  "source": "outputs/tail-dup-20261004/plan.json",
+  "baseline_id": "REPRO_A_raccoon_209211001",
+  "D_id": "D_raccoon_209211001",
+  "baseline_positive": "1boy, male focus, masculine silhouette, white camisole, black shorts, bare legs, bare shoulders, bare arms, blue hair, multicolored hair, short hair, purple eyes, animal ears, tail, raccoon tail, raccoon ears, solo, full body, white background, simple background, coherent anatomy, best quality",
+  "D_positive": "1boy, male focus, masculine silhouette, white camisole, black shorts, bare legs, bare shoulders, bare arms, blue hair, multicolored hair, short hair, purple eyes, light blue tail, striped tail, raccoon ears, solo, full body, white background, simple background, coherent anatomy, best quality",
+  "negative": "1girl, nsfw, panties, underwear, buruma, abstract background, speed lines, light rays, lowres, bad, text, worst quality, low quality, watermark, signature, different character, different hairstyle, different hair color, different eye color, missing character features, bad anatomy, bad hands, malformed hands, extra fingers, uneven eyes",
+  "intentional_difference": "Retain animal ears; only confirmed tail descriptions replace tail tags."
+}

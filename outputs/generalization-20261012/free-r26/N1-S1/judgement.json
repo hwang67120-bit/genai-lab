@@ -1,0 +1,24 @@
+[
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-18, review-26-batch-1.png #1",
+    "case": "N1-S1",
+    "target": {
+      "attempt": 1,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r26\\N1-S1\\qwen\\raw.png",
+      "sha256": "df60d06aaf8206d3cb4e3550444c6a37bc74b31822b71a5c527118c1040ad503"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-18T01:09:28",
+    "note": "",
+    "same_character": "yes",
+    "outfit": "same",
+    "request_followed": "yes",
+    "severe_defect": "none",
+    "finish_quality": "good",
+    "quality_pass": true,
+    "failure_type": null
+  }
+]

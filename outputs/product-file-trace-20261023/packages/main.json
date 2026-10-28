@@ -1,0 +1,780 @@
+{
+ "python": "D:\\genai-cache\\venv\\Scripts\\python.exe",
+ "site_packages": "D:\\Model\\genai-cache\\venv\\Lib\\site-packages",
+ "version": "3.10.6",
+ "packages": {
+  "accelerate": {
+   "version": "1.15.0",
+   "license": "Apache",
+   "import_names": [
+    "accelerate"
+   ],
+   "observed_in": [
+    "qwen.json",
+    "segment.json"
+   ]
+  },
+  "bitmath": {
+   "version": "2.1.1",
+   "license": "",
+   "import_names": [
+    "bitmath"
+   ],
+   "observed_in": [
+    "modules-5704.json"
+   ]
+  },
+  "bitsandbytes": {
+   "version": "0.50.2",
+   "license": "MIT",
+   "import_names": [
+    "bitsandbytes"
+   ],
+   "observed_in": [
+    "qwen.json"
+   ]
+  },
+  "bracex": {
+   "version": "3.0.1",
+   "license": "MIT",
+   "import_names": [
+    "bracex"
+   ],
+   "observed_in": [
+    "modules-5704.json"
+   ]
+  },
+  "certifi": {
+   "version": "2026.7.22",
+   "license": "MPL-2.0",
+   "import_names": [
+    "certifi"
+   ],
+   "observed_in": [
+    "modules-38224.json",
+    "modules-5704.json",
+    "qwen.json",
+    "segment.json"
+   ]
+  },
+  "charset-normalizer": {
+   "version": "3.5.2",
+   "license": "MIT",
+   "import_names": [
+    "charset_normalizer"
+   ],
+   "observed_in": [
+    "modules-38224.json",
+    "modules-5704.json",
+    "qwen.json",
+    "segment.json"
+   ]
+  },
+  "cloudpickle": {
+   "version": "3.1.2",
+   "license": "BSD-3-Clause",
+   "import_names": [
+    "cloudpickle"
+   ],
+   "observed_in": [
+    "qwen.json"
+   ]
+  },
+  "colorama": {
+   "version": "0.4.6",
+   "license": "",
+   "import_names": [
+    "colorama"
+   ],
+   "observed_in": [
+    "modules-22192.json",
+    "modules-38224.json",
+    "modules-5704.json",
+    "qwen.json",
+    "segment.json"
+   ]
+  },
+  "deprecation": {
+   "version": "2.1.0",
+   "license": "Apache 2",
+   "import_names": [
+    "deprecation"
+   ],
+   "observed_in": [
+    "modules-5704.json"
+   ]
+  },
+  "dghs-imgutils": {
+   "version": "0.19.0",
+   "license": "MIT",
+   "import_names": [
+    "imgutils"
+   ],
+   "observed_in": [
+    "modules-5704.json"
+   ]
+  },
+  "diffusers": {
+   "version": "0.38.0",
+   "license": "Apache 2.0 License",
+   "import_names": [
+    "diffusers"
+   ],
+   "observed_in": [
+    "qwen.json"
+   ]
+  },
+  "einops": {
+   "version": "0.8.2",
+   "license": "MIT",
+   "import_names": [
+    "einops"
+   ],
+   "observed_in": [
+    "segment.json"
+   ]
+  },
+  "filelock": {
+   "version": "3.32.3",
+   "license": "MIT",
+   "import_names": [
+    "filelock"
+   ],
+   "observed_in": [
+    "modules-38224.json",
+    "modules-5704.json",
+    "qwen.json",
+    "segment.json"
+   ]
+  },
+  "fsspec": {
+   "version": "2026.7.0",
+   "license": "BSD-3-Clause",
+   "import_names": [
+    "fsspec"
+   ],
+   "observed_in": [
+    "modules-5704.json",
+    "qwen.json"
+   ]
+  },
+  "gguf": {
+   "version": "0.19.0",
+   "license": "",
+   "import_names": [
+    "gguf"
+   ],
+   "observed_in": [
+    "qwen.json"
+   ]
+  },
+  "hbutils": {
+   "version": "0.14.2",
+   "license": "Apache License, Version 2.0",
+   "import_names": [
+    "hbutils"
+   ],
+   "observed_in": [
+    "modules-5704.json"
+   ]
+  },
+  "hfutils": {
+   "version": "0.13.0",
+   "license": "Apache License, Version 2.0",
+   "import_names": [
+    "hfutils"
+   ],
+   "observed_in": [
+    "modules-5704.json"
+   ]
+  },
+  "httpx": {
+   "version": "0.28.1",
+   "license": "BSD-3-Clause",
+   "import_names": [
+    "httpx"
+   ],
+   "observed_in": [
+    "qwen.json"
+   ]
+  },
+  "huggingface_hub": {
+   "version": "0.36.2",
+   "license": "Apache",
+   "import_names": [
+    "huggingface_hub"
+   ],
+   "observed_in": [
+    "modules-38224.json",
+    "modules-5704.json",
+    "qwen.json",
+    "segment.json"
+   ]
+  },
+  "idna": {
+   "version": "3.20",
+   "license": "BSD-3-Clause",
+   "import_names": [
+    "idna"
+   ],
+   "observed_in": [
+    "modules-38224.json",
+    "modules-5704.json",
+    "qwen.json",
+    "segment.json"
+   ]
+  },
+  "Jinja2": {
+   "version": "3.1.6",
+   "license": "",
+   "import_names": [
+    "jinja2"
+   ],
+   "observed_in": [
+    "modules-5704.json",
+    "qwen.json"
+   ]
+  },
+  "joblib": {
+   "version": "1.6.0",
+   "license": "BSD-3-Clause",
+   "import_names": [
+    "joblib"
+   ],
+   "observed_in": [
+    "qwen.json"
+   ]
+  },
+  "MarkupSafe": {
+   "version": "3.0.3",
+   "license": "BSD-3-Clause",
+   "import_names": [
+    "markupsafe"
+   ],
+   "observed_in": [
+    "modules-5704.json",
+    "qwen.json"
+   ]
+  },
+  "mpmath": {
+   "version": "1.3.0",
+   "license": "BSD",
+   "import_names": [
+    "mpmath"
+   ],
+   "observed_in": [
+    "modules-5704.json",
+    "qwen.json",
+    "segment.json"
+   ]
+  },
+  "natsort": {
+   "version": "8.4.0",
+   "license": "MIT",
+   "import_names": [
+    "natsort"
+   ],
+   "observed_in": [
+    "modules-5704.json"
+   ]
+  },
+  "networkx": {
+   "version": "3.4.2",
+   "license": "",
+   "import_names": [
+    "networkx"
+   ],
+   "observed_in": [
+    "qwen.json"
+   ]
+  },
+  "numpy": {
+   "version": "2.2.6",
+   "license": "Copyright (c) 2005-2024, NumPy Developers.\n All rights reserved.\n\n Redistributio",
+   "import_names": [
+    "numpy"
+   ],
+   "observed_in": [
+    "modules-22192.json",
+    "modules-38224.json",
+    "modules-5704.json",
+    "qwen.json",
+    "segment.json"
+   ]
+  },
+  "nvidia-ml-py": {
+   "version": "13.615.71",
+   "license": "BSD",
+   "import_names": [
+    "pynvml"
+   ],
+   "observed_in": [
+    "modules-22192.json",
+    "modules-38224.json",
+    "modules-5704.json",
+    "qwen.json",
+    "segment.json"
+   ]
+  },
+  "onnxruntime": {
+   "version": "1.23.2",
+   "license": "MIT License",
+   "import_names": [
+    "onnxruntime"
+   ],
+   "observed_in": [
+    "modules-38224.json",
+    "modules-5704.json"
+   ]
+  },
+  "opencv-contrib-python": {
+   "version": "5.0.0.93",
+   "license": "Apache 2.0",
+   "import_names": [
+    "cv2"
+   ],
+   "observed_in": [
+    "modules-22192.json",
+    "modules-38224.json",
+    "modules-5704.json",
+    "qwen.json",
+    "segment.json"
+   ]
+  },
+  "opencv-python": {
+   "version": "5.0.0.93",
+   "license": "Apache 2.0",
+   "import_names": [
+    "cv2"
+   ],
+   "observed_in": [
+    "modules-22192.json",
+    "modules-38224.json",
+    "modules-5704.json",
+    "qwen.json",
+    "segment.json"
+   ]
+  },
+  "packaging": {
+   "version": "26.3",
+   "license": "Apache-2.0 OR BSD-2-Clause",
+   "import_names": [
+    "packaging"
+   ],
+   "observed_in": [
+    "modules-5704.json",
+    "qwen.json",
+    "segment.json"
+   ]
+  },
+  "pandas": {
+   "version": "2.3.3",
+   "license": "BSD 3-Clause License\n\n Copyright (c) 2008-2011, AQR Capital Management, LLC, Lam",
+   "import_names": [
+    "pandas"
+   ],
+   "observed_in": [
+    "modules-5704.json",
+    "qwen.json"
+   ]
+  },
+  "peft": {
+   "version": "0.21.2",
+   "license": "Apache",
+   "import_names": [
+    "peft"
+   ],
+   "observed_in": [
+    "qwen.json"
+   ]
+  },
+  "pillow": {
+   "version": "12.3.0",
+   "license": "MIT-CMU",
+   "import_names": [
+    "PIL"
+   ],
+   "observed_in": [
+    "modules-22192.json",
+    "modules-38224.json",
+    "modules-5704.json",
+    "qwen.json",
+    "segment.json"
+   ]
+  },
+  "psutil": {
+   "version": "7.2.2",
+   "license": "BSD-3-Clause",
+   "import_names": [
+    "psutil"
+   ],
+   "observed_in": [
+    "qwen.json"
+   ]
+  },
+  "pyparsing": {
+   "version": "3.3.3",
+   "license": "MIT",
+   "import_names": [
+    "pyparsing"
+   ],
+   "observed_in": [
+    "modules-5704.json"
+   ]
+  },
+  "pyrfc6266": {
+   "version": "1.0.2",
+   "license": "MIT",
+   "import_names": [
+    "pyrfc6266"
+   ],
+   "observed_in": [
+    "modules-5704.json"
+   ]
+  },
+  "PySide6": {
+   "version": "6.12.0",
+   "license": "LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+   "import_names": [
+    "PySide6"
+   ],
+   "observed_in": [
+    "modules-22192.json",
+    "modules-38224.json",
+    "segment.json"
+   ]
+  },
+  "PySide6_Addons": {
+   "version": "6.12.0",
+   "license": "LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+   "import_names": [
+    "PySide6"
+   ],
+   "observed_in": [
+    "modules-22192.json",
+    "modules-38224.json",
+    "segment.json"
+   ]
+  },
+  "PySide6_Essentials": {
+   "version": "6.12.0",
+   "license": "LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+   "import_names": [
+    "PySide6"
+   ],
+   "observed_in": [
+    "modules-22192.json",
+    "modules-38224.json",
+    "segment.json"
+   ]
+  },
+  "PySide6_Pdf": {
+   "version": "6.12.0.140",
+   "license": "LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+   "import_names": [
+    "PySide6"
+   ],
+   "observed_in": [
+    "modules-22192.json",
+    "modules-38224.json",
+    "segment.json"
+   ]
+  },
+  "PySide6_WebEngine": {
+   "version": "6.12.0.140",
+   "license": "LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+   "import_names": [
+    "PySide6"
+   ],
+   "observed_in": [
+    "modules-22192.json",
+    "modules-38224.json",
+    "segment.json"
+   ]
+  },
+  "python-dateutil": {
+   "version": "2.9.0.post0",
+   "license": "Dual License",
+   "import_names": [
+    "dateutil"
+   ],
+   "observed_in": [
+    "modules-5704.json",
+    "qwen.json"
+   ]
+  },
+  "pytimeparse": {
+   "version": "1.1.8",
+   "license": "License :: OSI Approved :: MIT License",
+   "import_names": [
+    "pytimeparse"
+   ],
+   "observed_in": [
+    "modules-5704.json"
+   ]
+  },
+  "pytz": {
+   "version": "2025.2",
+   "license": "MIT",
+   "import_names": [
+    "pytz"
+   ],
+   "observed_in": [
+    "modules-5704.json",
+    "qwen.json"
+   ]
+  },
+  "PyYAML": {
+   "version": "6.0.3",
+   "license": "MIT",
+   "import_names": [
+    "yaml"
+   ],
+   "observed_in": [
+    "modules-38224.json",
+    "modules-5704.json",
+    "qwen.json",
+    "segment.json"
+   ]
+  },
+  "random-user-agent": {
+   "version": "1.0.1",
+   "license": "MIT",
+   "import_names": [
+    "random_user_agent"
+   ],
+   "observed_in": [
+    "modules-5704.json"
+   ]
+  },
+  "regex": {
+   "version": "2026.9.29",
+   "license": "Apache-2.0 AND CNRI-Python",
+   "import_names": [
+    "regex"
+   ],
+   "observed_in": [
+    "modules-5704.json",
+    "qwen.json"
+   ]
+  },
+  "requests": {
+   "version": "2.34.2",
+   "license": "Apache-2.0",
+   "import_names": [
+    "charset_normalizer",
+    "idna",
+    "requests",
+    "urllib3"
+   ],
+   "observed_in": [
+    "modules-38224.json",
+    "modules-5704.json",
+    "qwen.json",
+    "segment.json"
+   ]
+  },
+  "safetensors": {
+   "version": "0.9.0rc1",
+   "license": "",
+   "import_names": [
+    "safetensors"
+   ],
+   "observed_in": [
+    "modules-5704.json",
+    "qwen.json",
+    "segment.json"
+   ]
+  },
+  "scikit-learn": {
+   "version": "1.7.2",
+   "license": "BSD-3-Clause",
+   "import_names": [
+    "sklearn"
+   ],
+   "observed_in": [
+    "qwen.json"
+   ]
+  },
+  "scipy": {
+   "version": "1.15.3",
+   "license": "Copyright (c) 2001-2002 Enthought, Inc. 2003-2024, SciPy Developers.\n All rights",
+   "import_names": [
+    "scipy"
+   ],
+   "observed_in": [
+    "qwen.json"
+   ]
+  },
+  "setuptools": {
+   "version": "63.2.0",
+   "license": "",
+   "import_names": [
+    "_distutils_hack"
+   ],
+   "observed_in": [
+    "modules-22192.json",
+    "modules-38224.json",
+    "modules-5704.json",
+    "segment.json"
+   ]
+  },
+  "shiboken6": {
+   "version": "6.12.0",
+   "license": "LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+   "import_names": [
+    "shiboken6"
+   ],
+   "observed_in": [
+    "modules-22192.json",
+    "modules-38224.json",
+    "segment.json"
+   ]
+  },
+  "six": {
+   "version": "1.17.0",
+   "license": "MIT",
+   "import_names": [
+    "six"
+   ],
+   "observed_in": [
+    "modules-5704.json",
+    "qwen.json"
+   ]
+  },
+  "sympy": {
+   "version": "1.14.0",
+   "license": "BSD",
+   "import_names": [
+    "sympy"
+   ],
+   "observed_in": [
+    "modules-5704.json",
+    "qwen.json",
+    "segment.json"
+   ]
+  },
+  "threadpoolctl": {
+   "version": "3.7.0",
+   "license": "BSD-3-Clause",
+   "import_names": [
+    "threadpoolctl"
+   ],
+   "observed_in": [
+    "qwen.json"
+   ]
+  },
+  "tokenizers": {
+   "version": "0.22.2",
+   "license": "",
+   "import_names": [
+    "tokenizers"
+   ],
+   "observed_in": [
+    "modules-5704.json",
+    "qwen.json"
+   ]
+  },
+  "torch": {
+   "version": "2.9.1+cu128",
+   "license": "BSD-3-Clause",
+   "import_names": [
+    "functorch",
+    "torch",
+    "torchgen"
+   ],
+   "observed_in": [
+    "modules-22192.json",
+    "modules-38224.json",
+    "modules-5704.json",
+    "qwen.json",
+    "segment.json"
+   ]
+  },
+  "torchvision": {
+   "version": "0.24.1+cu128",
+   "license": "BSD",
+   "import_names": [
+    "torchvision"
+   ],
+   "observed_in": [
+    "modules-5704.json",
+    "qwen.json",
+    "segment.json"
+   ]
+  },
+  "tqdm": {
+   "version": "4.70.1",
+   "license": "MPL-2.0 AND MIT",
+   "import_names": [
+    "tqdm"
+   ],
+   "observed_in": [
+    "modules-22192.json",
+    "modules-38224.json",
+    "modules-5704.json",
+    "qwen.json",
+    "segment.json"
+   ]
+  },
+  "transformers": {
+   "version": "4.57.6",
+   "license": "Apache 2.0 License",
+   "import_names": [
+    "transformers"
+   ],
+   "observed_in": [
+    "modules-5704.json",
+    "qwen.json"
+   ]
+  },
+  "typing_extensions": {
+   "version": "4.16.0",
+   "license": "PSF-2.0",
+   "import_names": [
+    "typing_extensions"
+   ],
+   "observed_in": [
+    "modules-22192.json",
+    "modules-38224.json",
+    "modules-5704.json",
+    "qwen.json",
+    "segment.json"
+   ]
+  },
+  "urllib3": {
+   "version": "2.8.0",
+   "license": "MIT",
+   "import_names": [
+    "urllib3"
+   ],
+   "observed_in": [
+    "modules-38224.json",
+    "modules-5704.json",
+    "qwen.json",
+    "segment.json"
+   ]
+  },
+  "URLObject": {
+   "version": "3.0.0",
+   "license": "",
+   "import_names": [
+    "urlobject"
+   ],
+   "observed_in": [
+    "modules-5704.json"
+   ]
+  },
+  "wcmatch": {
+   "version": "11.0.1",
+   "license": "MIT",
+   "import_names": [
+    "wcmatch"
+   ],
+   "observed_in": [
+    "modules-5704.json"
+   ]
+  }
+ },
+ "unmapped_top_level": []
+}

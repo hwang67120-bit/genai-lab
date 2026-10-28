@@ -1,0 +1,9 @@
+{
+  "new_generation_calls": 0,
+  "files": {
+    "vram-addendum.md": "dfe26a2a7e6ba3cb9aff23e418aa9f85d0f94824afc9ef8b3a936d8c5eed7481",
+    "vram-existing-records.json": "c1fe6bbfdecbaffa5c20c5bb3b609da6f57bf4571025b540f55e5f856d4e4b9a",
+    "README.md": "b946b86eb832a815bdf82213c34e6dcfb2ae3fc5add54d3e7f98dedfd89efcbb"
+  },
+  "historical_verification_note": "verification.json records README hash before this approved report addition; production files and measurement raw data unchanged"
+}

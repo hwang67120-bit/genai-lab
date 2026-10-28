@@ -1,0 +1,109 @@
+{
+ "model_home": "D:\\genai-test\\model-home-20261023",
+ "gpu_visible": false,
+ "runtime": {
+  "ok": true,
+  "seconds": 0.2,
+  "value": {
+   "pose_python": "D:\\genai-cache\\catvton-venv\\Scripts\\python.exe",
+   "pose_models": "D:\\genai-test\\model-home-20261023\\dwpose\\checkpoints",
+   "model_cache": "D:\\genai-test\\model-home-20261023\\hf",
+   "head_cache": "D:\\genai-test\\model-home-20261023\\head-detection\\hub",
+   "analysis_python": "D:\\genai-cache\\venv\\Scripts\\python.exe",
+   "proportion_sketch_root": "G:\\genai-cache\\models\\t2i-adapter-sketch-sdxl-1.0",
+   "head_semantic_repo": "D:\\genai-test\\model-home-20261023\\tools\\see-through",
+   "head_semantic_checkpoint": "D:\\genai-test\\model-home-20261023\\hf\\models--24yearsold--l2d_sam_iter2\\snapshots\\0b0608310fb7a89e32ecd7397147a249540cf1e7\\checkpoint-18000.pt",
+   "qwen_settings": "\\\\192.168.0.109\\win_g\\genai-lab\\configs\\qwen_edit_settings.model_home.json"
+  }
+ },
+ "qwen_settings": {
+  "ok": true,
+  "seconds": 0.2,
+  "value": {
+   "python_executable": "D:\\genai-cache\\venv\\Scripts\\python.exe",
+   "model_root": "D:\\genai-test\\model-home-20261023\\qwen\\Qwen-Image-Edit-2511",
+   "gguf_file": "D:\\genai-test\\model-home-20261023\\qwen\\Qwen-Image-Edit-2511-GGUF\\qwen-image-edit-2511-Q4_K_M.gguf",
+   "artifact_manifest": "\\\\192.168.0.109\\win_g\\genai-lab\\configs\\qwen_model_files.json"
+  }
+ },
+ "analyze_base": {
+  "ok": true,
+  "seconds": 6.0,
+  "value": {
+   "tag_count": 8106
+  }
+ },
+ "analyze_inputs": {
+  "ok": true,
+  "seconds": 43.5,
+  "value": [
+   "analysis_device",
+   "character_scores",
+   "crop_details",
+   "directory",
+   "face_crop",
+   "face_sha256",
+   "garment_scores",
+   "garment_tags",
+   "groups",
+   "models_downloaded",
+   "references",
+   "slim"
+  ]
+ },
+ "model_check_staging": {
+  "ok": true,
+  "seconds": 0.2,
+  "value": {
+   "ok": true,
+   "flow": "staging",
+   "deep": false,
+   "problems": [],
+   "locations": {
+    "wd_tagger": "D:\\genai-test\\model-home-20261023\\hf\\models--SmilingWolf--wd-vit-tagger-v3",
+    "dwpose": "D:\\genai-test\\model-home-20261023\\dwpose\\checkpoints",
+    "head_segmentation": "D:\\genai-test\\model-home-20261023\\hf\\models--24yearsold--l2d_sam_iter2\\snapshots\\0b0608310fb7a89e32ecd7397147a249540cf1e7\\checkpoint-18000.pt",
+    "see_through_code": "D:\\genai-test\\model-home-20261023\\tools\\see-through",
+    "qwen": "D:\\genai-test\\model-home-20261023\\qwen\\Qwen-Image-Edit-2511"
+   }
+  }
+ },
+ "model_check_outfit": {
+  "ok": true,
+  "seconds": 0.2,
+  "value": {
+   "ok": true,
+   "flow": "outfit",
+   "deep": false,
+   "problems": [],
+   "locations": {
+    "wd_tagger": "D:\\genai-test\\model-home-20261023\\hf\\models--SmilingWolf--wd-vit-tagger-v3",
+    "anime_seg": "D:\\genai-test\\model-home-20261023\\hf\\models--skytnt--anime-seg",
+    "dwpose": "D:\\genai-test\\model-home-20261023\\dwpose\\checkpoints",
+    "head_detection": "D:\\genai-test\\model-home-20261023\\head-detection\\hub\\models--deepghs--anime_head_detection",
+    "head_segmentation": "D:\\genai-test\\model-home-20261023\\hf\\models--24yearsold--l2d_sam_iter2\\snapshots\\0b0608310fb7a89e32ecd7397147a249540cf1e7\\checkpoint-18000.pt",
+    "see_through_code": "D:\\genai-test\\model-home-20261023\\tools\\see-through",
+    "qwen": "D:\\genai-test\\model-home-20261023\\qwen\\Qwen-Image-Edit-2511"
+   }
+  }
+ },
+ "model_check_deep": {
+  "ok": true,
+  "seconds": 212.8,
+  "value": {
+   "ok": true,
+   "flow": "outfit",
+   "deep": true,
+   "problems": [],
+   "locations": {
+    "wd_tagger": "D:\\genai-test\\model-home-20261023\\hf\\models--SmilingWolf--wd-vit-tagger-v3",
+    "anime_seg": "D:\\genai-test\\model-home-20261023\\hf\\models--skytnt--anime-seg",
+    "dwpose": "D:\\genai-test\\model-home-20261023\\dwpose\\checkpoints",
+    "head_detection": "D:\\genai-test\\model-home-20261023\\head-detection\\hub\\models--deepghs--anime_head_detection",
+    "head_segmentation": "D:\\genai-test\\model-home-20261023\\hf\\models--24yearsold--l2d_sam_iter2\\snapshots\\0b0608310fb7a89e32ecd7397147a249540cf1e7\\checkpoint-18000.pt",
+    "see_through_code": "D:\\genai-test\\model-home-20261023\\tools\\see-through",
+    "qwen": "D:\\genai-test\\model-home-20261023\\qwen\\Qwen-Image-Edit-2511"
+   }
+  }
+ }
+}

@@ -1,0 +1,565 @@
+{
+  "status": "completed",
+  "gates_executed": false,
+  "final_return_eligible": false,
+  "request_sha256": "2d686b107da53b63fd233ffdf08103b97f3171ffca37b48ae66ff98cca95a247",
+  "versions": {
+    "torch": "2.9.1+cu128",
+    "diffusers": "0.38.0",
+    "transformers": "4.57.6",
+    "bitsandbytes": "0.50.2",
+    "gguf": "0.19.0"
+  },
+  "runtime": {
+    "python": "D:\\genai-cache\\qwen-test-venv\\Scripts\\python.exe",
+    "packages": {
+      "torch": "D:\\genai-cache\\venv\\Lib\\site-packages",
+      "diffusers": "D:\\genai-cache\\venv\\Lib\\site-packages",
+      "transformers": "D:\\genai-cache\\venv\\Lib\\site-packages",
+      "bitsandbytes": "D:\\genai-cache\\venv\\Lib\\site-packages",
+      "gguf": "D:\\genai-cache\\venv\\Lib\\site-packages"
+    }
+  },
+  "models": {
+    "manifest_sha256": "73561d21617e1dfb136ccd0d81868217ca7d593691be35deada96e9d3477f66e",
+    "files_checked": 27,
+    "gguf_sha256": "8677bac90627adbbc11efab87b1870e701c4eb3689ee865a3de8ab81b705a723"
+  },
+  "memory_cap_fraction": 0.8129589764729233,
+  "task_kind": "outfit_edit",
+  "output_size": [
+    896,
+    1184
+  ],
+  "input_sizes": [
+    [
+      768,
+      1024
+    ],
+    [
+      605,
+      1200
+    ]
+  ],
+  "gpu_name": "NVIDIA GeForce RTX 4060",
+  "total_vram_bytes": 8585084928,
+  "memory_note": "PyTorch allocated/reserved only; dedicated/shared sampling unavailable",
+  "dedicated_memory": null,
+  "shared_memory": null,
+  "stage_seconds": {
+    "text_encode": 17.8975065999839,
+    "pipeline_load": 90.1382336000097,
+    "generation": 1669.9977046999848
+  },
+  "steps": [
+    {
+      "index": 0,
+      "seconds": 55.22354149998864
+    },
+    {
+      "index": 1,
+      "seconds": 42.646568200027104
+    },
+    {
+      "index": 2,
+      "seconds": 41.09957929997472
+    },
+    {
+      "index": 3,
+      "seconds": 40.49752940001781
+    },
+    {
+      "index": 4,
+      "seconds": 43.97134879999794
+    },
+    {
+      "index": 5,
+      "seconds": 43.28323800000362
+    },
+    {
+      "index": 6,
+      "seconds": 44.555723400000716
+    },
+    {
+      "index": 7,
+      "seconds": 44.6345025000046
+    },
+    {
+      "index": 8,
+      "seconds": 43.62950849998742
+    },
+    {
+      "index": 9,
+      "seconds": 40.55995960001019
+    },
+    {
+      "index": 10,
+      "seconds": 40.53645799998776
+    },
+    {
+      "index": 11,
+      "seconds": 44.13238470000215
+    },
+    {
+      "index": 12,
+      "seconds": 40.504217999987304
+    },
+    {
+      "index": 13,
+      "seconds": 40.422232400014764
+    },
+    {
+      "index": 14,
+      "seconds": 40.43222719998448
+    },
+    {
+      "index": 15,
+      "seconds": 40.49956810000003
+    },
+    {
+      "index": 16,
+      "seconds": 40.44822250001016
+    },
+    {
+      "index": 17,
+      "seconds": 40.641159199993126
+    },
+    {
+      "index": 18,
+      "seconds": 41.080477100011194
+    },
+    {
+      "index": 19,
+      "seconds": 40.66413359998842
+    },
+    {
+      "index": 20,
+      "seconds": 41.787304600002244
+    },
+    {
+      "index": 21,
+      "seconds": 41.85881520001567
+    },
+    {
+      "index": 22,
+      "seconds": 41.35825379999005
+    },
+    {
+      "index": 23,
+      "seconds": 40.979954500013264
+    },
+    {
+      "index": 24,
+      "seconds": 40.792994499992346
+    },
+    {
+      "index": 25,
+      "seconds": 40.63936359999934
+    },
+    {
+      "index": 26,
+      "seconds": 40.60381609998876
+    },
+    {
+      "index": 27,
+      "seconds": 40.5193103000056
+    },
+    {
+      "index": 28,
+      "seconds": 40.49192309999489
+    },
+    {
+      "index": 29,
+      "seconds": 40.46099230000982
+    },
+    {
+      "index": 30,
+      "seconds": 40.46505840000464
+    },
+    {
+      "index": 31,
+      "seconds": 40.493855699984124
+    },
+    {
+      "index": 32,
+      "seconds": 40.703145300009055
+    },
+    {
+      "index": 33,
+      "seconds": 40.57386010000482
+    },
+    {
+      "index": 34,
+      "seconds": 40.55061949999072
+    },
+    {
+      "index": 35,
+      "seconds": 40.52594419999514
+    },
+    {
+      "index": 36,
+      "seconds": 40.4775604000024
+    },
+    {
+      "index": 37,
+      "seconds": 40.504627600021195
+    },
+    {
+      "index": 38,
+      "seconds": 40.47258239999064
+    },
+    {
+      "index": 39,
+      "seconds": 40.478690899995854
+    }
+  ],
+  "processor_inputs": [
+    {
+      "sequence_length": 638,
+      "text": [
+        "<|im_start|>system\nDescribe the key features of the input image (color, shape, size, texture, objects, background), then explain how the user's text instruction should alter or modify the image. Generate a new image that meets the user's requirements while maintaining consistency with the original input where appropriate.<|im_end|>\n<|im_start|>user\nPicture 1: <|vision_start|><|image_pad|><|vision_end|>Picture 2: <|vision_start|><|image_pad|><|vision_end|>Replace all of the character's current clothing in image 1, including any bodysuit, jacket, coat draped over the shoulders, tie, gloves, choker, stockings, socks and shoes, with the complete outfit shown in image 2, matching its shape, length, colors and details. Nothing from the original outfit may remain. Remove any weapon and every carried or held prop. Place the character alone on a plain pure white background with nothing else. The character is female. Keep her body shape and proportions as in image 1. Keep the character's face, hairstyle, hair color, head accessories and body proportions exactly the same as in image 1. The character has no animal ears, no tail and no wings; do not add any. Keep the character's pose exactly as in image 1, whether standing, sitting or crouching. Do not change the camera angle, framing or the character's size or position.<|im_end|>\n<|im_start|>assistant\n"
+      ],
+      "truncation": false
+    },
+    {
+      "sequence_length": 450,
+      "text": [
+        "<|im_start|>system\nDescribe the key features of the input image (color, shape, size, texture, objects, background), then explain how the user's text instruction should alter or modify the image. Generate a new image that meets the user's requirements while maintaining consistency with the original input where appropriate.<|im_end|>\n<|im_start|>user\nPicture 1: <|vision_start|><|image_pad|><|vision_end|>Picture 2: <|vision_start|><|image_pad|><|vision_end|> <|im_end|>\n<|im_start|>assistant\n"
+      ],
+      "truncation": false
+    }
+  ],
+  "embedding_shapes": {
+    "positive": [
+      1,
+      574,
+      3584
+    ],
+    "negative": [
+      1,
+      386,
+      3584
+    ]
+  },
+  "text_encode_memory": {
+    "allocated_bytes": 6496370176,
+    "reserved_bytes": 6794772480
+  },
+  "text_encoder_released": true,
+  "vae_tiling": true,
+  "scheduler": {
+    "class": "FlowMatchEulerDiscreteScheduler",
+    "config": {
+      "num_train_timesteps": 1000,
+      "shift": 1.0,
+      "use_dynamic_shifting": true,
+      "base_shift": 0.5,
+      "max_shift": 0.9,
+      "base_image_seq_len": 256,
+      "max_image_seq_len": 8192,
+      "invert_sigmas": false,
+      "shift_terminal": 0.02,
+      "use_karras_sigmas": false,
+      "use_exponential_sigmas": false,
+      "use_beta_sigmas": false,
+      "time_shift_type": "exponential",
+      "stochastic_sampling": false,
+      "_class_name": "FlowMatchEulerDiscreteScheduler",
+      "_diffusers_version": "0.36.0.dev0"
+    }
+  },
+  "offload": "group_block1",
+  "zero_cond_t": true,
+  "call_arguments": {
+    "height": 1184,
+    "width": 896,
+    "true_cfg_scale": 4.0,
+    "guidance_scale": 1.0,
+    "num_inference_steps": 40,
+    "num_images_per_prompt": 1,
+    "seed": 42,
+    "generator_device": "cpu",
+    "positive": "Replace all of the character's current clothing in image 1, including any bodysuit, jacket, coat draped over the shoulders, tie, gloves, choker, stockings, socks and shoes, with the complete outfit shown in image 2, matching its shape, length, colors and details. Nothing from the original outfit may remain. Remove any weapon and every carried or held prop. Place the character alone on a plain pure white background with nothing else. The character is female. Keep her body shape and proportions as in image 1. Keep the character's face, hairstyle, hair color, head accessories and body proportions exactly the same as in image 1. The character has no animal ears, no tail and no wings; do not add any. Keep the character's pose exactly as in image 1, whether standing, sitting or crouching. Do not change the camera angle, framing or the character's size or position.",
+    "negative": " ",
+    "images": 2
+  },
+  "memory_stages": [
+    {
+      "stage": "text_encoder_loaded",
+      "allocated_gib": 5.697,
+      "reserved_gib": 5.816,
+      "stage_peak_reserved_gib": 5.943
+    },
+    {
+      "stage": "encoded_and_released",
+      "allocated_gib": 0.01,
+      "reserved_gib": 0.021,
+      "stage_peak_reserved_gib": 6.328
+    },
+    {
+      "stage": "transformer_loaded",
+      "allocated_gib": 0.247,
+      "reserved_gib": 0.287,
+      "stage_peak_reserved_gib": 0.287
+    },
+    {
+      "stage": "step0",
+      "allocated_gib": 0.28,
+      "reserved_gib": 2.355,
+      "stage_peak_reserved_gib": 2.355
+    },
+    {
+      "stage": "step1",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step2",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step3",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step4",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step5",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step6",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step7",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step8",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step9",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step10",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step11",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step12",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step13",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step14",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step15",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step16",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step17",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step18",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step19",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step20",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step21",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step22",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step23",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step24",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step25",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step26",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step27",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step28",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step29",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step30",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step31",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step32",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step33",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step34",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step35",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step36",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step37",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step38",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "step39",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.641,
+      "stage_peak_reserved_gib": 2.641
+    },
+    {
+      "stage": "decoded",
+      "allocated_gib": 0.259,
+      "reserved_gib": 2.971,
+      "stage_peak_reserved_gib": 2.971
+    }
+  ],
+  "generation_memory": {
+    "allocated_bytes": 277565440,
+    "reserved_bytes": 3189768192
+  },
+  "raw_sha256": "fbe397cd1b02c64dc0af55bef915314282439f923c66d1bf419da6342ffa281d",
+  "model_inputs": {
+    "prompt.txt": "5e76bd4eccf80ab4220adf05c6f6ca4b74dcbed18b10644372d4b235ea7d3741",
+    "vae_picture1_896x1184.png": "5d665bfb51967d74fdaf3f50bf659661bed78ed89ce017c77d23428eb4042d52",
+    "vae_picture2_736x1440.png": "efea7d5a783c189fa8bec79e9375f91d9b092bfa436e8a6295effdfdd6e8634d",
+    "vl_picture1_320x448.png": "9512ae81004486aa9cd25af78277c4aaf3528822f5c2ed8ae8d230775a9bfad2",
+    "vl_picture2_288x544.png": "6a539a3ef84ff9d38c89865b57af6842b5fb618b9aaf45e3fe14dff6cfabf86c"
+  },
+  "seconds": 1778.7241247000056
+}

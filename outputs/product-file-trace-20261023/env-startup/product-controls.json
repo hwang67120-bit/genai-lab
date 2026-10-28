@@ -1,0 +1,48 @@
+{
+  "developer_mode": false,
+  "controls": [
+    {
+      "kind": "QPushButton",
+      "name": "",
+      "text": "원본 크기로 보기",
+      "enabled": false
+    },
+    {
+      "kind": "QPushButton",
+      "name": "primaryAction",
+      "text": "저장",
+      "enabled": false
+    },
+    {
+      "kind": "QPushButton",
+      "name": "",
+      "text": "캐릭터 선택",
+      "enabled": true
+    },
+    {
+      "kind": "QPushButton",
+      "name": "",
+      "text": "의상 선택",
+      "enabled": true
+    },
+    {
+      "kind": "QPushButton",
+      "name": "",
+      "text": "해제",
+      "enabled": true
+    },
+    {
+      "kind": "QPushButton",
+      "name": "primaryAction",
+      "text": "이미지 생성",
+      "enabled": false
+    },
+    {
+      "kind": "QLineEdit",
+      "name": "product_scene",
+      "text": "",
+      "enabled": true
+    }
+  ],
+  "menu_actions": []
+}

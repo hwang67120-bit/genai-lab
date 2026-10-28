@@ -1,0 +1,572 @@
+{
+  "status": "completed",
+  "gates_executed": false,
+  "final_return_eligible": false,
+  "session": {
+    "control": "D:\\genai-test\\session-reuse-20261024b\\flow\\runs\\f8a3de355b8640e88fe70c39b16a1e49\\free-generation\\qwen-session",
+    "job": 2,
+    "pid": 30588
+  },
+  "request_sha256": "cf1ebf1703d26277e6bb925177d8c866ea84792e62962b5565941b05897c56b7",
+  "versions": {
+    "torch": "2.9.1+cu128",
+    "diffusers": "0.38.0",
+    "transformers": "4.57.6",
+    "bitsandbytes": "0.50.2",
+    "gguf": "0.19.0"
+  },
+  "runtime": {
+    "python": "D:\\genai-cache\\qwen-test-venv\\Scripts\\python.exe",
+    "packages": {
+      "torch": "D:\\genai-cache\\venv\\Lib\\site-packages",
+      "diffusers": "D:\\genai-cache\\venv\\Lib\\site-packages",
+      "transformers": "D:\\genai-cache\\venv\\Lib\\site-packages",
+      "bitsandbytes": "D:\\genai-cache\\venv\\Lib\\site-packages",
+      "gguf": "D:\\genai-cache\\venv\\Lib\\site-packages"
+    }
+  },
+  "models": {
+    "manifest_sha256": "73561d21617e1dfb136ccd0d81868217ca7d593691be35deada96e9d3477f66e",
+    "files_checked": 27,
+    "gguf_sha256": "8677bac90627adbbc11efab87b1870e701c4eb3689ee865a3de8ab81b705a723",
+    "files_rechecked": false,
+    "reused_from_job": 1,
+    "note": "같은 프로세스가 첫 작업에서 검사한 파일로 불러 둔 가중치를 그대로 쓴다 — 파일을 다시 읽지 않으므로 다시 검사하지 않는다"
+  },
+  "memory_cap_fraction": 0.8129589764729233,
+  "session_memory_at_start": {
+    "allocated_bytes": 22418944,
+    "reserved_bytes": 134217728
+  },
+  "task_kind": "free_generation",
+  "output_size": [
+    896,
+    1184
+  ],
+  "input_sizes": [
+    [
+      768,
+      1024
+    ],
+    [
+      205,
+      189
+    ]
+  ],
+  "gpu_name": "NVIDIA GeForce RTX 4060",
+  "total_vram_bytes": 8585084928,
+  "memory_note": "PyTorch allocated/reserved only; dedicated/shared sampling unavailable",
+  "dedicated_memory": null,
+  "shared_memory": null,
+  "stage_seconds": {
+    "generation": 1897.120702799999
+  },
+  "steps": [
+    {
+      "index": 0,
+      "seconds": 54.92425970000113
+    },
+    {
+      "index": 1,
+      "seconds": 46.7733391999991
+    },
+    {
+      "index": 2,
+      "seconds": 46.73362610000004
+    },
+    {
+      "index": 3,
+      "seconds": 46.81106809999983
+    },
+    {
+      "index": 4,
+      "seconds": 46.728268700000626
+    },
+    {
+      "index": 5,
+      "seconds": 47.394676300000356
+    },
+    {
+      "index": 6,
+      "seconds": 45.90099959999861
+    },
+    {
+      "index": 7,
+      "seconds": 48.768500300000596
+    },
+    {
+      "index": 8,
+      "seconds": 49.1305439000007
+    },
+    {
+      "index": 9,
+      "seconds": 47.24812529999872
+    },
+    {
+      "index": 10,
+      "seconds": 46.927123200001006
+    },
+    {
+      "index": 11,
+      "seconds": 46.75886469999932
+    },
+    {
+      "index": 12,
+      "seconds": 46.590256900000895
+    },
+    {
+      "index": 13,
+      "seconds": 46.720009599999685
+    },
+    {
+      "index": 14,
+      "seconds": 46.70236619999923
+    },
+    {
+      "index": 15,
+      "seconds": 46.62402440000005
+    },
+    {
+      "index": 16,
+      "seconds": 46.701580500001
+    },
+    {
+      "index": 17,
+      "seconds": 46.92868710000039
+    },
+    {
+      "index": 18,
+      "seconds": 47.18611400000009
+    },
+    {
+      "index": 19,
+      "seconds": 46.8648919999996
+    },
+    {
+      "index": 20,
+      "seconds": 46.856347599999935
+    },
+    {
+      "index": 21,
+      "seconds": 46.915799099999276
+    },
+    {
+      "index": 22,
+      "seconds": 46.767549000000145
+    },
+    {
+      "index": 23,
+      "seconds": 46.668949099999736
+    },
+    {
+      "index": 24,
+      "seconds": 46.77948760000072
+    },
+    {
+      "index": 25,
+      "seconds": 46.71080859999893
+    },
+    {
+      "index": 26,
+      "seconds": 46.7580923000005
+    },
+    {
+      "index": 27,
+      "seconds": 48.93467849999979
+    },
+    {
+      "index": 28,
+      "seconds": 47.90132690000064
+    },
+    {
+      "index": 29,
+      "seconds": 47.75172810000004
+    },
+    {
+      "index": 30,
+      "seconds": 46.84133830000064
+    },
+    {
+      "index": 31,
+      "seconds": 46.8075575999992
+    },
+    {
+      "index": 32,
+      "seconds": 46.89334939999935
+    },
+    {
+      "index": 33,
+      "seconds": 46.71078060000036
+    },
+    {
+      "index": 34,
+      "seconds": 46.755686100001185
+    },
+    {
+      "index": 35,
+      "seconds": 47.36708749999889
+    },
+    {
+      "index": 36,
+      "seconds": 47.4924288000002
+    },
+    {
+      "index": 37,
+      "seconds": 47.06341930000053
+    },
+    {
+      "index": 38,
+      "seconds": 48.41596799999934
+    },
+    {
+      "index": 39,
+      "seconds": 46.189961800000674
+    }
+  ],
+  "processor_inputs": [
+    {
+      "sequence_length": 696,
+      "text": [
+        "<|im_start|>system\nDescribe the key features of the input image (color, shape, size, texture, objects, background), then explain how the user's text instruction should alter or modify the image. Generate a new image that meets the user's requirements while maintaining consistency with the original input where appropriate.<|im_end|>\n<|im_start|>user\nPicture 1: <|vision_start|><|image_pad|><|vision_end|>Picture 2: <|vision_start|><|image_pad|><|vision_end|>Keep the same character as in image 1. The character has short hair black hair; keep these exactly. Keep the exact hair colors and where each color appears as in image 1; do not add new hair colors. Keep the face, hairstyle, hair color and head accessories the same as in image 1 and as in the head close-up in image 2. Keep the character's outfit exactly as in image 1: the same garments, colors, patterns and details. The character is female. Keep her body shape and proportions as in image 1. The character is reaching up to touch a hanging branch, with a dreamy look, in a snowy mountain village at sunset. Lighting: dappled sunlight falling through leaves. Color design: a pastel pink and mint green palette in the background and lighting only. Eye-level view, natural body proportions. Full-body shot: the whole character is visible from head to feet, with a detailed background. Keep the character's own hair, eye, skin and outfit colors exactly as in image 1; the scene lighting must not change or wash out these colors. Do not add weapons or held props unless the request asks for them. <|im_end|>\n<|im_start|>assistant\n"
+      ],
+      "truncation": false
+    },
+    {
+      "sequence_length": 462,
+      "text": [
+        "<|im_start|>system\nDescribe the key features of the input image (color, shape, size, texture, objects, background), then explain how the user's text instruction should alter or modify the image. Generate a new image that meets the user's requirements while maintaining consistency with the original input where appropriate.<|im_end|>\n<|im_start|>user\nPicture 1: <|vision_start|><|image_pad|><|vision_end|>Picture 2: <|vision_start|><|image_pad|><|vision_end|>animal tail, animal ears, wings<|im_end|>\n<|im_start|>assistant\n"
+      ],
+      "truncation": false
+    }
+  ],
+  "embedding_shapes": {
+    "positive": [
+      1,
+      632,
+      3584
+    ],
+    "negative": [
+      1,
+      398,
+      3584
+    ]
+  },
+  "text_encode_reused": {
+    "from_job": 1,
+    "note": "지시문·입력 그림이 같아 첫 작업의 임베딩을 그대로 씀"
+  },
+  "vae_tiling": true,
+  "pipeline_reused": {
+    "from_job": 1,
+    "note": "불러 둔 변환기·VAE·블록 오프로드를 그대로 씀"
+  },
+  "scheduler": {
+    "class": "FlowMatchEulerDiscreteScheduler",
+    "config": {
+      "num_train_timesteps": 1000,
+      "shift": 1.0,
+      "use_dynamic_shifting": true,
+      "base_shift": 0.5,
+      "max_shift": 0.9,
+      "base_image_seq_len": 256,
+      "max_image_seq_len": 8192,
+      "invert_sigmas": false,
+      "shift_terminal": 0.02,
+      "use_karras_sigmas": false,
+      "use_exponential_sigmas": false,
+      "use_beta_sigmas": false,
+      "time_shift_type": "exponential",
+      "stochastic_sampling": false,
+      "_class_name": "FlowMatchEulerDiscreteScheduler",
+      "_diffusers_version": "0.36.0.dev0"
+    }
+  },
+  "offload": "group_block1",
+  "zero_cond_t": true,
+  "call_arguments": {
+    "height": 1184,
+    "width": 896,
+    "true_cfg_scale": 4.0,
+    "guidance_scale": 1.0,
+    "num_inference_steps": 40,
+    "num_images_per_prompt": 1,
+    "seed": 43,
+    "generator_device": "cpu",
+    "positive": "Keep the same character as in image 1. The character has short hair black hair; keep these exactly. Keep the exact hair colors and where each color appears as in image 1; do not add new hair colors. Keep the face, hairstyle, hair color and head accessories the same as in image 1 and as in the head close-up in image 2. Keep the character's outfit exactly as in image 1: the same garments, colors, patterns and details. The character is female. Keep her body shape and proportions as in image 1. The character is reaching up to touch a hanging branch, with a dreamy look, in a snowy mountain village at sunset. Lighting: dappled sunlight falling through leaves. Color design: a pastel pink and mint green palette in the background and lighting only. Eye-level view, natural body proportions. Full-body shot: the whole character is visible from head to feet, with a detailed background. Keep the character's own hair, eye, skin and outfit colors exactly as in image 1; the scene lighting must not change or wash out these colors. Do not add weapons or held props unless the request asks for them. ",
+    "negative": "animal tail, animal ears, wings",
+    "images": 2
+  },
+  "memory_stages": [
+    {
+      "stage": "encoded_and_released",
+      "allocated_gib": 0.021,
+      "reserved_gib": 0.125,
+      "stage_peak_reserved_gib": 0.125
+    },
+    {
+      "stage": "transformer_loaded",
+      "allocated_gib": 0.258,
+      "reserved_gib": 0.289,
+      "stage_peak_reserved_gib": 0.289
+    },
+    {
+      "stage": "step0",
+      "allocated_gib": 0.28,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step1",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step2",
+      "allocated_gib": 0.28,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step3",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step4",
+      "allocated_gib": 0.28,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step5",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step6",
+      "allocated_gib": 0.28,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step7",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step8",
+      "allocated_gib": 0.28,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step9",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step10",
+      "allocated_gib": 0.28,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step11",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step12",
+      "allocated_gib": 0.28,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step13",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step14",
+      "allocated_gib": 0.28,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step15",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step16",
+      "allocated_gib": 0.28,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step17",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step18",
+      "allocated_gib": 0.28,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step19",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step20",
+      "allocated_gib": 0.28,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step21",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step22",
+      "allocated_gib": 0.28,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step23",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step24",
+      "allocated_gib": 0.28,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step25",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step26",
+      "allocated_gib": 0.28,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step27",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step28",
+      "allocated_gib": 0.28,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step29",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step30",
+      "allocated_gib": 0.28,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step31",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step32",
+      "allocated_gib": 0.28,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step33",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step34",
+      "allocated_gib": 0.28,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step35",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step36",
+      "allocated_gib": 0.28,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step37",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step38",
+      "allocated_gib": 0.28,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "step39",
+      "allocated_gib": 0.279,
+      "reserved_gib": 2.41,
+      "stage_peak_reserved_gib": 2.41
+    },
+    {
+      "stage": "decoded",
+      "allocated_gib": 0.258,
+      "reserved_gib": 2.74,
+      "stage_peak_reserved_gib": 2.74
+    }
+  ],
+  "generation_memory": {
+    "allocated_bytes": 277417984,
+    "reserved_bytes": 2942304256
+  },
+  "raw_sha256": "bfcce1aca37f6aac90def9b8afabe6798cb482f08332a261a354f664c19535bb",
+  "model_inputs": {
+    "prompt.txt": "d1c62b7cf39f53b95cf95ba2d1ed2d73167ddd437a2da06cb2118edb0838461e",
+    "vae_picture1_896x1184.png": "0c6ba6ce0da29d5a538eb69de6ae7e2dc3aab5c00c2d72100f4994597e73d3e8",
+    "vae_picture2_1056x992.png": "ea3510857c574ac7f550029a421b3d4d33e758f6e133902b6dfb3d74c8933fa1",
+    "vl_picture1_320x448.png": "e9f3b048dd46b646f49692758d45ce2500de04ecbc3527e55c03431cb156561f",
+    "vl_picture2_384x384.png": "1710329f971d275e50dceb7c9cf63f55949e2aa2d13b3bd514555bae0f02df4a"
+  },
+  "seconds": 1897.5968379999995
+}

@@ -1,0 +1,179 @@
+"""파일 열기 관찰(제품 의존 파일 목록 조사용, 2026-10-23). GENAI_OPEN_TRACE가 있을 때만 켠다.
+
+- 파이썬 open 감사 이벤트 + 네이티브 코드가 직접 여는 경로(onnxruntime·safetensors·huggingface_hub 반환 경로·torch.load)를 감싸 기록한다.
+- 그래도 C 확장이 자체로 여는 파일은 빠질 수 있다 → 관찰 목록은 '최소 목록'이다.
+"""
+import os
+import sys
+
+_LOG = os.environ.get("GENAI_OPEN_TRACE")
+if _LOG:
+    import importlib.abc
+    import importlib.machinery
+    import json
+    import threading
+
+    _lock = threading.Lock()
+    _skip_ext = (".py", ".pyc", ".pyd", ".dll", ".pth")
+
+    def _write(kind, path):
+        try:
+            p = os.fspath(path)
+        except TypeError:
+            return
+        if not isinstance(p, str) or p.endswith(_skip_ext) or "__pycache__" in p:
+            return
+        with _lock:
+            with open(_LOG, "a", encoding="utf-8") as f:   # 감사 훅 재귀 방지: 아래에서 _LOG는 거른다
+                f.write(json.dumps(dict(pid=os.getpid(), argv0=sys.argv[0] if sys.argv else "", kind=kind, path=p),
+                                   ensure_ascii=False) + "\n")
+
+    _NET_EVENTS = ("socket.connect", "socket.getaddrinfo", "socket.sendto", "socket.gethostbyname", "urllib.Request",
+                   "http.client.connect")
+
+    def _hook(event, args):
+        if event in _NET_EVENTS:                       # 외부 연결 시도(파이썬 수준, D-174) — 결과와 상관없이 시도 자체를 남긴다
+            try:
+                with _lock:
+                    with open(_LOG, "a", encoding="utf-8") as f:
+                        f.write(json.dumps(dict(pid=os.getpid(), kind="net", event=event, args=repr(args)[:300]), ensure_ascii=False) + "\n")
+            except Exception:
+                pass
+            return
+        if event == "open" and args and args[0] != _LOG and isinstance(args[0], (str, bytes, os.PathLike)):
+            mode = args[1] if len(args) > 1 and isinstance(args[1], str) else "r"
+            if "r" in mode and "+" not in mode and "w" not in mode and "a" not in mode:
+                _write("open", args[0] if not isinstance(args[0], bytes) else args[0].decode(errors="replace"))
+
+    sys.addaudithook(_hook)
+
+    def _wrap(module, name, kind, arg_index=0, result=False):
+        original = getattr(module, name, None)
+        if original is None or getattr(original, "_traced", False):
+            return
+        def wrapper(*a, **k):
+            if not result:
+                target = a[arg_index] if len(a) > arg_index else k.get("path_or_bytes") or k.get("filename") or k.get("f")
+                if isinstance(target, (str, os.PathLike)):
+                    _write(kind, target)
+            out = original(*a, **k)
+            if result and isinstance(out, (str, os.PathLike)):
+                _write(kind, out)
+            return out
+        wrapper._traced = True
+        setattr(module, name, wrapper)
+
+    _TARGETS = {
+        "onnxruntime": lambda m: _wrap(m, "InferenceSession", "onnx"),
+        "safetensors": lambda m: _wrap(m, "safe_open", "safetensors"),
+        "safetensors.torch": lambda m: _wrap(m, "load_file", "safetensors"),
+        "huggingface_hub": lambda m: (_wrap(m, "hf_hub_download", "hf_download", result=True),
+                                      _wrap(m, "snapshot_download", "hf_snapshot", result=True)),
+        "torch": lambda m: _wrap(m, "load", "torch_load"),
+    }
+
+    class _Finder(importlib.abc.MetaPathFinder):
+        def find_spec(self, fullname, path, target=None):
+            if fullname not in _TARGETS:
+                return None
+            for finder in sys.meta_path:
+                if finder is self:
+                    continue
+                spec = finder.find_spec(fullname, path, target) if hasattr(finder, "find_spec") else None
+                if spec is not None and spec.loader is not None:
+                    loader = spec.loader
+                    original_exec = loader.exec_module
+                    def exec_module(module, _orig=original_exec, _name=fullname):
+                        _orig(module)
+                        try:
+                            _TARGETS[_name](module)
+                        except Exception:
+                            pass
+                    loader.exec_module = exec_module
+                    return spec
+            return None
+
+    sys.meta_path.insert(0, _Finder())
+
+    # 실행 환경 기록(GENAI_OPEN_TRACE_MODULES=1, D-169): 프로세스가 끝날 때 실제 Python·경로·불러온 모듈 위치를,
+    # 하위 프로세스를 띄울 때 명령·작업 폴더·PYTHONPATH 전달 여부를 남긴다.
+    if os.environ.get("GENAI_OPEN_TRACE_MODULES") == "1":
+        import atexit
+        import subprocess
+
+        def _dump_modules():
+            modules = {}
+            for name, module in list(sys.modules.items()):
+                origin = getattr(module, "__file__", None)
+                if origin:
+                    modules[name] = origin
+            record = dict(pid=os.getpid(), argv=sys.argv, executable=sys.executable, prefix=sys.prefix,
+                          base_prefix=sys.base_prefix, version=sys.version, path=list(sys.path), cwd=os.getcwd(),
+                          pythonpath=os.environ.get("PYTHONPATH"), env_keys=sorted(os.environ.keys()),   # 값은 남기지 않는다
+                          modules=modules)
+            target = os.path.join(os.path.dirname(_LOG), f"modules-{os.getpid()}.json")
+            with open(target, "w", encoding="utf-8") as f:
+                json.dump(record, f, ensure_ascii=False, indent=1)
+        atexit.register(_dump_modules)
+
+        _popen_init = subprocess.Popen.__init__
+
+        def _traced_popen(self, args, *a, **k):
+            env = k.get("env")
+            try:
+                with _lock:
+                    with open(_LOG, "a", encoding="utf-8") as f:
+                        f.write(json.dumps(dict(pid=os.getpid(), kind="popen", args=[str(x) for x in args] if isinstance(args, (list, tuple)) else str(args),
+                                                cwd=str(k.get("cwd")) if k.get("cwd") else None,
+                                                env_pythonpath=(env if env is not None else os.environ).get("PYTHONPATH")),
+                                           ensure_ascii=False) + "\n")
+            except Exception:
+                pass
+            _popen_init(self, args, *a, **k)
+        subprocess.Popen.__init__ = _traced_popen
+
+    # 선택: 프로세스 연결 표본(GENAI_OPEN_TRACE_NET=1, D-174). 운영체제가 보는 이 프로세스의 TCP/UDP 연결을 0.5초마다 —
+    # 파이썬 밖(C 확장)에서 연 연결도 열려 있는 동안이면 잡힌다. 아주 짧은 연결은 빠질 수 있다.
+    if os.environ.get("GENAI_OPEN_TRACE_NET") == "1":
+        def _sample_net():
+            import time
+            try:
+                import psutil
+            except ImportError:
+                return
+            proc, seen = psutil.Process(os.getpid()), set()
+            while True:
+                try:
+                    for c in proc.net_connections(kind="inet"):
+                        key = (c.laddr, c.raddr, c.status)
+                        if key not in seen:
+                            seen.add(key)
+                            with _lock:
+                                with open(_LOG, "a", encoding="utf-8") as f:
+                                    f.write(json.dumps(dict(pid=os.getpid(), kind="net-sample", laddr=str(c.laddr), raddr=str(c.raddr),
+                                                            status=c.status), ensure_ascii=False) + "\n")
+                except Exception:
+                    pass
+                time.sleep(0.5)
+        threading.Thread(target=_sample_net, name="open-trace-net", daemon=True).start()
+
+    # 선택: 열린 핸들 표본(GENAI_OPEN_TRACE_HANDLES=1). C 확장이 직접 연 파일 중 '열려 있는 동안' 잡히는 것만 보인다
+    # (열었다 바로 닫은 파일·핸들 없이 매핑된 파일은 빠진다). 위 기록에 없는 파일이 여기서 나오면 관찰 도구가 놓친 범위다.
+    if os.environ.get("GENAI_OPEN_TRACE_HANDLES") == "1":
+        def _sample():
+            import time
+            try:
+                import psutil
+            except ImportError:
+                return
+            proc, seen = psutil.Process(os.getpid()), set()
+            while True:
+                try:
+                    for item in proc.open_files():
+                        if item.path not in seen:
+                            seen.add(item.path)
+                            _write("handle", item.path)
+                except Exception:
+                    pass
+                time.sleep(0.2)
+        threading.Thread(target=_sample, name="open-trace-handles", daemon=True).start()

@@ -1,0 +1,216 @@
+"""작업실 자유 생성 입력·승인 확인창. 생성 함수는 free_generation_pipeline에 있다."""
+from pathlib import Path
+import numpy as np
+from PIL import Image
+from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QPlainTextEdit, QCheckBox, QPushButton
+from genai_lab.character_features import tag_features, features_text, parse_features_text, weak_note
+from genai_lab.character_preferences import load_character_features, load_character_gender, load_character_body_parts
+from genai_lab.character_verification import measure_result_scores
+from genai_lab.free_generation import check_request
+from genai_lab.outfit_support import support_summary, support_warnings
+
+
+def analyze_base(path, runtime):
+    """옷 참조를 요구하지 않고 선택한 기준 한 장만 CPU로 분석한다."""
+    with Image.open(path) as image:
+        scores = measure_result_scores(np.asarray(image.convert("RGB")), runtime)
+    if scores is None:      # D-172: 태거를 불러오거나 실행하지 못함 ≠ 태그가 안 나옴. 빈 태그로 진행하지 않는다
+        from genai_lab.model_check import ACTION
+        raise RuntimeError("캐릭터 태그 분석(WD 태거)을 실행하지 못해 시작하지 않았습니다. "
+                           f"모델 위치: {runtime.model_cache}\n" + ACTION)
+    return dict(source=str(path), character_scores=scores, groups=dict(fixed=[], appearance=[], body=[]))
+
+
+def character_link_info(source, memory=None):
+    """캐릭터 기억 조회(H1-B). 반환 (연결 정보 | None, 미리 채울 정체성, 오류 문장, 기억).
+    기억을 못 읽으면 기존 파일 경로 기록만으로 미리 채우고 연결 줄을 빼고 진행한다(생성은 막지 않는다)."""
+    from genai_lab.character_memory import CharacterMemory, CharacterMemoryError, prefill
+    record = dict(gender=load_character_gender(source), body_parts=load_character_body_parts(source),
+                  features=load_character_features(source))
+    memory = memory if memory is not None else CharacterMemory()
+    try:
+        info = prefill(memory, source, record)
+    except (OSError, ValueError, KeyError, CharacterMemoryError) as error:
+        return None, {k: v for k, v in record.items() if v is not None}, str(error)[:200], memory
+    return info, dict(info["identity"] or {}), "", memory
+
+
+def confirm_free_inputs(window, analysis, memory=None):
+    from genai_lab.studio_controller import picture, guessed_gender, guessed_body_parts
+    from genai_lab.studio_character_link import CharacterLinkRow, Prefill
+    source = Path(analysis["source"])
+    link_info, identity, memory_error, memory = character_link_info(source, memory)
+    dialog = QDialog(window)
+    dialog.setWindowTitle("같은 캐릭터·의상으로 자유 생성")
+    dialog.resize(650, 820)
+    layout = QVBoxLayout(dialog)
+    layout.addLayout(picture(source, "기준 이미지 · 이 의상을 유지합니다", 260, 260))
+    kind = QComboBox()
+    kind.setObjectName("free_base_kind")
+    kind.addItem("원본 캔버스 (의상 교체 해결의 증거가 아님)", "original")
+    kind.addItem("사용자가 승인·저장한 의상 편집본", "edited")
+    if source.with_suffix(".review.json").is_file():
+        kind.setCurrentIndex(1)
+    layout.addWidget(kind)
+    gender = QComboBox()
+    gender.setObjectName("free_gender")
+    for key, label in (("male", "남성"), ("female", "여성"), ("unspecified", "미지정")):
+        gender.addItem(label, key)
+    gender.setCurrentIndex(gender.findData(identity.get("gender") or guessed_gender(analysis)))
+    layout.addWidget(gender)
+    part_boxes = {}
+    saved = identity.get("body_parts")
+    chosen = guessed_body_parts(analysis) if saved is None else saved
+    row = QHBoxLayout()
+    for key, label in (("ears", "동물 귀"), ("tail", "꼬리"), ("wings", "날개")):
+        box = QCheckBox(label)
+        box.setObjectName("free_part_"+key)
+        box.setChecked(key in chosen)
+        part_boxes[key] = box
+        row.addWidget(box)
+    layout.addLayout(row)
+    prefill = identity.get("features")
+    guessed = tag_features(analysis["character_scores"])
+    layout.addWidget(QLabel("특징표: 자동 분석/저장값을 확인하고 수정해 주세요. '모름'·빈 칸은 확인 불가, '없음'은 없다고 확정입니다.\n"
+                            "고유 형태: 태그가 못 재는 모양을 ';'로 나눠 4개까지(예: heart-shaped tail tip; right eye blue, left eye red). "
+                            "영어 메모만 생성 지시문에 들어가고, 모든 메모는 결과 확인 때 하나씩 확인합니다."))
+    features = QPlainTextEdit()
+    features.setObjectName("free_features")
+    features.setPlainText(features_text({k: dict(values=v) for k, v in prefill.items()} if prefill else guessed))
+    features.setFixedHeight(150)
+    layout.addWidget(features)
+    layout.addWidget(QLabel(weak_note(guessed)))
+    link = None
+    if link_info is not None:
+        fallback = dict(gender=gender.currentData(), body_parts=chosen,
+                        features={k: v for k, v in prefill.items()} if prefill else {k: v["values"] for k, v in guessed.items()})
+        filler = Prefill(gender, part_boxes, features, lambda f: features_text({k: dict(values=v) for k, v in f.items()}), fallback)
+        link = CharacterLinkRow(layout, link_info, memory, "free", filler.apply, lambda *_: refresh())
+    elif memory_error:
+        layout.addWidget(QLabel("캐릭터 기억을 읽지 못해 이번에는 연결 없이 진행합니다: " + memory_error))
+    request = QPlainTextEdit()
+    request.setObjectName("free_request")
+    request.setPlaceholderText("자세·구도·시점·배경·상황만 요청. 비워 두면 고정 목록에서 자세를 선택합니다.")
+    request.setFixedHeight(65)
+    layout.addWidget(request)
+    support = QLabel()
+    support.setWordWrap(True)
+    layout.addWidget(support)
+    confirm = QCheckBox("성인 캐릭터이며 특징표·부위와 연출 범위를 확인했습니다. 외형·의상을 바꾸지 않습니다.")
+    confirm.setObjectName("free_confirm")
+    layout.addWidget(confirm)
+    # D-147: 직접 시험용 빠른 미리보기(8단계 가속, 재시도 없음, D-141/143). 최종·판정용은 꺼 둔 40단계.
+    quick = QCheckBox("빠른 미리보기(8단계 가속, 약 10분, 재시도 없음 — 최종 결과·판정용 아님)")
+    quick.setObjectName("free_quick_preview")
+    layout.addWidget(quick)
+    note = QLabel()
+    note.setWordWrap(True)
+    layout.addWidget(note)
+    def note_text():
+        note.setText("약 10분. 8단계 가속 미리보기라 세부·색이 40단계와 다를 수 있습니다(요청 30 F5). 마음에 들면 끄고 다시 만들어 주세요."
+                     if quick.isChecked() else
+                     "약 30분, 자동 재시도 한 번이면 약 1시간. 같은 기준의 머리 크롭도 참조하며 동일성 보장은 없습니다.")
+    quick.toggled.connect(note_text)
+    note_text()
+    hint = QLabel()
+    hint.setWordWrap(True)
+    layout.addWidget(hint)
+    start = QPushButton("자유 생성 시작")
+    back = QPushButton("취소")
+    parsed = {}
+    def refresh():
+        parsed.clear()
+        try:
+            parsed["features"] = parse_features_text(features.toPlainText())
+            from genai_lab.free_generation import distinctive_notes
+            distinctive_notes(parsed["features"].get("distinctive"))
+            checked = check_request(request.toPlainText())
+            if not checked["ok"]:
+                raise ValueError(checked["reason"])
+            parsed["valid"] = True
+            hint.setText("결과는 자동 승인하지 않습니다. 같은 캐릭터·의상·연출·심한 이상을 다시 확인합니다.")
+        except ValueError as error:
+            hint.setText(str(error))
+        support.setText(support_summary(support_warnings(analysis["character_scores"], tuple(k for k,v in part_boxes.items() if v.isChecked())))
+                        + " 요청한 앉은 자세는 허용됩니다. 경고는 입력 근거일 뿐입니다.")
+        start.setEnabled(confirm.isChecked() and bool(parsed.get("valid")) and (link is None or link.ready()))
+    for box in part_boxes.values():
+        box.toggled.connect(refresh)
+    confirm.toggled.connect(refresh)
+    features.textChanged.connect(refresh)
+    request.textChanged.connect(refresh)
+    refresh()
+    start.clicked.connect(dialog.accept)
+    back.clicked.connect(dialog.reject)
+    layout.addWidget(start)
+    layout.addWidget(back)
+    if dialog.exec() != QDialog.DialogCode.Accepted:
+        return None
+    refresh()
+    if not confirm.isChecked() or not parsed.get("valid") or (link is not None and not link.ready()):
+        return None
+    decision = dict(base_kind=kind.currentData(), gender=gender.currentData(), body_parts=tuple(k for k,v in part_boxes.items() if v.isChecked()),
+                    character_features=parsed["features"], request_text=request.toPlainText(), confirmed=True, adult_confirmed=True)
+    if quick.isChecked():
+        decision["experiment"] = dict(lightning8=True, single_attempt=True)
+    if link is not None:        # 생성 함수에는 넘기지 않는다(작업실이 생성 전에 꺼내 적용한다)
+        decision["character_link"] = dict(link.choice(), path_record_used=link_info["source"] == "path_record")
+    return decision
+
+
+def confirm_free_result(window, results):
+    from genai_lab.studio_controller import picture
+    dialog = QDialog(window)
+    dialog.setWindowTitle("자유 생성 결과 확인")
+    layout = QVBoxLayout(dialog)
+    trace = __import__("json").loads(Path(results.outcome["trace"]).read_text(encoding="utf-8"))
+    row = QHBoxLayout()
+    row.addLayout(picture(Path(trace["input_facts"]["base"].get("snapshot") or trace["input_facts"]["base"]["path"]), "기준", 250, 350))
+    row.addLayout(picture(results.current_path, "생성 결과", 250, 350))
+    layout.addLayout(row)
+    candidate = results.candidate
+    observed = candidate.get("automatic_features", results.outcome["automatic_features"].get("summary", {}))
+    lines = ["자동 특징 관찰(근거일 뿐, 판정 아님): " + str(observed)]
+    garments = candidate.get("garment_tags") or {}
+    if garments.get("lost") or garments.get("added"):
+        lines.append("의상 태그 차이(관찰): 없어짐 " + (", ".join(garments.get("lost") or ()) or "-")
+                     + " · 생김 " + (", ".join(garments.get("added") or ()) or "-"))
+    if len(results.candidates) > 1:
+        lines.append(f"시도 {len(results.candidates)}개 중 {candidate['attempt']}번째입니다. 다른 시도는 결과 목록에서 바꿔 볼 수 있습니다.")
+    summary = QLabel("\n".join(lines))
+    summary.setWordWrap(True)
+    layout.addWidget(summary)
+    checks = {}
+    for key, label in (("character", "같은 캐릭터입니다(얼굴·머리·성별·귀/꼬리/날개의 개수·형태·색·연결 확인)."),
+                       ("garment", "기준과 같은 의상입니다(옷 종류·색·무늬·세부 확인)."),
+                       ("request", "요청하거나 선택된 자세·구도·시점·배경·상황이 반영됐습니다."),
+                       ("exposure", "심한 이상(팔다리 개수·겹친 자세 포함 — 자동 검사가 못 잡음)과 원치 않는 노출·아동 외형이 없습니다."),
+                       ("finish", "그림 완성도(배경·선·마무리)가 기준 수준입니다.")):
+        box = QCheckBox(label)
+        box.setObjectName("free_review_"+key)
+        checks[key] = box
+        layout.addWidget(box)
+    notes = results.outcome.get("distinctive_review") or []
+    note_boxes = []
+    for number, note in enumerate(notes):          # 고유 형태 메모마다 확인(자동 판정 없음, D-126 ④)
+        box = QCheckBox(f"고유 형태 유지: {note}")
+        box.setObjectName(f"free_review_distinctive_{number}")
+        note_boxes.append(box)
+        layout.addWidget(box)
+    layout.addWidget(QLabel("실제 연출 조건: " + next(c["text"] for c in trace["conditions"] if c["key"] == "request")))
+    accept = QPushButton("이 결과 사용")
+    accept.setEnabled(False)
+    every = [*checks.values(), *note_boxes]
+    for box in every:
+        box.toggled.connect(lambda: accept.setEnabled(all(c.isChecked() for c in every)))
+    accept.clicked.connect(dialog.accept)
+    back = QPushButton("다시 비교하기")
+    back.clicked.connect(dialog.reject)
+    layout.addWidget(accept)
+    layout.addWidget(back)
+    if dialog.exec() != QDialog.DialogCode.Accepted:
+        return None
+    answer = {k: v.isChecked() for k, v in checks.items()}
+    if note_boxes:
+        answer["distinctive"] = all(b.isChecked() for b in note_boxes)
+    return answer

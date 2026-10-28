@@ -1,0 +1,43 @@
+{
+  "checks": {
+    "selected.png": {
+      "sha256": "c10bf6a3aedcfae17e289063d8bc1b83145672e2e93dd138b8fa18d53d275e81",
+      "baseline": "c10bf6a3aedcfae17e289063d8bc1b83145672e2e93dd138b8fa18d53d275e81",
+      "matches": true
+    },
+    "base_candidates/candidate_1.png": {
+      "sha256": "cd1a11ffa5664d37106758e544ca783d0950f868dcebe0ae39bd04f2f5d9d3e0",
+      "baseline": "cd1a11ffa5664d37106758e544ca783d0950f868dcebe0ae39bd04f2f5d9d3e0",
+      "matches": true
+    },
+    "base_candidates/input_source.png": {
+      "sha256": "dd8a2899573bd971a9a5134007d0979ebfac46a8980b39945b5db54603935ae0",
+      "baseline": "dd8a2899573bd971a9a5134007d0979ebfac46a8980b39945b5db54603935ae0",
+      "matches": true
+    },
+    "base_candidates/input_garment.png": {
+      "sha256": "8c5f1c0223ef29375d5289eec10891468ba05433968652f55f3f43a128e03acb",
+      "baseline": "8c5f1c0223ef29375d5289eec10891468ba05433968652f55f3f43a128e03acb",
+      "matches": true
+    }
+  },
+  "tracked_source_changes": [],
+  "commit_unchanged": true,
+  "git_status_unchanged": true,
+  "all_requested_checkpoints_observed": true,
+  "onnx_outer_initializations_recorded": 6,
+  "inner_constructor_instrumentation_errors": 6,
+  "generation_calls": {
+    "base": 1,
+    "inpaint": 1
+  },
+  "callback_count": 25,
+  "process_hooks_removed": true,
+  "current_settings_verified": true,
+  "output_file_sha256": {
+    "README.md": "1bd0d301a7bb5ce57a4d691bab1d49376266de9b298c13135f3db45ee3d7f6aa",
+    "checkpoints.json": "ffe6df209778e67791846fbbee9bf99946744cdbe14b848174d63a7c03eef22f",
+    "modules.json": "69accc17984bec4345f01cc4a8609c4bce37d780d1e5255bcff3bcddcf2cdaba",
+    "samples.json": "719da2258bb2aefc7d591272fab09b5becf1d1baeadf2a4332c957e1c854c004"
+  }
+}

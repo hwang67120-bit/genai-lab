@@ -1,0 +1,17 @@
+{
+  "schema": "model_setup/1",
+  "model_home": "D:\\genai-test\\model-home-no-wd",
+  "status": "files_verified",
+  "checked_at": "fabricated-for-test",
+  "run_id": "fabricated",
+  "seconds": 0,
+  "fingerprint": {
+    "model_home_files": "78491b074c8b3ba775a84b2cc1e291ff2a7af759977b5b09e5456052bcfe345c",
+    "qwen_model_files": "73561d21617e1dfb136ccd0d81868217ca7d593691be35deada96e9d3477f66e",
+    "gguf_sha256": "8677bac90627adbbc11efab87b1870e701c4eb3689ee865a3de8ab81b705a723"
+  },
+  "problem_count": 0,
+  "message": "",
+  "gpu_generation_verified": false,
+  "note": "시험용으로 직접 쓴 기록(D-174 missing 단계) — 실제 검사 결과가 아님"
+}

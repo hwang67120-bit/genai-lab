@@ -1,0 +1,17 @@
+{
+  "source": "automatic_analysis (tag 0.5 이상, 사람 확정 아님)",
+  "features": {
+    "M1-horned": {
+      "hair_length": null,
+      "hair_style": null,
+      "hair_color": [
+        "grey_hair"
+      ],
+      "eye_color": null,
+      "head_accessories": [
+        "horns"
+      ],
+      "skin": null
+    }
+  }
+}

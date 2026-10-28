@@ -1,0 +1,32 @@
+{
+  "groups": {
+    "appearance": [
+      "white_hair",
+      "short_hair",
+      "facial_hair",
+      "dark_skin",
+      "dark-skinned_male"
+    ],
+    "body": [
+      "muscular",
+      "abs",
+      "muscular_male",
+      "pectorals",
+      "thick_thighs"
+    ],
+    "fixed": []
+  },
+  "slim": false,
+  "garment_tags": [
+    "shorts",
+    "male underwear",
+    "underwear",
+    "red shorts"
+  ],
+  "gender": "male",
+  "expected": {
+    "T0": "1boy, male focus, masculine silhouette, shorts, male underwear, underwear, red shorts, bare legs, white hair, short hair, facial hair, dark skin, dark-skinned male, muscular, abs, muscular male, pectorals, thick thighs, solo, full body, white background, simple background, coherent anatomy, best quality",
+    "T1": "1boy, male focus, masculine silhouette, shorts, male underwear, underwear, red shorts, bare legs, white hair, short hair, facial hair, muscular, abs, muscular male, pectorals, thick thighs, solo, full body, white background, simple background, coherent anatomy, best quality",
+    "T2": "1boy, male focus, masculine silhouette, shorts, male underwear, underwear, red shorts, bare legs, white hair, short hair, facial hair, tan, muscular, abs, muscular male, pectorals, thick thighs, solo, full body, white background, simple background, coherent anatomy, best quality"
+  }
+}

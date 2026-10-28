@@ -1,0 +1,106 @@
+[
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-21, judgement-29/batch-3.png #2",
+    "case": "M3-S2",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r29\\M3-S2\\qwen\\raw.png",
+      "sha256": "346134e857ddec910bdfd42467f14a56c27ad318d4166bfdb89df0a9519297a6"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-21T14:04:14",
+    "note": "사용자: 실패 머리색(노란 금발)",
+    "same_character": "partial",
+    "outfit": "not_judged",
+    "request_followed": "not_judged",
+    "severe_defect": "not_judged",
+    "finish_quality": "not_judged",
+    "quality_pass": false,
+    "failure_type": "hair",
+    "failure_types": [
+      "hair_color"
+    ]
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-21, judgement-29/batch-5.png #2",
+    "case": "M3-S2",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "hair_restored",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r29\\M3-S2\\result-analysis\\hair-restored.png",
+      "sha256": "333dfddfc3857907db3571f7fb861a364a305ac7005c4586cd32cff570ab92e0"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-21T14:15:51",
+    "note": "사용자: 실패 머리색(분홍 과함)",
+    "same_character": "partial",
+    "outfit": "not_judged",
+    "request_followed": "not_judged",
+    "severe_defect": "not_judged",
+    "finish_quality": "not_judged",
+    "quality_pass": false,
+    "failure_type": "hair",
+    "failure_types": [
+      "hair_color"
+    ]
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-21, judgement-29/batch-5.png #3",
+    "case": "M3-S2",
+    "target": {
+      "attempt": 2,
+      "seed": 43,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r29\\M3-S2\\qwen-2\\raw.png",
+      "sha256": "4257eb80297515ca53a5d516db9ef490e2164de7563c011114d60aaca703c1cd"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-21T14:15:51",
+    "note": "사용자: 실패 머리색(노란 금발)",
+    "same_character": "partial",
+    "outfit": "not_judged",
+    "request_followed": "not_judged",
+    "severe_defect": "not_judged",
+    "finish_quality": "not_judged",
+    "quality_pass": false,
+    "failure_type": "hair",
+    "failure_types": [
+      "hair_color"
+    ]
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-21, judgement-29/batch-5.png #4",
+    "case": "M3-S2",
+    "target": {
+      "attempt": 2,
+      "seed": 43,
+      "variant": "hair_restored",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r29\\M3-S2\\result-analysis-2\\hair-restored.png",
+      "sha256": "74e0384256fe398bbac6881cf422698b7959e369ea11aedec927a83f514288ca"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-21T14:15:51",
+    "note": "사용자: 실패 머리색",
+    "same_character": "partial",
+    "outfit": "not_judged",
+    "request_followed": "not_judged",
+    "severe_defect": "not_judged",
+    "finish_quality": "not_judged",
+    "quality_pass": false,
+    "failure_type": "hair",
+    "failure_types": [
+      "hair_color"
+    ]
+  }
+]

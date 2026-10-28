@@ -1,0 +1,2 @@
+﻿D:\genai-test\p2p3-20261023-run2\results\trace\opens.jsonl 1019 {'open': 964, 'popen': 15, None: 4, 'onnx': 19, 'hf_download': 17} zip opens: 0
+D:\genai-test\p2p3-20261023-embed\results\trace\opens.jsonl 4256 {'open': 4201, 'popen': 15, None: 4, 'onnx': 19, 'hf_download': 17} zip opens: 3237

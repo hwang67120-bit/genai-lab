@@ -1,0 +1,62 @@
+[
+  {
+    "judge": "user",
+    "source": "Claude 대화 2026-10-21, judgement-30/sheet.png",
+    "case": "N1-S2",
+    "control_attempt": 1,
+    "verdict": "same_or_better",
+    "compared": "요청 30 8단계 가속 vs 요청 29 40단계 같은 seed",
+    "note": "사용자: 일치 통과. Claude 관찰: 8단계는 실제로 앉음(40단계는 의자 옆에 섬)",
+    "recorded_at": "2026-10-21T18:00:36"
+  },
+  {
+    "judge": "user",
+    "source": "Claude 대화 2026-10-21, judgement-30/sheet.png",
+    "case": "M6-S3",
+    "control_attempt": 1,
+    "verdict": "same_or_better",
+    "compared": "요청 30 8단계 가속 vs 요청 29 40단계 같은 seed",
+    "note": "사용자: 일치 통과. Claude 관찰: 머리 청회색에 더 가까움, 슬리퍼는 흰 신발처럼 보임",
+    "recorded_at": "2026-10-21T18:00:36"
+  },
+  {
+    "judge": "user",
+    "source": "Claude 대화 2026-10-21, judgement-30/sheet.png",
+    "case": "F5-S1",
+    "control_attempt": 1,
+    "verdict": "worse",
+    "compared": "요청 30 8단계 가속 vs 요청 29 40단계 같은 seed",
+    "note": "사용자: 꽃 장식은 캐릭터 특징에 중요하지 않음. 머리 채도가 너무 낮음 — 조명을 생각하면 회색이어야 할 머리끝까지 반타블랙처럼 검게 칠해짐(hair_color)",
+    "recorded_at": "2026-10-21T18:00:36"
+  },
+  {
+    "judge": "user",
+    "source": "Claude 대화 2026-10-21, judgement-30/sheet.png",
+    "case": "K-S3",
+    "control_attempt": 1,
+    "verdict": "same_or_better",
+    "compared": "요청 30 8단계 가속 vs 요청 29 40단계 같은 seed",
+    "note": "사용자: 통과",
+    "recorded_at": "2026-10-21T18:00:36"
+  },
+  {
+    "judge": "user",
+    "source": "Claude 대화 2026-10-21, judgement-30/sheet.png",
+    "case": "M2-S4",
+    "control_attempt": 2,
+    "verdict": "same_or_better",
+    "compared": "요청 30 8단계 가속 vs 요청 29 40단계 같은 seed",
+    "note": "사용자: 통과(꼬리 없음, seed 43)",
+    "recorded_at": "2026-10-21T18:00:36"
+  },
+  {
+    "judge": "user",
+    "source": "Claude 대화 2026-10-21, judgement-30/sheet.png",
+    "case": "K-S4",
+    "control_attempt": 2,
+    "verdict": "same_or_better",
+    "compared": "요청 30 8단계 가속 vs 요청 29 40단계 같은 seed",
+    "note": "사용자: 통과(꼬리 없음, seed 43)",
+    "recorded_at": "2026-10-21T18:00:36"
+  }
+]

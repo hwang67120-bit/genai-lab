@@ -1,0 +1,19 @@
+{
+  "status": "completed",
+  "total": 1,
+  "done": 1,
+  "active": null,
+  "results": [
+    {
+      "case": "F5-cheer",
+      "status": "awaiting_user_review",
+      "attempts": 1,
+      "result": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\eval-smoke-26\\runs\\F5-cheer-skin\\qwen\\raw.png",
+      "retry": [
+        null
+      ]
+    }
+  ],
+  "stage": "done",
+  "elapsed_seconds": 2112.2
+}

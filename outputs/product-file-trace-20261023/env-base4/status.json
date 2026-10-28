@@ -1,0 +1,54 @@
+{
+  "scenario": "base4",
+  "qwen": "substituted (기존 결과 그림)",
+  "segmentation": "substituted (기존 분할 결과, CUDA 필요 단계)",
+  "gpu": "hidden (CUDA_VISIBLE_DEVICES=-1, torch.cuda.is_available()=False)",
+  "A_analyze_inputs": {
+    "state": "ok",
+    "seconds": 58.4,
+    "result": {}
+  },
+  "B_analyze_base": {
+    "state": "ok",
+    "seconds": 8.4,
+    "result": {}
+  },
+  "C_outfit_pipeline": {
+    "state": "ok",
+    "seconds": 35.7,
+    "result": {
+      "composited": true,
+      "attempts": [
+        {
+          "seed": 42,
+          "composited": true,
+          "reason": null,
+          "hair_auto": null,
+          "hair_restore": null
+        }
+      ]
+    }
+  },
+  "D_free_generation": {
+    "state": "ok",
+    "seconds": 55.4,
+    "result": {
+      "status": "awaiting_user_review",
+      "composited": false,
+      "attempts": [
+        {
+          "seed": 42,
+          "retry_reason": "확신 있는 특징 위반: skin",
+          "hair_auto": "not_applicable",
+          "hair_restore": null
+        },
+        {
+          "seed": 43,
+          "retry_reason": "확신 있는 특징 위반: eye_color, hair_color, skin",
+          "hair_auto": "not_applicable",
+          "hair_restore": "restored"
+        }
+      ]
+    }
+  }
+}

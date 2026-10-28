@@ -1,0 +1,46 @@
+[
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-18, judgement-26/batch-4.png #3",
+    "case": "M2-S1",
+    "target": {
+      "attempt": 1,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r26\\M2-S1\\qwen\\raw.png",
+      "sha256": "d488af9c705c39bdee95cd6475d3c3f59699a713ae6b9514aef5ae73b799895e"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-18T01:23:40",
+    "note": "사용자: 실패 바지색(검정 → 올리브)",
+    "same_character": "not_judged",
+    "outfit": "different",
+    "request_followed": "not_judged",
+    "severe_defect": "not_judged",
+    "finish_quality": "not_judged",
+    "quality_pass": false,
+    "failure_type": "outfit"
+  },
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-18, judgement-26/batch-4.png #4",
+    "case": "M2-S1",
+    "target": {
+      "attempt": 2,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r26\\M2-S1\\qwen-2\\raw.png",
+      "sha256": "8faafeb4abf9d8ebaaadf5be60f0b1443247e2e16ba8c7fdd704a9320912c947"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-18T01:23:40",
+    "note": "사용자: 실패 피부색(짙은 갈색 → 밝음)",
+    "same_character": "partial",
+    "outfit": "not_judged",
+    "request_followed": "not_judged",
+    "severe_defect": "not_judged",
+    "finish_quality": "not_judged",
+    "quality_pass": false,
+    "failure_type": "skin"
+  }
+]

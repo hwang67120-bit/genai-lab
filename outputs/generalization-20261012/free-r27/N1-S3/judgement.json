@@ -1,0 +1,25 @@
+[
+  {
+    "judge": "user",
+    "mode": "free_generation",
+    "source": "Claude 대화 2026-10-19, judgement-27/batch-2.png #3",
+    "case": "N1-S3",
+    "target": {
+      "attempt": 1,
+      "seed": 42,
+      "variant": "raw",
+      "image": "\\\\192.168.0.109\\win_g\\genai-lab\\outputs\\generalization-20261012\\free-r27\\N1-S3\\qwen\\raw.png",
+      "sha256": "7e189a3fa452d857108a3c62f560807e23d29931e3832b64919f52a689565f60"
+    },
+    "recorded_by": "user",
+    "recorded_at": "2026-10-19T12:52:57",
+    "note": "사용자: 성공 — 머리색 차이는 조명 영향(밝은 카페 결과는 정상인 것이 근거). Claude 관찰: 걷기보다 서 있는 자세",
+    "same_character": "yes",
+    "outfit": "same",
+    "request_followed": "yes",
+    "severe_defect": "none",
+    "finish_quality": "good",
+    "quality_pass": true,
+    "failure_type": null
+  }
+]

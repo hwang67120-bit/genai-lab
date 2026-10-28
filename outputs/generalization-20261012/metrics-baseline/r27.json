@@ -1,0 +1,423 @@
+{
+  "schema": "free_generation_metrics/1",
+  "rows": 21,
+  "human_judgements": 29,
+  "judgements_per_row": 1.38,
+  "first_pass": 9,
+  "selection_pass": 14,
+  "passed_by": {
+    "first": 9,
+    "retry": 3,
+    "hair_restored": 2,
+    "hair_auto": 0
+  },
+  "auto_selected": 0,
+  "auto_accepted": 0,
+  "auto_worsened": 0,
+  "failure_categories": {
+    "hair_color": {
+      "rows": 1,
+      "characters": [
+        "M6"
+      ],
+      "repeated": false
+    },
+    "hair_style": {
+      "rows": 3,
+      "characters": [
+        "F5",
+        "K",
+        "M3"
+      ],
+      "repeated": true
+    },
+    "head_accessory": {
+      "rows": 1,
+      "characters": [
+        "F5"
+      ],
+      "repeated": false
+    },
+    "eye_color": {
+      "rows": 1,
+      "characters": [
+        "F5"
+      ],
+      "repeated": false
+    },
+    "skin": {
+      "rows": 3,
+      "characters": [
+        "F5",
+        "M2"
+      ],
+      "repeated": true
+    },
+    "outfit_part": {
+      "rows": 2,
+      "characters": [
+        "M2",
+        "M6"
+      ],
+      "repeated": true
+    },
+    "extra_body_part": {
+      "rows": 1,
+      "characters": [
+        "M2"
+      ],
+      "repeated": false
+    },
+    "pose": {
+      "rows": 1,
+      "characters": [
+        "F5"
+      ],
+      "repeated": false
+    },
+    "framing": {
+      "rows": 2,
+      "characters": [
+        "F5",
+        "K"
+      ],
+      "repeated": true
+    },
+    "structure": {
+      "rows": 1,
+      "characters": [
+        "M3"
+      ],
+      "repeated": false
+    }
+  },
+  "detection": {
+    "hair_color": {
+      "caught": 0,
+      "caught_review_only": 3,
+      "missed": 0,
+      "false_alarm": 1,
+      "review_on_pass": 7,
+      "quiet_pass": 4
+    },
+    "hair_style": {
+      "caught": 2,
+      "caught_review_only": 0,
+      "missed": 1,
+      "false_alarm": 5,
+      "review_on_pass": 0,
+      "quiet_pass": 7
+    },
+    "head_accessory": {
+      "caught": 0,
+      "caught_review_only": 0,
+      "missed": 2,
+      "false_alarm": 3,
+      "review_on_pass": 2,
+      "quiet_pass": 7
+    },
+    "eye_color": {
+      "caught": 0,
+      "caught_review_only": 1,
+      "missed": 2,
+      "false_alarm": 0,
+      "review_on_pass": 6,
+      "quiet_pass": 6
+    },
+    "skin": {
+      "caught": 3,
+      "caught_review_only": 2,
+      "missed": 0,
+      "false_alarm": 4,
+      "review_on_pass": 3,
+      "quiet_pass": 5
+    },
+    "extra_body_part": {
+      "caught": 0,
+      "caught_review_only": 0,
+      "missed": 1,
+      "false_alarm": 0,
+      "review_on_pass": 0,
+      "quiet_pass": 12
+    }
+  },
+  "attempt_minutes": 40.8,
+  "per_row": [
+    {
+      "case": "F5-S1",
+      "judgements": 1,
+      "first_pass": false,
+      "selection_pass": false,
+      "passed_by": null,
+      "candidates": 2,
+      "auto_selected": false,
+      "auto_accepted": null,
+      "auto_worsened": false,
+      "failures": [
+        "eye_color",
+        "skin"
+      ]
+    },
+    {
+      "case": "F5-S3",
+      "judgements": 1,
+      "first_pass": false,
+      "selection_pass": false,
+      "passed_by": null,
+      "candidates": 2,
+      "auto_selected": false,
+      "auto_accepted": null,
+      "auto_worsened": false,
+      "failures": [
+        "framing",
+        "pose"
+      ]
+    },
+    {
+      "case": "F5-S4",
+      "judgements": 2,
+      "first_pass": false,
+      "selection_pass": false,
+      "passed_by": null,
+      "candidates": 4,
+      "auto_selected": false,
+      "auto_accepted": null,
+      "auto_worsened": false,
+      "failures": [
+        "hair_style",
+        "head_accessory",
+        "skin"
+      ]
+    },
+    {
+      "case": "K-S1",
+      "judgements": 1,
+      "first_pass": false,
+      "selection_pass": false,
+      "passed_by": null,
+      "candidates": 1,
+      "auto_selected": false,
+      "auto_accepted": null,
+      "auto_worsened": false,
+      "failures": [
+        "framing",
+        "hair_style"
+      ]
+    },
+    {
+      "case": "K-S3",
+      "judgements": 1,
+      "first_pass": true,
+      "selection_pass": true,
+      "passed_by": "first",
+      "candidates": 1,
+      "auto_selected": false,
+      "auto_accepted": null,
+      "auto_worsened": false,
+      "failures": []
+    },
+    {
+      "case": "K-S4",
+      "judgements": 1,
+      "first_pass": true,
+      "selection_pass": true,
+      "passed_by": "first",
+      "candidates": 3,
+      "auto_selected": false,
+      "auto_accepted": null,
+      "auto_worsened": false,
+      "failures": []
+    },
+    {
+      "case": "M2-S1",
+      "judgements": 2,
+      "first_pass": false,
+      "selection_pass": true,
+      "passed_by": "retry",
+      "candidates": 4,
+      "auto_selected": false,
+      "auto_accepted": null,
+      "auto_worsened": false,
+      "failures": []
+    },
+    {
+      "case": "M2-S2",
+      "judgements": 1,
+      "first_pass": true,
+      "selection_pass": true,
+      "passed_by": "first",
+      "candidates": 2,
+      "auto_selected": false,
+      "auto_accepted": null,
+      "auto_worsened": false,
+      "failures": []
+    },
+    {
+      "case": "M2-S4",
+      "judgements": 2,
+      "first_pass": false,
+      "selection_pass": false,
+      "passed_by": null,
+      "candidates": 4,
+      "auto_selected": false,
+      "auto_accepted": null,
+      "auto_worsened": false,
+      "failures": [
+        "extra_body_part",
+        "outfit_part",
+        "skin"
+      ]
+    },
+    {
+      "case": "M3-S1",
+      "judgements": 1,
+      "first_pass": true,
+      "selection_pass": true,
+      "passed_by": "first",
+      "candidates": 2,
+      "auto_selected": false,
+      "auto_accepted": null,
+      "auto_worsened": false,
+      "failures": []
+    },
+    {
+      "case": "M3-S2",
+      "judgements": 1,
+      "first_pass": true,
+      "selection_pass": true,
+      "passed_by": "first",
+      "candidates": 2,
+      "auto_selected": false,
+      "auto_accepted": null,
+      "auto_worsened": false,
+      "failures": []
+    },
+    {
+      "case": "M3-S3",
+      "judgements": 1,
+      "first_pass": false,
+      "selection_pass": false,
+      "passed_by": null,
+      "candidates": 1,
+      "auto_selected": false,
+      "auto_accepted": null,
+      "auto_worsened": false,
+      "failures": [
+        "hair_style",
+        "structure"
+      ]
+    },
+    {
+      "case": "M6-S2",
+      "judgements": 2,
+      "first_pass": false,
+      "selection_pass": true,
+      "passed_by": "hair_restored",
+      "candidates": 2,
+      "auto_selected": false,
+      "auto_accepted": null,
+      "auto_worsened": false,
+      "failures": []
+    },
+    {
+      "case": "M6-S3",
+      "judgements": 2,
+      "first_pass": false,
+      "selection_pass": true,
+      "passed_by": "hair_restored",
+      "candidates": 2,
+      "auto_selected": false,
+      "auto_accepted": null,
+      "auto_worsened": false,
+      "failures": []
+    },
+    {
+      "case": "M6-S4",
+      "judgements": 2,
+      "first_pass": false,
+      "selection_pass": false,
+      "passed_by": null,
+      "candidates": 2,
+      "auto_selected": false,
+      "auto_accepted": null,
+      "auto_worsened": false,
+      "failures": [
+        "hair_color",
+        "outfit_part"
+      ]
+    },
+    {
+      "case": "N1-S1",
+      "judgements": 2,
+      "first_pass": false,
+      "selection_pass": true,
+      "passed_by": "retry",
+      "candidates": 3,
+      "auto_selected": false,
+      "auto_accepted": null,
+      "auto_worsened": false,
+      "failures": []
+    },
+    {
+      "case": "N1-S2",
+      "judgements": 2,
+      "first_pass": false,
+      "selection_pass": true,
+      "passed_by": "retry",
+      "candidates": 3,
+      "auto_selected": false,
+      "auto_accepted": null,
+      "auto_worsened": false,
+      "failures": []
+    },
+    {
+      "case": "N1-S3",
+      "judgements": 1,
+      "first_pass": true,
+      "selection_pass": true,
+      "passed_by": "first",
+      "candidates": 2,
+      "auto_selected": false,
+      "auto_accepted": null,
+      "auto_worsened": false,
+      "failures": []
+    },
+    {
+      "case": "N2-S2",
+      "judgements": 1,
+      "first_pass": true,
+      "selection_pass": true,
+      "passed_by": "first",
+      "candidates": 2,
+      "auto_selected": false,
+      "auto_accepted": null,
+      "auto_worsened": false,
+      "failures": []
+    },
+    {
+      "case": "N2-S3",
+      "judgements": 1,
+      "first_pass": true,
+      "selection_pass": true,
+      "passed_by": "first",
+      "candidates": 2,
+      "auto_selected": false,
+      "auto_accepted": null,
+      "auto_worsened": false,
+      "failures": []
+    },
+    {
+      "case": "N2-S4",
+      "judgements": 1,
+      "first_pass": true,
+      "selection_pass": true,
+      "passed_by": "first",
+      "candidates": 4,
+      "auto_selected": false,
+      "auto_accepted": null,
+      "auto_worsened": false,
+      "failures": []
+    }
+  ],
+  "note": "detection: 사람이 그 분류로 실패시킨 원 결과에 자동 검사가 위반(changed·added·missing)을 냈으면 caught, '확인 필요'만이면 caught_review_only, 아무것도 없으면 missed. 사람 통과 원 결과에 위반이면 false_alarm, 확인 필요만이면 review_on_pass. attempt_minutes는 실행 전체 시간/시도 수(분석 포함 근사). repeated = 2명 이상 → 공통 변경 후보(D-140 조건 1·2)."
+}

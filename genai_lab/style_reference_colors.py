@@ -22,7 +22,14 @@ GPU 비교 v2~v4에서 그림체 참조에 남은 색·내용(머리색·청바�
   속눈썹 제외)만 골라 화면 왼쪽·오른쪽 눈을 따로 원본의 같은 쪽 눈 색으로 맞춘다(짝눈). 한쪽 눈이 안 보이면 다른 쪽 색을 쓴다.
   눈 부위 마스크에는 눈두덩 피부가 섞이므로 양쪽 모두 피부처럼 보이는 픽셀을 홍채에서 뺀다(T014 파란 눈이 갈색 피부와
   평균되어 회색, 참조 분홍 눈두덩까지 칠해짐 — 첫 시도 style-reference-v6/-V001b).
-- 원본의 선화(밝기 L < 8인 검은 윤곽선)는 옷 색 후보에서 뺀다. 좁은 바지 영역에서는 윤곽선이 바지보다 많아
+- 원본의 선화(밝기 L < 8인 검은 윤곽선)는 옷 색 후보에서 뺀다. 단 어두운 픽셀이 후보의 40% 이상이면 검은 옷으로 보고
+  남긴다(로컬 5명 시험에서 V007 검은 바지가 윤곽선으로 빠짐).
+- 위치로 짝짓기(로컬 5명 시험, 사용자 10/29): 밝기 순서로 짝지으면 참조의 몸통 옷(크롭 셔츠)·팔 옷(재킷)이 원본의
+  조끼(몸통)·셔츠(팔)와 엇갈렸다(T008 조끼 하늘색, V006 블레이저 반반). 자세 관절이 있으면 팔 영역(어깨-팔꿈치-손목)을
+  만들어 윗옷을 몸통·팔로 나누고, 각각 원본의 같은 위치에서 가장 넓은 색을 쓴다. 다리 영역(엉덩이-무릎-발목)은
+  아래옷 후보에 더한다(분할기가 바지를 작게 잡는 경우).
+- 무늬 지우기: 옷 역할은 참조 밝기에서 큰 명암(흐린 성분)은 남기고 잔무늬(글씨·그라피티 획)는 0.35배로 눌러
+  ±8 안으로 자른다. 다섯 명 모두 참조 셔츠의 그라피티가 옷 무늬로 넘어왔다. 좁은 바지 영역에서는 윤곽선이 바지보다 많아
   "가장 넓은 색"이 검정이 되는 경우가 있었다(V001). 남는 게 50픽셀 미만이면 빼지 않는다.
 """
 import numpy as np
@@ -98,8 +105,9 @@ def match_part(reference_lab, reference_mask, source_lab, source_mask, k=1, sour
     반환: 새 Lab(부위 밖은 그대로)과 기록."""
     out = reference_lab.copy()
     ref_px, src_px = reference_lab[reference_mask], source_lab[source_mask]
-    if (src_px[:, 0] >= INK_L).sum() >= min_pixels:
-        src_px = src_px[src_px[:, 0] >= INK_L]                       # line art is not a garment colour
+    light = src_px[:, 0] >= INK_L
+    if light.sum() >= min_pixels and light.mean() >= 0.6:
+        src_px = src_px[light]                                       # line art is not a garment colour (unless mostly dark: a black garment)
     if len(ref_px) >= min_pixels and len(src_px) < min_pixels and source == "largest" and min_fraction is not None:
         return neutral_part(reference_lab, reference_mask), dict(          # no evidence at all: grey, never the reference colour
             state="neutral_uncertain", reason="source part too small to read a colour", source_pixels=int(len(src_px)))
@@ -181,19 +189,63 @@ def match_eyes(reference_lab, reference_mask, source_lab, source_mask, chroma_mi
     return out, dict(state="matched", sides=sides)
 
 
+def flatten_lightness(lab, mask, sigma=6.0, keep=0.35, clip=8.0):
+    """옷 부위의 잔무늬를 누른다: 마스크 안에서만 흐린 밝기(큰 명암·주름)를 구하고, 원래와의 차이(획·글씨)는 keep배·±clip."""
+    from scipy import ndimage
+    mask = np.asarray(mask, bool)
+    if mask.sum() < 50:
+        return lab
+    weight = mask.astype(np.float64)
+    low = ndimage.gaussian_filter(lab[..., 0] * weight, sigma) / np.maximum(ndimage.gaussian_filter(weight, sigma), 1e-3)
+    out = lab.copy()
+    detail = np.clip((lab[..., 0] - low) * keep, -clip, clip)
+    out[..., 0][mask] = (low + detail)[mask]
+    return out
+
+
+def limb_mask(shape, joints, chains, width):
+    """관절 사슬(어깨-팔꿈치-손목 등)을 width 굵기 선으로 그린 마스크. 없는 관절은 건너뛴다."""
+    from PIL import Image, ImageDraw
+    canvas = Image.new("L", (shape[1], shape[0]), 0)
+    draw = ImageDraw.Draw(canvas)
+    for chain in chains:
+        points = [tuple(joints[n]) for n in chain if n in joints]
+        if len(points) >= 2:
+            draw.line(points, fill=255, width=max(2, int(width)), joint="curve")
+            for x, y in points:
+                draw.ellipse((x - width / 2, y - width / 2, x + width / 2, y + width / 2), fill=255)
+    return np.asarray(canvas) > 0
+
+
+def body_regions(shape, joints):
+    """자세 관절에서 팔·다리 영역. 굵기는 어깨 폭 기준(없으면 그림 폭의 25%)."""
+    if not joints:
+        return None
+    if "left_shoulder" in joints and "right_shoulder" in joints:
+        shoulder = float(np.hypot(*np.subtract(joints["left_shoulder"], joints["right_shoulder"])))
+    else:
+        shoulder = 0.25 * shape[1]
+    arms = limb_mask(shape, joints, [("right_shoulder", "right_elbow", "right_wrist"), ("left_shoulder", "left_elbow", "left_wrist")], 0.42 * shoulder)
+    legs = limb_mask(shape, joints, [("right_hip", "right_knee", "right_ankle"), ("left_hip", "left_knee", "left_ankle")], 0.5 * shoulder)
+    return dict(arms=arms, legs=legs)
+
+
 def union(parts, names):
     return np.logical_or.reduce([np.asarray(parts[n], bool) for n in names])
 
 
 def recolor_reference(reference_rgb, reference_parts, source_rgb, source_parts, plan, background_alpha=None,
-                      background_rgb=(214, 210, 202)):
+                      background_rgb=(214, 210, 202), reference_joints=None, source_joints=None):
     """plan: {역할: dict(reference=[부위…], source=[부위…], k=색 수, pick="pair"|"largest", keep_skin=False,
     exclude_colours_of=다른 역할, min_fraction=확신 기준, split="left_right"(눈: 홍채를 화면 좌우로 따로))}. keep_skin이 아니면(옷 역할) 양쪽 모두 피부처럼 보이는 픽셀을 뺀다.
     exclude_colours_of가 있으면 그 역할에서 쓴 원본 색을 원본 후보에서 뺀다(남는 게 50픽셀 미만이면 빼지 않음).
-    배경 알파가 있으면 배경을 단색으로."""
+    split="torso_arms"(윗옷: 관절이 있으면 몸통·팔을 따로, 각각 원본 같은 위치의 가장 넓은 색), add_region="legs"(아래옷
+    원본 후보에 다리 영역 추가), flatten=True(참조 옷의 잔무늬 누르기). 배경 알파가 있으면 배경을 단색으로."""
     ref_skin = skin_like(reference_rgb, reference_parts["face"])
     src_skin = skin_like(source_rgb, source_parts["face"])
     lab, src_lab = rgb_to_lab(reference_rgb), rgb_to_lab(source_rgb)
+    ref_regions = body_regions(lab.shape[:2], reference_joints)
+    src_regions = body_regions(src_lab.shape[:2], source_joints)
     record = {}
     for role, rule in plan.items():
         ref_mask, src_mask = union(reference_parts, rule["reference"]), union(source_parts, rule["source"])
@@ -201,8 +253,25 @@ def recolor_reference(reference_rgb, reference_parts, source_rgb, source_parts, 
             lab, record[role] = match_eyes(lab, ref_mask, src_lab, src_mask, rule.get("chroma_min", 12.0), ref_skin, src_skin)
             record[role].update(reference_parts=rule["reference"], source_parts=rule["source"])
             continue
+        if rule.get("add_region") and src_regions is not None:
+            src_mask = src_mask | src_regions[rule["add_region"]]
         if not rule.get("keep_skin", False):
             ref_mask, src_mask = ref_mask & ~ref_skin, src_mask & ~src_skin
+        if rule.get("flatten"):
+            lab = flatten_lightness(lab, ref_mask)
+        if rule.get("split") == "torso_arms" and ref_regions is not None and src_regions is not None:
+            parts_record, chosen = {}, []
+            for region in ("torso", "arms"):
+                ref_sub = ref_mask & (ref_regions["arms"] if region == "arms" else ~ref_regions["arms"])
+                src_sub = src_mask & (src_regions["arms"] if region == "arms" else ~src_regions["arms"])
+                if src_sub.sum() < 50:
+                    src_sub = src_mask                                   # region not visible in the original: whole garment
+                lab, parts_record[region] = match_part(lab, ref_sub, src_lab, src_sub, 1, "largest")
+                if parts_record[region].get("pairs"):
+                    chosen.append(parts_record[region]["pairs"][0]["source_lab"])
+            record[role] = dict(state="matched_by_position", regions=parts_record, source_centers=chosen,
+                                reference_parts=rule["reference"], source_parts=rule["source"])
+            continue
         excluded = None
         other = rule.get("exclude_colours_of")
         if other and record.get(other, {}).get("source_centers"):

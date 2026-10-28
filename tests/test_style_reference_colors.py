@@ -1,8 +1,8 @@
 """참조 색 맞춤(D-187 다음 단계): 원본 색으로 옮기되 참조의 명암 변화는 유지, 피부는 옷에서 빠진다."""
 import numpy as np
 
-from genai_lab.style_reference_colors import (clusters, lab_to_rgb, match_eyes, match_part, recolor_reference, rgb_to_lab,
-                                              without_colours)
+from genai_lab.style_reference_colors import (body_regions, clusters, flatten_lightness, lab_to_rgb, match_eyes, match_part,
+                                              recolor_reference, rgb_to_lab, without_colours)
 
 
 def test_lab_round_trip():
@@ -85,8 +85,8 @@ def test_lower_skips_the_upper_colour_unless_nothing_else_is_left():
 
 def test_outline_pixels_are_not_a_garment_colour():
     ref = np.full((20, 20, 3), (60, 90, 160), np.uint8)
-    src = np.full((20, 20, 3), (5, 5, 6), np.uint8)                    # mostly black outlines
-    src[:6] = (95, 105, 125)                                           # narrow blue-grey trousers
+    src = np.full((20, 20, 3), (95, 105, 125), np.uint8)               # blue-grey trousers
+    src[:4] = (5, 5, 6)                                                # outlines: a minority (20%; a majority means a black garment)
     mask = np.ones((20, 20), bool)
     out = lab_to_rgb(match_part(rgb_to_lab(ref), mask, rgb_to_lab(src), mask, source="largest")[0])
     assert out.mean() > 60                                             # trousers colour, not black
@@ -123,3 +123,39 @@ def test_eyes_take_each_side_colour_and_keep_white_and_pupil():
     assert out[15, 15, 0] > out[15, 15, 2] + 60                         # image-left iris now gold
     assert out[15, 55, 2] > out[15, 55, 0] + 60                         # image-right iris stays blue
     assert out[11, 11].min() > 230 and out[20, 20].max() < 40           # sclera and pupil untouched
+
+
+def test_black_garment_is_not_dropped_as_outline():
+    ref = np.full((20, 20, 3), (200, 190, 170), np.uint8)              # beige reference trousers
+    src = np.full((20, 20, 3), (6, 6, 7), np.uint8)                    # black trousers (mostly dark)
+    mask = np.ones((20, 20), bool)
+    out = lab_to_rgb(match_part(rgb_to_lab(ref), mask, rgb_to_lab(src), mask, source="largest")[0])
+    assert out.mean() < 60                                              # dark, not beige
+
+
+def test_flatten_presses_print_strokes_but_keeps_large_shading():
+    lab = rgb_to_lab(np.full((60, 60, 3), 200, np.uint8))
+    lab[:, 30:, 0] -= 30                                                # large shadow on the right half
+    lab[28:32, 5:25, 0] = 10                                            # a black print stroke
+    mask = np.ones((60, 60), bool)
+    flat = flatten_lightness(lab, mask)
+    assert flat[30, 15, 0] - flat[30, 5, 0] > -12                       # stroke pressed (was about -70)
+    assert flat[10, 50, 0] < flat[10, 10, 0] - 15                       # big shadow kept
+
+
+def test_upper_is_matched_by_position_torso_and_arms():
+    h, w = 100, 100
+    joints = dict(right_shoulder=[30, 20], right_elbow=[15, 50], right_wrist=[10, 80],
+                  left_shoulder=[70, 20], left_elbow=[85, 50], left_wrist=[90, 80])
+    regions = body_regions((h, w), joints)
+    ref = np.full((h, w, 3), (240, 240, 240), np.uint8)                 # reference: white top everywhere...
+    ref[regions["arms"]] = (30, 30, 60)                                 # ...dark jacket on the arms
+    src = np.full((h, w, 3), (230, 225, 210), np.uint8)                 # original: light shirt on the arms...
+    src[~regions["arms"]] = (60, 80, 45)                                # ...olive vest on the torso
+    face = np.zeros((h, w), bool)
+    parts = dict(face=face, topwear=np.ones((h, w), bool))
+    plan = {"upper": dict(reference=["topwear"], source=["topwear"], split="torso_arms")}
+    out, record = recolor_reference(ref, parts, src, parts, plan, reference_joints=joints, source_joints=joints)
+    assert record["upper"]["state"] == "matched_by_position"
+    assert out[60, 50, 1] > out[60, 50, 2] + 15 and out[60, 50].mean() < 120     # torso -> olive (was white)
+    assert out[50, 15].mean() > 180                                               # arms -> light shirt (was dark jacket)

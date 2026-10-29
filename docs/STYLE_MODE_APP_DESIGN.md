@@ -137,3 +137,4 @@ run_style_redraw(request) -> StyleRedrawOutcome(state="review_pending" | "refuse
 ### 진행
 
 - S1(2026-10-29): `character_style_conditioning.py`·`character_style_inputs.py`·`scripts/prepare_character_style_inputs.py`·`tests/test_character_style_inputs.py` 커밋. CPU 시험 34개 통과(입력 묶음 19 + 색 맞춤 15). 코드 동작은 바꾸지 않음(빈 줄 하나 정리).
+- S2(2026-10-29): 의상 참조를 정식 세 번째 어댑터로. 입력 묶음은 `outfit_path` + 주석 `outfit_sha256`·`outfit_box`(둘 다 있거나 둘 다 없음)를 받아 `outfit-reference.png`·`outfit-mask.png`를 만들고, `ConditioningOptions(outfit_scale=…)`이 있을 때만 세 번째 참조·마스크·강도를 붙인다(묶음과 강도가 어긋나면 거부). 실행 전 검사는 불러온 어댑터 수가 호출의 참조 수와 같은지 본다. 의상 참조가 없는 묶음은 예전과 같음. CPU 시험 41개 통과(새 7개). **실제 자료 대조:** T003·T017·N004에서 정식 경로가 밤사이 우회 방식과 문장·자세 지도·참조 3장·마스크 3개·강도·seed까지 같은 호출을 만듦(`parity.json`, 생성 없음).

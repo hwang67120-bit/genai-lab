@@ -200,6 +200,71 @@ class TestCharacterStyleInputs(unittest.TestCase):
         self.assertEqual(call.evidence["model_calls"],0)
 
 
+    def prepare_outfit(self, box=None):
+        outfit=self.root/"outfit.png"
+        Image.new("RGB",(40,70),(10,120,90)).save(outfit)
+        self.profile.update(outfit_sha256=sha256_bytes(outfit.read_bytes()),outfit_box=box or [8,40,56,96])
+        return prepare_character_style_bundle(self.source,self.style,self.profile,self.bundle,outfit)
+
+    def test_outfit_reference_is_third_adapter_on_body_box_only(self):
+        manifest=self.prepare_outfit()
+        self.assertEqual(manifest["routing"]["adapter_order"],["style","identity","outfit"])
+        call=build_conditioning_call(self.bundle,ConditioningOptions(.4,.7,.6,outfit_scale=.8))
+        import torch
+        masks=call.kwargs["cross_attention_kwargs"]["ip_adapter_masks"]
+        self.assertEqual(len(masks),3)
+        self.assertEqual(int(torch.count_nonzero(masks[2])),48*56)
+        self.assertEqual(call.kwargs["ip_adapter_image"][2].getpixel((0,0)),(10,120,90))
+        self.assertEqual(call.adapter_scales[1:],[.4,.8])
+        self.assertEqual(call.evidence["adapter_order"],["style","identity","outfit"])
+        self.assertEqual(call.evidence["outfit_reference_sha256"],manifest["assets"]["outfit"]["sha256"])
+
+    def test_two_adapter_bundle_unchanged_without_outfit(self):
+        call=self.call()
+        self.assertEqual(len(call.kwargs["ip_adapter_image"]),2)
+        self.assertEqual(call.evidence["adapter_order"],["style","identity"])
+        self.assertIsNone(call.evidence["outfit_reference_sha256"])
+
+    def test_outfit_reference_and_scale_must_match(self):
+        self.prepare()
+        with self.assertRaisesRegex(CharacterInputError,"outfit_reference_and_scale"):
+            build_conditioning_call(self.bundle,ConditioningOptions(.4,.7,.6,outfit_scale=.8))
+        other=self.root/"outfit-bundle";self.bundle=other
+        self.prepare_outfit()
+        with self.assertRaisesRegex(CharacterInputError,"outfit_reference_and_scale"):
+            build_conditioning_call(self.bundle,self.options)
+
+    def test_outfit_annotation_without_file_and_bad_box_rejected(self):
+        self.profile.update(outfit_sha256="0"*64,outfit_box=[8,40,56,96])
+        with self.assertRaisesRegex(CharacterInputError,"outfit_reference_and_annotation"):self.prepare()
+        self.profile.pop("outfit_sha256");self.profile.pop("outfit_box")
+        with self.assertRaisesRegex(CharacterInputError,"outfit_box_outside_source"):self.prepare_outfit([8,40,56,97])
+        self.assertFalse(self.bundle.exists())
+
+    def test_tampered_outfit_fails(self):
+        self.prepare_outfit()
+        (self.bundle/"outfit-reference.png").write_bytes(b"tampered")
+        with self.assertRaisesRegex(CharacterInputError,"sha_mismatch"):
+            build_conditioning_call(self.bundle,ConditioningOptions(.4,.7,.6,outfit_scale=.8))
+
+    def test_outfit_scale_range_checked(self):
+        for value in (-.1,1.5,float("nan"),True):
+            with self.subTest(value=value),self.assertRaises(CharacterInputError):
+                ConditioningOptions(.4,.7,.6,outfit_scale=value)
+
+    def test_three_adapter_call_needs_three_loaded_adapters(self):
+        self.prepare_outfit()
+        call=build_conditioning_call(self.bundle,ConditioningOptions(.4,.7,.6,outfit_scale=.8))
+        pipeline=RecordingPipeline()
+        with self.assertRaisesRegex(CharacterInputError,"three_ordered"):
+            dispatch_conditioning_once(pipeline,call,execution_authorized=True)
+        self.assertEqual(pipeline.calls,[])
+        pipeline.unet.encoder_hid_proj.image_projection_layers=[object()]*3
+        output,evidence=dispatch_conditioning_once(pipeline,call,execution_authorized=True)
+        self.assertEqual(pipeline.scales[2],.8)
+        self.assertEqual(len(pipeline.calls[0]["ip_adapter_image"]),3)
+        self.assertEqual(len(pipeline.calls[0]["masks"]),3)
+
     def test_pose_map_does_not_inherit_changed_source_colors(self):
         first=self.prepare()
         with Image.open(self.bundle/"structure-pose.png") as image:

@@ -23,9 +23,11 @@ class ConditioningOptions:
     steps: int = 50
     guidance: float = 5.0
     seed: int = 42
+    outfit_scale: float | None = None   # 의상 참조(세 번째 어댑터, D-195 0.8). 묶음에 의상 참조가 있을 때만 준다.
 
     def __post_init__(self):
-        for value in (self.identity_scale, self.style_scale, self.structure_scale):
+        scales = (self.identity_scale, self.style_scale, self.structure_scale)
+        for value in scales + (() if self.outfit_scale is None else (self.outfit_scale,)):
             if type(value) not in (int, float) or not math.isfinite(value) or not 0 <= value <= 1:
                 raise CharacterInputError("conditioning_scale_out_of_range")
         if type(self.identity_visual) is not bool or type(self.structure) is not bool:
@@ -55,9 +57,12 @@ def build_feature_prompts(profile):
 
 
 def build_conditioning_call(folder, options):
-    """시각 참조 두 개와 구조 입력을 조립한다. 이미지를 생성하지 않는다."""
+    """시각 참조 두 개(의상 참조가 있으면 세 개)와 구조 입력을 조립한다. 이미지를 생성하지 않는다."""
     manifest, images = read_verified_bundle(folder)
     try:
+        has_outfit = "outfit" in images
+        if has_outfit != (options.outfit_scale is not None):
+            raise CharacterInputError("outfit_reference_and_scale_must_match")
         from diffusers.image_processor import IPAdapterMaskProcessor
         width, height = manifest["canvas"]
         processor = IPAdapterMaskProcessor()
@@ -72,10 +77,19 @@ def build_conditioning_call(folder, options):
             {"up": {"block_0": [0.0, options.style_scale, 0.0]}},
             options.identity_scale if options.identity_visual else 0.0,
         ]
+        references = [images["style"].copy(), face]
+        masks = [style_mask, identity_mask]
+        order = ["style", "identity"]
+        if has_outfit:
+            # 의상 참조는 몸 영역에만, 모든 블록에 적용한다(D-195 시험 구성과 같음).
+            scales.append(options.outfit_scale)
+            references.append(images["outfit"].copy())
+            masks.append(processor.preprocess(images["outfit_mask"], height=height, width=width))
+            order.append("outfit")
         kwargs = {
             "prompt": prompt, "prompt_2": prompt, "negative_prompt": negative,
-            "image": pose, "ip_adapter_image": [images["style"].copy(), face],
-            "cross_attention_kwargs": {"ip_adapter_masks": [style_mask, identity_mask]},
+            "image": pose, "ip_adapter_image": references,
+            "cross_attention_kwargs": {"ip_adapter_masks": masks},
             "width": width, "height": height, "num_inference_steps": options.steps,
             "guidance_scale": options.guidance, "num_images_per_prompt": 1,
             "controlnet_conditioning_scale": options.structure_scale if options.structure else 0.0,
@@ -85,15 +99,16 @@ def build_conditioning_call(folder, options):
             "state": "conditioning_prepared_not_generated", "model_calls": 0,
             "character_traits": deepcopy(manifest["profile"]["traits"]),
             "prompt": prompt, "negative_prompt": negative,
-            "adapter_order": ["style", "identity"], "adapter_scales": deepcopy(scales),
+            "adapter_order": order, "adapter_scales": deepcopy(scales),
             "identity_visual_enabled": options.identity_visual,
             "structure_enabled": options.structure,
             "structure_origin": manifest["profile"]["layout"]["origin"],
             "style_reference_sha256": manifest["assets"]["style"]["sha256"],
             "identity_reference_sha256": manifest["assets"]["identity"]["sha256"] if options.identity_visual else None,
             "pose_sha256": manifest["assets"]["pose"]["sha256"] if options.structure else None,
-            "mask_shapes": [list(style_mask.shape), list(identity_mask.shape)],
-            "mask_devices": [str(style_mask.device), str(identity_mask.device)],
+            "outfit_reference_sha256": manifest["assets"]["outfit"]["sha256"] if has_outfit else None,
+            "mask_shapes": [list(m.shape) for m in masks],
+            "mask_devices": [str(m.device) for m in masks],
             "original_rgb_initialization": False, "postprocessing": [],
             "tokenizer_delivery": "not_checked_until_loaded_pipeline",
             "quality_approval": None,
@@ -104,16 +119,17 @@ def build_conditioning_call(folder, options):
             image.close()
 
 
-def validate_pipeline_contract(pipeline):
-    """img2img 오접속을 거부하고 시각 참조 두 개를 갖춘 SDXL ControlNet 계약을 검사한다."""
+def validate_pipeline_contract(pipeline, adapter_count=2):
+    """img2img 오접속을 거부하고 시각 참조 수(그림체·얼굴[·의상])를 갖춘 SDXL ControlNet 계약을 검사한다."""
     parameters = inspect.signature(pipeline.__call__).parameters
     required = {"image", "ip_adapter_image", "cross_attention_kwargs", "controlnet_conditioning_scale", "prompt_2"}
     if not required.issubset(parameters) or "strength" in parameters:
         raise CharacterInputError("requires_sdxl_controlnet_text_to_image_contract")
     layers = getattr(getattr(getattr(pipeline, "unet", None), "encoder_hid_proj", None),
                      "image_projection_layers", ())
-    if len(layers) != 2 or not callable(getattr(pipeline, "set_ip_adapter_scale", None)):
-        raise CharacterInputError("two_ordered_ip_adapters_required_style_then_identity")
+    if len(layers) != adapter_count or not callable(getattr(pipeline, "set_ip_adapter_scale", None)):
+        raise CharacterInputError("two_ordered_ip_adapters_required_style_then_identity" if adapter_count == 2
+                                  else "three_ordered_ip_adapters_required_style_identity_outfit")
     if getattr(pipeline, "controlnet", None) is None:
         raise CharacterInputError("pose_controlnet_required")
 
@@ -141,7 +157,7 @@ def dispatch_conditioning_once(pipeline, call, *, execution_authorized=False, ca
         raise PermissionError("generation_not_authorized")
     if call.evidence["model_calls"]:
         raise CharacterInputError("conditioning_call_already_dispatched")
-    validate_pipeline_contract(pipeline)
+    validate_pipeline_contract(pipeline, len(call.adapter_scales))
     token_counts = check_prompt_delivery(pipeline, call)
     from torch import Generator
     arguments = dict(call.kwargs, generator=Generator(device="cpu").manual_seed(call.seed))

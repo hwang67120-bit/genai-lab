@@ -38,7 +38,7 @@ def inspect_cpu_delivery(bundle, options):
         check_names = inspect.signature(StableDiffusionXLControlNetPipeline.__call__).parameters
         checks["installed_text_to_image_accepts_arguments"] = set(call.kwargs).issubset(check_names)
         checks["img2img_is_distinguishable"] = "strength" in inspect.signature(StableDiffusionXLControlNetImg2ImgPipeline.__call__).parameters
-        checks["all_masks_are_cpu"] = call.evidence["mask_devices"] == ["cpu", "cpu"]
+        checks["all_masks_are_cpu"] = all(device == "cpu" for device in call.evidence["mask_devices"])
         masks = call.kwargs["cross_attention_kwargs"]["ip_adapter_masks"]
         checks["identity_has_spatial_limit"] = 0 < int(torch.count_nonzero(masks[1])) < masks[1].numel()
         checks["style_covers_canvas"] = bool(torch.all(masks[0] == 1))
@@ -111,9 +111,10 @@ def main():
     parser.add_argument("--style", required=True, type=Path)
     parser.add_argument("--annotations", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--outfit", type=Path, help="의상 참조(세 번째 어댑터). 주석에 outfit_sha256·outfit_box가 있어야 한다")
     args = parser.parse_args()
     profile = json.loads(args.annotations.read_text(encoding="utf-8"))
-    manifest = prepare_character_style_bundle(args.source, args.style, profile, args.output)
+    manifest = prepare_character_style_bundle(args.source, args.style, profile, args.output, args.outfit)
     from genai_lab.character_style_conditioning import ConditioningOptions
     options = ConditioningOptions(**profile["cpu_probe_options"])
     report = inspect_cpu_delivery(args.output, options)

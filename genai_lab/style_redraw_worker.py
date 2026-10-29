@@ -119,7 +119,7 @@ def prepare(directory):
     features = extract_features(rgb, source_parts, scores, gender=confirmed or "unknown")
     traits = trait_rows(features, scores, confirmed)
     annotations = build_annotations(sha(canvas_path), sha(directory / "style-reference.png"), sha(directory / "outfit-reference.png"),
-                                    face, traits)
+                                    face, traits, confirmed)
     save(directory / "annotations.json", annotations)
     prepare_character_style_bundle(canvas_path, directory / "style-reference.png", annotations, directory / "inputs",
                                    directory / "outfit-reference.png")

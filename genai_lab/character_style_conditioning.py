@@ -53,6 +53,8 @@ def build_feature_prompts(profile):
     traits = "; ".join(row["text"].strip() for row in profile["traits"] if row["text"].strip())
     positive = profile["scene_prompt"].strip() + ". " + (traits + ". " if traits else "") + profile["style_prompt"].strip()
     negative = "photograph, skin pores, flat cel shading, latex, felt, watermark"
+    if profile.get("negative_terms", "").strip():          # 예: 성별을 알 때 반대 성별 낱말(D-199)
+        negative += ", " + profile["negative_terms"].strip()
     return positive, negative
 
 

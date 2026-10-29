@@ -36,6 +36,8 @@ SKIN_WORDS = ((45, "dark brown skin"), (60, "brown skin"), (72, ""), (101, "fair
 EXTRA_HAIR_STYLE_TAGS = ("dreadlocks", "undercut", "afro", "cornrows", "mohawk", "buzz_cut")
 TAG_THRESHOLD = 0.5
 GENDER_WORDS = {"male": "adult man", "female": "adult woman"}
+# 성별 낱말만으로는 짧은 곱슬머리·짙은 피부의 여성(V002·T014)이 남성처럼 나왔다(D-199) → 반대 성별을 부정 문장에.
+GENDER_NEGATIVE = {"male": "woman, female, feminine", "female": "man, male, masculine"}
 EVIDENCE = "자동 측정(특징표·태그, style_redraw_inputs). 사람 확인 전."
 
 
@@ -138,9 +140,9 @@ def trait_rows(features, character_scores, confirmed_gender=None):
             _row("clothes", clothes, "옷"), _row("build", build, "체형·성별")]
 
 
-def build_annotations(source_sha256, style_sha256, outfit_sha256, face, traits):
+def build_annotations(source_sha256, style_sha256, outfit_sha256, face, traits, gender=None):
     """입력 묶음 주석(character_style_inputs.validate_annotations 형식). 자세는 표준 자세, 의상 참조는 몸 영역."""
-    return dict(schema_version=1, source_sha256=source_sha256, style_sha256=style_sha256, canvas=list(CANVAS),
+    return dict(schema_version=1, negative_terms=GENDER_NEGATIVE.get(gender, ""), source_sha256=source_sha256, style_sha256=style_sha256, canvas=list(CANVAS),
                 coordinate_system="image_xy", height_cm=None, face_box=list(face), traits=traits,
                 scene_prompt=SCENE_PROMPT, style_prompt=STYLE_PROMPT,
                 layout=dict(origin="manual_image_annotation",

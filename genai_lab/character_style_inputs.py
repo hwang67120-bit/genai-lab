@@ -78,6 +78,8 @@ def validate_annotations(profile, canvas):
         raise CharacterInputError("scene_prompt_missing")
     if not isinstance(profile.get("style_prompt"), str) or not profile["style_prompt"].strip():
         raise CharacterInputError("style_prompt_missing")
+    if not isinstance(profile.get("negative_terms", ""), str) or len(profile.get("negative_terms", "")) > 120:
+        raise CharacterInputError("negative_terms_invalid")
     layout = profile.get("layout", {})
     if layout.get("origin") not in ("manual_image_annotation", "detector"):
         raise CharacterInputError("layout_origin_missing")

@@ -127,9 +127,13 @@ run_style_redraw(request) -> StyleRedrawOutcome(state="review_pending" | "refuse
 
 각 단계는 이전 단계 확인 뒤에 시작한다. 코드는 Linux에서 고쳐도 되지만 **git add·commit은 Windows git**, 커밋 전 `git diff --cached --stat` 확인.
 
-## 10. 사용자 결정이 필요한 것
+## 10. 사용자 결정 (2026-10-29)
 
-1. 이 설계대로 S1부터 구현을 시작해도 되는지.
-2. 그림체 고르기: (가) target-02 하나로 시작(시험용, 배포 전 허가 확인) / (나) 처음부터 사용자가 그림체 그림을 넣는 칸.
-3. 모드 B 결과를 몇 장 낼지: 1장(지금 시험과 같음) / 후보 2~3장(장당 약 60초씩 늘어남).
-4. 모드 A 결과를 모드 B에 넣는 연결: 지금은 하지 않음(추천) / 같이 설계.
+1. 이 설계대로 **S1부터 구현** 시작.
+2. 그림체: **(가) target-02 하나로 시작** — 배포 전에 사용 허가 확인(8절 2).
+3. 모드 B 결과: **1장**.
+4. 모드 A 결과를 모드 B에 넣는 연결: **하지 않음**.
+
+### 진행
+
+- S1(2026-10-29): `character_style_conditioning.py`·`character_style_inputs.py`·`scripts/prepare_character_style_inputs.py`·`tests/test_character_style_inputs.py` 커밋. CPU 시험 34개 통과(입력 묶음 19 + 색 맞춤 15). 코드 동작은 바꾸지 않음(빈 줄 하나 정리).

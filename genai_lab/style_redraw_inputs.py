@@ -20,6 +20,11 @@ OUTFIT_NECK_MARGIN = 0.02                   # 목 관절보다 그림 높이의 
 OUTFIT_HIP_BELOW = 0.05                     # 윗옷 조각은 엉덩이 관절보다 5% 아래까지
 OUTFIT_HIP_ABOVE = 0.03                     # 아래옷 조각은 엉덩이 관절보다 3% 위부터
 OUTFIT_MIN_PIXELS = 2000                    # 조각에 사람 픽셀이 이보다 적으면 그 조각은 없는 것으로
+# D-200 머리 참조: 그림체 참조(target-02)의 단발 모양이 결과 머리로 넘어오고, 원본 머리 모양을 담은 참조가 없었다(얼굴 참조는
+# 얼굴만, 의상 참조는 목 아래). 원본 머리카락+얼굴을 잘라 표준 자세 머리 영역에만 0.7로 준다(V002·T009·V007·T014·N004 시험).
+HEAD_BOX = [264, 30, 504, 320]
+HAIR_SCALE = 0.7
+HAIR_MARGIN = 0.04                          # 머리+얼굴 영역 둘레 여유(그림 높이 비율)
 # 후보 3장(사용자 10/29 (가)): 몸선은 seed에 묶여 문장으로 못 움직인다(D-199) → seed 셋으로 만들고 사용자가 1장 고른다.
 SEEDS = (42, 43, 44)
 FACE_BOX_SCALE = 1.6
@@ -81,6 +86,23 @@ def outfit_references(image, alpha, neck_y, hip_y=None):
         return [("body", upper, upper_crop, list(OUTFIT_BOX))]
     return [("upper", upper, upper_crop, list(OUTFIT_SPLIT_BOXES["upper"])),
             ("lower", lower, lower_crop, list(OUTFIT_SPLIT_BOXES["lower"]))]
+
+
+def hair_reference(image, alpha, hair, face):
+    """머리 참조: 원본 머리카락+얼굴 영역(둘레 4% 여유)의 높이만 남기고 배경을 지워 회색 바탕에 둔다. (그림, 자른 상자)."""
+    head = np.asarray(hair, bool) | np.asarray(face, bool)
+    ys, xs = np.nonzero(head)
+    if len(xs) < OUTFIT_MIN_PIXELS:
+        raise StyleRedrawInputError("머리를 찾지 못했습니다. 머리가 잘 보이는 그림을 넣어 주세요.")
+    h, w = head.shape
+    margin = int(HAIR_MARGIN * h)
+    box = (max(0, int(xs.min()) - margin), max(0, int(ys.min()) - margin),
+           min(w, int(xs.max()) + margin), min(h, int(ys.max()) + margin))
+    rgb = np.asarray(image.convert("RGB")).astype(np.float32)
+    a = np.asarray(alpha, dtype=np.float32)
+    a = a / 255.0 if a.max() > 1 else a
+    comp = rgb * a[..., None] + np.array(OUTFIT_BACKGROUND, np.float32) * (1 - a[..., None])
+    return Image.fromarray(np.clip(comp + 0.5, 0, 255).astype(np.uint8)).crop(box), list(box)
 
 
 def outfit_reference(image, alpha, top, bottom=None):
@@ -169,12 +191,13 @@ def trait_rows(features, character_scores, confirmed_gender=None):
 
 def build_annotations(source_sha256, style_sha256, outfits, face, traits, gender=None):
     """입력 묶음 주석(character_style_inputs.validate_annotations 형식). 자세는 표준 자세.
-    outfits: [(이름, SHA-256, 적용 영역)] — outfit_references 순서 그대로."""
+    outfits: [(이름, SHA-256, 적용 영역)] 또는 [(이름, SHA-256, 적용 영역, 강도)] — 참조 순서 그대로(의상 다음 머리)."""
     return dict(schema_version=1, negative_terms=GENDER_NEGATIVE.get(gender, ""), source_sha256=source_sha256, style_sha256=style_sha256, canvas=list(CANVAS),
                 coordinate_system="image_xy", height_cm=None, face_box=list(face), traits=traits,
                 scene_prompt=SCENE_PROMPT, style_prompt=STYLE_PROMPT,
                 layout=dict(origin="manual_image_annotation",
                             evidence="고정 표준 서 있는 자세(사용자 10/29: 자세 무관, 인체만 맞으면 됨). 원본 관절은 옷 색 읽기에만",
                             joints={k: list(v) for k, v in STANDARD_POSE.items()}),
-                outfits=[dict(name=name, sha256=digest, box=list(box)) for name, digest, box in outfits],
+                outfits=[dict(name=row[0], sha256=row[1], box=list(row[2]), **({"scale": row[3]} if len(row) > 3 else {}))
+                         for row in outfits],
                 cpu_probe_options={k: SCALES[k] for k in ("identity_scale", "style_scale", "structure_scale")})

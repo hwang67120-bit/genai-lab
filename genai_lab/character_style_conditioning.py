@@ -84,9 +84,9 @@ def build_conditioning_call(folder, options):
         references = [images["style"].copy(), face]
         masks = [style_mask, identity_mask]
         order = ["style", "identity"]
-        for role, mask_role in outfits:
-            # 의상 참조는 자기 몸 영역에만, 모든 블록에 같은 강도로 적용한다(D-195, 윗옷·아래옷 나눔 D-200).
-            scales.append(options.outfit_scale)
+        for row, (role, mask_role) in zip(manifest["profile"].get("outfits", []), outfits):
+            # 영역 참조(의상·머리)는 자기 영역에만, 모든 블록에 적용한다(D-195, 윗옷·아래옷 나눔·머리 참조 D-200).
+            scales.append(row.get("scale", options.outfit_scale))
             references.append(images[role].copy())
             masks.append(processor.preprocess(images[mask_role], height=height, width=width))
             order.append(role)

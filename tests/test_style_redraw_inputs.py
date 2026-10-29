@@ -9,8 +9,8 @@ from PIL import Image
 from genai_lab.character_style_inputs import CharacterInputError, prepare_character_style_bundle, sha256_bytes
 from genai_lab.character_style_conditioning import ConditioningOptions, build_conditioning_call, build_feature_prompts
 from genai_lab.style_redraw_inputs import (
-    CANVAS, OUTFIT_BACKGROUND, OUTFIT_BOX, OUTFIT_SPLIT_BOXES, SCALES, StyleRedrawInputError, build_annotations, face_box,
-    garment_words, outfit_reference, outfit_references, trait_rows,
+    CANVAS, HAIR_SCALE, HEAD_BOX, OUTFIT_BACKGROUND, OUTFIT_BOX, OUTFIT_SPLIT_BOXES, SCALES, StyleRedrawInputError,
+    build_annotations, face_box, garment_words, hair_reference, outfit_reference, outfit_references, trait_rows,
 )
 
 
@@ -46,6 +46,17 @@ class TestStyleRedrawInputs(unittest.TestCase):
         self.assertEqual(tuple(arr[20, 20]), (200, 30, 30))
         with self.assertRaises(StyleRedrawInputError):
             outfit_reference(image, alpha, top=199)
+
+    def test_hair_reference_crops_hair_and_face_with_margin(self):
+        image = Image.new("RGB", (400, 1000), (20, 20, 20))
+        alpha = np.zeros((1000, 400), np.uint8); alpha[50:900, 100:300] = 255
+        hair = np.zeros((1000, 400), bool); hair[60:200, 120:280] = True
+        face = np.zeros((1000, 400), bool); face[150:260, 150:250] = True
+        out, box = hair_reference(image, alpha, hair, face)
+        self.assertEqual(box, [80, 20, 319, 299])          # 머리+얼굴 (120..279, 60..259) 둘레 1000*0.04 = 40
+        self.assertEqual(tuple(np.asarray(out)[5, 5]), OUTFIT_BACKGROUND)   # 사람 밖은 회색 바탕
+        with self.assertRaises(StyleRedrawInputError):
+            hair_reference(image, alpha, np.zeros_like(hair), np.zeros_like(face))
 
     def test_outfit_split_into_upper_and_lower_at_the_hips(self):
         image = Image.new("RGB", (400, 1000), (200, 30, 30))
@@ -105,12 +116,14 @@ class TestStyleRedrawInputs(unittest.TestCase):
             traits = trait_rows(features(eye=["green_eyes"]), {"shirt": 0.9}, "female")
             digest = sha256_bytes(outfit.read_bytes())
             ann = build_annotations(sha256_bytes(source.read_bytes()), sha256_bytes(style.read_bytes()),
-                                    [("upper", digest, OUTFIT_SPLIT_BOXES["upper"]), ("lower", digest, OUTFIT_SPLIT_BOXES["lower"])],
+                                    [("upper", digest, OUTFIT_SPLIT_BOXES["upper"]), ("lower", digest, OUTFIT_SPLIT_BOXES["lower"]),
+                                     ("hair", digest, HEAD_BOX, HAIR_SCALE)],
                                     [300, 100, 460, 260], traits, "female")
-            prepare_character_style_bundle(source, style, ann, root / "bundle", {"upper": outfit, "lower": outfit})
+            prepare_character_style_bundle(source, style, ann, root / "bundle", {"upper": outfit, "lower": outfit, "hair": outfit})
             call = build_conditioning_call(root / "bundle", ConditioningOptions(**SCALES))
-            self.assertEqual(len(call.kwargs["ip_adapter_image"]), 4)
-            self.assertEqual(call.adapter_scales[2:], [0.8, 0.8])
+            self.assertEqual(len(call.kwargs["ip_adapter_image"]), 5)
+            self.assertEqual(call.adapter_scales[2:], [0.8, 0.8, 0.7])
+            self.assertEqual(call.evidence["adapter_order"][2:], ["outfit_upper", "outfit_lower", "outfit_hair"])
             self.assertEqual(call.kwargs["prompt"],
                              "Full body, standing by a window. green eyes; shirt; adult woman. Painted illustration, blended shadows, nuanced colors")
             self.assertTrue(call.kwargs["negative_prompt"].endswith(", man, male, masculine"))

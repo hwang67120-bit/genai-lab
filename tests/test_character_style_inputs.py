@@ -226,6 +226,13 @@ class TestCharacterStyleInputs(unittest.TestCase):
         dispatch_conditioning_once(pipeline,call,execution_authorized=True)
         self.assertEqual(len(pipeline.calls[0]["masks"]),4)
 
+    def test_reference_scale_out_of_range_rejected(self):
+        self.prepare_outfit()
+        for value in (1.5, -0.1, float("nan"), "0.7"):
+            profile=deepcopy(self.profile);profile["outfits"][0]["scale"]=value
+            with self.subTest(value=value),self.assertRaisesRegex(CharacterInputError,"outfits_invalid"):
+                prepare_character_style_bundle(self.source,self.style,profile,self.root/f"b-{value}",{"body":self.root/"outfit-body.png"})
+
     def test_outfit_names_must_be_unique_and_simple(self):
         for pieces in ([("upper",(1,1,1),[8,40,56,70]),("upper",(2,2,2),[8,66,56,96])],[("Up-1",(1,1,1),[8,40,56,70])]):
             with self.subTest(pieces=pieces),self.assertRaises(CharacterInputError):

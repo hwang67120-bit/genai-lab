@@ -62,8 +62,8 @@ def prepare(directory):
     from genai_lab.clothing_analysis import ClothingDesignAnalysisSettings, WdTagSession
     from genai_lab.free_generation import safety_observation
     from genai_lab.studio_controller import guessed_gender
-    from genai_lab.style_redraw_inputs import (STYLE_PLAN, build_annotations, face_box, outfit_references, trait_rows,
-                                               StyleRedrawInputError)
+    from genai_lab.style_redraw_inputs import (HAIR_SCALE, HEAD_BOX, STYLE_PLAN, build_annotations, face_box, hair_reference,
+                                               outfit_references, trait_rows, StyleRedrawInputError)
     req = json.loads((directory / "request.json").read_text(encoding="utf-8"))
     started = time.time()
     canvas_path = directory / "character.png"
@@ -118,20 +118,27 @@ def prepare(directory):
     finally:
         seg.close()
     Image.fromarray(styled).save(directory / "style-reference.png")
+    try:
+        hair, hair_crop = hair_reference(canvas, source_alpha, source_parts["hair"], source_parts["face"])
+    except StyleRedrawInputError as error:
+        return refuse("hair", str(error))
+    outfit_paths["hair"] = directory / "outfit-hair.png"
+    hair.save(outfit_paths["hair"])
+    pieces.append(("hair", hair, hair_crop, list(HEAD_BOX), HAIR_SCALE))
     # 자동 성별 추정은 기록만 한다. 문장에는 사람이 확정한 성별(request의 confirmed_gender)만 쓴다(D-198).
     guessed = guessed_gender(dict(character_scores=scores))
     confirmed = req.get("confirmed_gender")
     features = extract_features(rgb, source_parts, scores, gender=confirmed or "unknown")
     traits = trait_rows(features, scores, confirmed)
     annotations = build_annotations(sha(canvas_path), sha(directory / "style-reference.png"),
-                                    [(name, sha(outfit_paths[name]), box) for name, _piece, _crop, box in pieces],
+                                    [(p[0], sha(outfit_paths[p[0]]), *p[3:]) for p in pieces],
                                     face, traits, confirmed)
     save(directory / "annotations.json", annotations)
     prepare_character_style_bundle(canvas_path, directory / "style-reference.png", annotations, directory / "inputs", outfit_paths)
     save(directory / "colour-record.json", colour_record)
     save(directory / "prepare.json", dict(
         state="ready", seconds=round(time.time() - started, 1), gender=confirmed, guessed_gender=guessed, traits=traits, face_box=face,
-        outfits={name: dict(crop=crop, box=box) for name, _piece, crop, box in pieces}, warnings=support_warnings(scores, joints), safety=safety,
+        outfits={p[0]: dict(crop=p[2], box=p[3]) for p in pieces}, warnings=support_warnings(scores, joints), safety=safety,
         colour={k: v["state"] for k, v in colour_record.items()}, joints_used=sorted(joints),
         note="특징 문장·성별은 자동 측정이며 사람 확인 전이다."))
 

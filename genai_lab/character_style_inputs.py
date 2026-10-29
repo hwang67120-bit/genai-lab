@@ -67,7 +67,11 @@ def validate_annotations(profile, canvas):
     if not isinstance(outfits, list) or len(outfits) > MAX_OUTFITS:
         raise CharacterInputError("outfits_invalid")
     for row in outfits:
-        if not isinstance(row, dict) or set(row) != {"name", "sha256", "box"} or not re.fullmatch(r"[a-z]{1,12}", str(row["name"])):
+        # scale(선택): 이 참조만의 강도. 없으면 생성 옵션의 outfit_scale(머리 참조는 0.7, D-200).
+        if (not isinstance(row, dict) or not {"name", "sha256", "box"} <= set(row) <= {"name", "sha256", "box", "scale"}
+                or not re.fullmatch(r"[a-z]{1,12}", str(row["name"]))):
+            raise CharacterInputError("outfits_invalid")
+        if "scale" in row and (type(row["scale"]) not in (int, float) or not math.isfinite(row["scale"]) or not 0 <= row["scale"] <= 1):
             raise CharacterInputError("outfits_invalid")
         validate_box(row["box"], canvas, "outfit_box")
     if len({row["name"] for row in outfits}) != len(outfits):

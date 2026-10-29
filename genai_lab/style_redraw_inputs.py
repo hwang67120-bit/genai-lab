@@ -46,6 +46,10 @@ STANDARD_POSE = {"nose": [384, 175], "neck": [384, 255], "right_shoulder": [304,
 PROPORTION_DEFAULTS = dict(head=0.8, torso=1.6, hip=0.65, leg=1.5, neck_drop=0.55)
 PROPORTION_LIMITS = dict(head=(0.5, 1.3), torso=(1.2, 2.2), hip=(0.5, 0.9), leg=(1.2, 1.9), neck_drop=(0.3, 0.9))
 POSE_TOP, POSE_BOTTOM = 40, 960             # 머리 위·발목 높이(캔버스 768x1024)
+# D-202 구도: 원본에 발목이 없으면(허벅지·무릎에서 잘린 그림) 없는 다리를 지어내지 않고 무릎 위까지만 그린다(사용자 10/30).
+# 지어낸 다리는 비율을 확인할 수 없고(V001 다리 짧음), 아래옷 조각이 작아 바지가 덩어리·흐림(N004·T008·V006)이 됐다.
+KNEE_BOTTOM = 1000                          # 무릎 위 구도에서 무릎 높이
+SCENE_PROMPTS = {"full": "Full body, standing by a window", "knee_up": "Knee-up shot, standing by a window"}
 MAX_GARMENT_WORDS = 6
 GARMENT_DETAIL = r"sleeves|collared|buttons?$|^open |^dress shirt$|^sleeves "
 # 피부 낱말: 얼굴 피부 Lab L* 기준. 45·60은 자유 생성(D-136)과 같다. 60~72는 밝은 면을 재 짙은 피부도 들어와(V006) 낱말 없이
@@ -103,15 +107,24 @@ def measured_proportions(joints, face):
     return found, source
 
 
-def fitted_pose(proportions, canvas=CANVAS):
+def framing_for(joints):
+    """원본 구도: 발목이 보이면 전신(full), 아니면 무릎 위(knee_up)."""
+    return "full" if any(k in joints for k in ("left_ankle", "right_ankle")) else "knee_up"
+
+
+def fitted_pose(proportions, canvas=CANVAS, framing="full"):
     """표준 자세(정면, 팔 내림)를 주어진 비율로 만들어 캔버스에 맞춘다. 반환: 관절, 얼굴 마스크 상자, 머리·윗옷·아래옷·몸 영역.
-    기준 단위는 어깨 폭 1. 팔·발 모양은 고정 뼈대(STANDARD_POSE)와 같은 비율을 쓴다."""
+    기준 단위는 어깨 폭 1. 팔·발 모양은 고정 뼈대(STANDARD_POSE)와 같은 비율을 쓴다.
+    framing="knee_up": 무릎을 캔버스 아래 끝에 두고 발목은 넣지 않는다(D-202)."""
+    if framing not in SCENE_PROMPTS:
+        raise StyleRedrawInputError(f"모르는 구도입니다: {framing}")
     p = proportions
     f = p["head"]                                   # 얼굴 상자 한 변
     torso, leg = p["torso"], p["leg"] * p["torso"]
     face_cy = -p["neck_drop"] * f                   # 목(0,0) 기준 얼굴 중심
-    top, bottom = face_cy - 1.1 * f, torso + leg    # 머리 위(머리카락 여유) ~ 발목
-    k = (POSE_BOTTOM - POSE_TOP) / (bottom - top)
+    knee = torso + 0.513 * leg
+    top, bottom = face_cy - 1.1 * f, (torso + leg if framing == "full" else knee)   # 머리 위(머리카락 여유) ~ 발목 또는 무릎
+    k = ((POSE_BOTTOM if framing == "full" else KNEE_BOTTOM) - POSE_TOP) / (bottom - top)
     k = min(k, (canvas[0] / 2 - 40) / 0.75)         # 팔 바깥(어깨 폭 0.75)이 캔버스 안에
     cx, y0 = canvas[0] / 2, POSE_TOP - top * k
     def at(x, y):
@@ -125,8 +138,9 @@ def fitted_pose(proportions, canvas=CANVAS):
         joints[f"{side}_elbow"] = at(sign * 0.6625, drop + 0.466 * torso)
         joints[f"{side}_wrist"] = at(sign * 0.7375, drop + 0.892 * torso)
         joints[f"{side}_hip"] = at(sign * p["hip"] / 2, torso)
-        joints[f"{side}_knee"] = at(sign * (p["hip"] / 2 + 0.0375), torso + 0.513 * leg)
-        joints[f"{side}_ankle"] = at(sign * (p["hip"] / 2 + 0.0625), torso + leg)
+        joints[f"{side}_knee"] = at(sign * (p["hip"] / 2 + 0.0375), knee)
+        if framing == "full":
+            joints[f"{side}_ankle"] = at(sign * (p["hip"] / 2 + 0.0625), torso + leg)
     def box(x0, y0_, x1, y1):
         a, b = at(x0, y0_), at(x1, y1)
         return [int(max(0, a[0])), int(max(0, a[1])), int(min(canvas[0], b[0])), int(min(canvas[1], b[1]))]
@@ -135,8 +149,9 @@ def fitted_pose(proportions, canvas=CANVAS):
                  # 머리 참조 영역은 목에서 멈춘다: 어깨까지 내려가면 머리 참조의 회색 바탕이 어깨에 칠해졌다(T009, D-201).
                  head=box(-f, face_cy - 1.125 * f, f, 0),
                  upper=box(-half, -0.094, half, torso + 0.094),
-                 lower=box(-half, torso - 0.094, half, torso + leg + 0.31),
-                 body=box(-half, -0.094, half, torso + leg + 0.31))
+                 # 무릎 위 구도는 아래 영역을 캔버스 끝까지(box가 캔버스 안으로 자른다)
+                 lower=box(-half, torso - 0.094, half, (torso + leg + 0.31) if framing == "full" else knee + 1.0),
+                 body=box(-half, -0.094, half, (torso + leg + 0.31) if framing == "full" else knee + 1.0))
     return joints, boxes
 
 
@@ -260,7 +275,8 @@ def trait_rows(features, character_scores, confirmed_gender=None):
             _row("clothes", clothes, "옷"), _row("build", build, "체형·성별")]
 
 
-def build_annotations(source_sha256, style_sha256, outfits, face, traits, gender=None, joints=None, face_mask=None):
+def build_annotations(source_sha256, style_sha256, outfits, face, traits, gender=None, joints=None, face_mask=None,
+                      framing="full"):
     """입력 묶음 주석(character_style_inputs.validate_annotations 형식).
     outfits: [(이름, SHA-256, 적용 영역)] 또는 [(이름, SHA-256, 적용 영역, 강도)] — 참조 순서 그대로(의상 다음 머리).
     joints·face_mask: 원본 비율로 만든 표준 자세(fitted_pose)와 그 얼굴 자리. 없으면 고정 뼈대와 원본 얼굴 상자."""
@@ -269,7 +285,7 @@ def build_annotations(source_sha256, style_sha256, outfits, face, traits, gender
     extra = {"identity_mask_box": list(face_mask)} if face_mask else {}
     return dict(schema_version=1, negative_terms=GENDER_NEGATIVE.get(gender, ""), source_sha256=source_sha256, style_sha256=style_sha256, canvas=list(CANVAS),
                 coordinate_system="image_xy", height_cm=None, face_box=list(face), traits=traits,
-                scene_prompt=SCENE_PROMPT, style_prompt=STYLE_PROMPT, **extra,
+                scene_prompt=SCENE_PROMPTS[framing], style_prompt=STYLE_PROMPT, **extra,
                 layout=dict(origin="manual_image_annotation", evidence=evidence,
                             joints={k: list(v) for k, v in (joints or STANDARD_POSE).items()}),
                 outfits=[dict(name=row[0], sha256=row[1], box=list(row[2]), **({"scale": row[3]} if len(row) > 3 else {}))

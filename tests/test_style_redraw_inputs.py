@@ -10,7 +10,7 @@ from genai_lab.character_style_inputs import CharacterInputError, prepare_charac
 from genai_lab.character_style_conditioning import ConditioningOptions, build_conditioning_call, build_feature_prompts
 from genai_lab.style_redraw_inputs import (
     CANVAS, HAIR_SCALE, HEAD_BOX, OUTFIT_BACKGROUND, OUTFIT_BOX, OUTFIT_SPLIT_BOXES, PROPORTION_DEFAULTS, SCALES, STANDARD_POSE,
-    StyleRedrawInputError, build_annotations, face_box, fitted_pose, garment_words, hair_reference, measured_proportions,
+    StyleRedrawInputError, build_annotations, face_box, fitted_pose, framing_for, garment_words, hair_reference, measured_proportions,
     outfit_reference, outfit_references, trait_rows,
 )
 
@@ -72,6 +72,20 @@ class TestStyleRedrawInputs(unittest.TestCase):
         self.assertLess(boxes["upper"][1], big["right_shoulder"][1])
         self.assertLessEqual(boxes["head"][3], big["neck"][1])     # 머리 참조는 어깨에 걸치지 않는다
         self.assertGreater(boxes["lower"][3], big["right_ankle"][1])
+
+    def test_knee_up_framing_when_original_has_no_ankles(self):
+        self.assertEqual(framing_for({"left_knee": [0, 0]}), "knee_up")
+        self.assertEqual(framing_for({"right_ankle": [0, 0]}), "full")
+        joints, boxes = fitted_pose(PROPORTION_DEFAULTS, framing="knee_up")
+        self.assertNotIn("left_ankle", joints)
+        self.assertAlmostEqual((joints["left_knee"][1] + joints["right_knee"][1]) / 2, 1000, delta=1)
+        self.assertTrue(all(0 <= x < 768 and 0 <= y < 1024 for x, y in joints.values()))
+        self.assertEqual(boxes["lower"][3], 1024)
+        full, _ = fitted_pose(PROPORTION_DEFAULTS)
+        width = lambda j: j["left_shoulder"][0] - j["right_shoulder"][0]
+        self.assertGreater(width(joints), width(full))          # 무릎 위 구도는 사람이 더 크게 보인다
+        with self.assertRaises(StyleRedrawInputError):
+            fitted_pose(PROPORTION_DEFAULTS, framing="waist_up")
 
     def test_face_mask_goes_to_the_generated_face_place(self):
         with TemporaryDirectory() as temp:

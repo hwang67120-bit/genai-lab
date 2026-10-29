@@ -43,7 +43,7 @@ def support_warnings(scores, joints):
         return any(float(scores.get(t, 0.0)) >= TAG_THRESHOLD for t in tags)
     found = []
     if not any(name in joints for name in ("right_knee", "left_knee", "right_ankle", "left_ankle")):
-        found.append(dict(code="upper_body_only", message="아래옷이 거의 보이지 않는 그림입니다. 아래옷 색·모양이 달라질 수 있습니다."))
+        found.append(dict(code="upper_body_only", message="다리가 보이지 않는 그림이라 무릎 위까지만 그립니다. 아래옷 색·모양이 달라질 수 있습니다."))
     if hit(*EXTRA_HAIR_STYLE_TAGS):
         found.append(dict(code="rare_hairstyle", message="드문 머리 모양입니다. 머리 모양이 흔한 형태로 바뀔 수 있습니다."))
     if hit("heterochromia"):
@@ -62,8 +62,9 @@ def prepare(directory):
     from genai_lab.clothing_analysis import ClothingDesignAnalysisSettings, WdTagSession
     from genai_lab.free_generation import safety_observation
     from genai_lab.studio_controller import guessed_gender
-    from genai_lab.style_redraw_inputs import (HAIR_SCALE, STYLE_PLAN, build_annotations, face_box, fitted_pose, hair_reference,
-                                               measured_proportions, outfit_references, trait_rows, StyleRedrawInputError)
+    from genai_lab.style_redraw_inputs import (HAIR_SCALE, STYLE_PLAN, build_annotations, face_box, fitted_pose, framing_for,
+                                               hair_reference, measured_proportions, outfit_references, trait_rows,
+                                               StyleRedrawInputError)
     req = json.loads((directory / "request.json").read_text(encoding="utf-8"))
     started = time.time()
     canvas_path = directory / "character.png"
@@ -101,7 +102,8 @@ def prepare(directory):
         fg.close()
     # 생성 자세: 정면 서 있는 자세를 원본 비율로(D-201). 참조 적용 영역도 이 자세에서 잡는다.
     proportions, proportion_source = measured_proportions(joints, face)
-    pose_joints, pose_boxes = fitted_pose(proportions)
+    framing = framing_for(joints)                   # 발목이 없으면 무릎 위까지만(D-202)
+    pose_joints, pose_boxes = fitted_pose(proportions, framing=framing)
     hips = [joints[k][1] for k in ("right_hip", "left_hip") if k in joints]
     try:
         pieces = outfit_references(canvas, source_alpha, joints.get("neck", [0, canvas.height * 0.22])[1],
@@ -135,13 +137,14 @@ def prepare(directory):
     traits = trait_rows(features, scores, confirmed)
     annotations = build_annotations(sha(canvas_path), sha(directory / "style-reference.png"),
                                     [(p[0], sha(outfit_paths[p[0]]), *p[3:]) for p in pieces],
-                                    face, traits, confirmed, pose_joints, pose_boxes["face"])
+                                    face, traits, confirmed, pose_joints, pose_boxes["face"], framing)
     save(directory / "annotations.json", annotations)
     prepare_character_style_bundle(canvas_path, directory / "style-reference.png", annotations, directory / "inputs", outfit_paths)
     save(directory / "colour-record.json", colour_record)
     save(directory / "prepare.json", dict(
         state="ready", seconds=round(time.time() - started, 1), gender=confirmed, guessed_gender=guessed, traits=traits, face_box=face,
         outfits={p[0]: dict(crop=p[2], box=p[3]) for p in pieces}, proportions=proportions, proportion_source=proportion_source,
+        framing=framing,
         warnings=support_warnings(scores, joints), safety=safety,
         colour={k: v["state"] for k, v in colour_record.items()}, joints_used=sorted(joints),
         note="특징 문장·성별은 자동 측정이며 사람 확인 전이다."))

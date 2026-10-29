@@ -27,8 +27,10 @@ def fake_run(calls, prepare_state="ready", fail=None):
                 body.update(code="safety", message="진행할 수 없습니다.")
             (directory / "prepare.json").write_text(json.dumps(body), encoding="utf-8")
         else:
-            Image.new("RGB", (768, 1024)).save(directory / "result.png")
-            (directory / "generation.json").write_text(json.dumps({"peak_reserved_gib": 6.2}), encoding="utf-8")
+            for seed in (42, 43, 44):
+                Image.new("RGB", (768, 1024)).save(directory / f"result-seed{seed}.png")
+            body = {"peak_reserved_gib": 6.2, "candidates": [{"seed": s, "file": f"result-seed{s}.png"} for s in (42, 43, 44)]}
+            (directory / "generation.json").write_text(json.dumps(body), encoding="utf-8")
         return 0
     return run
 
@@ -46,6 +48,7 @@ class TestStyleRedrawPipeline(unittest.TestCase):
         out = run_style_redraw(self.source, self.root / "run", RUNTIME, run=fake_run(calls))
         self.assertEqual(calls, ["pose", "prepare", "generate"])
         self.assertEqual(out["state"], "review_pending")
+        self.assertEqual([Path(c).name for c in out["candidates"]], ["result-seed42.png", "result-seed43.png", "result-seed44.png"])
         self.assertEqual(out["warnings"][0]["code"], "upper_body_only")
         with Image.open(self.root / "run" / "character.png") as canvas:
             self.assertEqual(canvas.size, (768, 1024))

@@ -12,8 +12,16 @@ SCENE_PROMPT = "Full body, standing by a window"
 STYLE_PROMPT = "Painted illustration, blended shadows, nuanced colors"
 SCALES = dict(identity_scale=0.4, style_scale=0.7, structure_scale=0.6, outfit_scale=0.8)
 OUTFIT_BOX = [230, 240, 540, 1000]          # 표준 자세의 몸 영역(목 아래), 캔버스 768x1024
+# D-200: 의상 참조 한 장이면 넓은 옷(V002 회색 바지)이 작은 옷(초록 조끼)을 덮었다 → 윗옷(목~엉덩이)·아래옷(엉덩이 아래)을
+# 나눠 표준 자세의 각 영역에만 적용한다. 엉덩이 관절이 없으면 예전처럼 한 장(body).
+OUTFIT_SPLIT_BOXES = {"upper": [230, 240, 540, 575], "lower": [230, 545, 540, 1000]}
 OUTFIT_BACKGROUND = (214, 210, 202)
 OUTFIT_NECK_MARGIN = 0.02                   # 목 관절보다 그림 높이의 2% 위에서 자른다
+OUTFIT_HIP_BELOW = 0.05                     # 윗옷 조각은 엉덩이 관절보다 5% 아래까지
+OUTFIT_HIP_ABOVE = 0.03                     # 아래옷 조각은 엉덩이 관절보다 3% 위부터
+OUTFIT_MIN_PIXELS = 2000                    # 조각에 사람 픽셀이 이보다 적으면 그 조각은 없는 것으로
+# 후보 3장(사용자 10/29 (가)): 몸선은 seed에 묶여 문장으로 못 움직인다(D-199) → seed 셋으로 만들고 사용자가 1장 고른다.
+SEEDS = (42, 43, 44)
 FACE_BOX_SCALE = 1.6
 POINT_SCORE = 0.3
 # 그림체 참조는 명암·재질 표현만 맡는다: 머리·눈은 원본 색으로 칠하고, 옷은 무채색(잔무늬 누름). 옷 색·형태는 의상 참조가 맡는다.
@@ -58,16 +66,35 @@ def face_box(face_points, face_scores, size, scale=FACE_BOX_SCALE):
     return [int(max(0, cx - side / 2)), int(max(0, cy - side / 2)), int(min(w, cx + side / 2)), int(min(h, cy + side / 2))]
 
 
-def outfit_reference(image, alpha, neck_y):
-    """의상 참조: 배경을 지우고 목 위(그림 높이 2% 여유)를 잘라 회색 바탕에 몸만 남긴다. (그림, 자른 상자)."""
+def outfit_references(image, alpha, neck_y, hip_y=None):
+    """의상 참조 목록 [(이름, 그림, 자른 상자, 적용 영역)]. 엉덩이 높이를 알면 윗옷·아래옷 두 장, 모르면 몸 전체 한 장.
+    아래옷 조각에 사람이 거의 없으면(허벅지 위에서 잘린 그림) 윗옷만 몸 전체 영역에 쓴다."""
+    h = np.asarray(alpha).shape[0]
+    top = neck_y - OUTFIT_NECK_MARGIN * h
+    if hip_y is None:
+        piece, crop = outfit_reference(image, alpha, top)
+        return [("body", piece, crop, list(OUTFIT_BOX))]
+    upper, upper_crop = outfit_reference(image, alpha, top, hip_y + OUTFIT_HIP_BELOW * h)
+    try:
+        lower, lower_crop = outfit_reference(image, alpha, hip_y - OUTFIT_HIP_ABOVE * h)
+    except StyleRedrawInputError:
+        return [("body", upper, upper_crop, list(OUTFIT_BOX))]
+    return [("upper", upper, upper_crop, list(OUTFIT_SPLIT_BOXES["upper"])),
+            ("lower", lower, lower_crop, list(OUTFIT_SPLIT_BOXES["lower"]))]
+
+
+def outfit_reference(image, alpha, top, bottom=None):
+    """의상 참조 한 조각: 배경을 지우고 top~bottom 높이만 남겨 회색 바탕에 몸만 둔다. (그림, 자른 상자)."""
     rgb = np.asarray(image.convert("RGB")).astype(np.float32)
     a = np.asarray(alpha, dtype=np.float32)
     if a.max() > 1:
         a = a / 255.0
     a = a.copy()
-    a[:int(max(0, neck_y - OUTFIT_NECK_MARGIN * rgb.shape[0]))] = 0
+    a[:int(max(0, top))] = 0
+    if bottom is not None:
+        a[int(min(rgb.shape[0], bottom)):] = 0
     ys, xs = np.nonzero(a > 0.5)
-    if len(xs) == 0:
+    if len(xs) < OUTFIT_MIN_PIXELS:
         raise StyleRedrawInputError("목 아래에서 옷을 찾지 못했습니다. 몸이 보이는 그림을 넣어 주세요.")
     comp = rgb * a[..., None] + np.array(OUTFIT_BACKGROUND, np.float32) * (1 - a[..., None])
     box = (max(0, int(xs.min()) - 8), max(0, int(ys.min()) - 8),
@@ -140,13 +167,14 @@ def trait_rows(features, character_scores, confirmed_gender=None):
             _row("clothes", clothes, "옷"), _row("build", build, "체형·성별")]
 
 
-def build_annotations(source_sha256, style_sha256, outfit_sha256, face, traits, gender=None):
-    """입력 묶음 주석(character_style_inputs.validate_annotations 형식). 자세는 표준 자세, 의상 참조는 몸 영역."""
+def build_annotations(source_sha256, style_sha256, outfits, face, traits, gender=None):
+    """입력 묶음 주석(character_style_inputs.validate_annotations 형식). 자세는 표준 자세.
+    outfits: [(이름, SHA-256, 적용 영역)] — outfit_references 순서 그대로."""
     return dict(schema_version=1, negative_terms=GENDER_NEGATIVE.get(gender, ""), source_sha256=source_sha256, style_sha256=style_sha256, canvas=list(CANVAS),
                 coordinate_system="image_xy", height_cm=None, face_box=list(face), traits=traits,
                 scene_prompt=SCENE_PROMPT, style_prompt=STYLE_PROMPT,
                 layout=dict(origin="manual_image_annotation",
                             evidence="고정 표준 서 있는 자세(사용자 10/29: 자세 무관, 인체만 맞으면 됨). 원본 관절은 옷 색 읽기에만",
                             joints={k: list(v) for k, v in STANDARD_POSE.items()}),
-                outfit_sha256=outfit_sha256, outfit_box=list(OUTFIT_BOX),
+                outfits=[dict(name=name, sha256=digest, box=list(box)) for name, digest, box in outfits],
                 cpu_probe_options={k: SCALES[k] for k in ("identity_scale", "style_scale", "structure_scale")})

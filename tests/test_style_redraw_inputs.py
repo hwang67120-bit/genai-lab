@@ -9,8 +9,8 @@ from PIL import Image
 from genai_lab.character_style_inputs import CharacterInputError, prepare_character_style_bundle, sha256_bytes
 from genai_lab.character_style_conditioning import ConditioningOptions, build_conditioning_call, build_feature_prompts
 from genai_lab.style_redraw_inputs import (
-    CANVAS, OUTFIT_BACKGROUND, OUTFIT_BOX, SCALES, StyleRedrawInputError, build_annotations, face_box, garment_words,
-    outfit_reference, trait_rows,
+    CANVAS, OUTFIT_BACKGROUND, OUTFIT_BOX, OUTFIT_SPLIT_BOXES, SCALES, StyleRedrawInputError, build_annotations, face_box,
+    garment_words, outfit_reference, outfit_references, trait_rows,
 )
 
 
@@ -39,13 +39,27 @@ class TestStyleRedrawInputs(unittest.TestCase):
         image = Image.new("RGB", (100, 200), (200, 30, 30))
         alpha = np.zeros((200, 100), np.uint8)
         alpha[20:180, 30:70] = 255                       # 사람 영역
-        out, box = outfit_reference(image, alpha, neck_y=60)
-        self.assertEqual(box, [22, 48, 77, 187])         # 목 60 - 200*0.02 = 56에서 자르고, 마지막 픽셀(69,179)에서 8px 여유
+        out, box = outfit_reference(image, alpha, top=56)
+        self.assertEqual(box, [22, 48, 77, 187])         # 56에서 자르고, 마지막 픽셀(69,179)에서 8px 여유
         arr = np.asarray(out)
         self.assertEqual(tuple(arr[0, 0]), OUTFIT_BACKGROUND)
         self.assertEqual(tuple(arr[20, 20]), (200, 30, 30))
         with self.assertRaises(StyleRedrawInputError):
-            outfit_reference(image, alpha, neck_y=199)
+            outfit_reference(image, alpha, top=199)
+
+    def test_outfit_split_into_upper_and_lower_at_the_hips(self):
+        image = Image.new("RGB", (400, 1000), (200, 30, 30))
+        alpha = np.zeros((1000, 400), np.uint8)
+        alpha[100:950, 150:250] = 255
+        pieces = outfit_references(image, alpha, neck_y=200, hip_y=500)
+        self.assertEqual([p[0] for p in pieces], ["upper", "lower"])
+        self.assertEqual(pieces[0][2], [142, 172, 257, 557])   # 목 200 - 20 = 180 ~ 엉덩이 500 + 50 = 550(마지막 행 549)
+        self.assertEqual(pieces[1][2], [142, 462, 257, 957])   # 엉덩이 500 - 30 = 470부터
+        self.assertEqual([p[3] for p in pieces], [OUTFIT_SPLIT_BOXES["upper"], OUTFIT_SPLIT_BOXES["lower"]])
+        self.assertEqual([p[0] for p in outfit_references(image, alpha, neck_y=200)], ["body"])
+        short = alpha.copy(); short[480:] = 0                  # 허벅지 위에서 잘린 그림: 아래옷 조각 없음 → 몸 전체 한 장
+        only = outfit_references(image, short, neck_y=200, hip_y=500)
+        self.assertEqual([(p[0], p[3]) for p in only], [("body", OUTFIT_BOX)])
 
     def test_traits_from_measured_features_and_unknown_left_empty(self):
         rows = {r["name"]: r for r in trait_rows(
@@ -88,15 +102,18 @@ class TestStyleRedrawInputs(unittest.TestCase):
             Image.new("RGB", CANVAS, (90, 60, 40)).save(source)
             Image.new("RGB", CANVAS, (200, 200, 200)).save(style)
             Image.new("RGB", (300, 700), (10, 120, 90)).save(outfit)
-            traits = trait_rows(features(eye=["green_eyes"]), {"shirt": 0.9}, "unknown")
-            ann = build_annotations(*(sha256_bytes(p.read_bytes()) for p in (source, style, outfit)), [300, 100, 460, 260], traits)
-            prepare_character_style_bundle(source, style, ann, root / "bundle", outfit)
+            traits = trait_rows(features(eye=["green_eyes"]), {"shirt": 0.9}, "female")
+            digest = sha256_bytes(outfit.read_bytes())
+            ann = build_annotations(sha256_bytes(source.read_bytes()), sha256_bytes(style.read_bytes()),
+                                    [("upper", digest, OUTFIT_SPLIT_BOXES["upper"]), ("lower", digest, OUTFIT_SPLIT_BOXES["lower"])],
+                                    [300, 100, 460, 260], traits, "female")
+            prepare_character_style_bundle(source, style, ann, root / "bundle", {"upper": outfit, "lower": outfit})
             call = build_conditioning_call(root / "bundle", ConditioningOptions(**SCALES))
-            self.assertEqual(len(call.kwargs["ip_adapter_image"]), 3)
-            self.assertEqual(call.adapter_scales[2], 0.8)
+            self.assertEqual(len(call.kwargs["ip_adapter_image"]), 4)
+            self.assertEqual(call.adapter_scales[2:], [0.8, 0.8])
             self.assertEqual(call.kwargs["prompt"],
-                             "Full body, standing by a window. green eyes; shirt. Painted illustration, blended shadows, nuanced colors")
-            self.assertEqual(ann["outfit_box"], OUTFIT_BOX)
+                             "Full body, standing by a window. green eyes; shirt; adult woman. Painted illustration, blended shadows, nuanced colors")
+            self.assertTrue(call.kwargs["negative_prompt"].endswith(", man, male, masculine"))
 
     def test_unmeasured_trait_cannot_carry_text_and_empty_traits_leave_prompt_clean(self):
         profile = dict(scene_prompt="standing", style_prompt="painted",
@@ -109,9 +126,10 @@ class TestStyleRedrawInputs(unittest.TestCase):
                 Image.new("RGB", CANVAS if p != outfit else (10, 10), (c, c, c)).save(p)
             traits = trait_rows(features(), {}, "unknown")
             traits[0]["text"] = "blue eyes"                  # unmeasured인데 문장이 있음
-            ann = build_annotations(*(sha256_bytes(p.read_bytes()) for p in (source, style, outfit)), [300, 100, 460, 260], traits)
+            ann = build_annotations(sha256_bytes(source.read_bytes()), sha256_bytes(style.read_bytes()),
+                                    [("body", sha256_bytes(outfit.read_bytes()), OUTFIT_BOX)], [300, 100, 460, 260], traits)
             with self.assertRaisesRegex(CharacterInputError, "unmeasured_trait_has_text"):
-                prepare_character_style_bundle(source, style, ann, root / "bundle", outfit)
+                prepare_character_style_bundle(source, style, ann, root / "bundle", {"body": outfit})
 
 
 if __name__ == "__main__":

@@ -60,9 +60,11 @@ def build_feature_prompts(profile):
 
 def build_conditioning_call(folder, options):
     """시각 참조 두 개(의상 참조가 있으면 세 개)와 구조 입력을 조립한다. 이미지를 생성하지 않는다."""
+    from genai_lab.character_style_inputs import outfit_roles
     manifest, images = read_verified_bundle(folder)
     try:
-        has_outfit = "outfit" in images
+        outfits = outfit_roles(manifest["profile"])
+        has_outfit = bool(outfits)
         if has_outfit != (options.outfit_scale is not None):
             raise CharacterInputError("outfit_reference_and_scale_must_match")
         from diffusers.image_processor import IPAdapterMaskProcessor
@@ -82,12 +84,12 @@ def build_conditioning_call(folder, options):
         references = [images["style"].copy(), face]
         masks = [style_mask, identity_mask]
         order = ["style", "identity"]
-        if has_outfit:
-            # 의상 참조는 몸 영역에만, 모든 블록에 적용한다(D-195 시험 구성과 같음).
+        for role, mask_role in outfits:
+            # 의상 참조는 자기 몸 영역에만, 모든 블록에 같은 강도로 적용한다(D-195, 윗옷·아래옷 나눔 D-200).
             scales.append(options.outfit_scale)
-            references.append(images["outfit"].copy())
-            masks.append(processor.preprocess(images["outfit_mask"], height=height, width=width))
-            order.append("outfit")
+            references.append(images[role].copy())
+            masks.append(processor.preprocess(images[mask_role], height=height, width=width))
+            order.append(role)
         kwargs = {
             "prompt": prompt, "prompt_2": prompt, "negative_prompt": negative,
             "image": pose, "ip_adapter_image": references,
@@ -108,7 +110,7 @@ def build_conditioning_call(folder, options):
             "style_reference_sha256": manifest["assets"]["style"]["sha256"],
             "identity_reference_sha256": manifest["assets"]["identity"]["sha256"] if options.identity_visual else None,
             "pose_sha256": manifest["assets"]["pose"]["sha256"] if options.structure else None,
-            "outfit_reference_sha256": manifest["assets"]["outfit"]["sha256"] if has_outfit else None,
+            "outfit_reference_sha256": {role: manifest["assets"][role]["sha256"] for role, _ in outfits} or None,
             "mask_shapes": [list(m.shape) for m in masks],
             "mask_devices": [str(m.device) for m in masks],
             "original_rgb_initialization": False, "postprocessing": [],
@@ -131,7 +133,7 @@ def validate_pipeline_contract(pipeline, adapter_count=2):
                      "image_projection_layers", ())
     if len(layers) != adapter_count or not callable(getattr(pipeline, "set_ip_adapter_scale", None)):
         raise CharacterInputError("two_ordered_ip_adapters_required_style_then_identity" if adapter_count == 2
-                                  else "three_ordered_ip_adapters_required_style_identity_outfit")
+                                  else f"{adapter_count}_ordered_ip_adapters_required_style_identity_outfits")
     if getattr(pipeline, "controlnet", None) is None:
         raise CharacterInputError("pose_controlnet_required")
 

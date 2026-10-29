@@ -95,9 +95,12 @@ def run_style_redraw(source_path, directory, runtime=None, *, confirmed_gender=N
         if prepared["state"] == "refused":
             outcome.update(state="refused", code=prepared["code"], message=prepared["message"])
             return outcome
-        outcome["seconds"]["generate"] = _stage(run, "generate", directory, "result.png")
+        outcome["seconds"]["generate"] = _stage(run, "generate", directory, "generation.json")
         generated = json.loads((directory / "generation.json").read_text(encoding="utf-8"))
-        outcome.update(state="review_pending", result=str(directory / "result.png"), review="사람 확인 전(동일성·그림체)",
+        candidates = [str(directory / c["file"]) for c in generated.get("candidates", []) if (directory / c["file"]).is_file()]
+        if not candidates:
+            raise StyleRedrawFailed("generate", "생성 결과 그림이 없습니다.")
+        outcome.update(state="review_pending", candidates=candidates, review="사용자가 후보 중 1장을 고른다(동일성·그림체 확인 전)",
                        peak_reserved_gib=generated.get("peak_reserved_gib"))
         return outcome
     except StyleRedrawFailed as error:

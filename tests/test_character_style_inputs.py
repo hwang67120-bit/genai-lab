@@ -200,15 +200,41 @@ class TestCharacterStyleInputs(unittest.TestCase):
         self.assertEqual(call.evidence["model_calls"],0)
 
 
-    def prepare_outfit(self, box=None):
-        outfit=self.root/"outfit.png"
-        Image.new("RGB",(40,70),(10,120,90)).save(outfit)
-        self.profile.update(outfit_sha256=sha256_bytes(outfit.read_bytes()),outfit_box=box or [8,40,56,96])
-        return prepare_character_style_bundle(self.source,self.style,self.profile,self.bundle,outfit)
+    def prepare_outfit(self, box=None, pieces=None):
+        pieces=pieces or [("body",(10,120,90),box or [8,40,56,96])]
+        paths={}
+        self.profile["outfits"]=[]
+        for name,colour,piece_box in pieces:
+            paths[name]=self.root/f"outfit-{name}.png"
+            Image.new("RGB",(40,70),colour).save(paths[name])
+            self.profile["outfits"].append(dict(name=name,sha256=sha256_bytes(paths[name].read_bytes()),box=piece_box))
+        return prepare_character_style_bundle(self.source,self.style,self.profile,self.bundle,paths)
+
+    def test_split_outfit_references_each_on_own_box(self):
+        manifest=self.prepare_outfit(pieces=[("upper",(10,120,90),[8,40,56,70]),("lower",(90,90,90),[8,66,56,96])])
+        self.assertEqual(manifest["routing"]["adapter_order"],["style","identity","outfit_upper","outfit_lower"])
+        call=build_conditioning_call(self.bundle,ConditioningOptions(.4,.7,.6,outfit_scale=.8))
+        import torch
+        masks=call.kwargs["cross_attention_kwargs"]["ip_adapter_masks"]
+        self.assertEqual([int(torch.count_nonzero(m)) for m in masks[2:]],[48*30,48*30])
+        self.assertEqual([im.getpixel((0,0)) for im in call.kwargs["ip_adapter_image"][2:]],[(10,120,90),(90,90,90)])
+        self.assertEqual(call.adapter_scales[2:],[.8,.8])
+        pipeline=RecordingPipeline();pipeline.unet.encoder_hid_proj.image_projection_layers=[object()]*3
+        with self.assertRaisesRegex(CharacterInputError,"4_ordered"):
+            dispatch_conditioning_once(pipeline,call,execution_authorized=True)
+        pipeline.unet.encoder_hid_proj.image_projection_layers=[object()]*4
+        dispatch_conditioning_once(pipeline,call,execution_authorized=True)
+        self.assertEqual(len(pipeline.calls[0]["masks"]),4)
+
+    def test_outfit_names_must_be_unique_and_simple(self):
+        for pieces in ([("upper",(1,1,1),[8,40,56,70]),("upper",(2,2,2),[8,66,56,96])],[("Up-1",(1,1,1),[8,40,56,70])]):
+            with self.subTest(pieces=pieces),self.assertRaises(CharacterInputError):
+                self.prepare_outfit(pieces=pieces)
+        self.assertFalse(self.bundle.exists())
 
     def test_outfit_reference_is_third_adapter_on_body_box_only(self):
         manifest=self.prepare_outfit()
-        self.assertEqual(manifest["routing"]["adapter_order"],["style","identity","outfit"])
+        self.assertEqual(manifest["routing"]["adapter_order"],["style","identity","outfit_body"])
         call=build_conditioning_call(self.bundle,ConditioningOptions(.4,.7,.6,outfit_scale=.8))
         import torch
         masks=call.kwargs["cross_attention_kwargs"]["ip_adapter_masks"]
@@ -216,8 +242,8 @@ class TestCharacterStyleInputs(unittest.TestCase):
         self.assertEqual(int(torch.count_nonzero(masks[2])),48*56)
         self.assertEqual(call.kwargs["ip_adapter_image"][2].getpixel((0,0)),(10,120,90))
         self.assertEqual(call.adapter_scales[1:],[.4,.8])
-        self.assertEqual(call.evidence["adapter_order"],["style","identity","outfit"])
-        self.assertEqual(call.evidence["outfit_reference_sha256"],manifest["assets"]["outfit"]["sha256"])
+        self.assertEqual(call.evidence["adapter_order"],["style","identity","outfit_body"])
+        self.assertEqual(call.evidence["outfit_reference_sha256"],{"outfit_body":manifest["assets"]["outfit_body"]["sha256"]})
 
     def test_two_adapter_bundle_unchanged_without_outfit(self):
         call=self.call()
@@ -235,15 +261,15 @@ class TestCharacterStyleInputs(unittest.TestCase):
             build_conditioning_call(self.bundle,self.options)
 
     def test_outfit_annotation_without_file_and_bad_box_rejected(self):
-        self.profile.update(outfit_sha256="0"*64,outfit_box=[8,40,56,96])
+        self.profile.update(outfits=[dict(name="body",sha256="0"*64,box=[8,40,56,96])])
         with self.assertRaisesRegex(CharacterInputError,"outfit_reference_and_annotation"):self.prepare()
-        self.profile.pop("outfit_sha256");self.profile.pop("outfit_box")
+        self.profile.pop("outfits")
         with self.assertRaisesRegex(CharacterInputError,"outfit_box_outside_source"):self.prepare_outfit([8,40,56,97])
         self.assertFalse(self.bundle.exists())
 
     def test_tampered_outfit_fails(self):
         self.prepare_outfit()
-        (self.bundle/"outfit-reference.png").write_bytes(b"tampered")
+        (self.bundle/"outfit-body.png").write_bytes(b"tampered")
         with self.assertRaisesRegex(CharacterInputError,"sha_mismatch"):
             build_conditioning_call(self.bundle,ConditioningOptions(.4,.7,.6,outfit_scale=.8))
 
@@ -256,7 +282,7 @@ class TestCharacterStyleInputs(unittest.TestCase):
         self.prepare_outfit()
         call=build_conditioning_call(self.bundle,ConditioningOptions(.4,.7,.6,outfit_scale=.8))
         pipeline=RecordingPipeline()
-        with self.assertRaisesRegex(CharacterInputError,"three_ordered"):
+        with self.assertRaisesRegex(CharacterInputError,"3_ordered"):
             dispatch_conditioning_once(pipeline,call,execution_authorized=True)
         self.assertEqual(pipeline.calls,[])
         pipeline.unet.encoder_hid_proj.image_projection_layers=[object()]*3

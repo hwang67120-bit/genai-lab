@@ -9,13 +9,19 @@ import io
 import json
 import math
 from pathlib import Path
+import re
 
 from PIL import Image, ImageDraw
 from scripts.pose_reference_runner import BODY_JOINT_NAMES
 
 REQUIRED_TRAITS = {"eyes", "skin", "hair", "clothes", "build"}
 BASE_ROLES = {"identity", "pose", "identity_mask", "style_mask", "style", "audit_source"}
-OUTFIT_ROLES = {"outfit", "outfit_mask"}
+MAX_OUTFITS = 3
+
+
+def outfit_roles(profile):
+    """의상 참조마다 그림·마스크 역할 이름(주석 순서 = 어댑터 순서)."""
+    return [(f"outfit_{row['name']}", f"outfit_{row['name']}_mask") for row in profile.get("outfits", [])]
 
 
 class CharacterInputError(ValueError):
@@ -57,10 +63,15 @@ def validate_annotations(profile, canvas):
     if profile.get("height_cm") is not None:
         raise CharacterInputError("physical_height_not_measured")
     validate_box(profile.get("face_box"), canvas)
-    if ("outfit_sha256" in profile) != ("outfit_box" in profile):
-        raise CharacterInputError("outfit_sha_and_box_must_come_together")
-    if "outfit_box" in profile:
-        validate_box(profile["outfit_box"], canvas, "outfit_box")
+    outfits = profile.get("outfits", [])
+    if not isinstance(outfits, list) or len(outfits) > MAX_OUTFITS:
+        raise CharacterInputError("outfits_invalid")
+    for row in outfits:
+        if not isinstance(row, dict) or set(row) != {"name", "sha256", "box"} or not re.fullmatch(r"[a-z]{1,12}", str(row["name"])):
+            raise CharacterInputError("outfits_invalid")
+        validate_box(row["box"], canvas, "outfit_box")
+    if len({row["name"] for row in outfits}) != len(outfits):
+        raise CharacterInputError("outfit_names_duplicated")
     traits = profile.get("traits", [])
     names = [row.get("name") for row in traits]
     if len(names) != len(set(names)) or not REQUIRED_TRAITS.issubset(names):
@@ -108,9 +119,9 @@ def render_pose_map(layout, canvas):
     return Image.fromarray(draw_skeleton(records, canvas)).convert("RGB")
 
 
-def write_input_assets(source, style, profile, output, outfit=None):
+def write_input_assets(source, style, profile, output, outfits=()):
     """참조/마스크/구조 지도를 저장한다. 색 복원 또는 생성 후 합성은 하지 않는다.
-    의상 참조(D-195)는 몸 영역(outfit_box)에만 적용하는 세 번째 시각 참조다."""
+    의상 참조(D-195)는 몸 영역에만 적용하는 시각 참조다. 윗옷·아래옷을 나누면 각자 영역에만 적용한다(D-200)."""
     face = source.crop(tuple(profile["face_box"]))
     face.save(output / "identity-face.png")
     pose = render_pose_map(profile["layout"], source.size)
@@ -127,35 +138,38 @@ def write_input_assets(source, style, profile, output, outfit=None):
         "identity_mask": "identity-mask.png", "style_mask": "style-mask.png",
         "style": "style-reference.png", "audit_source": "source-audit-only.png",
     }
-    if outfit is not None:
-        outfit.save(output / "outfit-reference.png")
+    for row, image, (role, mask_role) in zip(profile.get("outfits", []), outfits, outfit_roles(profile)):
+        image.save(output / f"outfit-{row['name']}.png")
         outfit_mask = Image.new("L", source.size, 0)
-        x0, y0, x1, y1 = profile["outfit_box"]
+        x0, y0, x1, y1 = row["box"]
         ImageDraw.Draw(outfit_mask).rectangle((x0, y0, x1-1, y1-1), fill=255)
-        outfit_mask.save(output / "outfit-mask.png")
-        names.update(outfit="outfit-reference.png", outfit_mask="outfit-mask.png")
+        outfit_mask.save(output / f"outfit-{row['name']}-mask.png")
+        names.update({role: f"outfit-{row['name']}.png", mask_role: f"outfit-{row['name']}-mask.png"})
     return names
 
 
-def prepare_character_style_bundle(source_path, style_path, profile, output, outfit_path=None):
-    """검증 성공 시 새 폴더만 만든다. 기존 결과·원본을 덮어쓰지 않는다."""
+def prepare_character_style_bundle(source_path, style_path, profile, output, outfit_paths=None):
+    """검증 성공 시 새 폴더만 만든다. 기존 결과·원본을 덮어쓰지 않는다.
+    outfit_paths: {의상 참조 이름: 그림 경로}. 주석의 outfits와 이름이 같아야 한다."""
     profile = deepcopy(profile)
-    if (outfit_path is None) != ("outfit_sha256" not in profile):
+    outfit_paths = dict(outfit_paths or {})
+    rows = profile.get("outfits", []) if isinstance(profile.get("outfits", []), list) else []
+    if set(outfit_paths) != {row.get("name") for row in rows if isinstance(row, dict)}:
         raise CharacterInputError("outfit_reference_and_annotation_must_match")
     source = read_rgb_snapshot(source_path, profile["source_sha256"])
     style = read_rgb_snapshot(style_path, profile["style_sha256"])
-    outfit = None
+    outfits = []
     try:
-        if outfit_path is not None:
-            outfit = read_rgb_snapshot(outfit_path, profile["outfit_sha256"])
         validate_annotations(profile, source.size)
+        for row in profile.get("outfits", []):
+            outfits.append(read_rgb_snapshot(outfit_paths[row["name"]], row["sha256"]))
         if profile["source_sha256"] == profile["style_sha256"]:
             raise CharacterInputError("source_and_style_must_be_separate")
         if any(size % 8 for size in source.size):
             raise CharacterInputError("output_size_must_be_multiple_of_8")
         output = Path(output)
         output.mkdir(parents=True, exist_ok=False)
-        names = write_input_assets(source, style, profile, output, outfit)
+        names = write_input_assets(source, style, profile, output, outfits)
         assets = {
             role: {"file": name, "sha256": sha256_bytes((output/name).read_bytes())}
             for role, name in names.items()
@@ -168,7 +182,7 @@ def prepare_character_style_bundle(source_path, style_path, profile, output, out
                 "original_rgb_as_initial_latent": False,
                 "identity_visual": "face_crop_via_region_masked_ip_adapter",
                 "structure": "pose_controlnet_input", "style": "separate_style_ip_adapter",
-                "adapter_order": ["style", "identity"] + (["outfit"] if outfit is not None else []),
+                "adapter_order": ["style", "identity"] + [role for role, _ in outfit_roles(profile)],
                 "source_color_restoration": False, "original_background_composite": False,
                 "audit_source_sent_to_model": False,
             },
@@ -189,8 +203,8 @@ def prepare_character_style_bundle(source_path, style_path, profile, output, out
     finally:
         source.close()
         style.close()
-        if outfit is not None:
-            outfit.close()
+        for image in outfits:
+            image.close()
 
 
 def read_verified_bundle(folder):
@@ -207,11 +221,11 @@ def read_verified_bundle(folder):
             if path.parent != folder or path.is_symlink():
                 raise CharacterInputError("asset_path_escapes_bundle")
             images[role] = read_rgb_snapshot(path, asset["sha256"])
-        has_outfit = "outfit_sha256" in manifest["profile"]
-        if set(images) != BASE_ROLES | (OUTFIT_ROLES if has_outfit else set()):
+        roles = outfit_roles(manifest["profile"])
+        if set(images) != BASE_ROLES | {r for pair in roles for r in pair}:
             raise CharacterInputError("asset_roles_mismatch")
         canvas = tuple(manifest["canvas"])
-        sized = ("pose", "identity_mask", "style_mask", "audit_source") + (("outfit_mask",) if has_outfit else ())
+        sized = ("pose", "identity_mask", "style_mask", "audit_source") + tuple(mask for _, mask in roles)
         if any(images[r].size != canvas for r in sized):
             raise CharacterInputError("asset_dimensions_mismatch")
         return manifest, images

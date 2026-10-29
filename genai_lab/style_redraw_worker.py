@@ -62,7 +62,7 @@ def prepare(directory):
     from genai_lab.clothing_analysis import ClothingDesignAnalysisSettings, WdTagSession
     from genai_lab.free_generation import safety_observation
     from genai_lab.studio_controller import guessed_gender
-    from genai_lab.style_redraw_inputs import (STYLE_PLAN, build_annotations, face_box, outfit_reference, trait_rows,
+    from genai_lab.style_redraw_inputs import (STYLE_PLAN, build_annotations, face_box, outfit_references, trait_rows,
                                                StyleRedrawInputError)
     req = json.loads((directory / "request.json").read_text(encoding="utf-8"))
     started = time.time()
@@ -99,11 +99,16 @@ def prepare(directory):
         source_alpha = fg.alpha(canvas).astype(np.float32) / 255.0
     finally:
         fg.close()
+    hips = [joints[k][1] for k in ("right_hip", "left_hip") if k in joints]
     try:
-        outfit, outfit_crop = outfit_reference(canvas, source_alpha, joints.get("neck", [0, canvas.height * 0.22])[1])
+        pieces = outfit_references(canvas, source_alpha, joints.get("neck", [0, canvas.height * 0.22])[1],
+                                   sum(hips) / len(hips) if hips else None)
     except StyleRedrawInputError as error:
         return refuse("outfit", str(error))
-    outfit.save(directory / "outfit-reference.png")
+    outfit_paths = {}
+    for name, piece, _crop, _box in pieces:
+        outfit_paths[name] = directory / f"outfit-{name}.png"
+        piece.save(outfit_paths[name])
     seg = HeadSegmenter(Path(req["head_semantic_repo"]), Path(req["head_semantic_checkpoint"]))
     try:
         reference_rgb = np.asarray(reference)
@@ -118,20 +123,20 @@ def prepare(directory):
     confirmed = req.get("confirmed_gender")
     features = extract_features(rgb, source_parts, scores, gender=confirmed or "unknown")
     traits = trait_rows(features, scores, confirmed)
-    annotations = build_annotations(sha(canvas_path), sha(directory / "style-reference.png"), sha(directory / "outfit-reference.png"),
+    annotations = build_annotations(sha(canvas_path), sha(directory / "style-reference.png"),
+                                    [(name, sha(outfit_paths[name]), box) for name, _piece, _crop, box in pieces],
                                     face, traits, confirmed)
     save(directory / "annotations.json", annotations)
-    prepare_character_style_bundle(canvas_path, directory / "style-reference.png", annotations, directory / "inputs",
-                                   directory / "outfit-reference.png")
+    prepare_character_style_bundle(canvas_path, directory / "style-reference.png", annotations, directory / "inputs", outfit_paths)
     save(directory / "colour-record.json", colour_record)
     save(directory / "prepare.json", dict(
         state="ready", seconds=round(time.time() - started, 1), gender=confirmed, guessed_gender=guessed, traits=traits, face_box=face,
-        outfit_crop=outfit_crop, warnings=support_warnings(scores, joints), safety=safety,
+        outfits={name: dict(crop=crop, box=box) for name, _piece, crop, box in pieces}, warnings=support_warnings(scores, joints), safety=safety,
         colour={k: v["state"] for k, v in colour_record.items()}, joints_used=sorted(joints),
         note="특징 문장·성별은 자동 측정이며 사람 확인 전이다."))
 
 
-def load_pipeline(models):
+def load_pipeline(models, outfit_count=1):
     import torch
     from diffusers import ControlNetModel, DPMSolverMultistepScheduler, StableDiffusionXLControlNetPipeline
     controlnet = ControlNetModel.from_pretrained(str(models / "extra/pose"), torch_dtype=torch.float16, local_files_only=True)
@@ -140,10 +145,10 @@ def load_pipeline(models):
                                                                add_watermarker=False)
     pipe.scheduler = DPMSolverMultistepScheduler.from_config(pipe.scheduler.config, algorithm_type="sde-dpmsolver++",
                                                              use_karras_sigmas=True)
-    # 순서 고정: 그림체(plus) · 얼굴(plus-face) · 의상(plus). 이미지 인코더(ViT-H)는 배포 전 결정 대상(D-197).
+    # 순서 고정: 그림체(plus) · 얼굴(plus-face) · 의상 참조마다(plus). 이미지 인코더(ViT-H)는 배포 전 결정 대상(D-197).
     pipe.load_ip_adapter(str(models / "extra/ip"), subfolder="sdxl_models",
-                         weight_name=["ip-adapter-plus_sdxl_vit-h.safetensors", "ip-adapter-plus-face_sdxl_vit-h.safetensors",
-                                      "ip-adapter-plus_sdxl_vit-h.safetensors"],
+                         weight_name=["ip-adapter-plus_sdxl_vit-h.safetensors", "ip-adapter-plus-face_sdxl_vit-h.safetensors"]
+                         + ["ip-adapter-plus_sdxl_vit-h.safetensors"] * outfit_count,
                          image_encoder_folder="models/image_encoder", local_files_only=True)
     for module in (pipe.unet, pipe.controlnet):
         module.enable_layerwise_casting(storage_dtype=torch.float8_e4m3fn, compute_dtype=torch.float16)
@@ -154,26 +159,32 @@ def load_pipeline(models):
 def generate(directory):
     import torch
     from genai_lab.character_style_conditioning import ConditioningOptions, build_conditioning_call, dispatch_conditioning_once
-    from genai_lab.style_redraw_inputs import SCALES
+    from genai_lab.character_style_inputs import outfit_roles
+    from genai_lab.style_redraw_inputs import SCALES, SEEDS
     req = json.loads((directory / "request.json").read_text(encoding="utf-8"))
     torch.cuda.set_per_process_memory_fraction(MEMORY_CAP_GIB * 2**30 / torch.cuda.get_device_properties(0).total_memory)
+    manifest = json.loads((directory / "inputs" / "manifest.json").read_text(encoding="utf-8"))
     started = time.time()
-    pipe = load_pipeline(Path(req["style_models"]))
+    pipe = load_pipeline(Path(req["style_models"]), len(outfit_roles(manifest["profile"])))
     loaded = round(time.time() - started, 1)
-    call = build_conditioning_call(directory / "inputs", ConditioningOptions(**SCALES))
-    total = call.kwargs["num_inference_steps"]
-    def progress(pipeline, step, timestep, kwargs):
-        save(directory / "progress.json", dict(step=step + 1, total=total))
-        return kwargs
     torch.cuda.reset_peak_memory_stats()
-    t0 = time.time()
-    with torch.inference_mode():
-        image, evidence = dispatch_conditioning_once(pipe, call, execution_authorized=True, callback=progress)
-    image.save(directory / "result.png")
+    candidates = []
+    for number, seed in enumerate(SEEDS):
+        # 후보마다 같은 입력, seed만 다르다(D-199). 호출은 한 번만 쓰므로 후보마다 새로 조립한다.
+        call = build_conditioning_call(directory / "inputs", ConditioningOptions(**SCALES, seed=seed))
+        total = call.kwargs["num_inference_steps"]
+        def progress(pipeline, step, timestep, kwargs, number=number, total=total):
+            save(directory / "progress.json", dict(candidate=number + 1, candidates=len(SEEDS), step=step + 1, total=total))
+            return kwargs
+        t0 = time.time()
+        with torch.inference_mode():
+            image, evidence = dispatch_conditioning_once(pipe, call, execution_authorized=True, callback=progress)
+        path = directory / f"result-seed{seed}.png"
+        image.save(path)
+        candidates.append(dict(seed=seed, file=path.name, sha256=sha(path), seconds=round(time.time() - t0, 1), evidence=evidence))
     save(directory / "generation.json", dict(
-        state="generated_unreviewed", load_seconds=loaded, generate_seconds=round(time.time() - t0, 1),
-        peak_reserved_gib=round(torch.cuda.max_memory_reserved() / 2**30, 2), memory_cap_gib=MEMORY_CAP_GIB,
-        result_sha256=sha(directory / "result.png"), evidence=evidence))
+        state="generated_unreviewed", load_seconds=loaded, candidates=candidates, review="사용자가 후보 중 1장을 고른다",
+        peak_reserved_gib=round(torch.cuda.max_memory_reserved() / 2**30, 2), memory_cap_gib=MEMORY_CAP_GIB))
 
 
 if __name__ == "__main__":

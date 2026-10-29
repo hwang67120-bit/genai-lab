@@ -111,10 +111,12 @@ def main():
     parser.add_argument("--style", required=True, type=Path)
     parser.add_argument("--annotations", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
-    parser.add_argument("--outfit", type=Path, help="의상 참조(세 번째 어댑터). 주석에 outfit_sha256·outfit_box가 있어야 한다")
+    parser.add_argument("--outfit", action="append", default=[], metavar="NAME=PATH",
+                        help="의상 참조(이름=그림). 주석의 outfits에 같은 이름이 있어야 한다. 여러 번 줄 수 있다")
     args = parser.parse_args()
     profile = json.loads(args.annotations.read_text(encoding="utf-8"))
-    manifest = prepare_character_style_bundle(args.source, args.style, profile, args.output, args.outfit)
+    outfits = dict(item.split("=", 1) for item in args.outfit)
+    manifest = prepare_character_style_bundle(args.source, args.style, profile, args.output, outfits)
     from genai_lab.character_style_conditioning import ConditioningOptions
     options = ConditioningOptions(**profile["cpu_probe_options"])
     report = inspect_cpu_delivery(args.output, options)

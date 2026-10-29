@@ -13,6 +13,8 @@ import sys
 import time
 from pathlib import Path
 
+import numpy as np
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 MEMORY_CAP_GIB = 6.5
@@ -201,10 +203,78 @@ def generate(directory):
         peak_reserved_gib=round(torch.cuda.max_memory_reserved() / 2**30, 2), memory_cap_gib=MEMORY_CAP_GIB))
 
 
+def refine(directory):
+    """고른 후보 1장 다듬기(D-203). refine-request.json의 후보 파일·seed를 읽어 refined-seed<n>.png와 refine-result.json을 쓴다."""
+    import torch
+    from PIL import Image
+    from diffusers import ControlNetModel, DPMSolverMultistepScheduler, StableDiffusionXLControlNetImg2ImgPipeline
+    from diffusers.image_processor import IPAdapterMaskProcessor
+    from genai_lab.character_style_inputs import read_verified_bundle
+    from genai_lab.style_redraw_refine import (REFINE_FACE_SCALE, REFINE_STEPS, REFINE_STRENGTH, REFINE_STRUCTURE_SCALE,
+                                               REFINE_STYLE_SCALE, colour_back, refine_prompts, style_mask_without_garments)
+    req = json.loads((directory / "request.json").read_text(encoding="utf-8"))
+    ask = json.loads((directory / "refine-request.json").read_text(encoding="utf-8"))
+    chosen_path = directory / ask["candidate"]
+    if chosen_path.parent != directory or not chosen_path.name.startswith("result-seed"):
+        raise ValueError("다듬을 후보는 이 실행 폴더의 후보 그림이어야 합니다.")
+    if sha(chosen_path) != ask["candidate_sha256"]:
+        raise ValueError("고른 후보 그림이 바뀌었습니다.")
+    manifest, images = read_verified_bundle(directory / "inputs")
+    try:
+        profile, canvas = manifest["profile"], tuple(manifest["canvas"])
+        torch.cuda.set_per_process_memory_fraction(MEMORY_CAP_GIB * 2**30 / torch.cuda.get_device_properties(0).total_memory)
+        models = Path(req["style_models"])
+        started = time.time()
+        controlnet = ControlNetModel.from_pretrained(str(models / "extra/pose"), torch_dtype=torch.float16, local_files_only=True)
+        pipe = StableDiffusionXLControlNetImg2ImgPipeline.from_pretrained(str(models / "base/realvis"), controlnet=controlnet,
+                                                                          torch_dtype=torch.float16, variant="fp16", local_files_only=True,
+                                                                          add_watermarker=False)
+        pipe.scheduler = DPMSolverMultistepScheduler.from_config(pipe.scheduler.config, algorithm_type="sde-dpmsolver++",
+                                                                 use_karras_sigmas=True)
+        pipe.load_ip_adapter(str(models / "extra/ip"), subfolder="sdxl_models",
+                             weight_name=["ip-adapter-plus_sdxl_vit-h.safetensors", "ip-adapter-plus-face_sdxl_vit-h.safetensors"],
+                             image_encoder_folder="models/image_encoder", local_files_only=True)
+        for module in (pipe.unet, pipe.controlnet):
+            module.enable_layerwise_casting(storage_dtype=torch.float8_e4m3fn, compute_dtype=torch.float16)
+        pipe.enable_model_cpu_offload()
+        loaded = round(time.time() - started, 1)
+        processor = IPAdapterMaskProcessor()
+        style_mask = processor.preprocess(style_mask_without_garments(profile, canvas), height=canvas[1], width=canvas[0])
+        face_mask = processor.preprocess(images["identity_mask"], height=canvas[1], width=canvas[0])
+        positive, negative = refine_prompts(profile)
+        chosen = Image.open(chosen_path).convert("RGB")
+        target = Image.open(req["style_reference"]).convert("RGB")      # 깎지 않은 그림체 참조
+        pipe.set_ip_adapter_scale([{"up": {"block_0": [0.0, REFINE_STYLE_SCALE, 0.0]}}, REFINE_FACE_SCALE])
+        def progress(pipeline, step, timestep, kwargs):
+            save(directory / "progress.json", dict(stage="refine", step=step + 1, total=int(REFINE_STEPS * REFINE_STRENGTH)))
+            return kwargs
+        torch.cuda.reset_peak_memory_stats()
+        t0 = time.time()
+        with torch.inference_mode():
+            raw = pipe(prompt=positive, prompt_2=positive, negative_prompt=negative, image=chosen, control_image=images["pose"].copy(),
+                       strength=REFINE_STRENGTH, ip_adapter_image=[target, images["identity"].copy()],
+                       cross_attention_kwargs=dict(ip_adapter_masks=[style_mask, face_mask]), num_inference_steps=REFINE_STEPS,
+                       guidance_scale=5.0, controlnet_conditioning_scale=REFINE_STRUCTURE_SCALE,
+                       generator=torch.Generator(device="cpu").manual_seed(int(ask["seed"])),
+                       callback_on_step_end=progress).images[0]
+    finally:
+        for image in images.values():
+            image.close()
+    seed = int(ask["seed"])
+    raw.save(directory / f"refined-raw-seed{seed}.png")
+    Image.fromarray(colour_back(np.asarray(chosen), np.asarray(raw))).save(directory / f"refined-seed{seed}.png")
+    save(directory / "refine-result.json", dict(
+        state="refined_unreviewed", candidate=ask["candidate"], seed=seed, file=f"refined-seed{seed}.png",
+        raw_file=f"refined-raw-seed{seed}.png", sha256=sha(directory / f"refined-seed{seed}.png"), load_seconds=loaded,
+        refine_seconds=round(time.time() - t0, 1), peak_reserved_gib=round(torch.cuda.max_memory_reserved() / 2**30, 2),
+        settings=dict(strength=REFINE_STRENGTH, steps=REFINE_STEPS, style_scale=REFINE_STYLE_SCALE, face_scale=REFINE_FACE_SCALE,
+                      style_off_on_garments=True, colour_back=True), prompt=positive, negative_prompt=negative))
+
+
 if __name__ == "__main__":
     stage, folder = sys.argv[1], Path(sys.argv[2])
     try:
-        {"prepare": prepare, "generate": generate}[stage](folder)
+        {"prepare": prepare, "generate": generate, "refine": refine}[stage](folder)
     except Exception as error:
         save(folder / f"{stage}-error.json", dict(stage=stage, error_type=type(error).__name__, message=str(error)[:500]))
         raise

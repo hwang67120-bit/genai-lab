@@ -16,7 +16,7 @@ _BINDING = ROOT / "outputs/style-training-prep-20261025/character-style-binding-
 LEGACY = {"style_models": _BINDING / "cpu-v2-staging",
           "style_reference": ROOT / "outputs/style-training-prep-20261025/style-review-20261026/references/target-02.png",
           "style_reference_pose": _BINDING / "pose-target-02.json"}
-TIMEOUTS = {"pose": 600.0, "prepare": 900.0, "generate": 1800.0}
+TIMEOUTS = {"pose": 600.0, "prepare": 900.0, "generate": 1800.0, "refine": 900.0}
 
 
 class StyleRedrawFailed(RuntimeError):
@@ -112,3 +112,34 @@ def run_style_redraw(source_path, directory, runtime=None, *, confirmed_gender=N
     finally:
         outcome["finished"] = time.time()
         _save(directory / "outcome.json", outcome)
+
+
+def run_style_refine(directory, candidate, runtime=None, *, run=None):
+    """사용자가 고른 후보 1장을 다듬는다(D-203). candidate: outcome의 후보 경로 중 하나.
+    반환: refine 결과(state = review_pending | failed). 고른 후보 그림은 바꾸지 않는다."""
+    import hashlib
+    directory = Path(directory)
+    outcome = json.loads((directory / "outcome.json").read_text(encoding="utf-8"))
+    if outcome.get("state") != "review_pending":
+        raise ValueError("후보가 준비된 실행만 다듬을 수 있습니다.")
+    chosen = Path(candidate)
+    if str(chosen) not in outcome.get("candidates", []) or not chosen.is_file():
+        raise ValueError("다듬을 그림은 이 실행의 후보 중 하나여야 합니다.")
+    if runtime is None and run is None:
+        from genai_lab.studio_generation import StudioRuntime
+        runtime = StudioRuntime.from_environment()
+    run = run or default_run(runtime)
+    seed = int(chosen.stem.replace("result-seed", ""))
+    _save(directory / "refine-request.json", dict(candidate=chosen.name, seed=seed,
+                                                  candidate_sha256=hashlib.sha256(chosen.read_bytes()).hexdigest()))
+    result = dict(mode="style_refine", candidate=str(chosen), started=time.time())
+    try:
+        result["seconds"] = _stage(run, "refine", directory, "refine-result.json")
+        done = json.loads((directory / "refine-result.json").read_text(encoding="utf-8"))
+        result.update(state="review_pending", refined=str(directory / done["file"]), raw=str(directory / done["raw_file"]),
+                      peak_reserved_gib=done.get("peak_reserved_gib"), review="사람 확인 전(다듬기 결과)")
+    except StyleRedrawFailed as error:
+        result.update(state="failed", stage=error.stage, message=str(error))
+    result["finished"] = time.time()
+    _save(directory / f"refine-outcome-seed{seed}.json", result)
+    return result

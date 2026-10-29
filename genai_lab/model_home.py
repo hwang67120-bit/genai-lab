@@ -19,6 +19,10 @@ LAYOUT = {
     "head_cache": "head-detection/hub",                     # deepghs/anime_head_detection(허깅페이스 캐시 구조)
     "head_semantic_repo": "tools/see-through",
     "head_semantic_checkpoint": "hf/" + L2D_SAM_SNAPSHOT,
+    # 모드 B(그림체로 다시 그리기, STYLE_MODE_APP_DESIGN.md): base/realvis · extra/pose · extra/ip 배치. 모드 A만 쓰면 없어도 된다.
+    "style_models": "style/sdxl",
+    "style_reference": "style/references/target-02.png",
+    "style_reference_pose": "style/references/target-02.pose.json",
 }
 
 

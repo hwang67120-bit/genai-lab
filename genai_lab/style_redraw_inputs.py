@@ -107,9 +107,11 @@ def _row(name, text, description_ko):
                 status="unmeasured")
 
 
-def trait_rows(features, character_scores, gender):
+def trait_rows(features, character_scores, confirmed_gender=None):
     """특징표(character_features)와 태그 점수로 눈·피부·머리·옷·체형 문장을 만든다. 재지 못한 항목은 빈 문장(unmeasured)으로
-    두고 참조 그림에 맡긴다 — 추측해서 채우지 않는다(시각 조건 우선)."""
+    두고 참조 그림에 맡긴다 — 추측해서 채우지 않는다(시각 조건 우선).
+    성별 낱말은 사람이 확정한 성별(캐릭터 기억·확인)이 있을 때만 쓴다. 자동 태그 추정은 넣지 않는다 — S4에서 태그가 남성 둘을
+    1girl 0.97·1.00으로 읽었고, 그 낱말로 성별이 바뀌어 사용자 판정 0%·50%가 됐다(D-198)."""
     items = (features or {}).get("items", {})
     eye = _measured(items, "eye_color")
     eyes = ", ".join(_plain(t) for t in eye.get("tags", [])) if eye else ""
@@ -131,7 +133,7 @@ def trait_rows(features, character_scores, gender):
     if styles:
         hair_text = ", ".join(([hair_text] if hair_text else []) + [_plain(v) for v in styles])
     clothes = ", ".join(garment_words(character_scores))
-    build = GENDER_WORDS.get(gender, "")
+    build = GENDER_WORDS.get(confirmed_gender, "")
     return [_row("eyes", eyes, "눈"), _row("skin", skin_text, "피부"), _row("hair", hair_text, "머리"),
             _row("clothes", clothes, "옷"), _row("build", build, "체형·성별")]
 

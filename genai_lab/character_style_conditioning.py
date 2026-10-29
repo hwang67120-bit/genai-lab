@@ -50,8 +50,8 @@ class ConditioningCall:
 
 def build_feature_prompts(profile):
     """특징 문장을 빠짐없이 공유 프롬프트로 전달한다. 문장 이름만으로 독립 제어를 주장하지 않는다."""
-    traits = "; ".join(row["text"].strip() for row in profile["traits"])
-    positive = profile["scene_prompt"].strip() + ". " + traits + ". " + profile["style_prompt"].strip()
+    traits = "; ".join(row["text"].strip() for row in profile["traits"] if row["text"].strip())
+    positive = profile["scene_prompt"].strip() + ". " + (traits + ". " if traits else "") + profile["style_prompt"].strip()
     negative = "photograph, skin pores, flat cel shading, latex, felt, watermark"
     return positive, negative
 

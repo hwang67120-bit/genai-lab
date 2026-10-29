@@ -66,11 +66,14 @@ def validate_annotations(profile, canvas):
     if len(names) != len(set(names)) or not REQUIRED_TRAITS.issubset(names):
         raise CharacterInputError("required_traits_missing_or_duplicated")
     for row in traits:
-        if not all(isinstance(row.get(k), str) and row[k].strip()
-                   for k in ("name", "text", "description_ko", "evidence")):
+        # 재지 못한 항목(unmeasured)만 문장이 비어도 된다 — 문장에서 빠지고 참조 그림에 맡긴다.
+        keys = ("name", "description_ko", "evidence") if row.get("status") == "unmeasured" else ("name", "text", "description_ko", "evidence")
+        if not all(isinstance(row.get(k), str) and row[k].strip() for k in keys) or not isinstance(row.get("text"), str):
             raise CharacterInputError("trait_evidence_missing")
-        if row.get("status") not in ("operator_observation", "user_confirmed"):
+        if row.get("status") not in ("operator_observation", "user_confirmed", "automatic_measurement", "unmeasured"):
             raise CharacterInputError("trait_status_missing")
+        if row["status"] == "unmeasured" and row["text"].strip():
+            raise CharacterInputError("unmeasured_trait_has_text")
     if not isinstance(profile.get("scene_prompt"), str) or not profile["scene_prompt"].strip():
         raise CharacterInputError("scene_prompt_missing")
     if not isinstance(profile.get("style_prompt"), str) or not profile["style_prompt"].strip():

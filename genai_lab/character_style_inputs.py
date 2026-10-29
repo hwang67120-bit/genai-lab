@@ -63,6 +63,8 @@ def validate_annotations(profile, canvas):
     if profile.get("height_cm") is not None:
         raise CharacterInputError("physical_height_not_measured")
     validate_box(profile.get("face_box"), canvas)
+    if "identity_mask_box" in profile:              # 생성 자세의 얼굴 자리(원본 얼굴 상자와 다를 때, D-201)
+        validate_box(profile["identity_mask_box"], canvas, "identity_mask_box")
     outfits = profile.get("outfits", [])
     if not isinstance(outfits, list) or len(outfits) > MAX_OUTFITS:
         raise CharacterInputError("outfits_invalid")
@@ -131,7 +133,8 @@ def write_input_assets(source, style, profile, output, outfits=()):
     pose = render_pose_map(profile["layout"], source.size)
     pose.save(output / "structure-pose.png")
     face_mask = Image.new("L", source.size, 0)
-    x0, y0, x1, y1 = profile["face_box"]
+    # 얼굴 참조는 원본의 얼굴 상자로 자르고, 생성 자세의 얼굴 자리(identity_mask_box)에 적용한다. 없으면 원본 얼굴 상자 자리.
+    x0, y0, x1, y1 = profile.get("identity_mask_box", profile["face_box"])
     ImageDraw.Draw(face_mask).rectangle((x0, y0, x1-1, y1-1), fill=255)
     face_mask.save(output / "identity-mask.png")
     Image.new("L", source.size, 255).save(output / "style-mask.png")

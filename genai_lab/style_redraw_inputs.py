@@ -40,6 +40,12 @@ STANDARD_POSE = {"nose": [384, 175], "neck": [384, 255], "right_shoulder": [304,
                  "right_hip": [340, 560], "right_knee": [334, 760], "right_ankle": [330, 950], "left_hip": [428, 560],
                  "left_knee": [434, 760], "left_ankle": [438, 950], "right_eye": [366, 160], "left_eye": [402, 160],
                  "right_ear": [346, 170], "left_ear": [422, 170]}
+# D-201 원본 비율 맞춘 표준 자세: 고정 뼈대는 머리/어깨 0.62·엉덩이/어깨 0.55·다리/몸통 1.28로 원본 10명(0.70~1.16·0.60~0.70·
+# 1.43~1.68)보다 머리가 작고 어깨가 넓고 다리가 짧았다(사용자: 인체 비율이 안 맞음). 자세(정면, 팔 내림)는 그대로 두고 길이·폭만
+# 원본에서 잰 비율로 만든다. 재지 못한 비율은 아래 기본값(원본 10명의 가운데쯤), 터무니없는 값은 범위 안으로 자른다.
+PROPORTION_DEFAULTS = dict(head=0.8, torso=1.6, hip=0.65, leg=1.5, neck_drop=0.55)
+PROPORTION_LIMITS = dict(head=(0.5, 1.3), torso=(1.2, 2.2), hip=(0.5, 0.9), leg=(1.2, 1.9), neck_drop=(0.3, 0.9))
+POSE_TOP, POSE_BOTTOM = 40, 960             # 머리 위·발목 높이(캔버스 768x1024)
 MAX_GARMENT_WORDS = 6
 GARMENT_DETAIL = r"sleeves|collared|buttons?$|^open |^dress shirt$|^sleeves "
 # 피부 낱말: 얼굴 피부 Lab L* 기준. 45·60은 자유 생성(D-136)과 같다. 60~72는 밝은 면을 재 짙은 피부도 들어와(V006) 낱말 없이
@@ -71,21 +77,85 @@ def face_box(face_points, face_scores, size, scale=FACE_BOX_SCALE):
     return [int(max(0, cx - side / 2)), int(max(0, cy - side / 2)), int(min(w, cx + side / 2)), int(min(h, cy + side / 2))]
 
 
-def outfit_references(image, alpha, neck_y, hip_y=None):
+def _clip(value, key):
+    low, high = PROPORTION_LIMITS[key]
+    return min(high, max(low, value))
+
+
+def measured_proportions(joints, face):
+    """원본 관절·얼굴 상자에서 어깨 폭 기준 비율. 잴 수 없는 항목은 기본값, 출처를 함께 돌려준다."""
+    found, source = dict(PROPORTION_DEFAULTS), {k: "default" for k in PROPORTION_DEFAULTS}
+    if not {"left_shoulder", "right_shoulder", "neck"} <= set(joints):
+        return found, source
+    s = abs(joints["left_shoulder"][0] - joints["right_shoulder"][0])
+    if s < 10:
+        return found, source
+    side = face[3] - face[1]
+    values = dict(head=side / s, neck_drop=(joints["neck"][1] - (face[1] + face[3]) / 2) / side)
+    if {"left_hip", "right_hip"} <= set(joints):
+        hip_y = (joints["left_hip"][1] + joints["right_hip"][1]) / 2
+        torso = hip_y - joints["neck"][1]
+        values.update(torso=torso / s, hip=abs(joints["left_hip"][0] - joints["right_hip"][0]) / s)
+        if {"left_ankle", "right_ankle"} <= set(joints) and torso > 0:
+            values["leg"] = ((joints["left_ankle"][1] + joints["right_ankle"][1]) / 2 - hip_y) / torso
+    for key, value in values.items():
+        found[key], source[key] = round(_clip(value, key), 3), "measured"
+    return found, source
+
+
+def fitted_pose(proportions, canvas=CANVAS):
+    """표준 자세(정면, 팔 내림)를 주어진 비율로 만들어 캔버스에 맞춘다. 반환: 관절, 얼굴 마스크 상자, 머리·윗옷·아래옷·몸 영역.
+    기준 단위는 어깨 폭 1. 팔·발 모양은 고정 뼈대(STANDARD_POSE)와 같은 비율을 쓴다."""
+    p = proportions
+    f = p["head"]                                   # 얼굴 상자 한 변
+    torso, leg = p["torso"], p["leg"] * p["torso"]
+    face_cy = -p["neck_drop"] * f                   # 목(0,0) 기준 얼굴 중심
+    top, bottom = face_cy - 1.1 * f, torso + leg    # 머리 위(머리카락 여유) ~ 발목
+    k = (POSE_BOTTOM - POSE_TOP) / (bottom - top)
+    k = min(k, (canvas[0] / 2 - 40) / 0.75)         # 팔 바깥(어깨 폭 0.75)이 캔버스 안에
+    cx, y0 = canvas[0] / 2, POSE_TOP - top * k
+    def at(x, y):
+        return [round(cx + x * k, 1), round(y0 + y * k, 1)]
+    joints = {"neck": at(0, 0), "nose": at(0, face_cy + 0.083 * f),
+              "right_eye": at(-0.15 * f, face_cy - 0.042 * f), "left_eye": at(0.15 * f, face_cy - 0.042 * f),
+              "right_ear": at(-0.317 * f, face_cy + 0.042 * f), "left_ear": at(0.317 * f, face_cy + 0.042 * f)}
+    drop = 0.081                                    # 어깨는 목보다 어깨 폭의 8% 아래(고정 뼈대 13/160)
+    for side, sign in (("right", -1), ("left", 1)):
+        joints[f"{side}_shoulder"] = at(sign * 0.5, drop)
+        joints[f"{side}_elbow"] = at(sign * 0.6625, drop + 0.466 * torso)
+        joints[f"{side}_wrist"] = at(sign * 0.7375, drop + 0.892 * torso)
+        joints[f"{side}_hip"] = at(sign * p["hip"] / 2, torso)
+        joints[f"{side}_knee"] = at(sign * (p["hip"] / 2 + 0.0375), torso + 0.513 * leg)
+        joints[f"{side}_ankle"] = at(sign * (p["hip"] / 2 + 0.0625), torso + leg)
+    def box(x0, y0_, x1, y1):
+        a, b = at(x0, y0_), at(x1, y1)
+        return [int(max(0, a[0])), int(max(0, a[1])), int(min(canvas[0], b[0])), int(min(canvas[1], b[1]))]
+    half = 0.96
+    boxes = dict(face=box(-f / 2, face_cy - f / 2, f / 2, face_cy + f / 2),
+                 head=box(-f, face_cy - 1.125 * f, f, 0.54 * f),
+                 upper=box(-half, -0.094, half, torso + 0.094),
+                 lower=box(-half, torso - 0.094, half, torso + leg + 0.31),
+                 body=box(-half, -0.094, half, torso + leg + 0.31))
+    return joints, boxes
+
+
+def outfit_references(image, alpha, neck_y, hip_y=None, boxes=None):
     """의상 참조 목록 [(이름, 그림, 자른 상자, 적용 영역)]. 엉덩이 높이를 알면 윗옷·아래옷 두 장, 모르면 몸 전체 한 장.
-    아래옷 조각에 사람이 거의 없으면(허벅지 위에서 잘린 그림) 윗옷만 몸 전체 영역에 쓴다."""
+    아래옷 조각에 사람이 거의 없으면(허벅지 위에서 잘린 그림) 윗옷만 몸 전체 영역에 쓴다.
+    boxes: 적용 영역(fitted_pose). 없으면 고정 뼈대의 영역."""
+    boxes = boxes or dict(OUTFIT_SPLIT_BOXES, body=list(OUTFIT_BOX))
     h = np.asarray(alpha).shape[0]
     top = neck_y - OUTFIT_NECK_MARGIN * h
     if hip_y is None:
         piece, crop = outfit_reference(image, alpha, top)
-        return [("body", piece, crop, list(OUTFIT_BOX))]
+        return [("body", piece, crop, list(boxes["body"]))]
     upper, upper_crop = outfit_reference(image, alpha, top, hip_y + OUTFIT_HIP_BELOW * h)
     try:
         lower, lower_crop = outfit_reference(image, alpha, hip_y - OUTFIT_HIP_ABOVE * h)
     except StyleRedrawInputError:
-        return [("body", upper, upper_crop, list(OUTFIT_BOX))]
-    return [("upper", upper, upper_crop, list(OUTFIT_SPLIT_BOXES["upper"])),
-            ("lower", lower, lower_crop, list(OUTFIT_SPLIT_BOXES["lower"]))]
+        return [("body", upper, upper_crop, list(boxes["body"]))]
+    return [("upper", upper, upper_crop, list(boxes["upper"])),
+            ("lower", lower, lower_crop, list(boxes["lower"]))]
 
 
 def hair_reference(image, alpha, hair, face):
@@ -189,15 +259,18 @@ def trait_rows(features, character_scores, confirmed_gender=None):
             _row("clothes", clothes, "옷"), _row("build", build, "체형·성별")]
 
 
-def build_annotations(source_sha256, style_sha256, outfits, face, traits, gender=None):
-    """입력 묶음 주석(character_style_inputs.validate_annotations 형식). 자세는 표준 자세.
-    outfits: [(이름, SHA-256, 적용 영역)] 또는 [(이름, SHA-256, 적용 영역, 강도)] — 참조 순서 그대로(의상 다음 머리)."""
+def build_annotations(source_sha256, style_sha256, outfits, face, traits, gender=None, joints=None, face_mask=None):
+    """입력 묶음 주석(character_style_inputs.validate_annotations 형식).
+    outfits: [(이름, SHA-256, 적용 영역)] 또는 [(이름, SHA-256, 적용 영역, 강도)] — 참조 순서 그대로(의상 다음 머리).
+    joints·face_mask: 원본 비율로 만든 표준 자세(fitted_pose)와 그 얼굴 자리. 없으면 고정 뼈대와 원본 얼굴 상자."""
+    evidence = ("원본 비율로 만든 표준 서 있는 자세(D-201; 사용자 10/29: 자세 무관, 인체만 맞으면 됨). 원본 관절은 비율·옷 색 읽기에만"
+                if joints else "고정 표준 서 있는 자세(사용자 10/29: 자세 무관, 인체만 맞으면 됨). 원본 관절은 옷 색 읽기에만")
+    extra = {"identity_mask_box": list(face_mask)} if face_mask else {}
     return dict(schema_version=1, negative_terms=GENDER_NEGATIVE.get(gender, ""), source_sha256=source_sha256, style_sha256=style_sha256, canvas=list(CANVAS),
                 coordinate_system="image_xy", height_cm=None, face_box=list(face), traits=traits,
-                scene_prompt=SCENE_PROMPT, style_prompt=STYLE_PROMPT,
-                layout=dict(origin="manual_image_annotation",
-                            evidence="고정 표준 서 있는 자세(사용자 10/29: 자세 무관, 인체만 맞으면 됨). 원본 관절은 옷 색 읽기에만",
-                            joints={k: list(v) for k, v in STANDARD_POSE.items()}),
+                scene_prompt=SCENE_PROMPT, style_prompt=STYLE_PROMPT, **extra,
+                layout=dict(origin="manual_image_annotation", evidence=evidence,
+                            joints={k: list(v) for k, v in (joints or STANDARD_POSE).items()}),
                 outfits=[dict(name=row[0], sha256=row[1], box=list(row[2]), **({"scale": row[3]} if len(row) > 3 else {}))
                          for row in outfits],
                 cpu_probe_options={k: SCALES[k] for k in ("identity_scale", "style_scale", "structure_scale")})

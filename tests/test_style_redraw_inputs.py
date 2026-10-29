@@ -9,8 +9,9 @@ from PIL import Image
 from genai_lab.character_style_inputs import CharacterInputError, prepare_character_style_bundle, sha256_bytes
 from genai_lab.character_style_conditioning import ConditioningOptions, build_conditioning_call, build_feature_prompts
 from genai_lab.style_redraw_inputs import (
-    CANVAS, HAIR_SCALE, HEAD_BOX, OUTFIT_BACKGROUND, OUTFIT_BOX, OUTFIT_SPLIT_BOXES, SCALES, StyleRedrawInputError,
-    build_annotations, face_box, garment_words, hair_reference, outfit_reference, outfit_references, trait_rows,
+    CANVAS, HAIR_SCALE, HEAD_BOX, OUTFIT_BACKGROUND, OUTFIT_BOX, OUTFIT_SPLIT_BOXES, PROPORTION_DEFAULTS, SCALES, STANDARD_POSE,
+    StyleRedrawInputError, build_annotations, face_box, fitted_pose, garment_words, hair_reference, measured_proportions,
+    outfit_reference, outfit_references, trait_rows,
 )
 
 
@@ -46,6 +47,44 @@ class TestStyleRedrawInputs(unittest.TestCase):
         self.assertEqual(tuple(arr[20, 20]), (200, 30, 30))
         with self.assertRaises(StyleRedrawInputError):
             outfit_reference(image, alpha, top=199)
+
+    def test_proportions_measured_clipped_and_defaulted(self):
+        joints = {"neck": [400, 300], "left_shoulder": [500, 310], "right_shoulder": [300, 310],
+                  "left_hip": [470, 640], "right_hip": [330, 640]}
+        props, source = measured_proportions(joints, [330, 100, 470, 240])     # 얼굴 140 / 어깨 200
+        self.assertEqual((props["head"], props["torso"], props["hip"]), (0.7, 1.7, 0.7))
+        self.assertEqual((source["leg"], props["leg"]), ("default", PROPORTION_DEFAULTS["leg"]))
+        wide = dict(joints, left_hip=[900, 640], right_hip=[-100, 640])
+        self.assertEqual(measured_proportions(wide, [330, 100, 470, 240])[0]["hip"], 0.9)   # 범위 위로 자름
+        self.assertEqual(measured_proportions({}, [0, 0, 10, 10])[0], PROPORTION_DEFAULTS)
+
+    def test_fitted_pose_follows_proportions_and_fits_canvas(self):
+        small, _ = fitted_pose(dict(PROPORTION_DEFAULTS, head=0.6))
+        big, boxes = fitted_pose(dict(PROPORTION_DEFAULTS, head=1.2))
+        width = lambda j: j["left_shoulder"][0] - j["right_shoulder"][0]
+        self.assertGreater(width(small), width(big))          # 머리가 크면 같은 키에서 어깨가 좁다
+        for j in (small, big):
+            self.assertAlmostEqual((j["left_ankle"][1] + j["right_ankle"][1]) / 2, 960, delta=1)
+            self.assertTrue(all(0 <= x < 768 and 0 <= y < 1024 for x, y in j.values()))
+        self.assertTrue(set(STANDARD_POSE) == set(big))
+        face = boxes["face"]
+        self.assertTrue(face[0] < big["nose"][0] < face[2] and face[1] < big["nose"][1] < face[3])
+        self.assertLess(boxes["upper"][1], big["right_shoulder"][1])
+        self.assertGreater(boxes["lower"][3], big["right_ankle"][1])
+
+    def test_face_mask_goes_to_the_generated_face_place(self):
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            source, style = root / "s.png", root / "t.png"
+            Image.new("RGB", CANVAS, (1, 1, 1)).save(source); Image.new("RGB", CANVAS, (2, 2, 2)).save(style)
+            joints, boxes = fitted_pose(PROPORTION_DEFAULTS)
+            ann = build_annotations(sha256_bytes(source.read_bytes()), sha256_bytes(style.read_bytes()), [], [10, 10, 110, 110],
+                                    trait_rows(features(), {}, None), None, joints, boxes["face"])
+            prepare_character_style_bundle(source, style, ann, root / "bundle")
+            with Image.open(root / "bundle" / "identity-mask.png") as mask:
+                self.assertEqual(mask.getbbox(), tuple(boxes["face"]))
+            with Image.open(root / "bundle" / "identity-face.png") as crop:
+                self.assertEqual(crop.size, (100, 100))      # 자르기는 원본 얼굴 상자
 
     def test_hair_reference_crops_hair_and_face_with_margin(self):
         image = Image.new("RGB", (400, 1000), (20, 20, 20))

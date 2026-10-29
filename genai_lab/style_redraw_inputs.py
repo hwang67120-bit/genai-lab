@@ -132,7 +132,8 @@ def fitted_pose(proportions, canvas=CANVAS):
         return [int(max(0, a[0])), int(max(0, a[1])), int(min(canvas[0], b[0])), int(min(canvas[1], b[1]))]
     half = 0.96
     boxes = dict(face=box(-f / 2, face_cy - f / 2, f / 2, face_cy + f / 2),
-                 head=box(-f, face_cy - 1.125 * f, f, 0.54 * f),
+                 # 머리 참조 영역은 목에서 멈춘다: 어깨까지 내려가면 머리 참조의 회색 바탕이 어깨에 칠해졌다(T009, D-201).
+                 head=box(-f, face_cy - 1.125 * f, f, 0),
                  upper=box(-half, -0.094, half, torso + 0.094),
                  lower=box(-half, torso - 0.094, half, torso + leg + 0.31),
                  body=box(-half, -0.094, half, torso + leg + 0.31))

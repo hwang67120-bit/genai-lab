@@ -70,6 +70,7 @@ class TestStyleRedrawInputs(unittest.TestCase):
         face = boxes["face"]
         self.assertTrue(face[0] < big["nose"][0] < face[2] and face[1] < big["nose"][1] < face[3])
         self.assertLess(boxes["upper"][1], big["right_shoulder"][1])
+        self.assertLessEqual(boxes["head"][3], big["neck"][1])     # 머리 참조는 어깨에 걸치지 않는다
         self.assertGreater(boxes["lower"][3], big["right_ankle"][1])
 
     def test_face_mask_goes_to_the_generated_face_place(self):

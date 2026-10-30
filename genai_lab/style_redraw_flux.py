@@ -21,6 +21,8 @@ STYLE = ("highly detailed semi-realistic anime illustration, dense digital paint
 BACKGROUND = "Weathered concrete wall background with soft texture, strong warm key light from upper left."
 COLOUR_SHIFT_CAP = np.array([15.0, 12.0, 12.0])     # L, a, b — 이보다 크게 옮기지 않는다(잘못 잡은 영역의 피해를 줄임)
 SPREAD_CLIP = (0.8, 1.25)
+HIGHLIGHT_L = 94.0                  # 밝힐 때 부위의 밝은 쪽(99번째 백분위)이 이 L을 넘지 않게
+HIGHLIGHT_PERCENTILE = 99
 MIN_PART_PIXELS = 200
 PARTS = ("skin", "hair", "upper", "lower")
 IDENTITY_PARTS = ("skin", "hair")             # 옷을 바꿀 때는 캐릭터 원본에 맞출 부위가 피부·머리뿐(옷은 옷 그림에서 온다)
@@ -78,7 +80,11 @@ def colour_match(result_rgb, original_rgb, result_masks, original_masks, feather
         a, b = lab[mr], source[ms]
         mu_r, sd_r, mu_s, sd_s = a.mean(0), a.std(0) + 1e-3, b.mean(0), b.std(0) + 1e-3
         shift = np.clip(mu_s - mu_r, -cap, cap)
-        fixed = (lab - mu_r) * np.clip(sd_s / sd_r, *SPREAD_CLIP) + mu_r + shift
+        spread = np.clip(sd_s / sd_r, *SPREAD_CLIP)
+        if shift[0] > 0:                # 밝히는 쪽은 밝은 곳이 하얗게 날아가지 않을 만큼만(T017·V001: 흰 셀 피부 쪽으로 +20 → 얼굴 윤곽 사라짐)
+            top = (np.percentile(a[:, 0], HIGHLIGHT_PERCENTILE) - mu_r[0]) * spread[0] + mu_r[0]
+            shift[0] = min(shift[0], max(HIGHLIGHT_L - top, 0.0))
+        fixed = (lab - mu_r) * spread + mu_r + shift
         w = gaussian_filter(mr.astype(np.float32), feather)[..., None] if feather else mr[..., None].astype(np.float32)
         lab = lab * (1 - w) + fixed * w
         shifts[part] = [round(float(x), 1) for x in shift]

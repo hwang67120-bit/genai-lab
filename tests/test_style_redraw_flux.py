@@ -42,6 +42,16 @@ class TestFluxHelpers(unittest.TestCase):
         self.assertEqual(tuple(out[30, 30]), (200, 160, 140))                 # 옷은 그대로
         self.assertLess(int(out[10, 10].sum()), int(res[10, 10].sum()))       # 피부는 원본(짙은) 쪽으로
 
+    def test_brightening_stops_before_highlights_blow_out(self):
+        orig = np.zeros((40, 40, 3), np.uint8); orig[:] = (252, 246, 242)              # 흰 셀 피부
+        res = np.zeros((40, 40, 3), np.uint8); res[:] = (200, 180, 170); res[:5] = (240, 232, 228)   # 그늘 + 밝은 곳
+        skin = np.ones((40, 40), bool); empty = np.zeros_like(skin)
+        m = dict(skin=skin, hair=empty, upper=empty, lower=empty)
+        out, shifts = colour_match(res, orig, m, dict(m), feather=0, parts=("skin",), cap=(40, 20, 20))
+        self.assertLess(shifts["skin"][0], 10)                                         # +20 넘게 밝히지 않음
+        self.assertLess(int(out[2, 2].min()), 250)                                     # 밝은 곳이 하얗게 날아가지 않음
+        self.assertGreater(int(out[20, 20].sum()), int(res[20, 20].sum()))            # 그래도 원본 쪽(밝게)으로는 감
+
     def test_part_masks_stay_inside_the_person(self):
         rgb = np.zeros((40, 40, 3), np.uint8); rgb[:] = (200, 160, 130)      # 배경도 피부와 비슷한 색
         face = np.zeros((40, 40), bool); face[5:15, 10:20] = True

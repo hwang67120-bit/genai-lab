@@ -16,7 +16,9 @@ _BINDING = ROOT / "outputs/style-training-prep-20261025/character-style-binding-
 LEGACY = {"style_models": _BINDING / "cpu-v2-staging",
           "style_reference": ROOT / "outputs/style-training-prep-20261025/style-review-20261026/references/target-02.png",
           "style_reference_pose": _BINDING / "pose-target-02.json",
-          "style_lora": ROOT / "outputs/style-training-prep-20261025/style-lora-run-v1-20261030/step-00500"}
+          "style_lora": ROOT / "outputs/style-training-prep-20261025/style-lora-run-v1-20261030/step-00500",
+          "flux_model": Path("D:/genai-cache/models/FLUX.2-klein-4B-e7b7dc27"),
+          "hand_cache": Path("D:/genai-cache/huggingface")}
 TIMEOUTS = {"pose": 600.0, "prepare": 900.0, "generate": 1800.0, "refine": 900.0, "face": 900.0}
 
 
@@ -71,11 +73,17 @@ def _stage(run, stage, directory, expected):
     return round(time.time() - t0, 1)
 
 
-def run_style_redraw(source_path, directory, runtime=None, *, confirmed_gender=None, paths=None, run=None):
-    """캐릭터 그림 1장 → 결과 1장. 반환: outcome(state = review_pending | refused | failed). 결과를 자동 승인하지 않는다.
-    confirmed_gender: 사람이 확정한 성별(male·female, 캐릭터 기억 등). 없으면 성별 낱말 없이 얼굴 참조에 맡긴다(D-198)."""
+ENGINES = ("flux", "sdxl_lora")
+
+
+def run_style_redraw(source_path, directory, runtime=None, *, confirmed_gender=None, paths=None, run=None, engine="flux"):
+    """캐릭터 그림 1장 → 후보 3장. 반환: outcome(state = review_pending | refused | failed). 결과를 자동 승인하지 않는다.
+    confirmed_gender: 사람이 확정한 성별(male·female, 캐릭터 기억 등). 없으면 성별 낱말 없이 그린다(D-198).
+    engine: "flux"(기본, D-210 FLUX.2-klein 편집) 또는 "sdxl_lora"(이전 RealVisXL + 스타일 LoRA + 참조 경로)."""
     if confirmed_gender not in (None, "male", "female"):
         raise ValueError("확정 성별은 male·female 또는 None이어야 합니다.")
+    if engine not in ENGINES:
+        raise ValueError(f"모르는 생성 방식입니다: {engine}")
     from genai_lab.outfit_edit import canvas
     if runtime is None:
         from genai_lab.studio_generation import StudioRuntime
@@ -87,7 +95,7 @@ def run_style_redraw(source_path, directory, runtime=None, *, confirmed_gender=N
     try:
         with Image.open(source_path) as image:
             canvas(image).save(directory / "character.png")
-        _save(directory / "request.json", dict(request_paths(runtime, paths), confirmed_gender=confirmed_gender))
+        _save(directory / "request.json", dict(request_paths(runtime, paths), confirmed_gender=confirmed_gender, engine=engine))
         outcome["seconds"]["pose"] = _stage(run, "pose", directory, "pose.json")
         outcome["seconds"]["prepare"] = _stage(run, "prepare", directory, "prepare.json")
         prepared = json.loads((directory / "prepare.json").read_text(encoding="utf-8"))

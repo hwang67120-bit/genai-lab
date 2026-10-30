@@ -18,6 +18,8 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 MEMORY_CAP_GIB = 6.5
+ENGINE_DEFAULT = "flux"                 # D-210: FLUX.2-klein 편집. "sdxl_lora" = 이전 RealVisXL + 스타일 LoRA + IP-Adapter 경로
+HAND_MODEL = "models--deepghs--anime_hand_detection"
 ANIME_SEG = "models--skytnt--anime-seg/snapshots/493cb60893f47441b26ec4fb9a306bce9e342982/isnetis.onnx"
 JOINT_SCORE = 0.3
 TAG_THRESHOLD = 0.5
@@ -89,6 +91,8 @@ def prepare(directory):
     if safety["blocked"] or safety["review"]:
         # 성인 캐릭터만 다룬다. 어려 보이는 신호가 있으면 자동 진행하지 않는다.
         return refuse("safety", "이 그림은 그림체 다시 그리기를 진행할 수 없습니다.", safety=safety)
+    if req.get("engine", ENGINE_DEFAULT) == "flux":
+        return prepare_flux(directory, req, canvas, rgb, scores, safety, joints, face, started)
     from genai_lab.proportion_foreground import AnimeForeground
     from genai_lab.head_paste_semantics import HeadSegmenter
     from genai_lab.head_paste_worker import figure_parts
@@ -152,6 +156,115 @@ def prepare(directory):
         note="특징 문장·성별은 자동 측정이며 사람 확인 전이다."))
 
 
+def person_and_parts(rgb, req):
+    """사람 영역(anime-seg)과 부위 분할(See-through). 색 맞춤용 네 부위 마스크를 돌려준다."""
+    from PIL import Image
+    from types import SimpleNamespace
+    from genai_lab.proportion_foreground import AnimeForeground
+    from genai_lab.head_paste_semantics import HeadSegmenter
+    from genai_lab.head_paste_worker import figure_parts
+    from genai_lab.style_redraw_flux import part_masks
+    model = Path(req["model_cache"]) / ANIME_SEG
+    fg = AnimeForeground(SimpleNamespace(foreground_model=model, foreground_sha256=sha(model)))
+    try:
+        person = fg.alpha(Image.fromarray(rgb)) > 127
+    finally:
+        fg.close()
+    seg = HeadSegmenter(Path(req["head_semantic_repo"]), Path(req["head_semantic_checkpoint"]))
+    try:
+        parts = figure_parts(seg, rgb)
+    finally:
+        seg.close()
+    return parts, part_masks(rgb, parts, person)
+
+
+def count_hands(images, req):
+    """손 검출(deepghs anime_hand_detection, 로컬 캐시만). 모델이 없으면 [None, ...]."""
+    cache = Path(req.get("hand_cache", ""))
+    if not (cache / HAND_MODEL).is_dir():
+        return [None] * len(images)
+    # huggingface_hub는 가져올 때 캐시 위치를 읽으므로 환경 변수 대신 상수를 바꾼다(오프라인, 이 폴더만).
+    import huggingface_hub.constants as hub
+    hub.HF_HUB_CACHE = str(cache)
+    from PIL import Image
+    from imgutils.detect import detect_hands
+    try:
+        return [len(detect_hands(Image.fromarray(np.asarray(im)))) for im in images]
+    except Exception:                               # 손 검출은 보조 표시 — 실패해도 생성은 계속한다
+        return [None] * len(images)
+
+
+def prepare_flux(directory, req, canvas, rgb, scores, safety, joints, face, started):
+    """FLUX 경로 준비(D-210): 특징 문장·원본 부위 마스크·원본 손 개수. 그림체 참조·의상 참조·입력 묶음은 만들지 않는다."""
+    from genai_lab.character_features import extract_features
+    from genai_lab.studio_controller import guessed_gender
+    from genai_lab.style_redraw_flux import flux_prompt
+    from genai_lab.style_redraw_inputs import trait_rows
+    parts, masks = person_and_parts(rgb, req)
+    guessed = guessed_gender(dict(character_scores=scores))
+    confirmed = req.get("confirmed_gender")
+    features = extract_features(rgb, parts, scores, gender=confirmed or "unknown")
+    traits = trait_rows(features, scores, confirmed)
+    np.savez_compressed(directory / "original-masks.npz", **masks)
+    hands = count_hands([rgb], req)[0]
+    save(directory / "prepare.json", dict(
+        state="ready", engine="flux", seconds=round(time.time() - started, 1), gender=confirmed, guessed_gender=guessed,
+        traits=traits, prompt=flux_prompt(traits), face_box=face, original_hands=hands,
+        warnings=support_warnings(scores, joints), safety=safety, joints_used=sorted(joints),
+        note="특징 문장·성별은 자동 측정이며 사람 확인 전이다. 자세·구도는 원본을 따른다."))
+
+
+def generate_flux(directory, req):
+    """FLUX.2-klein 편집으로 후보 3장(D-210) → 부위별 색 맞춤 → 손 개수. 원래 생성 그림(raw)도 남긴다."""
+    import gc
+    import torch
+    from PIL import Image
+    from diffusers import Flux2KleinPipeline
+    from diffusers.quantizers import PipelineQuantizationConfig
+    from genai_lab.style_redraw_flux import GUIDANCE, MAX_SEQUENCE_LENGTH, SEEDS, STEPS, colour_match, hand_flag
+    prepared = json.loads((directory / "prepare.json").read_text(encoding="utf-8"))
+    torch.cuda.set_per_process_memory_fraction(MEMORY_CAP_GIB * 2**30 / torch.cuda.get_device_properties(0).total_memory)
+    started = time.time()
+    quant = PipelineQuantizationConfig(quant_backend="bitsandbytes_4bit", quant_kwargs={
+        "load_in_4bit": True, "bnb_4bit_quant_type": "nf4", "bnb_4bit_compute_dtype": torch.bfloat16, "bnb_4bit_use_double_quant": True},
+        components_to_quantize=["transformer", "text_encoder"])
+    pipe = Flux2KleinPipeline.from_pretrained(str(req["flux_model"]), torch_dtype=torch.bfloat16, quantization_config=quant,
+                                              low_cpu_mem_usage=True, local_files_only=True)
+    pipe.enable_model_cpu_offload()
+    pipe.vae.enable_tiling()
+    loaded = round(time.time() - started, 1)
+    reference = Image.open(directory / "character.png").convert("RGB")
+    torch.cuda.reset_peak_memory_stats()
+    raws = []
+    for number, seed in enumerate(SEEDS):
+        save(directory / "progress.json", dict(candidate=number + 1, candidates=len(SEEDS), step=0, total=STEPS))
+        t0 = time.time()
+        image = pipe(image=[reference], prompt=prepared["prompt"], width=reference.width, height=reference.height,
+                     num_inference_steps=STEPS, guidance_scale=GUIDANCE, max_sequence_length=MAX_SEQUENCE_LENGTH,
+                     generator=torch.Generator(device="cpu").manual_seed(seed)).images[0]
+        image.save(directory / f"result-raw-seed{seed}.png")
+        raws.append((seed, np.asarray(image), round(time.time() - t0, 1)))
+    peak = round(torch.cuda.max_memory_reserved() / 2**30, 2)
+    pipe = None
+    gc.collect()
+    torch.cuda.empty_cache()
+    original = np.asarray(reference)
+    original_masks = dict(np.load(directory / "original-masks.npz"))
+    hands = count_hands([r for _, r, _ in raws], req)
+    candidates = []
+    for (seed, raw, seconds), count in zip(raws, hands):
+        _, masks = person_and_parts(raw, req)
+        fixed, shifts = colour_match(raw, original, masks, original_masks)
+        path = directory / f"result-seed{seed}.png"
+        Image.fromarray(fixed).save(path)
+        candidates.append(dict(seed=seed, file=path.name, raw_file=f"result-raw-seed{seed}.png", sha256=sha(path), seconds=seconds,
+                               colour_shift=shifts, hands=count, extra_hands=hand_flag(prepared.get("original_hands"), count)))
+    save(directory / "generation.json", dict(
+        state="generated_unreviewed", engine="flux", load_seconds=loaded, candidates=candidates, review="사용자가 후보 중 1장을 고른다",
+        peak_reserved_gib=peak, memory_cap_gib=MEMORY_CAP_GIB, prompt=prepared["prompt"],
+        model=dict(name="black-forest-labs/FLUX.2-klein-4B", path=str(req["flux_model"]), license="Apache-2.0")))
+
+
 def load_pipeline(models, outfit_count=1, loras=None, style_adapter=True):
     """loras: {이름: LoRA 폴더}. fp8 보관 전에 얹고, LoRA 층은 fp8로 바꾸지 않는다(바꾸면 LoRA 계산이 fp8에서 멈춘다, D-204).
     style_adapter=False: 그림체 참조 어댑터를 불러오지 않는다(그림체는 스타일 LoRA)."""
@@ -187,6 +300,8 @@ def generate(directory):
     from genai_lab.character_style_inputs import outfit_roles
     from genai_lab.style_redraw_inputs import SCALES, SEEDS, STYLE_LORA_WEIGHT
     req = json.loads((directory / "request.json").read_text(encoding="utf-8"))
+    if req.get("engine", ENGINE_DEFAULT) == "flux":
+        return generate_flux(directory, req)
     torch.cuda.set_per_process_memory_fraction(MEMORY_CAP_GIB * 2**30 / torch.cuda.get_device_properties(0).total_memory)
     manifest = json.loads((directory / "inputs" / "manifest.json").read_text(encoding="utf-8"))
     started = time.time()

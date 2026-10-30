@@ -24,7 +24,7 @@ def qwen():
     GGUFQuantizationConfig(compute_dtype=torch.bfloat16)
     BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.bfloat16)
     for name in ("genai_lab.qwen_pose_worker", "genai_lab.outfit_edit", "genai_lab.generation_preview", "genai_lab.qwen_free_generation",
-                 "genai_lab.qwen_outfit_edit", "genai_lab.qwen_accelerators", "genai_lab.style_loras", "genai_lab.style_pass"):
+                 "genai_lab.qwen_outfit_edit", "genai_lab.qwen_accelerators"):
         importlib.import_module(name)
     from genai_lab.qwen_pose_settings import check_runtime_versions
     return dict(version_contract=check_runtime_versions())

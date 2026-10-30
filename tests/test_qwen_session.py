@@ -14,7 +14,7 @@ from genai_lab.qwen_session import ENV, QwenSession, session_enabled
 
 
 def request(seed=42, **spec):
-    return {"schema_version": 1, "task_kind": "free_generation", "free_spec": dict(dict(accelerator="", style_lora=""), **spec),
+    return {"schema_version": 1, "task_kind": "free_generation", "free_spec": dict(dict(accelerator=""), **spec),
             "prompt": {"positive": "p", "negative": " "}, "images": ["a.png", "b.png"], "settings": {"python_executable": "py"},
             "seed": seed, "memory": {"reserved_limit_gib": 6.5}, "output_size": [896, 1184]}
 
@@ -26,7 +26,6 @@ def test_only_the_seed_may_differ_inside_a_session():
     assert worker.reuse_key(changed) != worker.reuse_key(request(42))
     assert worker.session_reusable(request())
     assert not worker.session_reusable(request(accelerator="lightning8"))
-    assert not worker.session_reusable(request(style_lora="anime_borrowed"))
     assert not worker.session_reusable(dict(request(), task_kind="outfit_edit"))
 
 
@@ -216,7 +215,7 @@ def test_session_starts_one_process_and_accepts_only_seed_changes(tmp_path):
     assert job2["request"].endswith("request.json") and job2["request_sha256"] == json_sha(request(43))
     changed = request(43)
     changed["prompt"] = {"positive": "other", "negative": " "}
-    assert not session.accepts(changed) and not session.accepts(request(43, style_lora="x"))
+    assert not session.accepts(changed)
     session.kill()
     assert started[0].terminated and started[0].stdin.closed and session.closed and not session.accepts(request(44))
 

@@ -30,9 +30,9 @@ def reuse_key(request):
 
 
 def session_reusable(request):
-    """세션은 제품 기본 경로만: 자유 생성, 가속 LoRA·그림체 LoRA 없음(어댑터를 붙인 파이프라인은 넘기지 않는다)."""
+    """세션은 제품 기본 경로만: 자유 생성, 가속 LoRA 없음(어댑터를 붙인 파이프라인은 넘기지 않는다)."""
     spec = request.get("free_spec") or {}
-    return request.get("task_kind") in SESSION_KINDS and not spec.get("accelerator") and not spec.get("style_lora")
+    return request.get("task_kind") in SESSION_KINDS and not spec.get("accelerator")
 
 
 class SessionCache:
@@ -119,9 +119,6 @@ def validate_request(request):
     if kind == "free_generation":          # D-123: 기준 이미지 + 머리 크롭, 편집과 같은 메모리 정책
         from genai_lab.qwen_free_generation import validate_free_request
         return validate_free_request(request)
-    if kind == "style_pass":               # D-161 그림체 후처리 한 번(시험 전용): 결과 그림 1장 + 트리거 문장
-        from genai_lab.style_pass import validate_style_request
-        return validate_style_request(request)
     if kind != "pose_edit":
         raise ValueError("지원하지 않는 편집 종류")
     if request.get("schema_version") != 1 or request.get("images") != 2:
@@ -161,7 +158,7 @@ def generate(request, directory, record, cache=None):
     if not torch.cuda.is_available():
         raise RuntimeError("Qwen CUDA 장치가 없습니다.")
     images, p1, te, pipe, tr = [], None, None, None, None
-    outfit = request.get("task_kind") in ("outfit_edit", "free_generation", "style_pass")
+    outfit = request.get("task_kind") in ("outfit_edit", "free_generation")
     guard = None
     if outfit:  # D-094: 6.5GiB 할당 상한과 단계별 기록(시험 09~11 구성). 자세·꼬리 경로는 바꾸지 않는다.
         from genai_lab.outfit_edit import MemoryGuard
@@ -186,8 +183,7 @@ def generate(request, directory, record, cache=None):
         if (directory / "cancel.request").exists():
             raise WorkerCancelled("사용자 취소")
     try:
-        reference = (None if request.get("task_kind") == "style_pass"      # D-161 후처리: 결과 그림 1장만
-                     else (spec.crop_path, spec.crop_sha256) if request.get("task_kind") == "tail_edit"
+        reference = ((spec.crop_path, spec.crop_sha256) if request.get("task_kind") == "tail_edit"
                      else (spec.reference_path, spec.reference_sha256) if request.get("task_kind") == "free_generation"
                      else (spec.garment_path, spec.garment_sha256) if outfit
                      else (request["skeleton_path"], request["skeleton_sha256"]))
@@ -315,31 +311,6 @@ def generate(request, directory, record, cache=None):
                 record["accelerator"] = dict(name=accel_name, repo=accel["repo"], revision=accel["revision"], lora=str(path),
                                              sha256=accel["sha256"], steps=steps, true_cfg_scale=true_cfg,
                                              note="시험용 가속(D-141). CFG 1.0이면 부정 지시문은 쓰이지 않는다")
-            style_name = (getattr(spec, "style_lora", "") if request.get("task_kind") == "free_generation"
-                          else spec.lora_name if request.get("task_kind") == "style_pass" else "")
-            if style_name:      # D-159 그림체 LoRA 맛보기(시험 전용): 오프로드 전에 붙이고 가속 LoRA와 함께면 강도를 나눠 건다
-                from genai_lab.style_loras import check_strength, lora_path as style_path, style_lora
-                style = style_lora(style_name)
-                path = style_path(style_name, settings.model_root)
-                if not style["sha256"] or file_sha(str(path)) != style["sha256"]:
-                    raise ValueError("그림체 LoRA SHA 불일치(또는 미기록)")
-                strength = check_strength(spec.style_strength)
-                pipe.load_lora_weights(str(path.parent), weight_name=path.name, adapter_name="style")
-                names, weights = ([accel_name], [1.0]) if accel_name else ([], [])
-                pipe.set_adapters(names + ["style"], weights + [strength])
-                record["style_lora"] = dict(name=style_name, repo=style["repo"], revision=style["revision"], lora=str(path),
-                                            sha256=style["sha256"], strength=strength, adapters=names + ["style"],
-                                            note="그림체 맛보기(D-159, 시험 전용 — 제품 아님)")
-                # D-161 실제 적용 모듈: 'style' 어댑터가 걸린 층과 실제 배율(강도 × alpha/r)을 남긴다
-                applied = {name: float(module.scaling["style"]) for name, module in tr.named_modules()
-                           if "style" in (getattr(module, "lora_A", None) or {})}
-                write_json(directory / "style_modules.json", dict(count=len(applied), modules=applied))
-                kinds = {}
-                for name in applied:
-                    kind_name = name.split(".", 2)[-1] if name.startswith("transformer_blocks.") else name
-                    kinds[kind_name] = kinds.get(kind_name, 0) + 1
-                record["style_lora"].update(applied_modules=len(applied), applied_kinds=kinds,
-                                            applied_scalings=sorted(set(applied.values())), modules_file="style_modules.json")
             pipe.vae.to("cuda")
             if outfit and request["memory"]["vae_tiling"]:  # 타일 없이는 6.5GiB 상한에서 VAE 복원이 실패했다(시험 10 진단 C)
                 pipe.vae.enable_tiling()

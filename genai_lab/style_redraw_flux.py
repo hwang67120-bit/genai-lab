@@ -13,10 +13,12 @@ SEEDS = (42, 43, 44)
 STEPS = 4
 GUIDANCE = 1.0
 MAX_SEQUENCE_LENGTH = 256
-STYLE = ("anime illustration with semi-realistic painted shading, detailed digital painting: clean thin anime line art, anime facial "
-         "proportions with expressive eyes, soft painted skin shading with gentle glossy highlights, fine individual hair strands with rim "
-         "light, well-defined fabric materials with natural folds, strong directional sunlight with soft shadows, rich colours")
-BACKGROUND = "Plain warm-gray studio background, soft warm key light from upper left."
+# 그림체 = S4w(사용자 10/30): 목표(고밀도 반실사 애니메이션 일러스트)의 그리는 방식을 문장으로 — 목표 그림의 내용은 따라 하지 않는다.
+STYLE = ("highly detailed semi-realistic anime illustration, dense digital painting: delicate thin line art, anime face with realistic soft "
+         "skin rendering, subtle glossy highlights and light blush, detailed eyes with reflections, very fine individual hair strands with "
+         "loose flyaway wisps and strong backlight, deep realistic fabric folds and creases, detailed material texture, strong directional "
+         "sunlight with sharp deep shadows and soft bounce light, high detail density, cinematic colour grading")
+BACKGROUND = "Weathered concrete wall background with soft texture, strong warm key light from upper left."
 COLOUR_SHIFT_CAP = np.array([15.0, 12.0, 12.0])     # L, a, b — 이보다 크게 옮기지 않는다(잘못 잡은 영역의 피해를 줄임)
 SPREAD_CLIP = (0.8, 1.25)
 MIN_PART_PIXELS = 200

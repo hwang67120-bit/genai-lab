@@ -17,7 +17,7 @@ LEGACY = {"style_models": _BINDING / "cpu-v2-staging",
           "style_reference": ROOT / "outputs/style-training-prep-20261025/style-review-20261026/references/target-02.png",
           "style_reference_pose": _BINDING / "pose-target-02.json",
           "style_lora": ROOT / "outputs/style-training-prep-20261025/style-lora-run-v1-20261030/step-00500"}
-TIMEOUTS = {"pose": 600.0, "prepare": 900.0, "generate": 1800.0, "refine": 900.0}
+TIMEOUTS = {"pose": 600.0, "prepare": 900.0, "generate": 1800.0, "refine": 900.0, "face": 900.0}
 
 
 class StyleRedrawFailed(RuntimeError):
@@ -115,9 +115,8 @@ def run_style_redraw(source_path, directory, runtime=None, *, confirmed_gender=N
         _save(directory / "outcome.json", outcome)
 
 
-def run_style_refine(directory, candidate, runtime=None, *, run=None):
-    """사용자가 고른 후보 1장을 다듬는다(D-203). candidate: outcome의 후보 경로 중 하나.
-    반환: refine 결과(state = review_pending | failed). 고른 후보 그림은 바꾸지 않는다."""
+def _run_on_candidate(directory, candidate, runtime, run, stage, mode, review):
+    """고른 후보 1장에 단계 하나(refine·face)를 돌린다. 후보는 이 실행의 후보여야 하고 SHA로 확인, 원래 그림은 바꾸지 않는다."""
     import hashlib
     directory = Path(directory)
     outcome = json.loads((directory / "outcome.json").read_text(encoding="utf-8"))
@@ -131,16 +130,29 @@ def run_style_refine(directory, candidate, runtime=None, *, run=None):
         runtime = StudioRuntime.from_environment()
     run = run or default_run(runtime)
     seed = int(chosen.stem.replace("result-seed", ""))
-    _save(directory / "refine-request.json", dict(candidate=chosen.name, seed=seed,
-                                                  candidate_sha256=hashlib.sha256(chosen.read_bytes()).hexdigest()))
-    result = dict(mode="style_refine", candidate=str(chosen), started=time.time())
+    _save(directory / f"{stage}-request.json", dict(candidate=chosen.name, seed=seed,
+                                                    candidate_sha256=hashlib.sha256(chosen.read_bytes()).hexdigest()))
+    result = dict(mode=mode, candidate=str(chosen), started=time.time())
     try:
-        result["seconds"] = _stage(run, "refine", directory, "refine-result.json")
-        done = json.loads((directory / "refine-result.json").read_text(encoding="utf-8"))
-        result.update(state="review_pending", refined=str(directory / done["file"]), raw=str(directory / done["raw_file"]),
-                      peak_reserved_gib=done.get("peak_reserved_gib"), review="사람 확인 전(다듬기 결과)")
+        result["seconds"] = _stage(run, stage, directory, f"{stage}-result.json")
+        done = json.loads((directory / f"{stage}-result.json").read_text(encoding="utf-8"))
+        result.update(state="review_pending", result=str(directory / done["file"]), raw=str(directory / done["raw_file"]),
+                      peak_reserved_gib=done.get("peak_reserved_gib"), review=review)
     except StyleRedrawFailed as error:
         result.update(state="failed", stage=error.stage, message=str(error))
     result["finished"] = time.time()
-    _save(directory / f"refine-outcome-seed{seed}.json", result)
+    _save(directory / f"{stage}-outcome-seed{seed}.json", result)
     return result
+
+
+def run_style_refine(directory, candidate, runtime=None, *, run=None):
+    """고른 후보 1장을 그림체 참조로 다듬는다(D-203, 그림체 참조 방식 기록용 — LoRA 흐름에서는 쓰지 않음)."""
+    result = _run_on_candidate(directory, candidate, runtime, run, "refine", "style_refine", "사람 확인 전(다듬기 결과)")
+    if "result" in result:
+        result["refined"] = result["result"]
+    return result
+
+
+def run_style_face_detail(directory, candidate, runtime=None, *, run=None):
+    """고른 후보 1장의 얼굴을 원본 쪽으로 다듬고 눈 색을 되돌린다(D-206). 반환: state = review_pending | failed."""
+    return _run_on_candidate(directory, candidate, runtime, run, "face", "style_face_detail", "사람 확인 전(얼굴 다듬기 결과)")

@@ -285,10 +285,74 @@ def refine(directory):
                       style_off_on_garments=True, colour_back=True), prompt=positive, negative_prompt=negative))
 
 
+def face(directory):
+    """고른 후보 1장 얼굴 다듬기(D-206). face-request.json의 후보를 읽어 face-detail-seed<n>.png와 face-result.json을 쓴다."""
+    import torch
+    from PIL import Image
+    from diffusers import DPMSolverMultistepScheduler, StableDiffusionXLImg2ImgPipeline
+    from diffusers.hooks.layerwise_casting import DEFAULT_SKIP_MODULES_PATTERN
+    from genai_lab.style_redraw_face import (FACE_LORA_WEIGHT, FACE_REF_SCALE, FACE_SIZE, FACE_STEPS, FACE_STRENGTH, eye_colour_back,
+                                             face_crop_box, face_prompts, paste_face)
+    req = json.loads((directory / "request.json").read_text(encoding="utf-8"))
+    ask = json.loads((directory / "face-request.json").read_text(encoding="utf-8"))
+    chosen_path = directory / ask["candidate"]
+    if chosen_path.parent != directory or not chosen_path.name.startswith("result-seed"):
+        raise ValueError("다듬을 후보는 이 실행 폴더의 후보 그림이어야 합니다.")
+    if sha(chosen_path) != ask["candidate_sha256"]:
+        raise ValueError("고른 후보 그림이 바뀌었습니다.")
+    profile = json.loads((directory / "annotations.json").read_text(encoding="utf-8"))
+    chosen = Image.open(chosen_path).convert("RGB")
+    box = face_crop_box(profile.get("identity_mask_box", profile["face_box"]), chosen.size)
+    torch.cuda.set_per_process_memory_fraction(MEMORY_CAP_GIB * 2**30 / torch.cuda.get_device_properties(0).total_memory)
+    models, started = Path(req["style_models"]), time.time()
+    pipe = StableDiffusionXLImg2ImgPipeline.from_pretrained(str(models / "base/realvis"), torch_dtype=torch.float16, variant="fp16",
+                                                            local_files_only=True, add_watermarker=False)
+    pipe.scheduler = DPMSolverMultistepScheduler.from_config(pipe.scheduler.config, algorithm_type="sde-dpmsolver++", use_karras_sigmas=True)
+    pipe.load_ip_adapter(str(models / "extra/ip"), subfolder="sdxl_models", weight_name=["ip-adapter-plus-face_sdxl_vit-h.safetensors"],
+                         image_encoder_folder="models/image_encoder", local_files_only=True)
+    pipe.load_lora_weights(str(req["style_lora"]), weight_name="pytorch_lora_weights.safetensors", adapter_name="style")
+    pipe.unet.enable_layerwise_casting(storage_dtype=torch.float8_e4m3fn, compute_dtype=torch.float16,
+                                       skip_modules_pattern=tuple(DEFAULT_SKIP_MODULES_PATTERN) + ("lora",))
+    pipe.enable_model_cpu_offload()
+    pipe.set_adapters(["style"], adapter_weights=[FACE_LORA_WEIGHT])
+    pipe.set_ip_adapter_scale(FACE_REF_SCALE)
+    loaded = round(time.time() - started, 1)
+    positive, negative = face_prompts(profile)
+    torch.cuda.reset_peak_memory_stats()
+    t0 = time.time()
+    with torch.inference_mode():
+        redrawn = pipe(prompt=positive, prompt_2=positive, negative_prompt=negative,
+                       image=chosen.crop(tuple(box)).resize((FACE_SIZE, FACE_SIZE), Image.LANCZOS), strength=FACE_STRENGTH,
+                       ip_adapter_image=Image.open(directory / "inputs" / "identity-face.png").convert("RGB"),
+                       num_inference_steps=FACE_STEPS, guidance_scale=5.0,
+                       generator=torch.Generator(device="cpu").manual_seed(int(ask["seed"]))).images[0]
+    peak = round(torch.cuda.max_memory_reserved() / 2**30, 2)
+    del pipe
+    torch.cuda.empty_cache()
+    merged = paste_face(chosen, redrawn, box)
+    from genai_lab.head_paste_semantics import HeadSegmenter
+    from genai_lab.head_paste_worker import figure_parts
+    seg = HeadSegmenter(Path(req["head_semantic_repo"]), Path(req["head_semantic_checkpoint"]))
+    try:
+        eyes = figure_parts(seg, np.asarray(merged))["eyes"]
+    finally:
+        seg.close()
+    final, eye_px = eye_colour_back(np.asarray(merged), np.asarray(chosen), eyes)
+    seed = int(ask["seed"])
+    merged.save(directory / f"face-detail-raw-seed{seed}.png")
+    Image.fromarray(final).save(directory / f"face-detail-seed{seed}.png")
+    save(directory / "face-result.json", dict(
+        state="face_detailed_unreviewed", candidate=ask["candidate"], seed=seed, file=f"face-detail-seed{seed}.png",
+        raw_file=f"face-detail-raw-seed{seed}.png", sha256=sha(directory / f"face-detail-seed{seed}.png"), box=box,
+        eye_pixels_recoloured=eye_px, load_seconds=loaded, face_seconds=round(time.time() - t0, 1), peak_reserved_gib=peak,
+        settings=dict(strength=FACE_STRENGTH, steps=FACE_STEPS, lora_weight=FACE_LORA_WEIGHT, face_ref_scale=FACE_REF_SCALE,
+                      size=FACE_SIZE), prompt=positive, negative_prompt=negative))
+
+
 if __name__ == "__main__":
     stage, folder = sys.argv[1], Path(sys.argv[2])
     try:
-        {"prepare": prepare, "generate": generate, "refine": refine}[stage](folder)
+        {"prepare": prepare, "generate": generate, "refine": refine, "face": face}[stage](folder)
     except Exception as error:
         save(folder / f"{stage}-error.json", dict(stage=stage, error_type=type(error).__name__, message=str(error)[:500]))
         raise

@@ -23,10 +23,23 @@ COLOUR_SHIFT_CAP = np.array([15.0, 12.0, 12.0])     # L, a, b — 이보다 크�
 SPREAD_CLIP = (0.8, 1.25)
 MIN_PART_PIXELS = 200
 PARTS = ("skin", "hair", "upper", "lower")
+IDENTITY_PARTS = ("skin", "hair")             # 옷을 바꿀 때는 캐릭터 원본에 맞출 부위가 피부·머리뿐(옷은 옷 그림에서 온다)
+IDENTITY_SHIFT_CAP = np.array([40.0, 20.0, 20.0])   # 옷 그림의 흰 마네킹·배경에 피부가 밝게 끌릴 수 있어 폭을 넓힌다
 
 
-def flux_prompt(traits):
-    """같은 캐릭터를 S3b 그림체로 다시 그리라는 문장. 특징 문장(자동 측정)과 피부색 유지·같은 자세 지시를 넣는다."""
+def flux_prompt(traits, with_garment=False):
+    """같은 캐릭터를 목표 그림체로 다시 그리라는 문장. 특징 문장(자동 측정)과 피부색 유지·같은 자세 지시를 넣는다.
+    with_garment: 그림 2의 옷으로 갈아입히고 그린다(D-212, 모드 A·B 통합). 원래 옷 낱말은 빼야 새 옷과 다투지 않는다."""
+    if with_garment:
+        described = "; ".join(row["text"].strip() for row in traits
+                              if row.get("text", "").strip() and row.get("name") != "clothes")
+        who = f" ({described})" if described else ""
+        return (f"Dress the same adult character from image 1{who} in the complete outfit shown in image 2: replace all of the "
+                f"character's current clothing with the outfit from image 2, matching its shape, length, colours and details; nothing "
+                f"from the original outfit may remain. Keep the same face, hairstyle, hair colour, eye colour, skin tone and body "
+                f"proportions as in image 1; do not lighten or darken the skin. Keep the same pose and framing as image 1. Render as a "
+                f"new {STYLE}. {BACKGROUND} Do not copy the mannequin or the clothing photo background. No lettering, logo, watermark "
+                f"or multiple people.")
     described = "; ".join(row["text"].strip() for row in traits if row.get("text", "").strip())
     keep = f" ({described})" if described else ""
     return (f"Redraw the same adult character as in the reference image as a new {STYLE}. Keep the same face, hairstyle, hair colour, "
@@ -50,20 +63,21 @@ def part_masks(rgb, parts, person):
                 lower=any_of("bottomwear", "legwear") & ~skin & person)
 
 
-def colour_match(result_rgb, original_rgb, result_masks, original_masks, feather=2.0):
+def colour_match(result_rgb, original_rgb, result_masks, original_masks, feather=2.0, parts=PARTS, cap=None):
     """부위마다 결과 색을 원본 쪽으로(Lab 평균 이동 + 퍼짐 비율). 반환: (RGB uint8, {부위: 옮긴 양 또는 None})."""
     from scipy.ndimage import gaussian_filter
     from genai_lab.style_reference_colors import lab_to_rgb, rgb_to_lab
     lab, source = rgb_to_lab(np.asarray(result_rgb)), rgb_to_lab(np.asarray(original_rgb))
+    cap = COLOUR_SHIFT_CAP if cap is None else np.asarray(cap, float)
     shifts = {}
-    for part in PARTS:
+    for part in parts:
         mr, ms = np.asarray(result_masks[part], bool), np.asarray(original_masks[part], bool)
         if mr.sum() < MIN_PART_PIXELS or ms.sum() < MIN_PART_PIXELS:
             shifts[part] = None
             continue
         a, b = lab[mr], source[ms]
         mu_r, sd_r, mu_s, sd_s = a.mean(0), a.std(0) + 1e-3, b.mean(0), b.std(0) + 1e-3
-        shift = np.clip(mu_s - mu_r, -COLOUR_SHIFT_CAP, COLOUR_SHIFT_CAP)
+        shift = np.clip(mu_s - mu_r, -cap, cap)
         fixed = (lab - mu_r) * np.clip(sd_s / sd_r, *SPREAD_CLIP) + mu_r + shift
         w = gaussian_filter(mr.astype(np.float32), feather)[..., None] if feather else mr[..., None].astype(np.float32)
         lab = lab * (1 - w) + fixed * w

@@ -22,6 +22,26 @@ class TestFluxHelpers(unittest.TestCase):
         self.assertNotIn("relaxed arms", p)                    # 팔짱 원본에서 팔이 늘어난 원인(D-209)
         self.assertNotIn("()", flux_prompt([]))
 
+    def test_outfit_prompt_drops_old_clothes_words(self):
+        traits = [dict(name="eyes", text="brown eyes"), dict(name="skin", text="brown skin"),
+                  dict(name="clothes", text="green vest, grey trousers")]
+        p = flux_prompt(traits, with_garment=True)
+        self.assertIn("(brown eyes; brown skin)", p)
+        self.assertNotIn("green vest", p)                      # 원래 옷 낱말은 새 옷과 다툼
+        self.assertIn("outfit shown in image 2", p)
+        self.assertIn("do not lighten or darken the skin", p)
+
+    def test_identity_only_colour_match_leaves_clothes(self):
+        orig = np.zeros((40, 40, 3), np.uint8); orig[:] = (90, 60, 40)
+        res = np.zeros((40, 40, 3), np.uint8); res[:] = (200, 160, 140)
+        skin = np.zeros((40, 40), bool); skin[:20] = True
+        cloth = np.zeros((40, 40), bool); cloth[20:] = True
+        m = dict(skin=skin, hair=np.zeros_like(skin), upper=cloth, lower=np.zeros_like(skin))
+        out, shifts = colour_match(res, orig, m, dict(m), feather=0, parts=("skin", "hair"), cap=(40, 20, 20))
+        self.assertNotIn("upper", shifts)
+        self.assertEqual(tuple(out[30, 30]), (200, 160, 140))                 # 옷은 그대로
+        self.assertLess(int(out[10, 10].sum()), int(res[10, 10].sum()))       # 피부는 원본(짙은) 쪽으로
+
     def test_part_masks_stay_inside_the_person(self):
         rgb = np.zeros((40, 40, 3), np.uint8); rgb[:] = (200, 160, 130)      # 배경도 피부와 비슷한 색
         face = np.zeros((40, 40), bool); face[5:15, 10:20] = True
@@ -64,6 +84,13 @@ class TestEngineChoice(unittest.TestCase):
             self.assertTrue({"flux_model", "hand_cache"} <= set(req))
             with self.assertRaises(ValueError):
                 run_style_redraw(src, root / "b", runtime, run=run, engine="other")
+            garment = root / "g.png"; Image.new("RGB", (300, 500), (10, 120, 200)).save(garment)
+            run_style_redraw(src, root / "c", runtime, run=run, garment_path=garment)
+            with Image.open(root / "c" / "garment.png") as g:
+                self.assertEqual(g.size, (768, 1024))
+            self.assertEqual(json.loads((root / "c" / "request.json").read_text(encoding="utf-8"))["garment"], str(garment))
+            with self.assertRaises(ValueError):
+                run_style_redraw(src, root / "d", runtime, run=run, engine="sdxl_lora", garment_path=garment)
 
 
 if __name__ == "__main__":

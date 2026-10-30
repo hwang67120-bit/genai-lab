@@ -76,10 +76,14 @@ def _stage(run, stage, directory, expected):
 ENGINES = ("flux", "sdxl_lora")
 
 
-def run_style_redraw(source_path, directory, runtime=None, *, confirmed_gender=None, paths=None, run=None, engine="flux"):
+def run_style_redraw(source_path, directory, runtime=None, *, confirmed_gender=None, paths=None, run=None, engine="flux",
+                     garment_path=None):
     """캐릭터 그림 1장 → 후보 3장. 반환: outcome(state = review_pending | refused | failed). 결과를 자동 승인하지 않는다.
     confirmed_gender: 사람이 확정한 성별(male·female, 캐릭터 기억 등). 없으면 성별 낱말 없이 그린다(D-198).
-    engine: "flux"(기본, D-210 FLUX.2-klein 편집) 또는 "sdxl_lora"(이전 RealVisXL + 스타일 LoRA + 참조 경로)."""
+    engine: "flux"(기본, D-210 FLUX.2-klein 편집) 또는 "sdxl_lora"(이전 RealVisXL + 스타일 LoRA + 참조 경로).
+    garment_path: 옷 그림(선택, D-212). 있으면 그 옷으로 갈아입히면서 목표 그림체로 그린다(모드 A·B 통합, FLUX에서만)."""
+    if garment_path is not None and engine != "flux":
+        raise ValueError("옷 그림 입력은 FLUX 방식에서만 쓸 수 있습니다.")
     if confirmed_gender not in (None, "male", "female"):
         raise ValueError("확정 성별은 male·female 또는 None이어야 합니다.")
     if engine not in ENGINES:
@@ -95,7 +99,12 @@ def run_style_redraw(source_path, directory, runtime=None, *, confirmed_gender=N
     try:
         with Image.open(source_path) as image:
             canvas(image).save(directory / "character.png")
-        _save(directory / "request.json", dict(request_paths(runtime, paths), confirmed_gender=confirmed_gender, engine=engine))
+        if garment_path is not None:
+            with Image.open(garment_path) as garment:            # 옷 그림은 비율 그대로(흰 여백으로 캔버스에 맞춤)
+                canvas(garment).save(directory / "garment.png")
+            outcome["garment"] = str(garment_path)
+        _save(directory / "request.json", dict(request_paths(runtime, paths), confirmed_gender=confirmed_gender, engine=engine,
+                                              garment=str(garment_path) if garment_path is not None else None))
         outcome["seconds"]["pose"] = _stage(run, "pose", directory, "pose.json")
         outcome["seconds"]["prepare"] = _stage(run, "prepare", directory, "prepare.json")
         prepared = json.loads((directory / "prepare.json").read_text(encoding="utf-8"))

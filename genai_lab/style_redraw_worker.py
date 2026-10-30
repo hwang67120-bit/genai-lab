@@ -200,6 +200,20 @@ def prepare_flux(directory, req, canvas, rgb, scores, safety, joints, face, star
     from genai_lab.studio_controller import guessed_gender
     from genai_lab.style_redraw_flux import flux_prompt
     from genai_lab.style_redraw_inputs import trait_rows
+    garment_path = directory / "garment.png"
+    with_garment = garment_path.is_file()
+    if with_garment:
+        # 옷 그림도 같은 안전 검사(성인 캐릭터만, 어려 보이는 신호와 노출이 겹치면 막음)
+        from PIL import Image
+        from genai_lab.clothing_analysis import ClothingDesignAnalysisSettings, WdTagSession
+        from genai_lab.free_generation import safety_observation
+        with WdTagSession(ClothingDesignAnalysisSettings(cache_dir=Path(req["model_cache"]), local_files_only=True)) as tagger, \
+                Image.open(garment_path) as garment:
+            garment_safety = safety_observation(dict(tagger.analyze(garment.convert("RGB")).raw_general_scores))
+        if garment_safety["blocked"] or garment_safety["review"]:
+            save(directory / "prepare.json", dict(state="refused", code="garment_safety",
+                                                  message="이 옷 그림은 사용할 수 없습니다.", safety=garment_safety))
+            return
     parts, masks = person_and_parts(rgb, req)
     guessed = guessed_gender(dict(character_scores=scores))
     confirmed = req.get("confirmed_gender")
@@ -208,8 +222,8 @@ def prepare_flux(directory, req, canvas, rgb, scores, safety, joints, face, star
     np.savez_compressed(directory / "original-masks.npz", **masks)
     hands = count_hands([rgb], req)[0]
     save(directory / "prepare.json", dict(
-        state="ready", engine="flux", seconds=round(time.time() - started, 1), gender=confirmed, guessed_gender=guessed,
-        traits=traits, prompt=flux_prompt(traits), face_box=face, original_hands=hands,
+        state="ready", engine="flux", with_garment=with_garment, seconds=round(time.time() - started, 1), gender=confirmed,
+        guessed_gender=guessed, traits=traits, prompt=flux_prompt(traits, with_garment), face_box=face, original_hands=hands,
         warnings=support_warnings(scores, joints), safety=safety, joints_used=sorted(joints),
         note="특징 문장·성별은 자동 측정이며 사람 확인 전이다. 자세·구도는 원본을 따른다."))
 
@@ -221,7 +235,8 @@ def generate_flux(directory, req):
     from PIL import Image
     from diffusers import Flux2KleinPipeline
     from diffusers.quantizers import PipelineQuantizationConfig
-    from genai_lab.style_redraw_flux import GUIDANCE, MAX_SEQUENCE_LENGTH, SEEDS, STEPS, colour_match, hand_flag
+    from genai_lab.style_redraw_flux import (GUIDANCE, IDENTITY_PARTS, IDENTITY_SHIFT_CAP, MAX_SEQUENCE_LENGTH, PARTS, SEEDS, STEPS,
+                                             colour_match, hand_flag)
     prepared = json.loads((directory / "prepare.json").read_text(encoding="utf-8"))
     torch.cuda.set_per_process_memory_fraction(MEMORY_CAP_GIB * 2**30 / torch.cuda.get_device_properties(0).total_memory)
     started = time.time()
@@ -234,12 +249,14 @@ def generate_flux(directory, req):
     pipe.vae.enable_tiling()
     loaded = round(time.time() - started, 1)
     reference = Image.open(directory / "character.png").convert("RGB")
+    with_garment = bool(prepared.get("with_garment"))
+    references = [reference] + ([Image.open(directory / "garment.png").convert("RGB")] if with_garment else [])
     torch.cuda.reset_peak_memory_stats()
     raws = []
     for number, seed in enumerate(SEEDS):
         save(directory / "progress.json", dict(candidate=number + 1, candidates=len(SEEDS), step=0, total=STEPS))
         t0 = time.time()
-        image = pipe(image=[reference], prompt=prepared["prompt"], width=reference.width, height=reference.height,
+        image = pipe(image=references, prompt=prepared["prompt"], width=reference.width, height=reference.height,
                      num_inference_steps=STEPS, guidance_scale=GUIDANCE, max_sequence_length=MAX_SEQUENCE_LENGTH,
                      generator=torch.Generator(device="cpu").manual_seed(seed)).images[0]
         image.save(directory / f"result-raw-seed{seed}.png")
@@ -254,13 +271,15 @@ def generate_flux(directory, req):
     candidates = []
     for (seed, raw, seconds), count in zip(raws, hands):
         _, masks = person_and_parts(raw, req)
-        fixed, shifts = colour_match(raw, original, masks, original_masks)
+        # 옷을 바꿨으면 원본에 맞출 부위는 피부·머리뿐(옷은 옷 그림 것), 아니면 네 부위 모두
+        fixed, shifts = (colour_match(raw, original, masks, original_masks, parts=IDENTITY_PARTS, cap=IDENTITY_SHIFT_CAP)
+                         if with_garment else colour_match(raw, original, masks, original_masks, parts=PARTS))
         path = directory / f"result-seed{seed}.png"
         Image.fromarray(fixed).save(path)
         candidates.append(dict(seed=seed, file=path.name, raw_file=f"result-raw-seed{seed}.png", sha256=sha(path), seconds=seconds,
                                colour_shift=shifts, hands=count, extra_hands=hand_flag(prepared.get("original_hands"), count)))
     save(directory / "generation.json", dict(
-        state="generated_unreviewed", engine="flux", load_seconds=loaded, candidates=candidates, review="사용자가 후보 중 1장을 고른다",
+        state="generated_unreviewed", engine="flux", with_garment=with_garment, load_seconds=loaded, candidates=candidates, review="사용자가 후보 중 1장을 고른다",
         peak_reserved_gib=peak, memory_cap_gib=MEMORY_CAP_GIB, prompt=prepared["prompt"],
         model=dict(name="black-forest-labs/FLUX.2-klein-4B", path=str(req["flux_model"]), license="Apache-2.0")))
 

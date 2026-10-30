@@ -170,7 +170,8 @@ def load_pipeline(models, outfit_count=1, loras=None, style_adapter=True):
                          + ["ip-adapter-plus_sdxl_vit-h.safetensors"] * outfit_count,
                          image_encoder_folder="models/image_encoder", local_files_only=True)
     for name, folder in (loras or {}).items():
-        pipe.load_lora_weights(str(folder), adapter_name=name)
+        # 오프라인(HF_HUB_OFFLINE=1)에서는 파일 이름을 직접 줘야 한다(diffusers가 이름을 추측하지 않음).
+        pipe.load_lora_weights(str(folder), weight_name="pytorch_lora_weights.safetensors", adapter_name=name)
     from diffusers.hooks.layerwise_casting import DEFAULT_SKIP_MODULES_PATTERN
     # LoRA가 없으면 예전과 같은 기본값(건너뛸 층 지정 없음). 있으면 기본 목록 + LoRA 층.
     extra = dict(skip_modules_pattern=tuple(DEFAULT_SKIP_MODULES_PATTERN) + ("lora",)) if loras else {}

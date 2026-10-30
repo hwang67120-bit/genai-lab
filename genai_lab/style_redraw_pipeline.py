@@ -19,7 +19,7 @@ LEGACY = {"style_models": _BINDING / "cpu-v2-staging",
           "style_lora": ROOT / "outputs/style-training-prep-20261025/style-lora-run-v1-20261030/step-00500",
           "flux_model": Path("D:/genai-cache/models/FLUX.2-klein-4B-e7b7dc27"),
           "hand_cache": Path("D:/genai-cache/huggingface")}
-TIMEOUTS = {"pose": 600.0, "prepare": 900.0, "generate": 1800.0, "refine": 900.0, "face": 900.0}
+TIMEOUTS = {"pose": 600.0, "prepare": 900.0, "generate": 1800.0, "refine": 900.0, "face": 900.0, "combine": 600.0}
 
 
 class StyleRedrawFailed(RuntimeError):
@@ -173,3 +173,38 @@ def run_style_refine(directory, candidate, runtime=None, *, run=None):
 def run_style_face_detail(directory, candidate, runtime=None, *, run=None):
     """고른 후보 1장의 얼굴을 원본 쪽으로 다듬고 눈 색을 되돌린다(D-206). 반환: state = review_pending | failed."""
     return _run_on_candidate(directory, candidate, runtime, run, "face", "style_face_detail", "사람 확인 전(얼굴 다듬기 결과)")
+
+
+def run_style_part_combine(directory, face_candidate, body_candidate, runtime=None, *, run=None):
+    """부위별 고르기(D-214): 후보 하나의 얼굴·머리 + 다른 후보의 몸·옷 → 1장(CPU). 반환: state = review_pending | failed.
+    두 후보는 이 실행의 서로 다른 후보여야 하고 SHA로 확인한다. 원래 후보 그림은 바꾸지 않는다."""
+    import hashlib
+    directory = Path(directory)
+    outcome = json.loads((directory / "outcome.json").read_text(encoding="utf-8"))
+    if outcome.get("state") != "review_pending":
+        raise ValueError("후보가 준비된 실행만 부위를 고를 수 있습니다.")
+    face, body = Path(face_candidate), Path(body_candidate)
+    for chosen in (face, body):
+        if str(chosen) not in outcome.get("candidates", []) or not chosen.is_file():
+            raise ValueError("고를 그림은 이 실행의 후보 중 하나여야 합니다.")
+    if face == body:
+        raise ValueError("얼굴·머리와 몸·옷은 서로 다른 후보에서 골라야 합니다.")
+    if runtime is None and run is None:
+        from genai_lab.studio_generation import StudioRuntime
+        runtime = StudioRuntime.from_environment()
+    run = run or default_run(runtime)
+    seeds = [int(p.stem.replace("result-seed", "")) for p in (face, body)]
+    _save(directory / "combine-request.json", dict(
+        face_candidate=face.name, body_candidate=body.name, face_seed=seeds[0], body_seed=seeds[1],
+        face_sha256=hashlib.sha256(face.read_bytes()).hexdigest(), body_sha256=hashlib.sha256(body.read_bytes()).hexdigest()))
+    result = dict(mode="style_part_combine", face_candidate=str(face), body_candidate=str(body), started=time.time())
+    try:
+        result["seconds"] = _stage(run, "combine", directory, "combine-result.json")
+        done = json.loads((directory / "combine-result.json").read_text(encoding="utf-8"))
+        result.update(state="review_pending", result=str(directory / done["file"]), shift=done.get("shift"),
+                      review="사람 확인 전(부위별 고르기 결과)")
+    except StyleRedrawFailed as error:
+        result.update(state="failed", stage=error.stage, message=str(error))
+    result["finished"] = time.time()
+    _save(directory / f"combine-outcome-face{seeds[0]}-body{seeds[1]}.json", result)
+    return result

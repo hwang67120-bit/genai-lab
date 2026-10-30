@@ -156,20 +156,25 @@ def prepare(directory):
         note="특징 문장·성별은 자동 측정이며 사람 확인 전이다."))
 
 
-def person_and_parts(rgb, req):
-    """사람 영역(anime-seg)과 부위 분할(See-through). 색 맞춤용 네 부위 마스크를 돌려준다."""
+def person_mask(rgb, req):
+    """사람 영역(anime-seg)."""
     from PIL import Image
     from types import SimpleNamespace
     from genai_lab.proportion_foreground import AnimeForeground
-    from genai_lab.head_paste_semantics import HeadSegmenter
-    from genai_lab.head_paste_worker import figure_parts
-    from genai_lab.style_redraw_flux import part_masks
     model = Path(req["model_cache"]) / ANIME_SEG
     fg = AnimeForeground(SimpleNamespace(foreground_model=model, foreground_sha256=sha(model)))
     try:
-        person = fg.alpha(Image.fromarray(rgb)) > 127
+        return fg.alpha(Image.fromarray(rgb)) > 127
     finally:
         fg.close()
+
+
+def person_and_parts(rgb, req):
+    """사람 영역(anime-seg)과 부위 분할(See-through). 색 맞춤용 네 부위 마스크를 돌려준다."""
+    from genai_lab.head_paste_semantics import HeadSegmenter
+    from genai_lab.head_paste_worker import figure_parts
+    from genai_lab.style_redraw_flux import part_masks
+    person = person_mask(rgb, req)
     seg = HeadSegmenter(Path(req["head_semantic_repo"]), Path(req["head_semantic_checkpoint"]))
     try:
         parts = figure_parts(seg, rgb)
@@ -483,10 +488,41 @@ def face(directory):
                       size=FACE_SIZE), prompt=positive, negative_prompt=negative))
 
 
+def combine(directory):
+    """부위별 고르기(D-214, CPU). combine-request.json의 두 후보 → 얼굴·머리 후보 + 몸·옷 후보 → combine-result.json."""
+    from PIL import Image
+    from genai_lab.head_paste_semantics import HeadSegmenter
+    from genai_lab.head_paste_worker import figure_parts
+    from genai_lab.style_part_combine import combine_parts, head_mask
+    req = json.loads((directory / "request.json").read_text(encoding="utf-8"))
+    ask = json.loads((directory / "combine-request.json").read_text(encoding="utf-8"))
+    pictures = {}
+    for role in ("face", "body"):
+        path = directory / ask[f"{role}_candidate"]
+        if path.parent != directory or not path.name.startswith("result-seed"):
+            raise ValueError("고를 그림은 이 실행 폴더의 후보 그림이어야 합니다.")
+        if sha(path) != ask[f"{role}_sha256"]:
+            raise ValueError("고른 후보 그림이 바뀌었습니다.")
+        pictures[role] = np.asarray(Image.open(path).convert("RGB"))
+    started = time.time()
+    seg = HeadSegmenter(Path(req["head_semantic_repo"]), Path(req["head_semantic_checkpoint"]))
+    try:
+        heads = {role: head_mask(figure_parts(seg, rgb), rgb.shape[:2]) for role, rgb in pictures.items()}
+    finally:
+        seg.close()
+    out, info = combine_parts(pictures["face"], pictures["body"], heads["face"], heads["body"],
+                              face_person=person_mask(pictures["face"], req))
+    name = f"combined-face{ask['face_seed']}-body{ask['body_seed']}.png"
+    Image.fromarray(out).save(directory / name)
+    save(directory / "combine-result.json", dict(
+        state="combined_unreviewed", face_candidate=ask["face_candidate"], body_candidate=ask["body_candidate"], file=name,
+        sha256=sha(directory / name), seconds=round(time.time() - started, 1), **info))
+
+
 if __name__ == "__main__":
     stage, folder = sys.argv[1], Path(sys.argv[2])
     try:
-        {"prepare": prepare, "generate": generate, "refine": refine, "face": face}[stage](folder)
+        {"prepare": prepare, "generate": generate, "refine": refine, "face": face, "combine": combine}[stage](folder)
     except Exception as error:
         save(folder / f"{stage}-error.json", dict(stage=stage, error_type=type(error).__name__, message=str(error)[:500]))
         raise

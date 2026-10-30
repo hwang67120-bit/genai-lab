@@ -152,7 +152,9 @@ def prepare(directory):
         note="특징 문장·성별은 자동 측정이며 사람 확인 전이다."))
 
 
-def load_pipeline(models, outfit_count=1):
+def load_pipeline(models, outfit_count=1, loras=None, style_adapter=True):
+    """loras: {이름: LoRA 폴더}. fp8 보관 전에 얹고, LoRA 층은 fp8로 바꾸지 않는다(바꾸면 LoRA 계산이 fp8에서 멈춘다, D-204).
+    style_adapter=False: 그림체 참조 어댑터를 불러오지 않는다(그림체는 스타일 LoRA)."""
     import torch
     from diffusers import ControlNetModel, DPMSolverMultistepScheduler, StableDiffusionXLControlNetPipeline
     controlnet = ControlNetModel.from_pretrained(str(models / "extra/pose"), torch_dtype=torch.float16, local_files_only=True)
@@ -163,11 +165,17 @@ def load_pipeline(models, outfit_count=1):
                                                              use_karras_sigmas=True)
     # 순서 고정: 그림체(plus) · 얼굴(plus-face) · 의상 참조마다(plus). 이미지 인코더(ViT-H)는 배포 전 결정 대상(D-197).
     pipe.load_ip_adapter(str(models / "extra/ip"), subfolder="sdxl_models",
-                         weight_name=["ip-adapter-plus_sdxl_vit-h.safetensors", "ip-adapter-plus-face_sdxl_vit-h.safetensors"]
+                         weight_name=(["ip-adapter-plus_sdxl_vit-h.safetensors"] if style_adapter else [])
+                         + ["ip-adapter-plus-face_sdxl_vit-h.safetensors"]
                          + ["ip-adapter-plus_sdxl_vit-h.safetensors"] * outfit_count,
                          image_encoder_folder="models/image_encoder", local_files_only=True)
+    for name, folder in (loras or {}).items():
+        pipe.load_lora_weights(str(folder), adapter_name=name)
+    from diffusers.hooks.layerwise_casting import DEFAULT_SKIP_MODULES_PATTERN
+    # LoRA가 없으면 예전과 같은 기본값(건너뛸 층 지정 없음). 있으면 기본 목록 + LoRA 층.
+    extra = dict(skip_modules_pattern=tuple(DEFAULT_SKIP_MODULES_PATTERN) + ("lora",)) if loras else {}
     for module in (pipe.unet, pipe.controlnet):
-        module.enable_layerwise_casting(storage_dtype=torch.float8_e4m3fn, compute_dtype=torch.float16)
+        module.enable_layerwise_casting(storage_dtype=torch.float8_e4m3fn, compute_dtype=torch.float16, **extra)
     pipe.enable_model_cpu_offload()
     return pipe
 
@@ -176,18 +184,21 @@ def generate(directory):
     import torch
     from genai_lab.character_style_conditioning import ConditioningOptions, build_conditioning_call, dispatch_conditioning_once
     from genai_lab.character_style_inputs import outfit_roles
-    from genai_lab.style_redraw_inputs import SCALES, SEEDS
+    from genai_lab.style_redraw_inputs import SCALES, SEEDS, STYLE_LORA_WEIGHT
     req = json.loads((directory / "request.json").read_text(encoding="utf-8"))
     torch.cuda.set_per_process_memory_fraction(MEMORY_CAP_GIB * 2**30 / torch.cuda.get_device_properties(0).total_memory)
     manifest = json.loads((directory / "inputs" / "manifest.json").read_text(encoding="utf-8"))
     started = time.time()
-    pipe = load_pipeline(Path(req["style_models"]), len(outfit_roles(manifest["profile"])))
+    # 그림체는 스타일 LoRA(D-204), 그림체 참조 어댑터는 불러오지 않는다.
+    lora = Path(req["style_lora"])
+    pipe = load_pipeline(Path(req["style_models"]), len(outfit_roles(manifest["profile"])), loras={"style": lora}, style_adapter=False)
+    pipe.set_adapters(["style"], adapter_weights=[STYLE_LORA_WEIGHT])
     loaded = round(time.time() - started, 1)
     torch.cuda.reset_peak_memory_stats()
     candidates = []
     for number, seed in enumerate(SEEDS):
         # 후보마다 같은 입력, seed만 다르다(D-199). 호출은 한 번만 쓰므로 후보마다 새로 조립한다.
-        call = build_conditioning_call(directory / "inputs", ConditioningOptions(**SCALES, seed=seed))
+        call = build_conditioning_call(directory / "inputs", ConditioningOptions(**SCALES, seed=seed, style_visual=False))
         total = call.kwargs["num_inference_steps"]
         def progress(pipeline, step, timestep, kwargs, number=number, total=total):
             save(directory / "progress.json", dict(candidate=number + 1, candidates=len(SEEDS), step=step + 1, total=total))
@@ -200,6 +211,8 @@ def generate(directory):
         candidates.append(dict(seed=seed, file=path.name, sha256=sha(path), seconds=round(time.time() - t0, 1), evidence=evidence))
     save(directory / "generation.json", dict(
         state="generated_unreviewed", load_seconds=loaded, candidates=candidates, review="사용자가 후보 중 1장을 고른다",
+        style=dict(kind="lora", path=str(lora), weight=STYLE_LORA_WEIGHT,
+                   sha256=sha(lora / "pytorch_lora_weights.safetensors") if (lora / "pytorch_lora_weights.safetensors").is_file() else None),
         peak_reserved_gib=round(torch.cuda.max_memory_reserved() / 2**30, 2), memory_cap_gib=MEMORY_CAP_GIB))
 
 

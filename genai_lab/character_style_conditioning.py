@@ -24,8 +24,11 @@ class ConditioningOptions:
     guidance: float = 5.0
     seed: int = 42
     outfit_scale: float | None = None   # 의상 참조(세 번째 어댑터, D-195 0.8). 묶음에 의상 참조가 있을 때만 준다.
+    style_visual: bool = True           # False: 그림체 참조(IP-Adapter)를 빼고 그림체는 스타일 LoRA가 맡는다(D-204)
 
     def __post_init__(self):
+        if type(self.style_visual) is not bool:
+            raise CharacterInputError("condition_switch_must_be_bool")
         scales = (self.identity_scale, self.style_scale, self.structure_scale)
         for value in scales + (() if self.outfit_scale is None else (self.outfit_scale,)):
             if type(value) not in (int, float) or not math.isfinite(value) or not 0 <= value <= 1:
@@ -77,13 +80,15 @@ def build_conditioning_call(folder, options):
         pose = images["pose"].copy() if options.structure else Image.new("RGB", (width, height), 0)
         prompt, negative = build_feature_prompts(manifest["profile"])
         # 목표 참조는 SDXL up.block_0에만 연결한다. 실제 그림체 효과는 GPU 미검증.
-        scales = [
-            {"up": {"block_0": [0.0, options.style_scale, 0.0]}},
-            options.identity_scale if options.identity_visual else 0.0,
-        ]
-        references = [images["style"].copy(), face]
-        masks = [style_mask, identity_mask]
-        order = ["style", "identity"]
+        scales = [options.identity_scale if options.identity_visual else 0.0]
+        references = [face]
+        masks = [identity_mask]
+        order = ["identity"]
+        if options.style_visual:
+            scales.insert(0, {"up": {"block_0": [0.0, options.style_scale, 0.0]}})
+            references.insert(0, images["style"].copy())
+            masks.insert(0, style_mask)
+            order.insert(0, "style")
         for row, (role, mask_role) in zip(manifest["profile"].get("outfits", []), outfits):
             # 영역 참조(의상·머리)는 자기 영역에만, 모든 블록에 적용한다(D-195, 윗옷·아래옷 나눔·머리 참조 D-200).
             scales.append(row.get("scale", options.outfit_scale))
@@ -107,7 +112,8 @@ def build_conditioning_call(folder, options):
             "identity_visual_enabled": options.identity_visual,
             "structure_enabled": options.structure,
             "structure_origin": manifest["profile"]["layout"]["origin"],
-            "style_reference_sha256": manifest["assets"]["style"]["sha256"],
+            "style_reference_sha256": manifest["assets"]["style"]["sha256"] if options.style_visual else None,
+            "style_visual_enabled": options.style_visual,
             "identity_reference_sha256": manifest["assets"]["identity"]["sha256"] if options.identity_visual else None,
             "pose_sha256": manifest["assets"]["pose"]["sha256"] if options.structure else None,
             "outfit_reference_sha256": {role: manifest["assets"][role]["sha256"] for role, _ in outfits} or None,

@@ -15,7 +15,8 @@ _BINDING = ROOT / "outputs/style-training-prep-20261025/character-style-binding-
 # 모델 폴더(GENAI_MODEL_HOME)가 없을 때의 개발 PC 경로(D-195 시험과 같은 파일).
 LEGACY = {"style_models": _BINDING / "cpu-v2-staging",
           "style_reference": ROOT / "outputs/style-training-prep-20261025/style-review-20261026/references/target-02.png",
-          "style_reference_pose": _BINDING / "pose-target-02.json"}
+          "style_reference_pose": _BINDING / "pose-target-02.json",
+          "style_lora": ROOT / "outputs/style-training-prep-20261025/style-lora-run-v1-20261030/step-00500"}
 TIMEOUTS = {"pose": 600.0, "prepare": 900.0, "generate": 1800.0, "refine": 900.0}
 
 

@@ -23,6 +23,7 @@ LAYOUT = {
     "style_models": "style/sdxl",
     "style_reference": "style/references/target-02.png",
     "style_reference_pose": "style/references/target-02.pose.json",
+    "style_lora": "style/lora/gnlstyle-v1-step500",          # D-204 학습한 스타일 LoRA(허가 자료 = 직접 짠 문장 + FLUX.2-klein-4B)
 }
 
 

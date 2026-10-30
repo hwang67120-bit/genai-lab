@@ -11,6 +11,10 @@ CANVAS = (768, 1024)
 SCENE_PROMPT = "Full body, standing by a window"
 STYLE_PROMPT = "Painted illustration, blended shadows, nuanced colors"
 SCALES = dict(identity_scale=0.4, style_scale=0.7, structure_scale=0.6, outfit_scale=0.8)
+# D-204 그림체 = 학습한 스타일 LoRA(gnlstyle v1 500단계, 사용자 10/30 선택). 그림체 참조 한 장(target-02)은 쓰지 않는다:
+# 그 그림의 내용(단발 머리·크롭탑·그래피티·빨간 가닥)이 넘어왔다. LoRA는 내용 없이 그리는 방식만 담는다.
+STYLE_TRIGGER = "gnlstyle"
+STYLE_LORA_WEIGHT = 0.8
 OUTFIT_BOX = [230, 240, 540, 1000]          # 표준 자세의 몸 영역(목 아래), 캔버스 768x1024
 # D-200: 의상 참조 한 장이면 넓은 옷(V002 회색 바지)이 작은 옷(초록 조끼)을 덮었다 → 윗옷(목~엉덩이)·아래옷(엉덩이 아래)을
 # 나눠 표준 자세의 각 영역에만 적용한다. 엉덩이 관절이 없으면 예전처럼 한 장(body).
@@ -285,7 +289,7 @@ def build_annotations(source_sha256, style_sha256, outfits, face, traits, gender
     extra = {"identity_mask_box": list(face_mask)} if face_mask else {}
     return dict(schema_version=1, negative_terms=GENDER_NEGATIVE.get(gender, ""), source_sha256=source_sha256, style_sha256=style_sha256, canvas=list(CANVAS),
                 coordinate_system="image_xy", height_cm=None, face_box=list(face), traits=traits,
-                scene_prompt=SCENE_PROMPTS[framing], style_prompt=STYLE_PROMPT, **extra,
+                scene_prompt=f"{STYLE_TRIGGER}, {SCENE_PROMPTS[framing]}", style_prompt=STYLE_PROMPT, **extra,
                 layout=dict(origin="manual_image_annotation", evidence=evidence,
                             joints={k: list(v) for k, v in (joints or STANDARD_POSE).items()}),
                 outfits=[dict(name=row[0], sha256=row[1], box=list(row[2]), **({"scale": row[3]} if len(row) > 3 else {}))

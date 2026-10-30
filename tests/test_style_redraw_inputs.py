@@ -179,7 +179,12 @@ class TestStyleRedrawInputs(unittest.TestCase):
             self.assertEqual(call.adapter_scales[2:], [0.8, 0.8, 0.7])
             self.assertEqual(call.evidence["adapter_order"][2:], ["outfit_upper", "outfit_lower", "outfit_hair"])
             self.assertEqual(call.kwargs["prompt"],
-                             "Full body, standing by a window. green eyes; shirt; adult woman. Painted illustration, blended shadows, nuanced colors")
+                             "gnlstyle, Full body, standing by a window. green eyes; shirt; adult woman. Painted illustration, blended shadows, nuanced colors")
+            lora_call = build_conditioning_call(root / "bundle", ConditioningOptions(**SCALES, style_visual=False))
+            self.assertEqual(len(lora_call.kwargs["ip_adapter_image"]), 4)          # 그림체 참조 없음: 얼굴·윗옷·아래옷·머리
+            self.assertEqual(lora_call.evidence["adapter_order"], ["identity", "outfit_upper", "outfit_lower", "outfit_hair"])
+            self.assertEqual(lora_call.adapter_scales, [0.4, 0.8, 0.8, 0.7])
+            self.assertIsNone(lora_call.evidence["style_reference_sha256"])
             self.assertTrue(call.kwargs["negative_prompt"].endswith(", man, male, masculine"))
 
     def test_unmeasured_trait_cannot_carry_text_and_empty_traits_leave_prompt_clean(self):

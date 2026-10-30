@@ -39,6 +39,16 @@ class TestStyleRedrawFace(unittest.TestCase):
         same, zero = eye_colour_back(detailed, chosen, np.zeros((40, 40), bool))
         self.assertEqual(zero, 0); self.assertTrue((same == detailed).all())
 
+    def test_eye_whites_are_not_tinted(self):
+        detailed = np.zeros((40, 40, 3), np.uint8); detailed[:] = (120, 110, 140)     # 흐려진 홍채
+        detailed[10:14, 10:14] = (245, 245, 248)                                       # 흰자
+        chosen = np.zeros((40, 40, 3), np.uint8); chosen[:] = (170, 40, 220)           # 보라가 넓게 퍼진 후보
+        eyes = np.zeros((40, 40), bool); eyes[10:14, 10:24] = True
+        out, n = eye_colour_back(detailed, chosen, eyes, dilate=0)
+        self.assertEqual(n, 4 * 10)                                                    # 흰자 4x4는 빠짐
+        self.assertEqual(tuple(out[12, 12]), (245, 245, 248))                          # 흰자 그대로
+        self.assertGreater(float(rgb_to_lab(out)[12, 20, 1]), float(rgb_to_lab(detailed)[12, 20, 1]) + 10)   # 홍채는 보라 쪽
+
     def test_prompts(self):
         positive, negative = face_prompts(dict(traits=[dict(text="violet eyes"), dict(text="")], negative_terms="woman"))
         self.assertTrue(positive.startswith("gnlstyle, close-up portrait of the face, violet eyes"))

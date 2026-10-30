@@ -13,7 +13,8 @@ FACE_LORA_WEIGHT = 0.3
 FACE_REF_SCALE = 0.8
 FACE_BOX_SCALE = 1.8
 FACE_SIZE = 1024
-EYE_DILATE = 3                          # 다듬기에서 눈이 몇 픽셀 움직여도 덮도록
+EYE_DILATE = 1                          # 다듬기에서 눈이 조금 움직여도 덮도록(3이면 눈꺼풀까지 덮었다)
+SCLERA_L, SCLERA_CHROMA = 78, 12        # 이보다 밝고 색이 없는 픽셀(흰자·반사광)은 칠하지 않는다 — V001 흰자가 보라로 번졌다(10/30)
 
 
 def face_crop_box(face_box, canvas, scale=FACE_BOX_SCALE):
@@ -40,17 +41,22 @@ def paste_face(full, redrawn, box):
     return merged
 
 
-def eye_colour_back(detailed_rgb, chosen_rgb, eyes_mask, dilate=EYE_DILATE):
-    """눈 영역(분할의 eyes, 몇 픽셀 넓힘) 안에서만 색(a·b)을 고른 후보에서 가져오고 밝기는 다듬은 그림 그대로."""
+def eye_colour_back(detailed_rgb, chosen_rgb, eyes_mask, face_mask=None, dilate=EYE_DILATE):
+    """눈 영역(분할의 eyes, 조금 넓힘)의 홍채만 색(a·b)을 고른 후보에서 가져오고 밝기는 다듬은 그림 그대로.
+    다듬은 그림에서 밝고 색이 없는 픽셀(흰자·반사광)과 얼굴 피부색 픽셀(눈꺼풀)은 칠하지 않는다."""
     from scipy.ndimage import binary_dilation
-    from genai_lab.style_reference_colors import lab_to_rgb, rgb_to_lab
+    from genai_lab.style_reference_colors import lab_to_rgb, rgb_to_lab, skin_like
     detailed, chosen = np.asarray(detailed_rgb), np.asarray(chosen_rgb)
     mask = np.asarray(eyes_mask, bool)
     if dilate:
         mask = binary_dilation(mask, iterations=dilate)
+    a, b = rgb_to_lab(detailed), rgb_to_lab(chosen)
+    sclera = (a[..., 0] > SCLERA_L) & (np.hypot(a[..., 1], a[..., 2]) < SCLERA_CHROMA)
+    mask &= ~sclera
+    if face_mask is not None:
+        mask &= ~skin_like(detailed, face_mask)
     if not mask.any():
         return detailed.copy(), 0
-    a, b = rgb_to_lab(detailed), rgb_to_lab(chosen)
     a[mask, 1:] = b[mask, 1:]
     out = detailed.copy()
     out[mask] = np.clip(lab_to_rgb(a), 0, 255).astype(np.uint8)[mask]

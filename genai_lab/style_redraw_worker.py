@@ -334,10 +334,10 @@ def face(directory):
     from genai_lab.head_paste_worker import figure_parts
     seg = HeadSegmenter(Path(req["head_semantic_repo"]), Path(req["head_semantic_checkpoint"]))
     try:
-        eyes = figure_parts(seg, np.asarray(merged))["eyes"]
+        parts = figure_parts(seg, np.asarray(merged))
     finally:
         seg.close()
-    final, eye_px = eye_colour_back(np.asarray(merged), np.asarray(chosen), eyes)
+    final, eye_px = eye_colour_back(np.asarray(merged), np.asarray(chosen), parts["eyes"], parts.get("face"))
     seed = int(ask["seed"])
     merged.save(directory / f"face-detail-raw-seed{seed}.png")
     Image.fromarray(final).save(directory / f"face-detail-seed{seed}.png")

@@ -80,7 +80,7 @@ class TestFluxHelpers(unittest.TestCase):
 
 
 class TestEngineChoice(unittest.TestCase):
-    def test_engine_recorded_and_unknown_rejected(self):
+    def test_engine_recorded_and_garment_fitted(self):
         with TemporaryDirectory() as temp:
             root = Path(temp); src = root / "c.png"; Image.new("RGB", (100, 150)).save(src)
             runtime = SimpleNamespace(model_cache=Path("c"), head_semantic_repo=Path("r"), head_semantic_checkpoint=Path("k"))
@@ -92,15 +92,11 @@ class TestEngineChoice(unittest.TestCase):
             req = json.loads((root / "a" / "request.json").read_text(encoding="utf-8"))
             self.assertEqual(req["engine"], "flux")
             self.assertTrue({"flux_model", "hand_cache"} <= set(req))
-            with self.assertRaises(ValueError):
-                run_style_redraw(src, root / "b", runtime, run=run, engine="other")
             garment = root / "g.png"; Image.new("RGB", (300, 500), (10, 120, 200)).save(garment)
             run_style_redraw(src, root / "c", runtime, run=run, garment_path=garment)
             with Image.open(root / "c" / "garment.png") as g:
                 self.assertEqual(g.size, (768, 1024))
             self.assertEqual(json.loads((root / "c" / "request.json").read_text(encoding="utf-8"))["garment"], str(garment))
-            with self.assertRaises(ValueError):
-                run_style_redraw(src, root / "d", runtime, run=run, engine="sdxl_lora", garment_path=garment)
 
 
 if __name__ == "__main__":

@@ -19,11 +19,7 @@ LAYOUT = {
     "head_cache": "head-detection/hub",                     # deepghs/anime_head_detection(허깅페이스 캐시 구조)
     "head_semantic_repo": "tools/see-through",
     "head_semantic_checkpoint": "hf/" + L2D_SAM_SNAPSHOT,
-    # 모드 B(그림체로 다시 그리기, STYLE_MODE_APP_DESIGN.md): base/realvis · extra/pose · extra/ip 배치. 모드 A만 쓰면 없어도 된다.
-    "style_models": "style/sdxl",
-    "style_reference": "style/references/target-02.png",
-    "style_reference_pose": "style/references/target-02.pose.json",
-    "style_lora": "style/lora/gnlstyle-v1-step500",          # D-204 학습한 스타일 LoRA(허가 자료 = 직접 짠 문장 + FLUX.2-klein-4B)
+    # 모드 B(그림체로 다시 그리기). 모드 A만 쓰면 없어도 된다. 예전 SDXL 묶음·참조 그림·스타일 LoRA 자리는 D-216에서 뺐다.
     "flux_model": "flux/FLUX.2-klein-4B",                     # D-210 모드 B 본체(Apache-2.0)
     "hand_cache": "head-detection/hub",                      # deepghs anime_hand_detection(머리 검출과 같은 캐시 구조)
 }

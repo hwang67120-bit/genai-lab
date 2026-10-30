@@ -1,7 +1,8 @@
-"""모드 B 공통 진입점(STYLE_MODE_APP_DESIGN.md S4): 캐릭터 그림 1장 → 목표 그림체로 다시 그린 전신 1장 → 검토 대기.
+"""모드 B 공통 진입점(STYLE_MODE_APP_DESIGN.md S4): 캐릭터 그림 1장(+ 옷 그림) → 목표 그림체로 다시 그린 후보 3장 → 검토 대기.
 
 작업실 화면과 외부 API가 같이 쓴다. 확인 창을 띄우지 않고 결과(outcome.json)를 돌려준다.
-단계: 캔버스(768x1024) → 관절(제품 관절 분석, 별도 Python) → 준비(CPU 작업 프로세스) → 생성(GPU 작업 프로세스).
+단계: 캔버스(768x1024) → 관절(제품 관절 분석, 별도 Python) → 준비(CPU 작업 프로세스) → 생성(GPU, FLUX.2-klein-4B).
+후보를 받은 뒤: 부위별 고르기(run_style_part_combine, CPU).
 """
 import json
 import subprocess
@@ -10,16 +11,10 @@ from pathlib import Path
 
 from PIL import Image
 
-ROOT = Path(__file__).resolve().parents[1]
-_BINDING = ROOT / "outputs/style-training-prep-20261025/character-style-binding-20261027"
-# 모델 폴더(GENAI_MODEL_HOME)가 없을 때의 개발 PC 경로(D-195 시험과 같은 파일).
-LEGACY = {"style_models": _BINDING / "cpu-v2-staging",
-          "style_reference": ROOT / "outputs/style-training-prep-20261025/style-review-20261026/references/target-02.png",
-          "style_reference_pose": _BINDING / "pose-target-02.json",
-          "style_lora": ROOT / "outputs/style-training-prep-20261025/style-lora-run-v1-20261030/step-00500",
-          "flux_model": Path("D:/genai-cache/models/FLUX.2-klein-4B-e7b7dc27"),
+# 모델 폴더(GENAI_MODEL_HOME)가 없을 때의 개발 PC 경로.
+LEGACY = {"flux_model": Path("D:/genai-cache/models/FLUX.2-klein-4B-e7b7dc27"),
           "hand_cache": Path("D:/genai-cache/huggingface")}
-TIMEOUTS = {"pose": 600.0, "prepare": 900.0, "generate": 1800.0, "refine": 900.0, "face": 900.0, "combine": 600.0}
+TIMEOUTS = {"pose": 600.0, "prepare": 900.0, "generate": 1800.0, "combine": 600.0}
 
 
 class StyleRedrawFailed(RuntimeError):
@@ -73,21 +68,12 @@ def _stage(run, stage, directory, expected):
     return round(time.time() - t0, 1)
 
 
-ENGINES = ("flux", "sdxl_lora")
-
-
-def run_style_redraw(source_path, directory, runtime=None, *, confirmed_gender=None, paths=None, run=None, engine="flux",
-                     garment_path=None):
+def run_style_redraw(source_path, directory, runtime=None, *, confirmed_gender=None, paths=None, run=None, garment_path=None):
     """캐릭터 그림 1장 → 후보 3장. 반환: outcome(state = review_pending | refused | failed). 결과를 자동 승인하지 않는다.
     confirmed_gender: 사람이 확정한 성별(male·female, 캐릭터 기억 등). 없으면 성별 낱말 없이 그린다(D-198).
-    engine: "flux"(기본, D-210 FLUX.2-klein 편집) 또는 "sdxl_lora"(이전 RealVisXL + 스타일 LoRA + 참조 경로).
-    garment_path: 옷 그림(선택, D-212). 있으면 그 옷으로 갈아입히면서 목표 그림체로 그린다(모드 A·B 통합, FLUX에서만)."""
-    if garment_path is not None and engine != "flux":
-        raise ValueError("옷 그림 입력은 FLUX 방식에서만 쓸 수 있습니다.")
+    garment_path: 옷 그림(선택, D-212). 있으면 그 옷으로 갈아입히면서 목표 그림체로 그린다(모드 A·B 통합)."""
     if confirmed_gender not in (None, "male", "female"):
         raise ValueError("확정 성별은 male·female 또는 None이어야 합니다.")
-    if engine not in ENGINES:
-        raise ValueError(f"모르는 생성 방식입니다: {engine}")
     from genai_lab.outfit_edit import canvas
     if runtime is None:
         from genai_lab.studio_generation import StudioRuntime
@@ -103,7 +89,7 @@ def run_style_redraw(source_path, directory, runtime=None, *, confirmed_gender=N
             with Image.open(garment_path) as garment:            # 옷 그림은 비율 그대로(흰 여백으로 캔버스에 맞춤)
                 canvas(garment).save(directory / "garment.png")
             outcome["garment"] = str(garment_path)
-        _save(directory / "request.json", dict(request_paths(runtime, paths), confirmed_gender=confirmed_gender, engine=engine,
+        _save(directory / "request.json", dict(request_paths(runtime, paths), confirmed_gender=confirmed_gender, engine="flux",
                                               garment=str(garment_path) if garment_path is not None else None))
         outcome["seconds"]["pose"] = _stage(run, "pose", directory, "pose.json")
         outcome["seconds"]["prepare"] = _stage(run, "prepare", directory, "prepare.json")
@@ -130,49 +116,6 @@ def run_style_redraw(source_path, directory, runtime=None, *, confirmed_gender=N
     finally:
         outcome["finished"] = time.time()
         _save(directory / "outcome.json", outcome)
-
-
-def _run_on_candidate(directory, candidate, runtime, run, stage, mode, review):
-    """고른 후보 1장에 단계 하나(refine·face)를 돌린다. 후보는 이 실행의 후보여야 하고 SHA로 확인, 원래 그림은 바꾸지 않는다."""
-    import hashlib
-    directory = Path(directory)
-    outcome = json.loads((directory / "outcome.json").read_text(encoding="utf-8"))
-    if outcome.get("state") != "review_pending":
-        raise ValueError("후보가 준비된 실행만 다듬을 수 있습니다.")
-    chosen = Path(candidate)
-    if str(chosen) not in outcome.get("candidates", []) or not chosen.is_file():
-        raise ValueError("다듬을 그림은 이 실행의 후보 중 하나여야 합니다.")
-    if runtime is None and run is None:
-        from genai_lab.studio_generation import StudioRuntime
-        runtime = StudioRuntime.from_environment()
-    run = run or default_run(runtime)
-    seed = int(chosen.stem.replace("result-seed", ""))
-    _save(directory / f"{stage}-request.json", dict(candidate=chosen.name, seed=seed,
-                                                    candidate_sha256=hashlib.sha256(chosen.read_bytes()).hexdigest()))
-    result = dict(mode=mode, candidate=str(chosen), started=time.time())
-    try:
-        result["seconds"] = _stage(run, stage, directory, f"{stage}-result.json")
-        done = json.loads((directory / f"{stage}-result.json").read_text(encoding="utf-8"))
-        result.update(state="review_pending", result=str(directory / done["file"]), raw=str(directory / done["raw_file"]),
-                      peak_reserved_gib=done.get("peak_reserved_gib"), review=review)
-    except StyleRedrawFailed as error:
-        result.update(state="failed", stage=error.stage, message=str(error))
-    result["finished"] = time.time()
-    _save(directory / f"{stage}-outcome-seed{seed}.json", result)
-    return result
-
-
-def run_style_refine(directory, candidate, runtime=None, *, run=None):
-    """고른 후보 1장을 그림체 참조로 다듬는다(D-203, 그림체 참조 방식 기록용 — LoRA 흐름에서는 쓰지 않음)."""
-    result = _run_on_candidate(directory, candidate, runtime, run, "refine", "style_refine", "사람 확인 전(다듬기 결과)")
-    if "result" in result:
-        result["refined"] = result["result"]
-    return result
-
-
-def run_style_face_detail(directory, candidate, runtime=None, *, run=None):
-    """고른 후보 1장의 얼굴을 원본 쪽으로 다듬고 눈 색을 되돌린다(D-206). 반환: state = review_pending | failed."""
-    return _run_on_candidate(directory, candidate, runtime, run, "face", "style_face_detail", "사람 확인 전(얼굴 다듬기 결과)")
 
 
 def run_style_part_combine(directory, face_candidate, body_candidate, runtime=None, *, run=None):

@@ -56,8 +56,9 @@ class TestStyleRedrawPipeline(unittest.TestCase):
         self.assertEqual(saved["state"], "review_pending")
         request = json.loads((self.root / "run" / "request.json").read_text(encoding="utf-8"))
         self.assertEqual(request["model_cache"], "cache")
-        self.assertTrue({"style_models", "style_reference", "style_reference_pose", "style_lora"} <= set(request))
-        self.assertTrue(request["style_lora"].endswith("step-00500"))
+        self.assertTrue({"flux_model", "hand_cache"} <= set(request))
+        self.assertFalse({"style_models", "style_reference", "style_reference_pose", "style_lora"} & set(request))   # D-216
+        self.assertEqual(request["engine"], "flux")
 
     def test_refused_stops_before_generation(self):
         calls = []

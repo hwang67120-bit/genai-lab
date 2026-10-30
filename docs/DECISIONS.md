@@ -10,6 +10,14 @@
 - 실제 확인(`s5u-part-combine-20261031/`): N004 43+44, V002 43+44, T017 43+42(어긋남 3.8px), T009 42+43 모두 경계 없음. CPU 시험 37개. 화면 연결은 S5에서.
 - **사용자 판정(10/31): N004·V002·T009 합친 결과 통과.** T017은 "얼굴에 광원이 너무 강해 윤곽이 안 보임".
 
+## D-216 안 쓰는 모델 정리 1단계: 모드 B 예전 SDXL 경로 코드 제거 (2026-10-31)
+
+- 사용자: "쓰지 않은 모델 정리해 줘, 안 쓰는데 남아 있으면 문제 될 것 같다"(순서 ③, D-211).
+- 지운 것(코드): 모드 B `sdxl_lora` 방식 전체 — RealVisXL + 자세 ControlNet + IP-Adapter(ViT-H) + 스타일 LoRA 생성, 그림체 참조(target-02) 색 맞춤, 의상·머리 참조, 표준 자세·비율 맞춤, 입력 묶음, 얼굴 다듬기(`run_style_face_detail`), 그림체 참조 다듬기(`run_style_refine`), SDXL LoRA 학습기. 모듈 `style_redraw_face`·`style_redraw_refine`·`character_style_inputs`·`character_style_conditioning`, 스크립트 `prepare_character_style_inputs`·`train_style_lora_sdxl`, 그 시험들. `run_style_redraw`의 engine 선택 없앰(FLUX 하나, request.json에는 engine=flux 기록).
+- 줄인 것: `style_redraw_inputs`는 얼굴 상자·특징 문장만, `style_reference_colors`는 Lab 변환·피부 픽셀만. 모델 위치 표(`model_home.LAYOUT`)에서 `style_models`·`style_reference`·`style_reference_pose`·`style_lora` 뺌 → 모드 B에 필요한 모델은 FLUX.2-klein-4B와 손 검출뿐(나머지는 모드 A와 공유하는 분석 모델).
+- 남긴 것: 모드 A(Qwen 편집·자유 생성)는 제품 흐름이라 그대로. 기록은 git 역사와 이 문서.
+- 다음(사용자 결정 대기): ② Qwen 작업 프로세스의 시험 전용 LoRA 두 가지(빌린 그림체 LoRA D-159, 가속 LoRA D-141) 제거 — 제품 화면에서는 안 쓰지만 핵심 작업 프로세스 안에 분기가 있음. ③ 디스크의 안 쓰는 모델 파일 삭제.
+
 ## D-215 색 맞춤이 흰 피부를 하얗게 날림 → 밝히는 쪽에 하이라이트 한도 (2026-10-31)
 
 - T017 사용자 지적 → 원인 조사: 얼굴 위쪽 피부에서 하얗게 날아간 비율이 FLUX 원래 그림(raw) 0.1~0.7%, 색 맞춤 뒤 17~25%(T017)·12~21%(V001). 원본이 아주 밝은 셀 피부라 색 맞춤이 피부 L을 +17~24 올림(옷 바꾸기 때 상한 L40, D-212). 나머지 8명은 피부를 어둡게 옮겨 0%. **원인 = 생성이 아니라 우리 후처리.**

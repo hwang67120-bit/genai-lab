@@ -28,7 +28,30 @@ def parse_args():
     p.add_argument("--memory-cap-gib", type=float, default=6.5)
     p.add_argument("--width", type=int, default=768)
     p.add_argument("--height", type=int, default=1024)
+    # D-207: 얼굴 영역의 오차를 줄여 학습(LoRA가 학습 자료의 공통 얼굴을 덜 배우게). {"boxes": {그림 이름: [x0,y0,x1,y1]}}
+    p.add_argument("--face-boxes", type=Path)
+    p.add_argument("--face-weight", type=float, default=1.0)
     return p.parse_args()
+
+
+def loss_weights(args, items):
+    """그림마다 잠재값 크기의 오차 가중치(얼굴 상자 안 = face_weight, 밖 = 1). 상자 파일이 없으면 None."""
+    if args.face_boxes is None:
+        return None
+    from PIL import Image
+    boxes = json.loads(args.face_boxes.read_text(encoding="utf-8"))["boxes"]
+    h, w = args.height // 8, args.width // 8
+    weights = []
+    for img_path, _ in items:
+        m = torch.ones(1, 1, h, w)
+        box = boxes.get(img_path.stem)
+        if box:
+            with Image.open(img_path) as im:
+                sx, sy = args.width / im.width, args.height / im.height
+            x0, y0, x1, y1 = box
+            m[..., int(y0 * sy / 8):int(math.ceil(y1 * sy / 8)), int(x0 * sx / 8):int(math.ceil(x1 * sx / 8))] = args.face_weight
+        weights.append(m)
+    return weights
 
 
 def encode_all(args, items, device):
@@ -89,7 +112,9 @@ def main():
     report = dict(images=len(items), args={k: str(v) for k, v in vars(args).items()}, started=time.time())
     t0 = time.time()
     latents, embeds, truncated = encode_all(args, items, device)
-    report.update(encode_seconds=round(time.time() - t0, 1), captions_truncated=truncated)
+    weights = loss_weights(args, items)
+    report.update(encode_seconds=round(time.time() - t0, 1), captions_truncated=truncated,
+                  face_masked=None if weights is None else dict(weight=args.face_weight, images=sum(int((w < 1).any()) for w in weights)))
 
     from diffusers import DDPMScheduler, UNet2DConditionModel
     from peft import LoraConfig
@@ -128,7 +153,11 @@ def main():
         with torch.autocast("cuda", dtype=torch.float16):
             pred = unet(xt, t, encoder_hidden_states=prompt,
                         added_cond_kwargs={"text_embeds": pooled, "time_ids": time_ids}).sample
-            loss = torch.nn.functional.mse_loss(pred.float(), noise.float())
+            if weights is None:
+                loss = torch.nn.functional.mse_loss(pred.float(), noise.float())
+            else:
+                w = weights[i].to(device)
+                loss = (w * (pred.float() - noise.float()) ** 2).sum() / (w.sum() * pred.shape[1])
         optimizer.zero_grad(set_to_none=True)
         scaler.scale(loss).backward()
         scaler.unscale_(optimizer)

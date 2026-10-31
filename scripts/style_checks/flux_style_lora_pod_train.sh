@@ -9,6 +9,7 @@ STEPS=${STEPS:-2000}
 export PIP_NO_CACHE_DIR=1 HF_HUB_DISABLE_XET=1
 rm -rf /root/qi /dev/shm/qi
 pip install -q peft==0.21.2 datasets tensorboard
+pip uninstall -y -q torchaudio   # Pod 기본 이미지의 옛 torchaudio가 torch 2.9.1과 맞지 않아 transformers 가져오기에서 멈춤(학습엔 안 씀)
 curl -sSfL -o /root/train_dreambooth_lora_flux2_klein.py \
   https://raw.githubusercontent.com/huggingface/diffusers/v0.38.0/examples/dreambooth/train_dreambooth_lora_flux2_klein.py
 python3 - <<PY

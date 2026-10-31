@@ -27,6 +27,11 @@ MIN_PART_PIXELS = 200
 PARTS = ("skin", "hair", "upper", "lower")
 IDENTITY_PARTS = ("skin", "hair")             # 옷을 바꿀 때는 캐릭터 원본에 맞출 부위가 피부·머리뿐(옷은 옷 그림에서 온다)
 IDENTITY_SHIFT_CAP = np.array([40.0, 20.0, 20.0])   # 옷 그림의 흰 마네킹·배경에 피부가 밝게 끌릴 수 있어 폭을 넓힌다
+# 장면 문장 공통 규칙(D-225): 황금빛 역광에서 검은 머리가 회색으로(U003), '걷기'가 서 있는 자세로, 거리 간판에 가짜 글자.
+SCENE_RULES = ("The scene lighting may add highlights and shadows but must not change the character's own colours: the hair, "
+               "eyes, skin and clothes keep their colours from image 1. Show the pose and action of the scene clearly with the whole "
+               "body, arms and legs. ")
+# 간판 문장("Signs and screens … no letters")은 시험에서 가짜 글자를 못 막고 공원에 빈 간판을 새로 세워 뺐다(D-225).
 
 
 def flux_prompt(traits, with_garment=False, body_parts=None, scene=None):
@@ -46,7 +51,7 @@ def flux_prompt(traits, with_garment=False, body_parts=None, scene=None):
         keep = "body proportions" if with_garment else "body proportions and outfit"
         return (f"Show the same adult character as in image 1{who}{' ' + outfit if outfit else ''} in a new scene. Scene: {scene.strip()} "
                 f"Keep the same face, hairstyle, hair colour, eye colour, skin tone and {keep} exactly as in image 1; do not lighten "
-                f"or darken the skin. {parts}Full body, the whole character inside the frame, face clearly visible. Render as a new "
+                f"or darken the skin. {parts}{SCENE_RULES}Full body, the whole character inside the frame, face clearly visible. Render as a new "
                 f"{STYLE}. {'Do not copy the mannequin or the clothing photo background. ' if with_garment else ''}"
                 f"No lettering, logo, watermark or multiple people.")
     if with_garment:
@@ -82,8 +87,10 @@ def part_masks(rgb, parts, person):
                 lower=any_of("bottomwear", "legwear") & ~skin & person)
 
 
-def colour_match(result_rgb, original_rgb, result_masks, original_masks, feather=2.0, parts=PARTS, cap=None):
-    """부위마다 결과 색을 원본 쪽으로(Lab 평균 이동 + 퍼짐 비율). 반환: (RGB uint8, {부위: 옮긴 양 또는 None})."""
+def colour_match(result_rgb, original_rgb, result_masks, original_masks, feather=2.0, parts=PARTS, cap=None, scene_lighting=False):
+    """부위마다 결과 색을 원본 쪽으로(Lab 평균 이동 + 퍼짐 비율). 반환: (RGB uint8, {부위: 옮긴 양 또는 None}).
+    scene_lighting: 새 장면(조명이 바뀜)이면 밝기는 조명 몫 — 밝게 올리지 않고(어둡게 되돌리기만) 명암 폭도 그대로(D-225:
+    황금빛 역광의 검은 머리를 밝은 셀 원본 평균 쪽으로 +13 올려 회색이 됐다, U003). 색조(a·b)는 그대로 맞춘다."""
     from scipy.ndimage import gaussian_filter
     from genai_lab.style_reference_colors import lab_to_rgb, rgb_to_lab
     lab, source = rgb_to_lab(np.asarray(result_rgb)), rgb_to_lab(np.asarray(original_rgb))
@@ -98,7 +105,9 @@ def colour_match(result_rgb, original_rgb, result_masks, original_masks, feather
         mu_r, sd_r, mu_s, sd_s = a.mean(0), a.std(0) + 1e-3, b.mean(0), b.std(0) + 1e-3
         shift = np.clip(mu_s - mu_r, -cap, cap)
         spread = np.clip(sd_s / sd_r, *SPREAD_CLIP)
-        if shift[0] > 0:                # 밝히는 쪽은 밝은 곳이 하얗게 날아가지 않을 만큼만(T017·V001: 흰 셀 피부 쪽으로 +20 → 얼굴 윤곽 사라짐)
+        if scene_lighting:
+            shift[0], spread[0] = min(shift[0], 0.0), 1.0
+        if shift[0] > 0:              # 밝히는 쪽은 밝은 곳이 하얗게 날아가지 않을 만큼만(T017·V001: 흰 셀 피부 쪽으로 +20 → 얼굴 윤곽 사라짐)
             top = (np.percentile(a[:, 0], HIGHLIGHT_PERCENTILE) - mu_r[0]) * spread[0] + mu_r[0]
             shift[0] = min(shift[0], max(HIGHLIGHT_L - top, 0.0))
         fixed = (lab - mu_r) * spread + mu_r + shift

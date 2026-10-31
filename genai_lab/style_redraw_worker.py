@@ -219,8 +219,10 @@ def generate_flux(directory, req):
     for (seed, raw, seconds), count, scores in zip(raws, hands, result_scores):
         _, masks = person_and_parts(raw, req)
         # 옷을 바꿨으면 원본에 맞출 부위는 피부·머리뿐(옷은 옷 그림 것), 아니면 네 부위 모두
-        fixed, shifts = (colour_match(raw, original, masks, original_masks, parts=IDENTITY_PARTS, cap=IDENTITY_SHIFT_CAP)
-                         if with_garment else colour_match(raw, original, masks, original_masks, parts=PARTS))
+        scene = bool(prepared.get("scene"))         # 새 장면이면 밝기는 조명 몫(D-225)
+        fixed, shifts = (colour_match(raw, original, masks, original_masks, parts=IDENTITY_PARTS, cap=IDENTITY_SHIFT_CAP,
+                                      scene_lighting=scene)
+                         if with_garment else colour_match(raw, original, masks, original_masks, parts=PARTS, scene_lighting=scene))
         path = directory / f"result-seed{seed}.png"
         Image.fromarray(fixed).save(path)
         candidates.append(dict(seed=seed, file=path.name, raw_file=f"result-raw-seed{seed}.png", sha256=sha(path), seconds=seconds,

@@ -48,10 +48,27 @@ class TestFluxHelpers(unittest.TestCase):
         self.assertIn("a tail or tails", p)
         self.assertNotIn("Keep the same pose", p)                                  # 장면이 있으면 원본 자세를 고정하지 않음
         self.assertNotIn("concrete wall", p)                                       # 배경은 장면 문장이 정함
+        self.assertIn("must not change the character's own colours", p)            # 역광에 머리색이 바뀌지 않게(D-225)
+        self.assertNotIn("must not change the character's own colours", flux_prompt(traits))   # 장면 없을 때는 그대로
         g = flux_prompt(traits, with_garment=True, body_parts=(), scene="Walking in the rain.")
         self.assertIn("wearing the complete outfit shown in image 2", g)
         self.assertNotIn("black bodysuit", g)                                      # 원래 옷 낱말은 빼서 새 옷과 다투지 않게
         self.assertIn("Do not copy the mannequin", g)
+
+    def test_scene_lighting_never_brightens_and_keeps_contrast(self):
+        # U003(D-225): 역광으로 어두운 검은 머리를 밝은 셀 원본 평균 쪽으로 올리면 회색이 된다
+        orig = np.zeros((40, 40, 3), np.uint8); orig[:] = (90, 90, 100)                  # 원본 평균이 더 밝음
+        res = np.zeros((40, 40, 3), np.uint8); res[:] = (25, 25, 30)                     # 어두운 장면의 검은 머리
+        m = np.ones((40, 40), bool); e = np.zeros_like(m)
+        masks = dict(skin=e, hair=m, upper=e, lower=e)
+        out, shifts = colour_match(res, orig, masks, dict(masks), feather=0, scene_lighting=True)
+        self.assertEqual(shifts["hair"][0], 0.0)
+        self.assertLessEqual(int(out[20, 20].sum()), int(res[20, 20].sum()) + 3)        # 밝아지지 않음
+        _, plain = colour_match(res, orig, masks, dict(masks), feather=0)
+        self.assertGreater(plain["hair"][0], 0)                                           # 장면이 아니면 예전처럼 올린다
+        dark = np.zeros((40, 40, 3), np.uint8); dark[:] = (40, 20, 25)                    # 원본이 더 어두우면 어둡게 되돌리기는 함
+        _, down = colour_match(orig, dark, masks, dict(masks), feather=0, scene_lighting=True)
+        self.assertLess(down["hair"][0], 0)
 
     def test_missing_parts_by_result_tags(self):
         kept = {"animal_ears": 0.98, "cat_ears": 0.95, "tail": 0.95, "cat_tail": 0.94}

@@ -16,6 +16,9 @@ EXTRA_HAIR_STYLE_TAGS = ("dreadlocks", "undercut", "afro", "cornrows", "mohawk",
 TAG_THRESHOLD = 0.5
 GENDER_WORDS = {"male": "adult man", "female": "adult woman"}
 EVIDENCE = "자동 측정(특징표·태그, style_redraw_inputs). 사람 확인 전."
+# 옷 상태 태그 → 그 상태가 붙는 옷 이름(D-225). 따로 낱말로 두면 세부 낱말로 뒤로 밀려 6개 제한에서 잘렸다(U005 열린 셔츠가 잠김).
+OPEN_STATE_TAGS = {"open_shirt": "shirt", "unbuttoned_shirt": "shirt", "open_jacket": "jacket", "open_coat": "coat",
+                   "open_cardigan": "cardigan", "open_vest": "vest", "open_hoodie": "hoodie"}
 
 
 class StyleRedrawInputError(ValueError):
@@ -58,8 +61,16 @@ def garment_words(character_scores, threshold=0.35):    # 0.35 = ClothingDesignA
     # 색·종류가 붙은 낱말(white shirt)이 있으면 같은 이름의 일반 낱말(shirt)은 뺀다 — 6개 제한에서 색 있는 옷이 잘리지 않게.
     words = [w for w in words if not any(o != w and o.endswith(" " + w) for o in words)]
     # 소매·깃·단추 같은 세부 낱말은 옷 이름 뒤로(T014: 세부 낱말이 자리를 차지해 조끼가 잘림).
-    words = sorted(words, key=lambda w: bool(re.search(GARMENT_DETAIL, w)))
-    return words[:MAX_GARMENT_WORDS]
+    opened = [base for tag, base in OPEN_STATE_TAGS.items() if float((character_scores or {}).get(tag, 0.0)) >= threshold]
+    words = [w for w in words if not (w.startswith(("open ", "unbuttoned ")) or w == "open clothes")]   # 상태는 아래에서 옷에 붙인다
+    words = sorted(words, key=lambda w: bool(re.search(GARMENT_DETAIL, w)))[:MAX_GARMENT_WORDS]
+    for base in dict.fromkeys(opened):
+        at = next((i for i, w in enumerate(words) if w == base or w.endswith(" " + base)), None)
+        if at is None:
+            words = [f"open {base}"] + words[:MAX_GARMENT_WORDS - 1]
+        else:
+            words[at] = f"open {words[at]} (unbuttoned, worn open)"
+    return words
 
 
 def _row(name, text, description_ko):

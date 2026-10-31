@@ -59,6 +59,16 @@ class TestStyleRedrawInputs(unittest.TestCase):
                                   "white_shirt": 0.6, "green_vest": 0.5, "grey_pants": 0.45})
         self.assertEqual(coloured, ["white shirt", "green vest", "grey pants", "long sleeves", "collared shirt"])
 
+    def test_open_shirt_is_kept_on_the_shirt_not_cut_by_the_limit(self):
+        # U005(D-225): 옷 낱말 6개를 채우고 open_shirt가 세부 낱말로 뒤로 밀려 잘렸다 → 셔츠 낱말에 붙인다
+        scores = {"pants": 0.92, "open_clothes": 0.79, "torn_pants": 0.75, "shirt": 0.61, "open_shirt": 0.58, "white_shirt": 0.47,
+                  "belt": 0.9, "boots": 0.8, "denim": 0.7, "jeans": 0.6}
+        words = garment_words(scores)
+        self.assertIn("open white shirt (unbuttoned, worn open)", words)
+        self.assertFalse(any(w in ("open shirt", "open clothes") for w in words))
+        self.assertLessEqual(len(words), 6)
+        self.assertEqual(garment_words({"open_jacket": 0.8, "pants": 0.9})[0], "open jacket")   # 옷 이름 태그가 없으면 앞에 더함
+
 
 if __name__ == "__main__":
     unittest.main()

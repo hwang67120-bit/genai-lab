@@ -155,6 +155,7 @@ def prepare_flux(directory, req, canvas, rgb, scores, safety, joints, face, star
             save(directory / "prepare.json", dict(state="refused", code="garment_safety",
                                                   message="이 옷 그림은 사용할 수 없습니다.", safety=garment_safety))
             return
+    from genai_lab.identity_anchors import anchors
     from genai_lab.studio_controller import guessed_body_parts
     parts, masks = person_and_parts(rgb, req)
     guessed = guessed_gender(dict(character_scores=scores))
@@ -168,7 +169,7 @@ def prepare_flux(directory, req, canvas, rgb, scores, safety, joints, face, star
     hands = count_hands([rgb], req)[0]
     save(directory / "prepare.json", dict(
         state="ready", engine="flux", with_garment=with_garment, seconds=round(time.time() - started, 1), gender=confirmed,
-        guessed_gender=guessed, traits=traits, body_parts=list(body_parts),
+        guessed_gender=guessed, traits=traits, body_parts=list(body_parts), identity_anchors=anchors(scores),
         body_parts_source="confirmed" if confirmed_parts is not None else "automatic_tags",
         scene=req.get("scene"), prompt=flux_prompt(traits, with_garment, body_parts, req.get("scene")), face_box=face, original_hands=hands,
         warnings=support_warnings(scores, joints), safety=safety, joints_used=sorted(joints),
@@ -186,6 +187,7 @@ def generate_flux(directory, req):
     from genai_lab.style_redraw_flux import (GUIDANCE, IDENTITY_PARTS, IDENTITY_SHIFT_CAP, MAX_SEQUENCE_LENGTH, PARTS, SEEDS, STEPS,
                                              body_part_tags, colour_match, hand_flag, missing_body_parts)
     from genai_lab.clothing_analysis import ClothingDesignAnalysisSettings, WdTagSession
+    from genai_lab.identity_anchors import compare as compare_anchors
     prepared = json.loads((directory / "prepare.json").read_text(encoding="utf-8"))
     torch.cuda.set_per_process_memory_fraction(MEMORY_CAP_GIB * 2**30 / torch.cuda.get_device_properties(0).total_memory)
     started = time.time()
@@ -232,7 +234,8 @@ def generate_flux(directory, req):
         candidates.append(dict(seed=seed, file=path.name, raw_file=f"result-raw-seed{seed}.png", sha256=sha(path), seconds=seconds,
                                colour_shift=shifts, hands=count, extra_hands=hand_flag(prepared.get("original_hands"), count),
                                missing_body_parts=missing_body_parts(prepared.get("body_parts"), scores),
-                               body_part_tags=body_part_tags(scores)))
+                               body_part_tags=body_part_tags(scores),
+                               identity_anchors=compare_anchors(prepared.get("identity_anchors") or [], scores)))
     save(directory / "generation.json", dict(
         state="generated_unreviewed", engine="flux", with_garment=with_garment, load_seconds=loaded, candidates=candidates, review="사용자가 후보 중 1장을 고른다",
         peak_reserved_gib=peak, memory_cap_gib=MEMORY_CAP_GIB, prompt=prepared["prompt"],

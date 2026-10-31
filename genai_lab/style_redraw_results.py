@@ -34,7 +34,7 @@ class StyleRedrawResults:
             info = by_file.get(Path(path).name, {})
             self.candidates.append(dict(path=str(path), seed=info.get("seed"), sha256=info.get("sha256") or _sha(path),
                                         extra_hands=info.get("extra_hands"), missing_body_parts=info.get("missing_body_parts") or [],
-                                        variant="raw"))
+                                        identity_anchors=info.get("identity_anchors"), variant="raw"))
         flagged = lambda c: bool(c["extra_hands"]) or bool(c["missing_body_parts"])
         self.selected = next((i for i, c in enumerate(self.candidates) if not flagged(c)), 0)
         self.status, self.approved_sha, self.checks = "awaiting_user_review", None, {}
@@ -77,7 +77,10 @@ class StyleRedrawResults:
             notes.append("손이 원본보다 많게 보입니다")
         if c["missing_body_parts"]:
             notes.append("사라진 부위: " + ", ".join(c["missing_body_parts"]))
-        return f"FLUX 결과 {label}." + (" 자동 표시: " + " · ".join(notes) + "." if notes else "") + " 자동 표시는 품질 판정이 아닙니다."
+        from genai_lab.identity_anchors import summary_ko
+        anchors = f" {summary_ko(c['identity_anchors'])}." if c.get("identity_anchors") else ""
+        return (f"FLUX 결과 {label}." + anchors + (" 자동 표시: " + " · ".join(notes) + "." if notes else "")
+                + " 자동 표시는 품질 판정이 아닙니다.")
 
     def approve_saved_by_user(self):
         """'저장' = 이 그림을 쓰겠다는 사용자 결정(같은 캐릭터 등 품질 항목 판정은 아님)."""

@@ -1,19 +1,17 @@
-"""사용자 화면(D-151): 참조 이미지 + '이미지 생성' 한 번 + 생성 과정 미리보기. 확인 창 없이 ①→② 자동, 기록은 정직하게."""
-import hashlib
+"""사용자 화면(D-151, D-222 FLUX 한 경로): 참조 이미지 + '이미지 생성' 한 번 + 생성 과정 미리보기 + 후보 3장 고르기 + 저장."""
 import json
 import os
 from pathlib import Path
-from types import SimpleNamespace
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
 from PIL import Image
 from PySide6.QtWidgets import QApplication, QLineEdit
 
-from genai_lab import free_generation_pipeline, free_generation_results, outfit_edit_pipeline, qwen_outfit_edit
-from genai_lab import studio_controller as ui, studio_free_generation as free_ui, studio_generation
-from test_studio_generation import analysis_at, wait_for
-from test_studio_outfit_edit import fake_outcome
+from genai_lab import style_redraw_pipeline
+from genai_lab import studio_controller as ui, studio_free_generation as free_ui
+from genai_lab.style_redraw_results import StyleRedrawResults
+from test_studio_generation import wait_for
 
 
 @pytest.fixture
@@ -23,39 +21,47 @@ def product_window(monkeypatch, tmp_path):
     from gui_main import GenAILabWindow
     window = GenAILabWindow()
     window.studio.output_root = tmp_path / "runs"
-    monkeypatch.setattr(qwen_outfit_edit, "load_qwen_settings", lambda path: object())
     from genai_lab import model_check
-    monkeypatch.setattr(model_check, "require_product_models", lambda *a, **k: None)   # 모델 검사는 test_model_check에서
+    monkeypatch.setattr(model_check, "require_flux_models", lambda *a, **k: None)   # 모델 검사는 test_model_check에서
     for name in ("confirm_outfit_edit", "confirm_inputs", "confirm_result"):
         monkeypatch.setattr(ui, name, lambda *a, **k: pytest.fail("사용자 화면은 확인 창을 띄우지 않는다"))
     monkeypatch.setattr(free_ui, "confirm_free_inputs", lambda *a, **k: pytest.fail("확인 창 없음"))
+    monkeypatch.setattr(free_ui, "analyze_base", lambda source, runtime: dict(source=str(source), character_scores={"1boy": 0.9},
+                                                                              groups=dict(fixed=[], appearance=[], body=[])))
     yield window
     window.close()
 
 
-class FakeResults(free_generation_results.FreeGenerationResults):
-    """실제 결과 클래스의 화면용 속성은 그대로 물려받고, 생성 기록 검증만 건너뛴다."""
-
-    def __init__(self, outcome):
-        self.outcome, self.result_path, self.status = outcome, Path(outcome["result"]), "awaiting_user_review"
-        self.candidates, self.selected = [dict(attempt=1, raw=outcome["result"], sha256="x")], 0
-        self.directory = self.result_path.parent            # OutfitEditResults.__init__가 두는 속성들
-        self.batch = SimpleNamespace(directory=self.directory, candidates=(None,))
-        self.composited, self.raw_path, self.appendage_review_required = False, self.result_path, False
-        self.expected_sha = self.approved_sha = None
-        self.checks, self.quick_preview = {}, False
-
-    def approve_saved_by_user(self):
-        self.status = "user_approved"
-
-
-def fake_free(calls, tmp_path):
-    def run(base, features, request_text="", **kw):
-        calls.append(dict(kw, base=Path(base), features=features, request_text=request_text))
-        result = tmp_path / "final.png"
-        Image.new("RGB", (8, 8), (10, 20, 30)).save(result)
-        return dict(status="awaiting_user_review", result=str(result))
+def fake_flux(calls, flags=None):
+    """run_style_redraw 대신: 후보 3장 + generation.json을 만들고 검토 대기를 돌려준다."""
+    def run(source, directory, runtime=None, **kw):
+        calls.append(dict(kw, source=Path(source)))
+        directory = Path(directory)
+        directory.mkdir(parents=True)
+        files, rows = [], []
+        for i, seed in enumerate((42, 43, 44)):
+            path = directory / f"result-seed{seed}.png"
+            Image.new("RGB", (8, 8), (seed, i, 0)).save(path)
+            files.append(str(path))
+            rows.append(dict(seed=seed, file=path.name, extra_hands=(flags or {}).get(seed, False), missing_body_parts=[]))
+        (directory / "generation.json").write_text(json.dumps(dict(candidates=rows)), encoding="utf-8")
+        return dict(state="review_pending", candidates=files)
     return run
+
+
+def start(w, tmp_path, monkeypatch, calls, flags=None, garment=None):
+    character = tmp_path / "character.png"
+    Image.new("RGB", (8, 8)).save(character)
+    w.style_path = character
+    w.selected_outfit_path = garment
+    w.update_input_ready_status()
+    monkeypatch.setattr(style_redraw_pipeline, "run_style_redraw", fake_flux(calls, flags))
+    failed = []
+    monkeypatch.setattr(w.studio, "fail", lambda error, details="": failed.append(f"{error}\n{details}"))   # 오류 창 대신 기록
+    w.generate_button.click()
+    wait_for(QApplication.instance(), lambda: w.studio.task is None and (w.studio.results is not None or bool(failed)))
+    assert not failed, failed[0]
+    return character
 
 
 def test_only_references_generate_and_preview_are_shown(product_window):
@@ -70,75 +76,79 @@ def test_only_references_generate_and_preview_are_shown(product_window):
     assert w.generate_button.isEnabled() and "이미지 생성" in w.status_label.text()       # 의상은 선택
 
 
-def test_with_outfit_runs_edit_then_staging_automatically(product_window, tmp_path, monkeypatch):
+def test_one_flux_step_with_scene_and_three_candidates_to_choose(product_window, tmp_path, monkeypatch):
     w = product_window
-    analysis = analysis_at(tmp_path / "inputs")
-    w.style_path = Path(analysis["source"])
-    w.selected_outfit_path = Path(analysis["directory"]) / "garment.png"
-    w.update_input_ready_status()
-    asked = []
-    monkeypatch.setattr(studio_generation, "analyze_inputs", lambda *a, **k: asked.append(k.get("require_face")) or analysis)
-    edits = []
-    monkeypatch.setattr(outfit_edit_pipeline, "run_outfit_pipeline",
-                        lambda c, g, **kw: edits.append(kw) or fake_outcome(kw["directory"]))
     calls = []
-    monkeypatch.setattr(free_generation_pipeline, "run_free_generation", fake_free(calls, tmp_path))
-    monkeypatch.setattr(free_generation_results, "FreeGenerationResults", FakeResults)
-    w.generate_button.click()
-    wait_for(QApplication.instance(), lambda: w.studio.task is None and w.studio.results is not None)
-    assert asked == [False] and edits[0]["provenance"]["gender"]["source"] == "automatic_product"
+    character = start(w, tmp_path, monkeypatch, calls)
     call = calls[0]
-    assert call["base"].name == "edit-result.png" and call["base_kind"] == "edited"
+    assert call["source"] == character and call["garment_path"] is None
     scene = json.loads((w.studio.run_directory / "scene.json").read_text(encoding="utf-8"))      # 장면 자동 조합(D-153)
-    assert scene["source"] == "scene_composer" and call["request_text"] == scene["text"] and "head to feet" in scene["text"]
-    assert call["automatic_edit_base"] is True and call["confirmation_source"] == "automatic_product"
-    record = json.loads(call["base"].with_suffix(".review.json").read_text(encoding="utf-8"))
-    assert record["reviewer"] == "automatic_chain" and record["sha256"] == hashlib.sha256(call["base"].read_bytes()).hexdigest()
-    assert w.save_candidate_button.isEnabled() and "완성" in w.status_label.text()
+    assert scene["source"] == "scene_composer" and call["scene"] == scene["text"] and "head to feet" in scene["text"]
+    assert call["confirmed_gender"] is None and call["confirmed_body_parts"] is None   # 기억이 없으면 추정은 준비 단계가(D-198)
+    assert isinstance(w.studio.results, StyleRedrawResults)
+    combo = w.studio_candidate_combo
+    assert not combo.isHidden() and combo.count() == 3 and "후보 3장" in w.status_label.text()
+    combo.setCurrentIndex(2)
+    assert w.studio.results.selected == 2 and w.studio.results.current_path.name == "result-seed44.png"
+    assert w.save_candidate_button.isEnabled()
     saved = []
     monkeypatch.setattr(w.studio, "save", lambda: saved.append(w.studio.results.status))
     w.save_candidate_button.click()
     assert saved == ["user_approved"]
 
 
-def test_without_outfit_keeps_the_outfit_and_makes_pose_and_scene(product_window, tmp_path, monkeypatch):
+def test_garment_goes_to_the_same_flux_step_and_flagged_candidate_is_not_shown_first(product_window, tmp_path, monkeypatch):
+    w = product_window
+    garment = tmp_path / "garment.png"
+    Image.new("RGB", (8, 8), (0, 0, 200)).save(garment)
+    calls = []
+    start(w, tmp_path, monkeypatch, calls, flags={42: True}, garment=garment)
+    assert calls[0]["garment_path"] == garment
+    assert w.studio.results.selected == 1 and "손이 원본보다" not in w.studio.results.head_notice   # 손이 늘어난 42는 처음에 안 보임
+    w.studio_candidate_combo.setCurrentIndex(0)
+    assert "손이 원본보다" in w.studio.results.head_notice
+
+
+def test_refused_outcome_is_reported_not_shown(product_window, tmp_path, monkeypatch):
     w = product_window
     character = tmp_path / "character.png"
     Image.new("RGB", (8, 8)).save(character)
     w.style_path = character
     w.update_input_ready_status()
-    monkeypatch.setattr(free_ui, "analyze_base", lambda source, runtime: dict(source=str(source), character_scores={"1boy": 0.9},
-                                                                              groups=dict(fixed=[], appearance=[], body=[])))
-    calls = []
-    monkeypatch.setattr(free_generation_pipeline, "run_free_generation", fake_free(calls, tmp_path))
-    monkeypatch.setattr(free_generation_results, "FreeGenerationResults", FakeResults)
+    monkeypatch.setattr(style_redraw_pipeline, "run_style_redraw",
+                        lambda *a, **k: dict(state="refused", code="safety", message="이 그림은 진행할 수 없습니다."))
+    failed = []
+    monkeypatch.setattr(w.studio, "fail", lambda error, details="": failed.append(str(error)))
     w.generate_button.click()
-    wait_for(QApplication.instance(), lambda: w.studio.task is None and w.studio.results is not None)
-    call = calls[0]
-    assert call["base"] == character and call["base_kind"] == "original" and call["automatic_edit_base"] is False
-    assert call["gender"] == "male" and set(call["features"]) >= {"hair_color", "distinctive"}
-    assert call["request_text"] and "white background" not in call["request_text"].lower()
+    wait_for(QApplication.instance(), lambda: w.studio.task is None and bool(failed))
+    assert failed == ["이 그림은 진행할 수 없습니다."] and w.studio.results is None
 
 
-def test_preview_shows_the_newest_step_image(product_window, tmp_path):
+def test_preview_shows_the_newest_candidate_and_progress(product_window, tmp_path):
     w = product_window
     w.studio.run_directory = tmp_path / "run"
-    qwen = w.studio.run_directory / "free-generation" / "qwen"
-    qwen.mkdir(parents=True)
-    Image.new("RGB", (16, 20), (200, 0, 0)).save(qwen / "preview-007.png")
+    flux = w.studio.run_directory / "flux"
+    flux.mkdir(parents=True)
+    Image.new("RGB", (16, 20), (200, 0, 0)).save(flux / "result-raw-seed42.png")
+    (flux / "progress.json").write_text(json.dumps(dict(candidate=2, candidates=3)), encoding="utf-8")
     w.studio.product.poll_preview()
-    assert not w.candidate_preview._original.isNull()
+    assert not w.candidate_preview._original.isNull() and "후보 2/3" in w.status_label.text()
 
 
 def test_saved_by_user_is_not_a_quality_judgement(tmp_path):
-    results = free_generation_results.FreeGenerationResults.__new__(free_generation_results.FreeGenerationResults)
-    recorded = []
-    results.verify_current = lambda: "sha"
-    results.persist = lambda **k: None
-    results.record_human = lambda values, source: recorded.append((values, source))
+    directory = tmp_path / "run"
+    calls = []
+    outcome = fake_flux(calls)(tmp_path / "c.png", directory)
+    results = StyleRedrawResults(outcome)
     results.approve_saved_by_user()
-    assert results.status == "user_approved" and results.checks == dict(saved_by_user=True)
-    assert recorded and recorded[0][1] == "product_save" and "quality_pass" not in recorded[0][0]
+    review = json.loads((directory / "user-review.json").read_text(encoding="utf-8"))
+    assert results.status == "user_approved" and review["checks"] == dict(saved_by_user=True)
+    saved = results.export(tmp_path / "out.png")
+    meta = json.loads(saved.with_suffix(".review.json").read_text(encoding="utf-8"))
+    assert meta["mode"] == "style_redraw" and meta["engine"] == "flux" and meta["ai_label"]
+    with pytest.raises(FileExistsError):
+        results.status = "user_approved"
+        results.export(tmp_path / "out.png")
 
 
 def test_scene_field_feeds_the_request_and_blocks_appearance_changes(product_window, tmp_path, monkeypatch):
@@ -152,11 +162,8 @@ def test_scene_field_feeds_the_request_and_blocks_appearance_changes(product_win
     assert not w.generate_button.isEnabled() and "자세·배경·상황" in w.studio.product.scene_note.text()
     field.setText("jumping happily")
     assert w.generate_button.isEnabled()
-    monkeypatch.setattr(free_ui, "analyze_base", lambda source, runtime: dict(source=str(source), character_scores={},
-                                                                              groups=dict(fixed=[], appearance=[], body=[])))
     calls = []
-    monkeypatch.setattr(free_generation_pipeline, "run_free_generation", fake_free(calls, tmp_path))
-    monkeypatch.setattr(free_generation_results, "FreeGenerationResults", FakeResults)
+    monkeypatch.setattr(style_redraw_pipeline, "run_style_redraw", fake_flux(calls))
     w.generate_button.click()
     wait_for(QApplication.instance(), lambda: w.studio.task is None and w.studio.results is not None)
-    assert calls[0]["request_text"].startswith("jumping happily. Setting: ")       # 배경 말이 없어 장소·빛을 덧붙임
+    assert calls[0]["scene"].startswith("jumping happily. Setting: ")       # 배경 말이 없어 장소·빛을 덧붙임

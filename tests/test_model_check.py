@@ -131,7 +131,7 @@ def test_generate_stops_before_any_analysis_when_models_are_missing(monkeypatch,
     window.style_path = str(picture)
     monkeypatch.setattr(qwen_outfit_edit, "load_qwen_settings", lambda path: object())
     missing = dict(ok=False, problems=[dict(component="wd_tagger", label="x", path="P", problem="없음")], locations={"wd_tagger": "L"})
-    monkeypatch.setattr(model_check, "require_product_models", lambda *a, **k: (_ for _ in ()).throw(model_check.MissingModelFiles(missing)))
+    monkeypatch.setattr(model_check, "require_flux_models", lambda *a, **k: (_ for _ in ()).throw(model_check.MissingModelFiles(missing)))   # D-222
     monkeypatch.setattr(free_ui, "analyze_base", lambda *a, **k: pytest.fail("모델이 없으면 분석을 시작하지 않는다"))
     monkeypatch.setattr(studio_generation, "analyze_inputs", lambda *a, **k: pytest.fail("모델이 없으면 분석을 시작하지 않는다"))
     failures = []

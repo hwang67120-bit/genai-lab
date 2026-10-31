@@ -1,17 +1,14 @@
-"""사용자 화면 GPU 시험 실행기(D-156): 생성만 가짜로 바꾸고 '이미지 생성' → 저장까지 화면 없이 도는지(CPU)."""
+"""사용자 화면 GPU 시험 실행기(D-156, D-222 FLUX 한 경로): 생성만 가짜로 바꾸고 '이미지 생성' → 저장까지 화면 없이 도는지(CPU)."""
 import importlib.util
 import json
 from pathlib import Path
 
-import pytest
 from PIL import Image
 
-from genai_lab import free_generation_pipeline, free_generation_results, outfit_edit_pipeline, qwen_outfit_edit
-from genai_lab import studio_free_generation as free_ui, studio_generation
+from genai_lab import style_redraw_pipeline
+from genai_lab import studio_free_generation as free_ui
 from saved_image import saved_as
-from test_studio_generation import analysis_at
-from test_studio_outfit_edit import fake_outcome
-from test_studio_product import FakeResults
+from test_studio_product import fake_flux
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "product_flow_run.py"
 
@@ -25,37 +22,23 @@ def load_runner():
 
 def test_runner_clicks_generate_and_saves_each_case(tmp_path, monkeypatch):
     monkeypatch.delenv("GENAI_STUDIO_DEVELOPER", raising=False)
-    analysis = analysis_at(tmp_path / "inputs")
-    character = Path(analysis["source"])
-    garment = Path(analysis["directory"]) / "garment.png"
-    monkeypatch.setattr(qwen_outfit_edit, "load_qwen_settings", lambda path: object())
+    character = tmp_path / "character.png"
+    garment = tmp_path / "garment.png"
+    Image.new("RGB", (8, 8), (30, 60, 90)).save(character)
+    Image.new("RGB", (8, 8), (0, 0, 200)).save(garment)
     from genai_lab import model_check
-    monkeypatch.setattr(model_check, "require_product_models", lambda *a, **k: None)
-    monkeypatch.setattr(studio_generation, "analyze_inputs", lambda *a, **k: analysis)
+    monkeypatch.setattr(model_check, "require_flux_models", lambda *a, **k: None)
     monkeypatch.setattr(free_ui, "analyze_base", lambda source, runtime: dict(source=str(source), character_scores={},
                                                                               groups=dict(fixed=[], appearance=[], body=[])))
-    monkeypatch.setattr(outfit_edit_pipeline, "run_outfit_pipeline", lambda c, g, **kw: fake_outcome(kw["directory"]))
-    final = tmp_path / "final.png"
-    Image.new("RGB", (8, 8), (30, 60, 90)).save(final)
-    requests = []
-    monkeypatch.setattr(free_generation_pipeline, "run_free_generation",
-                        lambda base, features, request_text="", **kw: requests.append((Path(base).name, request_text)) or
-                        dict(status="awaiting_user_review", result=str(final)))
-
-    class SavingResults(FakeResults):
-        def export(self, destination):
-            from genai_lab.ai_label import label_record, labeled_png
-            Path(destination).write_bytes(labeled_png(Path(self.outcome["result"]).read_bytes(), label_record("generated")))
-            return Path(destination)
-
-    monkeypatch.setattr(free_generation_results, "FreeGenerationResults", SavingResults)
+    calls = []
+    monkeypatch.setattr(style_redraw_pipeline, "run_style_redraw", fake_flux(calls))
     cases = tmp_path / "cases.json"
     cases.write_text(json.dumps([dict(case="A1", character=str(character), garment=None),
                                  dict(case="B1", character=str(character), garment=str(garment))]), encoding="utf-8")
     status = load_runner().main([str(cases), str(tmp_path / "out")])
     assert {k: v["state"] for k, v in status["cases"].items()} == dict(A1="ok", B1="ok")
-    assert requests[0][0] == character.name and requests[1][0] == "edit-result.png"
-    assert all(text and "head to feet" in text for _, text in requests)                 # 장면 자동 조합
+    assert calls[0]["garment_path"] is None and calls[1]["garment_path"] == garment
+    assert all(c["scene"] and "head to feet" in c["scene"] for c in calls)                 # 장면 자동 조합
     assert status["cases"]["A1"]["scene"]["source"] == "scene_composer"
-    assert saved_as(tmp_path / "out" / "B1-saved.png", final)
-    assert json.loads((tmp_path / "out" / "batch-status.json").read_text(encoding="utf-8"))["state"] == "finished"
+    shown = Path(status["cases"]["B1"]["result"])                                           # 처음 보여 준 후보를 저장
+    assert saved_as(tmp_path / "out" / "B1-saved.png", shown)

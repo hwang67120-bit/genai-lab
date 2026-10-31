@@ -122,16 +122,16 @@ def test_problems_are_saved_as_failed_with_guidance_and_studio_stays_closed(app,
 def test_run_check_uses_the_shared_deep_check_on_the_chosen_folder(tmp_path, monkeypatch):
     calls = []
     def fake(runtime, settings, flow, *, deep=False, progress=None, **kw):
-        calls.append((runtime, settings, flow, deep))
+        calls.append((runtime, settings, flow, deep, kw.get("flux_root")))
         return dict(ok=True, problems=[], locations={})
     monkeypatch.setattr(model_check, "check_models", fake)
     home = tmp_path / "home"
     home.mkdir()
     result = model_setup.run_check(home, "r1", progress=lambda text: None)
-    runtime, settings, flow, deep = calls[0]
-    assert flow == "outfit" and deep is True and result["ok"] is True and result["run_id"] == "r1"
-    assert Path(runtime.model_cache) == home.resolve() / "hf" and Path(settings.model_root) == home.resolve() / "qwen/Qwen-Image-Edit-2511"
-    assert settings.python_executable == sys.executable
+    runtime, settings, flow, deep, flux_root = calls[0]
+    assert flow == "flux" and deep is True and result["ok"] is True and result["run_id"] == "r1"     # D-222 FLUX 한 경로
+    assert Path(runtime.model_cache) == home.resolve() / "hf" and settings is None
+    assert Path(flux_root) == home.resolve() / "flux/FLUX.2-klein-4B"
 
 
 def test_real_check_of_an_empty_folder_reports_problems_and_a_missing_folder_is_not_success(tmp_path):
@@ -168,4 +168,4 @@ def test_studio_start_keeps_the_quick_check_and_routes_through_the_decision():
     source = (ROOT / "gui_main.py").read_text(encoding="utf-8")
     assert "startup_decision(quick_check=None if packaged else current_paths_pass, packaged=packaged)" in source and "--model-setup" in source
     product = (ROOT / "genai_lab/studio_product.py").read_text(encoding="utf-8")
-    assert "model_check.require_product_models(" in product                     # '이미지 생성' 전 빠른 검사 유지
+    assert "model_check.require_flux_models(" in product                        # '이미지 생성' 전 빠른 검사 유지(D-222 FLUX)

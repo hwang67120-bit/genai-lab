@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "model": "black-forest-labs/FLUX.2-klein-4B",
+  "revision": "e7b7dc27",
+  "license": "Apache-2.0",
+  "note": "D-222 FLUX 한 경로 필수 파일(경로·크기). SHA는 설치 단계에서 더한다.",
+  "files": {
+    "LICENSE.md": 9584,
+    "model_index.json": 446,
+    "scheduler/scheduler_config.json": 486,
+    "text_encoder/config.json": 1536,
+    "text_encoder/generation_config.json": 214,
+    "text_encoder/model-00001-of-00002.safetensors": 4967215360,
+    "text_encoder/model-00002-of-00002.safetensors": 3077766632,
+    "text_encoder/model.safetensors.index.json": 32855,
+    "tokenizer/added_tokens.json": 707,
+    "tokenizer/chat_template.jinja": 4168,
+    "tokenizer/merges.txt": 1671853,
+    "tokenizer/special_tokens_map.json": 613,
+    "tokenizer/tokenizer.json": 11422654,
+    "tokenizer/tokenizer_config.json": 5404,
+    "tokenizer/vocab.json": 2776833,
+    "transformer/config.json": 541,
+    "transformer/diffusion_pytorch_model.safetensors": 7751109744,
+    "vae/config.json": 821,
+    "vae/diffusion_pytorch_model.safetensors": 168120878
+  }
+}

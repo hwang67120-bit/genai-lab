@@ -166,9 +166,10 @@ def prepare_flux(directory, req, canvas, rgb, scores, safety, joints, face, star
         state="ready", engine="flux", with_garment=with_garment, seconds=round(time.time() - started, 1), gender=confirmed,
         guessed_gender=guessed, traits=traits, body_parts=list(body_parts),
         body_parts_source="confirmed" if confirmed_parts is not None else "automatic_tags",
-        prompt=flux_prompt(traits, with_garment, body_parts), face_box=face, original_hands=hands,
+        scene=req.get("scene"), prompt=flux_prompt(traits, with_garment, body_parts, req.get("scene")), face_box=face, original_hands=hands,
         warnings=support_warnings(scores, joints), safety=safety, joints_used=sorted(joints),
-        note="특징 문장·성별은 자동 측정이며 사람 확인 전이다. 자세·구도는 원본을 따른다."))
+        note="특징 문장·성별은 자동 측정이며 사람 확인 전이다. "
+             + ("자세·장면은 장면 문장을 따른다." if req.get("scene") else "자세·구도는 원본을 따른다.")))
 
 
 def generate_flux(directory, req):

@@ -1,12 +1,13 @@
 """사용자 화면(D-151, 2026-10-22 사용자 "사용자한테 필요한 건 참조 이미지와 이미지 생성, 결과 미리보기에는 생성되는 과정만").
 
-화면: 참조 이미지(캐릭터 · 의상은 선택) → '이미지 생성' 한 번 → 미리보기에 생성 과정 → 완성 그림 → '저장'.
-나머지는 자동이다(요청 26~31에서 고정한 조합, D-140):
-- 성별·부위·특징표: 저장된 캐릭터 기억 → 이 파일의 저장값 → 자동 분석 순(사람 확인 창 없음). 자동값은 기억에 쓰지 않는다.
-- 의상을 골랐으면 ① 옷 바꾸기 → 그 결과로 ② 자세·장면, 안 골랐으면 캐릭터 그림의 옷 그대로 ② 자세·장면.
-- ② 연출(D-153): 장면 입력 칸이 비면 장면 자동 조합(scene_composer — 장소·동작·빛·날씨·카메라 무작위, 전신, 얼굴 보이는 자세만),
-  쓰면 그 문장(배경 말이 없으면 장소·빛을 덧붙임). 흰 배경 기본값은 사용자 화면에서 쓰지 않는다. 40단계 제품 설정·재시도·머리색 자동 보정 그대로.
-- ①→② 연결은 사람 승인이 아니라 자동(reviewer automatic_chain)이고 기록에도 그렇게 남긴다. 안전 태그 자동 차단은 그대로.
+화면: 참조 이미지(캐릭터 · 의상은 선택) → '이미지 생성' 한 번 → 미리보기에 생성 과정 → 후보 3장 중 고르기 → '저장'.
+2026-10-31 FLUX 한 경로(D-222, 사용자 "Qwen 제외 확정"): 옷 바꾸기·자세·장면·목표 그림체(S4w)를 FLUX.2-klein 한 단계로
+(style_redraw_pipeline.run_style_redraw). 예전 Qwen ①→② 흐름은 화면에서 뺐다(코드·모델 파일은 D-218대로 남김).
+나머지는 자동이다:
+- 성별·부위: 저장된 캐릭터 기억·파일 저장값이 있으면 확정값으로 넘기고, 없으면 준비 단계가 태그로 추정한다(사람 확인 창 없음).
+- 장면(D-153): 입력 칸이 비면 장면 자동 조합(scene_composer — 장소·동작·빛·날씨·카메라 무작위, 전신, 얼굴 보이는 자세만),
+  쓰면 그 문장(배경 말이 없으면 장소·빛을 덧붙임). 외형·의상을 바꾸는 말은 막는다.
+- 의상을 골랐으면 그 옷으로 갈아입히고, 안 골랐으면 캐릭터 그림의 옷 그대로. 안전 태그 자동 차단(캐릭터·옷 그림)은 그대로.
 개발·평가 화면(확인 창·체크 판정·진단)은 GENAI_STUDIO_DEVELOPER=1 또는 --developer로 연다.
 """
 import hashlib
@@ -22,11 +23,11 @@ from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QLabel, QLineEdit
 
 GENERATE = "이미지 생성"
-GENERATE_TIP = "캐릭터 그림(과 의상 그림)으로 새 그림을 만듭니다. 의상을 고르면 1~2시간, 안 고르면 약 40분 걸립니다."
+GENERATE_TIP = "캐릭터 그림(과 의상 그림)으로 새 장면의 그림 후보 3장을 만듭니다. 약 3분 걸립니다."
 READY = "상태: '이미지 생성'을 누르세요. 의상 이미지를 고르면 그 옷으로 바꿔 입히고, 안 고르면 지금 옷 그대로 새 자세·장면을 만듭니다."
 NEED_CHARACTER = "상태: 캐릭터 이미지를 골라 주세요."
 EMPTY_PREVIEW = "아직 만든 이미지가 없습니다.\n\n왼쪽에서 캐릭터(와 의상)를 고른 뒤\n'이미지 생성'을 눌러 주세요."
-DONE = "상태: 완성했습니다. 마음에 들면 '저장'을 누르세요. 다시 만들려면 '이미지 생성'을 누르세요."
+DONE = "상태: 후보 3장을 만들었습니다. 결과 목록에서 골라 보고, 마음에 들면 '저장'을 누르세요. 다시 만들려면 '이미지 생성'을 누르세요."
 STEPS = "참조 이미지 고르기  →  이미지 생성  →  저장"
 SCENE_HINT = "비워 두면 매번 새 장면(장소·자세·빛)을 자동으로 만듭니다. 예: 비 오는 밤 네온 거리에서 우산을 들고 걷는"
 DEVELOPER_LABELS = ("결과는 검토·승인한 뒤 저장할 수 있습니다.", "결과를 비교·승인하면 저장 버튼이 활성화됩니다.")
@@ -48,7 +49,8 @@ def auto_identity(source, analysis, memory):
     parts = identity.get("body_parts")
     return dict(gender=identity.get("gender") or guessed_gender(analysis),
                 body_parts=tuple(guessed_body_parts(analysis) if parts is None else parts), features=features,
-                prefill=(info or {}).get("source") or "automatic", memory_error=error or None)
+                prefill=(info or {}).get("source") or "automatic", memory_error=error or None,
+                confirmed_gender=identity.get("gender"), confirmed_body_parts=None if parts is None else tuple(parts))
 
 
 def automatic_edit_base(results, directory):
@@ -70,7 +72,7 @@ class ProductFlow:
     def __init__(self, studio):
         self.studio, self.window = studio, studio.window
         w = self.window
-        self.identity = self.settings = self.character = None
+        self.identity = self.character = self.garment = None
         self.preview_seen = None
         self.timer = QTimer(w)
         self.timer.setInterval(1500)
@@ -82,7 +84,7 @@ class ProductFlow:
         w.save_candidate_button.setText("저장")
         self.hidden = [w.free_generation_button.parentWidget(), w.diagnostics_toggle, w.diagnostics_panel,
                        w.approve_candidate_button, w.reject_candidate_button, w.discard_candidate_button,
-                       w.studio_candidate_combo, w.studio_raw_button, w.studio_before_head_button, w.identity_report_button,
+                       w.studio_raw_button, w.studio_before_head_button, w.identity_report_button,
                        w.identity_report_label, w.studio_background_notice, w.studio_finish_button, w.studio_finish_notice,
                        w.tail_edit_button, w.studio_head_paste_button]
         self.hidden += [label for label in w.findChildren(QLabel) if label.text() in DEVELOPER_LABELS]
@@ -136,6 +138,10 @@ class ProductFlow:
         for widget in self.hidden:
             widget.hide()
         active = s.task is not None or s.confirming
+        from genai_lab.style_redraw_results import StyleRedrawResults
+        choosing = isinstance(s.results, StyleRedrawResults) and len(s.results.candidates) > 1
+        w.studio_candidate_combo.setVisible(choosing)
+        w.studio_candidate_combo.setEnabled(choosing and not active)
         w.generate_button.setText(GENERATE)
         w.generate_button.setToolTip(GENERATE_TIP)
         problem = self.scene_problem()
@@ -152,19 +158,21 @@ class ProductFlow:
             self.window.status_label.setText(READY if self.window.style_path else NEED_CHARACTER)
 
     def poll_preview(self):
-        """작업 프로세스가 단계마다 쓰는 preview-NNN.png 중 가장 새것을 미리보기에 띄운다."""
-        from genai_lab.generation_preview import latest_preview
+        """FLUX 작업 프로세스가 후보마다 쓰는 result-raw-seed*.png 중 가장 새것을 미리보기에, progress.json을 상태 줄에."""
         directory = self.studio.run_directory
         if directory is None:
             return
-        folders = [p for sub in ("outfit-edit", "free-generation") for p in (Path(directory) / sub).glob("qwen*") if p.is_dir()]
-        latest = latest_preview(folders)
-        if latest is None:
-            return
+        flux = Path(directory) / "flux"
         try:
-            stamp = (str(latest), latest.stat().st_mtime)
-        except OSError:
+            progress = json.loads((flux / "progress.json").read_text(encoding="utf-8"))
+            self.window.status_label.setText(f"상태: 이미지 만드는 중 · 후보 {progress['candidate']}/{progress['candidates']}")
+        except (OSError, ValueError, KeyError):
+            pass
+        raws = sorted(flux.glob("result-raw-seed*.png"), key=lambda p: p.stat().st_mtime) if flux.is_dir() else []
+        if not raws:
             return
+        latest = raws[-1]
+        stamp = (str(latest), latest.stat().st_mtime)
         if stamp != self.preview_seen:
             pixmap = QPixmap(str(latest))
             if not pixmap.isNull():
@@ -178,14 +186,10 @@ class ProductFlow:
         if s.task is not None or s.confirming or s.cleanup_blocked or not w.style_path:
             return
         from genai_lab import model_check, studio_free_generation, studio_generation
-        from genai_lab.qwen_outfit_edit import load_qwen_settings
         try:
             s.runtime = studio_generation.StudioRuntime.from_environment()
-            # D-172 필수 모델 공통 검사(준비 화면과 같은 검사)를 먼저: 빠진 모델을 한 번에 알리고, 없거나 다르면 분석·생성을 시작하지 않는다
-            from genai_lab.qwen_pose_settings import QwenPoseSettings
-            model_check.require_product_models(s.runtime, QwenPoseSettings.load(s.runtime.qwen_settings),
-                                               garment=bool(w.selected_outfit_path))
-            self.settings = load_qwen_settings(s.runtime.qwen_settings)
+            # D-172 필수 모델 공통 검사(D-222 FLUX 목록): 빠진 모델을 한 번에 알리고, 없거나 다르면 분석·생성을 시작하지 않는다
+            model_check.require_flux_models(s.runtime)
             s.results = None
             s.run_directory = s.output_root / uuid.uuid4().hex
             s.run_directory.mkdir(parents=True)
@@ -193,73 +197,48 @@ class ProductFlow:
             s.fail(error, traceback.format_exc())
             return
         self.character = Path(w.style_path)
-        garment = w.selected_outfit_path
+        self.garment = Path(w.selected_outfit_path) if w.selected_outfit_path else None
         self.scene = self.choose_scene()
         (s.run_directory / "scene.json").write_text(json.dumps(self.scene, ensure_ascii=False, indent=2), encoding="utf-8")
         self.preview_seen = None
         w.candidate_preview.setText("캐릭터를 읽는 중입니다…")
-        w.status_label.setText("상태: 캐릭터" + ("와 의상" if garment else "") + "을 읽는 중")
+        w.status_label.setText("상태: 캐릭터를 읽는 중")
         self.timer.start()
-        if garment:
-            s.outfit_edit_enabled = True
-            s.launch(lambda cancel, progress: studio_generation.analyze_inputs(
-                self.character, Path(garment), s.run_directory / "inputs", s.runtime, cancelled=cancel, require_face=False),
-                self.edit_ready, on_error=self.failed)
-        else:
-            s.outfit_edit_enabled = False
-            s.launch(lambda cancel, progress: studio_free_generation.analyze_base(self.character, s.runtime),
-                     self.staging_ready, on_error=self.failed)
+        s.launch(lambda cancel, progress: studio_free_generation.analyze_base(self.character, s.runtime),
+                 self.analysis_ready, on_error=self.failed)
 
-    def edit_ready(self, analysis):
-        from genai_lab.studio_controller import character_source, confirmation_provenance
+    def analysis_ready(self, analysis):
         s = self.studio
         s.analysis = analysis
-        self.identity = ident = auto_identity(character_source(analysis) or self.character, analysis, s.memory())
-        provenance = confirmation_provenance(analysis, None, None, ident["body_parts"])
-        for key in ("gender", "body_parts"):
-            provenance[key]["source"] = "automatic_product"
-        provenance["character_features"] = dict(source="automatic_product", prefill=ident["prefill"])
-        inputs, directory, settings, runtime = Path(analysis["directory"]), s.run_directory / "outfit-edit", self.settings, s.runtime
+        self.identity = ident = auto_identity(self.character, analysis, s.memory())
+        character, garment, scene, runtime = self.character, self.garment, self.scene, s.runtime
+        directory = s.run_directory / "flux"
         def operation(cancel, progress):
-            from genai_lab.outfit_edit_pipeline import run_outfit_pipeline
-            return run_outfit_pipeline(inputs / "character.png", inputs / "garment.png", settings=settings, head_accessories="keep",
-                                       runtime=runtime, directory=directory, gender=ident["gender"], body_parts=ident["body_parts"],
-                                       provenance=provenance, character_features=ident["features"], cancelled=cancel,
-                                       progress=lambda text: progress("상태: ① 옷 바꾸는 중 · " + text.removeprefix("상태: ")))
-        s.launch(operation, self.edit_done, on_error=self.failed)
-
-    def edit_done(self, outcome):
-        from genai_lab.outfit_edit_results import OutfitEditResults
-        results = OutfitEditResults(outcome)
-        self.window.candidate_preview.setPixmap(QPixmap(str(results.current_path)))
-        self.run_staging(automatic_edit_base(results, self.studio.run_directory), "edited", chain=True)
-
-    def staging_ready(self, analysis):
-        s = self.studio
-        s.analysis = analysis
-        self.identity = auto_identity(self.character, analysis, s.memory())
-        self.run_staging(self.character, "original", chain=False)
-
-    def run_staging(self, base, base_kind, chain):
-        s, ident, settings, runtime, scene = self.studio, self.identity, self.settings, self.studio.runtime, self.scene
-        directory = s.run_directory / "free-generation"
-        label = "상태: ② 자세·장면 만드는 중 · " if chain else "상태: 자세·장면 만드는 중 · "
-        def operation(cancel, progress):
-            from genai_lab.free_generation_pipeline import run_free_generation
-            return run_free_generation(base, ident["features"], scene["text"], base_kind=base_kind, gender=ident["gender"],
-                                       body_parts=list(ident["body_parts"]), confirmed=True, adult_confirmed=True,
-                                       settings=settings, runtime=runtime, directory=directory, cancelled=cancel,
-                                       progress=lambda text: progress(label + text.removeprefix("상태: ")),
-                                       automatic_edit_base=chain, confirmation_source="automatic_product")
+            from genai_lab.style_redraw_pipeline import run_style_redraw
+            progress("상태: 이미지 만드는 중 · 후보 3장, 약 2~3분")
+            # 확정값(캐릭터 기억·파일 저장값)만 넘긴다. 없으면 준비 단계가 태그로 추정한다(자동 성별 낱말은 문장에 쓰지 않음, D-198).
+            return run_style_redraw(character, directory, runtime, confirmed_gender=ident["confirmed_gender"],
+                                    confirmed_body_parts=ident["confirmed_body_parts"], garment_path=garment, scene=scene["text"])
         s.launch(operation, self.done, on_error=self.failed)
 
     def done(self, outcome):
-        from genai_lab import free_generation_results
+        from genai_lab.style_redraw_results import StyleRedrawResults
         self.timer.stop()
-        s = self.studio
-        s.results = free_generation_results.FreeGenerationResults(outcome)
-        self.window.candidate_preview.setPixmap(QPixmap(str(s.results.current_path)))
-        self.window.status_label.setText(DONE)
+        s, w = self.studio, self.window
+        if outcome.get("state") != "review_pending":
+            self.failed(RuntimeError(outcome.get("message") or "이미지를 만들지 못했습니다."), json.dumps(outcome, ensure_ascii=False)[:2000])
+            return
+        s.results = StyleRedrawResults(outcome)
+        combo = w.studio_candidate_combo
+        combo.blockSignals(True)
+        combo.clear()
+        for i in range(len(s.results.candidates)):
+            combo.addItem(f"후보 {i + 1}")
+        combo.setCurrentIndex(s.results.selected)
+        combo.blockSignals(False)
+        w.candidate_preview.setPixmap(QPixmap(str(s.results.current_path)))
+        w.status_label.setText(DONE + " " + s.results.head_notice)
+        s.controls()
 
     def failed(self, error, details=""):
         self.timer.stop()

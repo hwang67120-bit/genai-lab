@@ -39,6 +39,20 @@ class TestFluxHelpers(unittest.TestCase):
         self.assertIn("If the character has animal ears, a tail or wings", flux_prompt([]))          # 모름 = 조건문
         self.assertIn("no animal ears, no tail and no wings", flux_prompt([], with_garment=True, body_parts=()))
 
+    def test_scene_prompt_changes_pose_and_keeps_identity(self):
+        traits = [dict(name="eyes", text="purple eyes"), dict(name="clothes", text="black bodysuit")]
+        p = flux_prompt(traits, body_parts=("ears", "tail"), scene="The character is sitting on a bench in a park.")
+        self.assertIn("in a new scene. Scene: The character is sitting on a bench in a park.", p)
+        self.assertIn("(purple eyes; black bodysuit)", p)
+        self.assertIn("skin tone and body proportions and outfit exactly as in image 1", p)
+        self.assertIn("a tail or tails", p)
+        self.assertNotIn("Keep the same pose", p)                                  # 장면이 있으면 원본 자세를 고정하지 않음
+        self.assertNotIn("concrete wall", p)                                       # 배경은 장면 문장이 정함
+        g = flux_prompt(traits, with_garment=True, body_parts=(), scene="Walking in the rain.")
+        self.assertIn("wearing the complete outfit shown in image 2", g)
+        self.assertNotIn("black bodysuit", g)                                      # 원래 옷 낱말은 빼서 새 옷과 다투지 않게
+        self.assertIn("Do not copy the mannequin", g)
+
     def test_missing_parts_by_result_tags(self):
         kept = {"animal_ears": 0.98, "cat_ears": 0.95, "tail": 0.95, "cat_tail": 0.94}
         lost = {"animal_ears": 0.98, "cat_ears": 0.95, "cat_tail": 0.2}                  # 고치기 전 U003(꼬리 없음)
@@ -114,6 +128,10 @@ class TestEngineChoice(unittest.TestCase):
             with Image.open(root / "c" / "garment.png") as g:
                 self.assertEqual(g.size, (768, 1024))
             self.assertEqual(json.loads((root / "c" / "request.json").read_text(encoding="utf-8"))["garment"], str(garment))
+            run_style_redraw(src, root / "s", runtime, run=run, scene="  walking in a park at dusk  ")
+            self.assertEqual(json.loads((root / "s" / "request.json").read_text(encoding="utf-8"))["scene"], "walking in a park at dusk")
+            with self.assertRaises(ValueError):
+                run_style_redraw(src, root / "x", runtime, run=run, scene="walking in the rain wearing a red dress")   # 의상 변경
 
 
 if __name__ == "__main__":

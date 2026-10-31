@@ -29,12 +29,26 @@ IDENTITY_PARTS = ("skin", "hair")             # 옷을 바꿀 때는 캐릭터 �
 IDENTITY_SHIFT_CAP = np.array([40.0, 20.0, 20.0])   # 옷 그림의 흰 마네킹·배경에 피부가 밝게 끌릴 수 있어 폭을 넓힌다
 
 
-def flux_prompt(traits, with_garment=False, body_parts=None):
-    """같은 캐릭터를 목표 그림체로 다시 그리라는 문장. 특징 문장(자동 측정)과 피부색 유지·같은 자세 지시를 넣는다.
+def flux_prompt(traits, with_garment=False, body_parts=None, scene=None):
+    """같은 캐릭터를 목표 그림체로 다시 그리라는 문장. 특징 문장(자동 측정)과 피부색 유지 지시를 넣는다.
     with_garment: 그림 2의 옷으로 갈아입히고 그린다(D-212, 모드 A·B 통합). 원래 옷 낱말은 빼야 새 옷과 다투지 않는다.
-    body_parts: 확인된 동물 귀·꼬리·날개(튜플, 없으면 빈 튜플, 모르면 None) — Qwen 경로와 같은 부위 문장(D-108·D-111, D-221)."""
+    body_parts: 확인된 동물 귀·꼬리·날개(튜플, 없으면 빈 튜플, 모르면 None) — Qwen 경로와 같은 부위 문장(D-108·D-111, D-221).
+    scene: 새 자세·장면 문장(scene_composer 또는 검사를 지난 사용자 문장, D-222). 없으면 원본 자세 + 콘크리트 벽 배경."""
     from genai_lab.outfit_edit import body_parts_sentence
     parts = body_parts_sentence(None if body_parts is None else tuple(body_parts))
+    if scene:
+        # D-219·D-221 장면 시험 문장(처음 보는 8명 동일성 유지)과 같은 짜임. 옷 그림이 있으면 그 옷을 입고 새 장면에.
+        outfit = ("wearing the complete outfit shown in image 2 (replace all of the character's current clothing with it, matching its "
+                  "shape, length, colours and details; nothing from the original outfit may remain)" if with_garment else "")
+        described = "; ".join(row["text"].strip() for row in traits if row.get("text", "").strip()
+                              and not (with_garment and row.get("name") == "clothes"))
+        who = f" ({described})" if described else ""
+        keep = "body proportions" if with_garment else "body proportions and outfit"
+        return (f"Show the same adult character as in image 1{who}{' ' + outfit if outfit else ''} in a new scene. Scene: {scene.strip()} "
+                f"Keep the same face, hairstyle, hair colour, eye colour, skin tone and {keep} exactly as in image 1; do not lighten "
+                f"or darken the skin. {parts}Full body, the whole character inside the frame, face clearly visible. Render as a new "
+                f"{STYLE}. {'Do not copy the mannequin or the clothing photo background. ' if with_garment else ''}"
+                f"No lettering, logo, watermark or multiple people.")
     if with_garment:
         described = "; ".join(row["text"].strip() for row in traits
                               if row.get("text", "").strip() and row.get("name") != "clothes")

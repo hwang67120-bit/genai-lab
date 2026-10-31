@@ -69,11 +69,19 @@ def _stage(run, stage, directory, expected):
 
 
 def run_style_redraw(source_path, directory, runtime=None, *, confirmed_gender=None, confirmed_body_parts=None, paths=None, run=None,
-                     garment_path=None):
+                     garment_path=None, scene=None):
     """캐릭터 그림 1장 → 후보 3장. 반환: outcome(state = review_pending | refused | failed). 결과를 자동 승인하지 않는다.
     confirmed_gender: 사람이 확정한 성별(male·female, 캐릭터 기억 등). 없으면 성별 낱말 없이 그린다(D-198).
     confirmed_body_parts: 사람이 확정한 동물 귀·꼬리·날개(ears·tail·wings 목록, 없으면 빈 목록). None이면 태그로 추정(D-221).
-    garment_path: 옷 그림(선택, D-212). 있으면 그 옷으로 갈아입히면서 목표 그림체로 그린다(모드 A·B 통합)."""
+    garment_path: 옷 그림(선택, D-212). 있으면 그 옷으로 갈아입히면서 목표 그림체로 그린다(모드 A·B 통합).
+    scene: 새 자세·장면 문장(선택, D-222 FLUX 한 경로). scene_composer 문장 또는 사용자 문장 — 외형·의상을 바꾸는 말은 거절한다.
+    없으면 원본 자세 그대로 다시 그린다."""
+    if scene is not None:
+        from genai_lab.free_generation import check_request
+        checked = check_request(scene)
+        if not checked["ok"]:
+            raise ValueError("장면에는 자세·배경·상황만 적어 주세요(외형·의상을 바꾸는 말은 쓸 수 없습니다): " + ", ".join(checked["matched"]))
+        scene = scene.strip() or None
     if confirmed_body_parts is not None:
         confirmed_body_parts = list(confirmed_body_parts)
         if not set(confirmed_body_parts) <= {"ears", "tail", "wings"} or len(set(confirmed_body_parts)) != len(confirmed_body_parts):
@@ -95,7 +103,7 @@ def run_style_redraw(source_path, directory, runtime=None, *, confirmed_gender=N
             with Image.open(garment_path) as garment:            # 옷 그림은 비율 그대로(흰 여백으로 캔버스에 맞춤)
                 canvas(garment).save(directory / "garment.png")
             outcome["garment"] = str(garment_path)
-        _save(directory / "request.json", dict(request_paths(runtime, paths), confirmed_gender=confirmed_gender, confirmed_body_parts=confirmed_body_parts, engine="flux",
+        _save(directory / "request.json", dict(request_paths(runtime, paths), confirmed_gender=confirmed_gender, confirmed_body_parts=confirmed_body_parts, scene=scene, engine="flux",
                                               garment=str(garment_path) if garment_path is not None else None))
         outcome["seconds"]["pose"] = _stage(run, "pose", directory, "pose.json")
         outcome["seconds"]["prepare"] = _stage(run, "prepare", directory, "prepare.json")

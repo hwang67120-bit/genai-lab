@@ -6,6 +6,8 @@
 - 저장: 깊은 검사를 끝까지 마치고 문제 0일 때만 '모델 파일 검증 완료'. 취소·중단은 저장하지 않는다.
   'GPU 생성 검증'은 별개다 — 이 기록은 항상 아직 안 됨(False)으로 둔다(첫 생성·최종 패키징 검증 P4·P5 몫).
 - 이번 범위 밖: 자동 내려받기·모델 이동·삭제·복구, SHA 정책 변경.
+- 2026-10-31 D-222 FLUX 한 경로: 검사 흐름을 'flux'(분석 모델 + FLUX.2-klein-4B)로 바꿨다. Qwen은 필수가 아니다.
+  FLUX 목록(configs/flux_model_files.json)은 아직 경로·크기만 — SHA·내려받기는 배포 단계(⑤).
 """
 import hashlib
 import json
@@ -62,10 +64,9 @@ def _file_sha(path):
 
 
 def manifest_fingerprint():
-    """검사 목록이 바뀌면(앱 갱신) 이전 검증 기록은 쓰지 않는다."""
-    settings = json.loads(HOME_SETTINGS.read_text(encoding="utf-8-sig"))
+    """검사 목록이 바뀌면(앱 갱신) 이전 검증 기록은 쓰지 않는다(D-222: Qwen 목록 → FLUX 목록)."""
     return dict(model_home_files=_file_sha(ROOT / "configs" / "model_home_files.json"),
-                qwen_model_files=settings["artifact_manifest_sha256"], gguf_sha256=settings["gguf_sha256"])
+                flux_model_files=_file_sha(ROOT / "configs" / "flux_model_files.json"))
 
 
 def run_check(home, run_id, *, progress=print):
@@ -77,7 +78,8 @@ def run_check(home, run_id, *, progress=print):
     try:
         if not home.is_dir():
             raise FileNotFoundError(f"모델 폴더가 없습니다: {home}")
-        checked = model_check.check_models(runtime_for_home(home), settings_for_home(home), "outfit", deep=True, progress=progress)
+        checked = model_check.check_models(runtime_for_home(home), None, "flux", deep=True, progress=progress,
+                                           flux_root=home / LAYOUT["flux_model"])
         result.update(ok=checked["ok"], problems=checked["problems"][:200], problem_count=len(checked["problems"]),
                       message="" if checked["ok"] else model_check.message(checked), locations=checked["locations"])
     except Exception as error:  # noqa: BLE001 — 검사 실패도 결과(완료로 저장하지 않음)
@@ -153,14 +155,12 @@ def setup_reason(record):
 
 
 def current_paths_pass():
-    """지금 실행 설정(모델 폴더 없음 = 기존 경로)으로 두 흐름의 빠른 검사가 통과하는지."""
+    """지금 실행 설정(모델 폴더 없음 = 기존 경로)으로 사용자 화면 흐름(D-222 FLUX)의 빠른 검사가 통과하는지."""
     from genai_lab import model_check
-    from genai_lab.qwen_pose_settings import QwenPoseSettings
     from genai_lab.studio_generation import StudioRuntime
     try:
         runtime = StudioRuntime.from_environment()
-        settings = QwenPoseSettings.load(runtime.qwen_settings)
-        return all(model_check.check_models(runtime, settings, flow)["ok"] for flow in ("outfit", "staging"))
+        return model_check.check_models(runtime, None, "flux")["ok"]
     except Exception:  # noqa: BLE001 — 판단 불가면 준비 화면으로
         return False
 

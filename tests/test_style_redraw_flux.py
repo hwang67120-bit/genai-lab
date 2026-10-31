@@ -70,6 +70,11 @@ class TestFluxHelpers(unittest.TestCase):
         _, down = colour_match(orig, dark, masks, dict(masks), feather=0, scene_lighting=True)
         self.assertLess(down["hair"][0], 0)
 
+    def test_output_size_is_the_chosen_high_resolution(self):
+        from genai_lab.style_redraw_flux import OUTPUT_SIZE
+        self.assertEqual(OUTPUT_SIZE, (1024, 1360))                               # D-230 사용자가 고정한 그림체(처음부터 고해상도)
+        self.assertTrue(all(v % 16 == 0 for v in OUTPUT_SIZE))                    # FLUX 잠재 격자에 맞는 크기
+
     def test_missing_parts_by_result_tags(self):
         kept = {"animal_ears": 0.98, "cat_ears": 0.95, "tail": 0.95, "cat_tail": 0.94}
         lost = {"animal_ears": 0.98, "cat_ears": 0.95, "cat_tail": 0.2}                  # 고치기 전 U003(꼬리 없음)

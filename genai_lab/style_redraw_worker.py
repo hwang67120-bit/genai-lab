@@ -184,7 +184,7 @@ def generate_flux(directory, req):
     from PIL import Image
     from diffusers import Flux2KleinPipeline
     from diffusers.quantizers import PipelineQuantizationConfig
-    from genai_lab.style_redraw_flux import (GUIDANCE, IDENTITY_PARTS, IDENTITY_SHIFT_CAP, MAX_SEQUENCE_LENGTH, PARTS, SEEDS, STEPS,
+    from genai_lab.style_redraw_flux import (GUIDANCE, IDENTITY_PARTS, IDENTITY_SHIFT_CAP, MAX_SEQUENCE_LENGTH, OUTPUT_SIZE, PARTS, SEEDS, STEPS,
                                              body_part_tags, colour_match, hand_flag, missing_body_parts)
     from genai_lab.clothing_analysis import ClothingDesignAnalysisSettings, WdTagSession
     from genai_lab.identity_anchors import compare as compare_anchors
@@ -207,7 +207,7 @@ def generate_flux(directory, req):
     for number, seed in enumerate(SEEDS):
         save(directory / "progress.json", dict(candidate=number + 1, candidates=len(SEEDS), step=0, total=STEPS))
         t0 = time.time()
-        image = pipe(image=references, prompt=prepared["prompt"], width=reference.width, height=reference.height,
+        image = pipe(image=references, prompt=prepared["prompt"], width=OUTPUT_SIZE[0], height=OUTPUT_SIZE[1],
                      num_inference_steps=STEPS, guidance_scale=GUIDANCE, max_sequence_length=MAX_SEQUENCE_LENGTH,
                      generator=torch.Generator(device="cpu").manual_seed(seed)).images[0]
         image.save(directory / f"result-raw-seed{seed}.png")

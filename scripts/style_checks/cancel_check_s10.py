@@ -31,7 +31,7 @@ def main():
     flag = threading.Event()
     result = {}
     before = gpu_used_mib()
-    thread = threading.Thread(target=lambda: result.update(o=run_style_redraw(CHAR, directory, scene="walking in a park at dusk",
+    thread = threading.Thread(target=lambda: result.update(o=run_style_redraw(CHAR, directory, scene="walking in a park at dusk", adult_confirmed=True,
                                                                               cancelled=flag.is_set)))
     t0 = time.time()
     thread.start()

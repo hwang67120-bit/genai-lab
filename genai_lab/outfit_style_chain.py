@@ -12,7 +12,7 @@ GENDERS = {"male": "male", "female": "female"}
 
 
 def run_outfit_then_style(character_path, garment_path, directory, *, outfit_kwargs, runtime=None, paths=None,
-                          outfit_runner=None, style_runner=None):
+                          outfit_runner=None, style_runner=None, adult_confirmed=False):
     """반환: dict(state, outfit=①요약, edit_base=①→② 넘긴 그림, style=② outcome). ①이 결과를 못 만들면 ②는 돌리지 않는다."""
     from genai_lab.outfit_edit_results import OutfitEditResults
     from genai_lab.studio_product import automatic_edit_base
@@ -34,7 +34,8 @@ def run_outfit_then_style(character_path, garment_path, directory, *, outfit_kwa
         base = automatic_edit_base(results, directory)
         chain["edit_base"] = str(base)
         gender = GENDERS.get(outfit_kwargs.get("gender"))
-        style = style_runner(base, directory / "style", runtime, confirmed_gender=gender, paths=paths)
+        style = style_runner(base, directory / "style", runtime, confirmed_gender=gender, paths=paths,
+                             adult_confirmed=adult_confirmed)          # 성인 확인은 호출한 쪽이(D-227)
         chain["style"] = style
         chain["state"] = style.get("state", "failed")
         return chain

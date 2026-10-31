@@ -50,6 +50,7 @@ def run_case(window, case, limit_minutes=240):
     window.studio.results = None
     window.update_input_ready_status()
     window.studio.product.scene_input.setText("")          # 장면 칸 비움 = 자동 장면 조합
+    window.studio.product.adult_check.setChecked(True)     # 성인 확인(D-227): 시험 줄 목록은 사람이 성인으로 확인한 캐릭터만
     if not window.generate_button.isEnabled():
         record.update(state="failed", errors=["'이미지 생성'이 꺼져 있음: " + window.status_label.text()])
         save_status()

@@ -28,7 +28,7 @@ def fake_outfit(composited=True, make_file=True):
 class TestChain(unittest.TestCase):
     def test_outfit_result_goes_to_style_with_gender(self):
         calls = []
-        def style(base, directory, runtime, *, confirmed_gender, paths):
+        def style(base, directory, runtime, *, confirmed_gender, paths, adult_confirmed=False):
             calls.append((Path(base).name, confirmed_gender)); return dict(state="review_pending", candidates=[])
         with TemporaryDirectory() as temp:
             out = run_outfit_then_style("c.png", "g.png", Path(temp) / "run", outfit_kwargs=dict(gender="female", settings=None),
@@ -41,7 +41,7 @@ class TestChain(unittest.TestCase):
 
     def test_uncomposited_outfit_still_passes_the_edited_view(self):
         calls = []
-        def style(base, directory, runtime, *, confirmed_gender, paths):
+        def style(base, directory, runtime, *, confirmed_gender, paths, adult_confirmed=False):
             calls.append(confirmed_gender); return dict(state="review_pending")
         with TemporaryDirectory() as temp:
             out = run_outfit_then_style("c.png", "g.png", Path(temp) / "run", outfit_kwargs=dict(gender="unspecified"),

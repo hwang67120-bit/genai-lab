@@ -18,7 +18,7 @@ def main():
     rows = []
     for arg in sys.argv[2:]:
         name, source = arg.split("=", 1)
-        o = run_style_redraw(source, out / name, rt, run=never_generate)
+        o = run_style_redraw(source, out / name, rt, run=never_generate, adult_confirmed=True)   # 태그 차단만 보려고 확인은 통과시킴
         prepared = out / name / "prepare.json"
         p = json.loads(prepared.read_text(encoding="utf-8")) if prepared.is_file() else {}
         row = dict(name=name, outcome=o["state"], code=o.get("code"), message=o.get("message", "")[:200],

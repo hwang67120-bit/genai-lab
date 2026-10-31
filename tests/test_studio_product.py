@@ -6,7 +6,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
 from PIL import Image
-from PySide6.QtWidgets import QApplication, QLineEdit
+from PySide6.QtWidgets import QApplication, QCheckBox, QLineEdit
 
 from genai_lab import style_redraw_pipeline
 from genai_lab import studio_controller as ui, studio_free_generation as free_ui
@@ -55,6 +55,7 @@ def start(w, tmp_path, monkeypatch, calls, flags=None, garment=None):
     w.style_path = character
     w.selected_outfit_path = garment
     w.update_input_ready_status()
+    w.findChild(QCheckBox, "product_adult").setChecked(True)           # 성인 확인(D-227)
     monkeypatch.setattr(style_redraw_pipeline, "run_style_redraw", fake_flux(calls, flags))
     failed = []
     monkeypatch.setattr(w.studio, "fail", lambda error, details="": failed.append(f"{error}\n{details}"))   # 오류 창 대신 기록
@@ -73,7 +74,13 @@ def test_only_references_generate_and_preview_are_shown(product_window):
     assert not w.generate_button.isEnabled()
     w.style_path = Path("character.png")
     w.update_input_ready_status()
+    assert not w.generate_button.isEnabled() and "성인" in w.status_label.text()          # 성인 확인 전(D-227)
+    adult = w.findChild(QCheckBox, "product_adult")
+    adult.setChecked(True)
     assert w.generate_button.isEnabled() and "이미지 생성" in w.status_label.text()       # 의상은 선택
+    w.style_path = Path("other.png")                                                    # 다른 캐릭터 → 확인이 풀림
+    w.update_input_ready_status()
+    assert not adult.isChecked() and not w.generate_button.isEnabled()
 
 
 def test_one_flux_step_with_scene_and_three_candidates_to_choose(product_window, tmp_path, monkeypatch):
@@ -85,6 +92,9 @@ def test_one_flux_step_with_scene_and_three_candidates_to_choose(product_window,
     scene = json.loads((w.studio.run_directory / "scene.json").read_text(encoding="utf-8"))      # 장면 자동 조합(D-153)
     assert scene["source"] == "scene_composer" and call["scene"] == scene["text"] and "head to feet" in scene["text"]
     assert call["confirmed_gender"] is None and call["confirmed_body_parts"] is None   # 기억이 없으면 추정은 준비 단계가(D-198)
+    assert call["adult_confirmed"] is True
+    record = json.loads((w.studio.run_directory / "adult-confirmation.json").read_text(encoding="utf-8"))
+    assert record["source"] == "user_checkbox" and record["character"] == str(character) and len(record["character_sha256"]) == 64
     assert isinstance(w.studio.results, StyleRedrawResults)
     combo = w.studio_candidate_combo
     assert not combo.isHidden() and combo.count() == 3 and "후보 3장" in w.status_label.text()
@@ -115,6 +125,7 @@ def test_refused_outcome_is_reported_not_shown(product_window, tmp_path, monkeyp
     Image.new("RGB", (8, 8)).save(character)
     w.style_path = character
     w.update_input_ready_status()
+    w.findChild(QCheckBox, "product_adult").setChecked(True)
     monkeypatch.setattr(style_redraw_pipeline, "run_style_redraw",
                         lambda *a, **k: dict(state="refused", code="safety", message="이 그림은 진행할 수 없습니다."))
     failed = []
@@ -131,6 +142,7 @@ def test_cancel_reaches_the_flux_step_and_discards_the_run(product_window, tmp_p
     Image.new("RGB", (8, 8)).save(character)
     w.style_path = character
     w.update_input_ready_status()
+    w.findChild(QCheckBox, "product_adult").setChecked(True)
     started, seen = [], []
     def slow(source, directory, runtime=None, *, cancelled=None, **kw):
         started.append(True)
@@ -189,6 +201,7 @@ def test_scene_field_feeds_the_request_and_blocks_appearance_changes(product_win
     field.setText("머리색을 금발로 바꿔")
     assert not w.generate_button.isEnabled() and "자세·배경·상황" in w.studio.product.scene_note.text()
     field.setText("jumping happily")
+    w.findChild(QCheckBox, "product_adult").setChecked(True)
     assert w.generate_button.isEnabled()
     calls = []
     monkeypatch.setattr(style_redraw_pipeline, "run_style_redraw", fake_flux(calls))

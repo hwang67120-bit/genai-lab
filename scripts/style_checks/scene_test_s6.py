@@ -38,7 +38,7 @@ def prepared_folder(name, source, out, rt):
     folder = out / f"{name}-base"
     if not (folder / "prepare.json").is_file():
         base = default_run(rt)
-        run_style_redraw(source, folder, rt, run=lambda stage, d: 1 if stage == "generate" else base(stage, d))
+        run_style_redraw(source, folder, rt, run=lambda stage, d: 1 if stage == "generate" else base(stage, d), adult_confirmed=True)
     prepared = json.loads((folder / "prepare.json").read_text(encoding="utf-8")) if (folder / "prepare.json").is_file() else {}
     print(name, "prepare", prepared.get("state"), prepared.get("code", ""), flush=True)
     return folder if prepared.get("state") == "ready" else None

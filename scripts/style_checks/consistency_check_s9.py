@@ -59,7 +59,7 @@ def main():
         for run in ("a", "b"):
             d = out / name / f"run-{run}"
             t0 = time.time()
-            o = run_style_redraw(character, d, garment_path=garment, scene=scene)
+            o = run_style_redraw(character, d, garment_path=garment, scene=scene, adult_confirmed=True)
             print(name, run, o["state"], round(time.time() - t0), "s", flush=True)
             if o["state"] != "review_pending":
                 raise SystemExit(f"{name} {run}: {o}")

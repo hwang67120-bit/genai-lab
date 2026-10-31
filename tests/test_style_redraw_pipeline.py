@@ -73,10 +73,27 @@ class TestCancel(unittest.TestCase):
                 if stage == "prepare":
                     flag.append(True)                              # 준비가 끝날 즈음 사용자가 취소
                 return fake_run([])(stage, directory)
-            out = run_style_redraw(source, root / "run", RUNTIME, run=run, cancelled=lambda: bool(flag))
+            out = run_style_redraw(source, root / "run", RUNTIME, run=run, cancelled=lambda: bool(flag), adult_confirmed=True)
             self.assertEqual(out["state"], "cancelled")
             self.assertEqual(calls, ["pose", "prepare"])
             self.assertEqual(json.loads((root / "run" / "outcome.json").read_text(encoding="utf-8"))["state"], "cancelled")
+
+
+class TestAdultConfirmation(unittest.TestCase):
+    def test_nothing_runs_without_adult_confirmation(self):
+        """D-227: 태그 분석기가 노출 없는 미성년·아이 캐릭터를 못 거르므로(D-226) 사용자 확인 없이는 시작하지 않는다(화면·API 공통)."""
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "char.png"
+            Image.new("RGB", (400, 600)).save(source)
+            calls = []
+            for value in (False, None, "yes", 1):
+                out = run_style_redraw(source, root / f"run-{value}", RUNTIME, run=fake_run(calls), adult_confirmed=value)
+                self.assertEqual((out["state"], out["code"]), ("refused", "adult_unconfirmed"))
+            self.assertEqual(calls, [])                                     # 관절·준비·생성 아무것도 안 돎
+            self.assertFalse((root / "run-False" / "character.png").exists())
+            run_style_redraw(source, root / "ok", RUNTIME, run=fake_run(calls), adult_confirmed=True)
+            self.assertTrue(json.loads((root / "ok" / "request.json").read_text(encoding="utf-8"))["adult_confirmed"])
 
 
 class TestStyleRedrawPipeline(unittest.TestCase):
@@ -89,7 +106,7 @@ class TestStyleRedrawPipeline(unittest.TestCase):
 
     def test_review_pending_after_three_stages_on_fitted_canvas(self):
         calls = []
-        out = run_style_redraw(self.source, self.root / "run", RUNTIME, run=fake_run(calls))
+        out = run_style_redraw(self.source, self.root / "run", RUNTIME, run=fake_run(calls), adult_confirmed=True)
         self.assertEqual(calls, ["pose", "prepare", "generate"])
         self.assertEqual(out["state"], "review_pending")
         self.assertEqual([Path(c).name for c in out["candidates"]], ["result-seed42.png", "result-seed43.png", "result-seed44.png"])
@@ -106,7 +123,7 @@ class TestStyleRedrawPipeline(unittest.TestCase):
 
     def test_refused_stops_before_generation(self):
         calls = []
-        out = run_style_redraw(self.source, self.root / "run", RUNTIME, run=fake_run(calls, "refused"))
+        out = run_style_redraw(self.source, self.root / "run", RUNTIME, run=fake_run(calls, "refused"), adult_confirmed=True)
         self.assertEqual(calls, ["pose", "prepare"])
         self.assertEqual((out["state"], out["code"]), ("refused", "safety"))
         self.assertFalse((self.root / "run" / "result.png").exists())
@@ -115,7 +132,7 @@ class TestStyleRedrawPipeline(unittest.TestCase):
         for stage in ("pose", "prepare", "generate"):
             with self.subTest(stage=stage):
                 calls = []
-                out = run_style_redraw(self.source, self.root / stage, RUNTIME, run=fake_run(calls, fail=stage))
+                out = run_style_redraw(self.source, self.root / stage, RUNTIME, run=fake_run(calls, fail=stage), adult_confirmed=True)
                 self.assertEqual((out["state"], out["stage"]), ("failed", stage))
                 self.assertIn("sentinel", out["message"])
                 self.assertEqual(calls[-1], stage)
@@ -123,22 +140,22 @@ class TestStyleRedrawPipeline(unittest.TestCase):
     def test_existing_directory_rejected_and_unreadable_image_fails(self):
         (self.root / "used").mkdir()
         with self.assertRaises(FileExistsError):
-            run_style_redraw(self.source, self.root / "used", RUNTIME, run=fake_run([]))
+            run_style_redraw(self.source, self.root / "used", RUNTIME, run=fake_run([]), adult_confirmed=True)
         bad = self.root / "bad.png"
         bad.write_bytes(b"not an image")
-        out = run_style_redraw(bad, self.root / "bad-run", RUNTIME, run=fake_run([]))
+        out = run_style_redraw(bad, self.root / "bad-run", RUNTIME, run=fake_run([]), adult_confirmed=True)
         self.assertEqual((out["state"], out["stage"]), ("failed", "input"))
 
     def test_only_confirmed_gender_is_passed_on(self):
-        run_style_redraw(self.source, self.root / "none", RUNTIME, run=fake_run([]))
+        run_style_redraw(self.source, self.root / "none", RUNTIME, run=fake_run([]), adult_confirmed=True)
         self.assertIsNone(json.loads((self.root / "none" / "request.json").read_text(encoding="utf-8"))["confirmed_gender"])
-        run_style_redraw(self.source, self.root / "male", RUNTIME, confirmed_gender="male", run=fake_run([]))
+        run_style_redraw(self.source, self.root / "male", RUNTIME, confirmed_gender="male", run=fake_run([]), adult_confirmed=True)
         self.assertEqual(json.loads((self.root / "male" / "request.json").read_text(encoding="utf-8"))["confirmed_gender"], "male")
         with self.assertRaises(ValueError):
-            run_style_redraw(self.source, self.root / "bad", RUNTIME, confirmed_gender="unspecified", run=fake_run([]))
+            run_style_redraw(self.source, self.root / "bad", RUNTIME, confirmed_gender="unspecified", run=fake_run([]), adult_confirmed=True)
 
     def test_path_overrides_win(self):
-        run_style_redraw(self.source, self.root / "run", RUNTIME, paths={"style_models": self.root / "m"}, run=fake_run([]))
+        run_style_redraw(self.source, self.root / "run", RUNTIME, paths={"style_models": self.root / "m"}, run=fake_run([]), adult_confirmed=True)
         request = json.loads((self.root / "run" / "request.json").read_text(encoding="utf-8"))
         self.assertEqual(request["style_models"], str(self.root / "m"))
 

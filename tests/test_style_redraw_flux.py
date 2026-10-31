@@ -136,19 +136,19 @@ class TestEngineChoice(unittest.TestCase):
                 if stage == "pose": (directory / "pose.json").write_text("{}", encoding="utf-8")
                 if stage == "prepare": (directory / "prepare.json").write_text(json.dumps(dict(state="refused", code="x", message="m")), encoding="utf-8")
                 return 0
-            run_style_redraw(src, root / "a", runtime, run=run)
+            run_style_redraw(src, root / "a", runtime, run=run, adult_confirmed=True)
             req = json.loads((root / "a" / "request.json").read_text(encoding="utf-8"))
             self.assertEqual(req["engine"], "flux")
             self.assertTrue({"flux_model", "hand_cache"} <= set(req))
             garment = root / "g.png"; Image.new("RGB", (300, 500), (10, 120, 200)).save(garment)
-            run_style_redraw(src, root / "c", runtime, run=run, garment_path=garment)
+            run_style_redraw(src, root / "c", runtime, run=run, garment_path=garment, adult_confirmed=True)
             with Image.open(root / "c" / "garment.png") as g:
                 self.assertEqual(g.size, (768, 1024))
             self.assertEqual(json.loads((root / "c" / "request.json").read_text(encoding="utf-8"))["garment"], str(garment))
-            run_style_redraw(src, root / "s", runtime, run=run, scene="  walking in a park at dusk  ")
+            run_style_redraw(src, root / "s", runtime, run=run, scene="  walking in a park at dusk  ", adult_confirmed=True)
             self.assertEqual(json.loads((root / "s" / "request.json").read_text(encoding="utf-8"))["scene"], "walking in a park at dusk")
             with self.assertRaises(ValueError):
-                run_style_redraw(src, root / "x", runtime, run=run, scene="walking in the rain wearing a red dress")   # 의상 변경
+                run_style_redraw(src, root / "x", runtime, run=run, scene="walking in the rain wearing a red dress", adult_confirmed=True)   # 의상 변경
 
 
 if __name__ == "__main__":

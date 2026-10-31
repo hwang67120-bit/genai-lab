@@ -20,11 +20,14 @@ from pathlib import Path
 
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import QLabel, QLineEdit
+from PySide6.QtWidgets import QCheckBox, QLabel, QLineEdit
 
 GENERATE = "이미지 생성"
 GENERATE_TIP = "캐릭터 그림(과 의상 그림)으로 새 장면의 그림 후보 3장을 만듭니다. 약 3분 걸립니다."
 READY = "상태: '이미지 생성'을 누르세요. 의상 이미지를 고르면 그 옷으로 바꿔 입히고, 안 고르면 지금 옷 그대로 새 자세·장면을 만듭니다."
+NEED_ADULT = "상태: 성인 캐릭터만 만들 수 있습니다. '이 캐릭터는 성인입니다'를 확인하면 '이미지 생성'을 누를 수 있습니다."
+ADULT_LABEL = "이 캐릭터는 성인입니다"
+ADULT_HINT = "성인 캐릭터만 만들 수 있습니다. 미성년 설정이거나 아이처럼 보이는 캐릭터는 넣지 마세요. 캐릭터를 바꾸면 다시 확인합니다."
 NEED_CHARACTER = "상태: 캐릭터 이미지를 골라 주세요."
 EMPTY_PREVIEW = "아직 만든 이미지가 없습니다.\n\n왼쪽에서 캐릭터(와 의상)를 고른 뒤\n'이미지 생성'을 눌러 주세요."
 DONE = "상태: 후보 3장을 만들었습니다. 결과 목록에서 골라 보고, 마음에 들면 '저장'을 누르세요. 다시 만들려면 '이미지 생성'을 누르세요."
@@ -89,6 +92,7 @@ class ProductFlow:
                        w.tail_edit_button, w.studio_head_paste_button]
         self.hidden += [label for label in w.findChildren(QLabel) if label.text() in DEVELOPER_LABELS]
         self.scene_input, self.scene_note = self.build_scene_card()
+        self.adult_check, self.adult_for = self.build_adult_check(), None
         self.scene = None
         w.candidate_preview.setText(EMPTY_PREVIEW)
         w.studio_steps_label.setText(STEPS)
@@ -110,6 +114,29 @@ class ProductFlow:
         layout.insertWidget(1, card)            # 참조 이미지 카드 바로 아래
         field.textChanged.connect(lambda *_: self.inputs_changed())
         return field, note
+
+    def build_adult_check(self):
+        """성인 확인(D-227): 태그 분석기는 노출 없는 미성년·아이 캐릭터를 걸러내지 못한다(D-226) → 사용자가 확인해야 시작한다.
+        확인은 그때 고른 캐릭터 그림에만 붙고, 캐릭터를 바꾸면 풀린다."""
+        from genai_lab.studio_ui import _card, _label
+        card, box = _card("성인 확인 (필수)")
+        check = QCheckBox(ADULT_LABEL)
+        check.setObjectName("product_adult")
+        check.setAccessibleName(ADULT_LABEL)
+        box.addWidget(check)
+        hint = _label(ADULT_HINT, "muted")
+        hint.setWordWrap(True)
+        box.addWidget(hint)
+        self.window.input_scroll.widget().layout().insertWidget(1, card)     # 참조 이미지 카드 바로 아래
+        check.toggled.connect(self.adult_toggled)
+        return check
+
+    def adult_toggled(self, checked):
+        self.adult_for = str(self.window.style_path) if checked and self.window.style_path else None
+        self.inputs_changed()
+
+    def adult_confirmed(self):
+        return self.adult_check.isChecked() and self.adult_for is not None and self.adult_for == str(self.window.style_path)
 
     def scene_problem(self):
         """장면 칸 문장이 연출 범위를 벗어나면 이유, 아니면 빈 문자열."""
@@ -148,14 +175,19 @@ class ProductFlow:
         self.scene_note.setText(problem or SCENE_HINT)
         self.scene_note.setStyleSheet("color: #b00020;" if problem else "")
         w.generate_button.setEnabled(not active and not s.cleanup_blocked and bool(w.style_path)
-                                     and w.pending_character_candidate is None and not problem)
+                                     and w.pending_character_candidate is None and not problem and self.adult_confirmed())
         w.save_candidate_button.setEnabled(not active and s.results is not None and getattr(s.results, "free_mode", False))
 
     def inputs_changed(self):
+        if self.adult_check.isChecked() and self.adult_for != str(self.window.style_path):
+            self.adult_check.blockSignals(True)          # 다른 캐릭터를 골랐으면 확인을 푼다
+            self.adult_check.setChecked(False)
+            self.adult_check.blockSignals(False)
+            self.adult_for = None
         self.refresh()
         s = self.studio
         if s.task is None and not s.confirming and s.results is None:
-            self.window.status_label.setText(READY if self.window.style_path else NEED_CHARACTER)
+            self.window.status_label.setText(READY if self.adult_confirmed() else NEED_ADULT if self.window.style_path else NEED_CHARACTER)
 
     def poll_preview(self):
         """FLUX 작업 프로세스가 후보마다 쓰는 result-raw-seed*.png 중 가장 새것을 미리보기에, progress.json을 상태 줄에."""
@@ -183,7 +215,7 @@ class ProductFlow:
 
     def start(self):
         s, w = self.studio, self.window
-        if s.task is not None or s.confirming or s.cleanup_blocked or not w.style_path:
+        if s.task is not None or s.confirming or s.cleanup_blocked or not w.style_path or not self.adult_confirmed():
             return
         from genai_lab import model_check, studio_free_generation, studio_generation
         try:
@@ -200,6 +232,9 @@ class ProductFlow:
         self.garment = Path(w.selected_outfit_path) if w.selected_outfit_path else None
         self.scene = self.choose_scene()
         (s.run_directory / "scene.json").write_text(json.dumps(self.scene, ensure_ascii=False, indent=2), encoding="utf-8")
+        (s.run_directory / "adult-confirmation.json").write_text(json.dumps(dict(
+            confirmed=True, source="user_checkbox", label=ADULT_LABEL, character=str(self.character),
+            character_sha256=hashlib.sha256(self.character.read_bytes()).hexdigest()), ensure_ascii=False, indent=2), encoding="utf-8")
         self.preview_seen = None
         w.candidate_preview.setText("캐릭터를 읽는 중입니다…")
         w.status_label.setText("상태: 캐릭터를 읽는 중")
@@ -219,7 +254,7 @@ class ProductFlow:
             # 확정값(캐릭터 기억·파일 저장값)만 넘긴다. 없으면 준비 단계가 태그로 추정한다(자동 성별 낱말은 문장에 쓰지 않음, D-198).
             return run_style_redraw(character, directory, runtime, confirmed_gender=ident["confirmed_gender"],
                                     confirmed_body_parts=ident["confirmed_body_parts"], garment_path=garment, scene=scene["text"],
-                                    cancelled=cancel)
+                                    cancelled=cancel, adult_confirmed=True)
         s.launch(operation, self.done, on_error=self.failed)
 
     def done(self, outcome):

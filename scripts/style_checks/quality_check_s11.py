@@ -25,7 +25,7 @@ def main():
     rows = []
     for name, character, scene in CASES:
         t0 = time.time()
-        o = run_style_redraw(character, out / label / name, scene=scene)
+        o = run_style_redraw(character, out / label / name, scene=scene, adult_confirmed=True)
         row = dict(name=name, state=o["state"], seconds=round(time.time() - t0), scene=scene)
         if o["state"] == "review_pending":
             prepared = json.loads((out / label / name / "prepare.json").read_text(encoding="utf-8"))

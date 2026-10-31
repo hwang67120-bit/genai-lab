@@ -129,6 +129,7 @@ def test_generate_stops_before_any_analysis_when_models_are_missing(monkeypatch,
     from PIL import Image
     Image.new("RGB", (8, 8), "white").save(picture)
     window.style_path = str(picture)
+    window.studio.product.adult_check.setChecked(True)                  # 성인 확인(D-227)
     monkeypatch.setattr(qwen_outfit_edit, "load_qwen_settings", lambda path: object())
     missing = dict(ok=False, problems=[dict(component="wd_tagger", label="x", path="P", problem="없음")], locations={"wd_tagger": "L"})
     monkeypatch.setattr(model_check, "require_flux_models", lambda *a, **k: (_ for _ in ()).throw(model_check.MissingModelFiles(missing)))   # D-222

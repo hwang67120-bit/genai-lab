@@ -108,9 +108,11 @@ def _stage(run, stage, directory, expected, cancelled=None):
 
 
 def run_style_redraw(source_path, directory, runtime=None, *, confirmed_gender=None, confirmed_body_parts=None, paths=None, run=None,
-                     garment_path=None, scene=None, cancelled=None):
+                     garment_path=None, scene=None, cancelled=None, adult_confirmed=False):
     """캐릭터 그림 1장 → 후보 3장. 반환: outcome(state = review_pending | refused | failed | cancelled). 결과를 자동 승인하지 않는다.
     cancelled: 취소 확인 함수(작업실 '취소'). 참이면 실행 중인 작업 프로세스를 끝내고 state=cancelled(D-224).
+    adult_confirmed: 사용자가 "이 캐릭터는 성인"이라고 확인했는지(D-227). True가 아니면 아무것도 하지 않고 refused —
+    태그 분석기는 노출 없는 미성년·아이 캐릭터를 걸러내지 못한다(D-226).
     confirmed_gender: 사람이 확정한 성별(male·female, 캐릭터 기억 등). 없으면 성별 낱말 없이 그린다(D-198).
     confirmed_body_parts: 사람이 확정한 동물 귀·꼬리·날개(ears·tail·wings 목록, 없으면 빈 목록). None이면 태그로 추정(D-221).
     garment_path: 옷 그림(선택, D-212). 있으면 그 옷으로 갈아입히면서 목표 그림체로 그린다(모드 A·B 통합).
@@ -136,6 +138,11 @@ def run_style_redraw(source_path, directory, runtime=None, *, confirmed_gender=N
     directory.mkdir(parents=True, exist_ok=False)
     run = run or default_run(runtime, cancelled)
     outcome = dict(mode="style_redraw", source=str(source_path), started=time.time(), seconds={})
+    if adult_confirmed is not True:
+        outcome.update(state="refused", code="adult_unconfirmed", finished=time.time(),
+                       message="성인 캐릭터만 만들 수 있습니다. '이 캐릭터는 성인입니다'를 확인해 주세요.")
+        _save(directory / "outcome.json", outcome)
+        return outcome
     try:
         with Image.open(source_path) as image:
             canvas(image).save(directory / "character.png")
@@ -143,7 +150,7 @@ def run_style_redraw(source_path, directory, runtime=None, *, confirmed_gender=N
             with Image.open(garment_path) as garment:            # 옷 그림은 비율 그대로(흰 여백으로 캔버스에 맞춤)
                 canvas(garment).save(directory / "garment.png")
             outcome["garment"] = str(garment_path)
-        _save(directory / "request.json", dict(request_paths(runtime, paths), confirmed_gender=confirmed_gender, confirmed_body_parts=confirmed_body_parts, scene=scene, engine="flux",
+        _save(directory / "request.json", dict(request_paths(runtime, paths), confirmed_gender=confirmed_gender, confirmed_body_parts=confirmed_body_parts, scene=scene, adult_confirmed=True, engine="flux",
                                               garment=str(garment_path) if garment_path is not None else None))
         outcome["seconds"]["pose"] = _stage(run, "pose", directory, "pose.json", cancelled)
         outcome["seconds"]["prepare"] = _stage(run, "prepare", directory, "prepare.json", cancelled)

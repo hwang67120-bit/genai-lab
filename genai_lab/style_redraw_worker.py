@@ -24,6 +24,7 @@ HAND_MODEL = "models--deepghs--anime_hand_detection"
 ANIME_SEG = "models--skytnt--anime-seg/snapshots/493cb60893f47441b26ec4fb9a306bce9e342982/isnetis.onnx"
 JOINT_SCORE = 0.3
 TAG_THRESHOLD = 0.5
+MULTI_VIEW_TAGS = ("multiple_views", "reference_sheet", "turnaround")
 
 
 def save(path, value):
@@ -81,6 +82,9 @@ def prepare(directory):
     settings = ClothingDesignAnalysisSettings(cache_dir=Path(req["model_cache"]), local_files_only=True)
     with WdTagSession(settings) as tagger:
         scores = dict(tagger.analyze(canvas).raw_general_scores)
+    if any(float(scores.get(tag, 0.0)) >= TAG_THRESHOLD for tag in MULTI_VIEW_TAGS):
+        # 앞·뒷모습이 한 장에 있는 설정화는 관절 분석이 1명으로 세기도 한다(D-226 미도리야 그림)
+        return refuse("multiple_views", "한 사람이 한 번만 그려진 그림을 넣어 주세요(설정화·여러 시점 그림은 쓸 수 없습니다).")
     safety = safety_observation(scores)
     if safety["blocked"] or safety["review"]:
         # 성인 캐릭터만 다룬다. 어려 보이는 신호가 있으면 자동 진행하지 않는다.

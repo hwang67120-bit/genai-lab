@@ -24,7 +24,7 @@ def main():
     summary = []
     for name, character, garment, scene in CASES:
         t0 = time.time()
-        o = run_style_redraw(character, out / name, garment_path=garment, scene=scene)
+        o = run_style_redraw(character, out / name, garment_path=garment, scene=scene, adult_confirmed=True)
         row = dict(name=name, state=o["state"], message=o.get("message", ""), seconds=round(time.time() - t0), scene=scene,
                    peak=o.get("peak_reserved_gib"))
         if o["state"] == "review_pending":

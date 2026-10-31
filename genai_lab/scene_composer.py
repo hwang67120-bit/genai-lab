@@ -7,11 +7,14 @@
 - 조명 설계(역광·테두리 빛·창가 햇빛 등)와 색 구성을 넣었다. 색 구성은 '배경과 조명에만' — 캐릭터 고유 색은 지시문의 색 유지 문장이 지킨다.
 - 표정과 몸짓(무게중심·손 위치·고개 기울기)을 구체적으로 썼다.
 광택·반짝이를 줄이는 문장은 넣지 않았다 — 그림체 단계에서 한 요인으로 따로 시험한다(STYLE_STAGE_DESIGN 3-2).
+3판(2026-10-31 D-232, 사용자가 고정 그림체 60장 중 실패 10장·방향이 맞는 6장을 고름): 실패의 대부분이 앉기·무릎 꿇기 자세
+(다리·비율이 어긋남, 앉은 자세는 D-113 지원 범위 밖), 강한 역광·렌즈 번짐·강한 측광, 진한 색 조합, 교실(어려 보이는 쪽)이었고,
+방향이 맞는 6장은 모두 서 있는 자세 + 부드러운 빛 + 밝은 파스텔 색이었다 → 그 동작·빛·색·장소를 뺐다.
 장면 문장은 기존 요청 검사(free_generation.check_request)를 그대로 지난다. 평가 세트·개발 화면의 '요청 없음 = 고정 자세 + 흰 배경'(D-098)은 그대로다.
 """
 import random
 
-VERSION = 2
+VERSION = 3
 FULL_BODY_TEXT = "Full-body shot: the whole character is visible from head to feet, with a detailed background."
 
 OUTDOOR = (
@@ -23,8 +26,7 @@ OUTDOOR = (
     "in front of ancient stone ruins", "on a balcony above a canal town",
 )
 INDOOR = (
-    "in a cozy cafe with wooden tables", "in a library with tall bookshelves", "in a bright classroom with large windows",
-    "in a greenhouse full of plants", "in a quiet museum hall", "in a kitchen with morning light through the window",
+    "in a cozy cafe with wooden tables", "in a library with tall bookshelves", "in a greenhouse full of plants", "in a quiet museum hall", "in a kitchen with morning light through the window",
     "in an artist studio with canvases", "in a grand castle hall with tall pillars", "in a small bookstore with warm shelves",
     "in an aquarium tunnel with blue water light",
 )
@@ -34,10 +36,6 @@ ACTIONS = (
     "walking with a light step, one arm swinging forward",
     "turning slightly with a glance over the shoulder, the face toward the viewer",
     "leaning against a wall with one foot crossed over the other and the arms loosely folded in front",
-    "sitting sideways on a chair with one arm resting on the backrest",
-    "sitting on stone steps with the elbows on the knees and the chin resting on one hand",
-    "crouching down with the arms resting on the knees, looking up at the viewer",
-    "kneeling on one knee with one hand on the raised knee",
     "stretching one arm up toward the sky with a lively pose",
     "tucking a strand of hair behind one ear with one hand",
     "holding an open umbrella over one shoulder",
@@ -52,7 +50,6 @@ ACTIONS = (
     "reaching up to touch a hanging branch",
     "standing on tiptoes with the hands joined in front",
     "leaning forward slightly with the hands clasped in front and a playful pose",
-    "sitting on a low wall with the legs crossed at the ankles",
 )
 EXPRESSIONS = (
     "with a confident smile", "with a playful grin", "with a gentle smile", "with a calm, cool expression",
@@ -69,7 +66,6 @@ TIME = {
 }
 LIGHTING = {
     ("outdoor", "day"): ("warm backlight with a soft rim light outlining the character", "dappled sunlight falling through leaves",
-                         "strong side light with clear, soft shadows", "golden backlight with a gentle lens glow",
                          "soft diffused light with gentle contrast"),
     ("outdoor", "night"): ("cool ambient light with warm accent lights in the background", "colorful neon accent light on one side",
                            "lantern glow mixed with cool evening light", "moonlight with warm lights in the distance"),
@@ -79,8 +75,8 @@ LIGHTING = {
                           "a soft rim light outlining the character", "warm string lights in the background"),
 }
 PALETTES = (
-    "warm orange and teal", "pastel pink and mint green", "deep blue with gold accents", "soft cream with emerald accents",
-    "sunny yellow and sky blue", "lavender and peach", "crimson and charcoal", "fresh green and white", "amber and navy",
+    "warm orange and teal", "pastel pink and mint green", "soft cream with emerald accents",
+    "sunny yellow and sky blue", "lavender and peach", "fresh green and white", "amber and navy",
     "coral and turquoise",
 )
 WEATHER = ("", "", "", "", "with light rain falling", "with snow falling gently", "with cherry petals drifting in the wind",

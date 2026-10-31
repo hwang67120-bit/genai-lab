@@ -9,7 +9,17 @@ from genai_lab.scene_composer import ACTIONS, CAMERA, EXPRESSIONS, LIGHTING, TIM
 def test_same_seed_same_scene_and_many_different_scenes():
     assert compose_scene(7) == compose_scene(7)
     texts = {compose_scene(seed)["text"] for seed in range(300)}
-    assert len(texts) >= 295 and compose_scene(1)["version"] == VERSION == 2
+    assert len(texts) >= 295 and compose_scene(1)["version"] == VERSION == 3
+
+
+def test_v3_drops_what_the_user_marked_as_failing():
+    """D-232: 앉기·무릎 꿇기·웅크리기, 강한 역광·렌즈 번짐·강한 측광, 진한 색 조합, 교실을 뺐다(사용자 60장 판정)."""
+    from genai_lab.scene_composer import INDOOR, PALETTES
+    texts = " ".join(compose_scene(s)["text"] for s in range(2000))
+    for word in ("sitting", "kneeling", "crouching", "lens glow", "strong side light", "crimson", "deep blue", "classroom"):
+        assert word not in texts, word
+    assert not any("sitting" in a or "kneeling" in a or "crouching" in a for a in ACTIONS)
+    assert "lavender and peach" in PALETTES and not any("classroom" in p for p in INDOOR)
 
 
 @pytest.mark.parametrize("seed", range(0, 400, 3))

@@ -2,7 +2,8 @@
 학습 중간 저장본을 하나씩 붙여, 같은 캐릭터·장면·seed(앱과 같은 42·43·44)로 LoRA 없음과 비교한다. 동일성은 고정 특징표(D-228),
 손 개수는 앱과 같은 손 검출(500단계 미리보기에서 손이 사라진 팔이 나와서, 원본보다 적으면 '손 사라짐').
 문장은 앱 문장(flux_prompt) 앞에 학습 트리거 낱말을 붙인 것. 이 PC, GPU.
-사용: python flux_style_lora_check_s27.py <LoRA 폴더(checkpoint-*/ 들어 있음)> <출력 폴더> [단계 ...]
+사용: python flux_style_lora_check_s27.py <LoRA 폴더(checkpoint-*/ 들어 있음)> <출력 폴더> [단계 또는 단계@세기 ...]
+     (예: 500 500@0.7 — 세기를 낮추면 그림체는 약해지고 원래 특징은 더 남는지 본다, D-235 귀 문제)
 """
 import os
 os.environ.update(HF_HUB_OFFLINE="1", TRANSFORMERS_OFFLINE="1", HF_HUB_DISABLE_TELEMETRY="1")
@@ -31,20 +32,27 @@ def main():
         components_to_quantize=["transformer", "text_encoder"])
     pipe = Flux2KleinPipeline.from_pretrained(req["flux_model"], torch_dtype=torch.bfloat16, quantization_config=quant,
                                               low_cpu_mem_usage=True, local_files_only=True)
-    for s in steps:
+    specs = [(s.split("@")[0], float(s.split("@")[1]) if "@" in s else 1.0) for s in steps]
+    for s in dict.fromkeys(step for step, _ in specs):
         pipe.load_lora_weights(str(lora_dir / f"checkpoint-{s}"), weight_name="pytorch_lora_weights.safetensors", adapter_name=f"s{s}")
     pipe.enable_model_cpu_offload(); pipe.vae.enable_tiling()
-    variants = ["none"] + [f"s{s}" for s in steps]
+    weights = {f"s{step}" + (f"w{w:g}" if w != 1.0 else ""): (f"s{step}", w) for step, w in specs}
+    variants = ["none"] + list(weights)
     records = []
     for name, folder in FOLDERS.items():
         prepared = json.loads((folder / "prepare.json").read_text(encoding="utf-8"))
         base_prompt = flux_prompt(prepared["traits"], False, prepared.get("body_parts"), SCENE)
+        # 시험용 문장 바꾸기(D-235 귀 문제): S27_PROMPT_SUB="옛말=>새말;..." — 앱 문장이 '동물 귀'만 말하고 종류를 말하지 않아서
+        for pair in filter(None, os.environ.get("S27_PROMPT_SUB", "").split(";")):
+            old, new = pair.split("=>")
+            base_prompt = base_prompt.replace(old, new)
         ref = Image.open(folder / "character.png").convert("RGB")
         for v in variants:
             if v == "none":
                 pipe.disable_lora(); prompt = base_prompt
             else:
-                pipe.enable_lora(); pipe.set_adapters([v]); prompt = f"{TRIGGER} {base_prompt}"
+                adapter, weight = weights[v]
+                pipe.enable_lora(); pipe.set_adapters([adapter], adapter_weights=[weight]); prompt = f"{TRIGGER} {base_prompt}"
             for seed in SEEDS:
                 torch.cuda.reset_peak_memory_stats(); t0 = time.time()
                 image = pipe(image=[ref], prompt=prompt, width=OUTPUT_SIZE[0], height=OUTPUT_SIZE[1], num_inference_steps=STEPS,

@@ -8,7 +8,8 @@ import unittest
 import numpy as np
 from PIL import Image
 
-from genai_lab.style_redraw_flux import COLOUR_SHIFT_CAP, colour_match, flux_prompt, hand_flag, part_masks
+from genai_lab.style_redraw_flux import (COLOUR_SHIFT_CAP, body_part_tags, colour_match, flux_prompt, hand_flag, missing_body_parts,
+                                         part_masks)
 from genai_lab.style_redraw_pipeline import run_style_redraw
 from genai_lab.style_reference_colors import rgb_to_lab
 
@@ -30,6 +31,22 @@ class TestFluxHelpers(unittest.TestCase):
         self.assertNotIn("green vest", p)                      # 원래 옷 낱말은 새 옷과 다툼
         self.assertIn("outfit shown in image 2", p)
         self.assertIn("do not lighten or darken the skin", p)
+
+    def test_body_part_sentence_like_the_qwen_path(self):
+        with_tail = flux_prompt([dict(text="black hair")], body_parts=("ears", "tail"))
+        self.assertIn("The character has animal ears and a tail or tails; keep them exactly", with_tail)
+        self.assertIn("no wings; do not add any", with_tail)
+        self.assertIn("If the character has animal ears, a tail or wings", flux_prompt([]))          # 모름 = 조건문
+        self.assertIn("no animal ears, no tail and no wings", flux_prompt([], with_garment=True, body_parts=()))
+
+    def test_missing_parts_by_result_tags(self):
+        kept = {"animal_ears": 0.98, "cat_ears": 0.95, "tail": 0.95, "cat_tail": 0.94}
+        lost = {"animal_ears": 0.98, "cat_ears": 0.95, "cat_tail": 0.2}                  # 고치기 전 U003(꼬리 없음)
+        self.assertEqual(missing_body_parts(("ears", "tail"), kept), [])
+        self.assertEqual(missing_body_parts(("ears", "tail"), lost), ["tail"])
+        self.assertEqual(missing_body_parts(("ears",), {"pointy_ears": 0.9}), ["ears"])   # 엘프 귀는 동물 귀가 아님
+        self.assertEqual(missing_body_parts(None, {}), [])
+        self.assertEqual(body_part_tags({"mechanical_tail": 0.86, "striped_tail": 0.1, "smile": 0.9}), {"mechanical_tail": 0.86})
 
     def test_identity_only_colour_match_leaves_clothes(self):
         orig = np.zeros((40, 40, 3), np.uint8); orig[:] = (90, 60, 40)

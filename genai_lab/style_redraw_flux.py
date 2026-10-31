@@ -29,9 +29,12 @@ IDENTITY_PARTS = ("skin", "hair")             # 옷을 바꿀 때는 캐릭터 �
 IDENTITY_SHIFT_CAP = np.array([40.0, 20.0, 20.0])   # 옷 그림의 흰 마네킹·배경에 피부가 밝게 끌릴 수 있어 폭을 넓힌다
 
 
-def flux_prompt(traits, with_garment=False):
+def flux_prompt(traits, with_garment=False, body_parts=None):
     """같은 캐릭터를 목표 그림체로 다시 그리라는 문장. 특징 문장(자동 측정)과 피부색 유지·같은 자세 지시를 넣는다.
-    with_garment: 그림 2의 옷으로 갈아입히고 그린다(D-212, 모드 A·B 통합). 원래 옷 낱말은 빼야 새 옷과 다투지 않는다."""
+    with_garment: 그림 2의 옷으로 갈아입히고 그린다(D-212, 모드 A·B 통합). 원래 옷 낱말은 빼야 새 옷과 다투지 않는다.
+    body_parts: 확인된 동물 귀·꼬리·날개(튜플, 없으면 빈 튜플, 모르면 None) — Qwen 경로와 같은 부위 문장(D-108·D-111, D-221)."""
+    from genai_lab.outfit_edit import body_parts_sentence
+    parts = body_parts_sentence(None if body_parts is None else tuple(body_parts))
     if with_garment:
         described = "; ".join(row["text"].strip() for row in traits
                               if row.get("text", "").strip() and row.get("name") != "clothes")
@@ -39,14 +42,14 @@ def flux_prompt(traits, with_garment=False):
         return (f"Dress the same adult character from image 1{who} in the complete outfit shown in image 2: replace all of the "
                 f"character's current clothing with the outfit from image 2, matching its shape, length, colours and details; nothing "
                 f"from the original outfit may remain. Keep the same face, hairstyle, hair colour, eye colour, skin tone and body "
-                f"proportions as in image 1; do not lighten or darken the skin. Keep the same pose and framing as image 1. Render as a "
+                f"proportions as in image 1; do not lighten or darken the skin. {parts}Keep the same pose and framing as image 1. Render as a "
                 f"new {STYLE}. {BACKGROUND} Do not copy the mannequin or the clothing photo background. No lettering, logo, watermark "
                 f"or multiple people.")
     described = "; ".join(row["text"].strip() for row in traits if row.get("text", "").strip())
     keep = f" ({described})" if described else ""
     return (f"Redraw the same adult character as in the reference image as a new {STYLE}. Keep the same face, hairstyle, hair colour, "
             f"eye colour, skin tone and outfit exactly as in the reference{keep}. Keep the exact same skin tone as the reference; do not "
-            f"lighten or darken the skin. Keep the same pose, arms, hands and framing as in the reference. {BACKGROUND} "
+            f"lighten or darken the skin. {parts}Keep the same pose, arms, hands and framing as in the reference. {BACKGROUND} "
             f"No lettering, logo, watermark or multiple people.")
 
 
@@ -89,6 +92,23 @@ def colour_match(result_rgb, original_rgb, result_masks, original_masks, feather
         lab = lab * (1 - w) + fixed * w
         shifts[part] = [round(float(x), 1) for x in shift]
     return np.clip(lab_to_rgb(lab), 0, 255).astype(np.uint8), shifts
+
+
+PART_TAG_MIN = 0.2      # 기록할 부위 태그(꼬리 종류 등) 하한
+
+
+def missing_body_parts(body_parts, result_scores):
+    """확인된 동물 귀·꼬리·날개가 결과 그림의 태그(WD 태거, 준비 단계와 같은 규칙 guessed_body_parts)에서 안 보이면 그 이름 목록.
+    부위 분할기는 원본에서도 꼬리를 못 잡아(U003·U007·U008 원본 0픽셀) 쓰지 않는다(D-221). 자동 탈락이 아니라 표시."""
+    from genai_lab.studio_controller import guessed_body_parts
+    found = guessed_body_parts(dict(character_scores=result_scores or {}))
+    return [p for p in tuple(body_parts or ()) if p not in found]
+
+
+def body_part_tags(scores):
+    """결과의 귀·꼬리·날개 종류 태그(기록용, 예: mechanical_tail → striped_tail로 바뀐 것 확인)."""
+    return {k: round(float(v), 2) for k, v in (scores or {}).items()
+            if (k == "animal_ears" or k.endswith(("_ears", "tail", "wings"))) and float(v) >= PART_TAG_MIN}
 
 
 def hand_flag(original_count, result_count):

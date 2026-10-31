@@ -151,16 +151,22 @@ def prepare_flux(directory, req, canvas, rgb, scores, safety, joints, face, star
             save(directory / "prepare.json", dict(state="refused", code="garment_safety",
                                                   message="이 옷 그림은 사용할 수 없습니다.", safety=garment_safety))
             return
+    from genai_lab.studio_controller import guessed_body_parts
     parts, masks = person_and_parts(rgb, req)
     guessed = guessed_gender(dict(character_scores=scores))
     confirmed = req.get("confirmed_gender")
     features = extract_features(rgb, parts, scores, gender=confirmed or "unknown")
     traits = trait_rows(features, scores, confirmed)
+    # 동물 귀·꼬리·날개: 사람이 확정한 값(캐릭터 기억 등)이 있으면 그것, 없으면 태그 자동 추정(사용자 화면과 같은 규칙, D-221)
+    confirmed_parts = req.get("confirmed_body_parts")
+    body_parts = tuple(confirmed_parts) if confirmed_parts is not None else guessed_body_parts(dict(character_scores=scores))
     np.savez_compressed(directory / "original-masks.npz", **masks)
     hands = count_hands([rgb], req)[0]
     save(directory / "prepare.json", dict(
         state="ready", engine="flux", with_garment=with_garment, seconds=round(time.time() - started, 1), gender=confirmed,
-        guessed_gender=guessed, traits=traits, prompt=flux_prompt(traits, with_garment), face_box=face, original_hands=hands,
+        guessed_gender=guessed, traits=traits, body_parts=list(body_parts),
+        body_parts_source="confirmed" if confirmed_parts is not None else "automatic_tags",
+        prompt=flux_prompt(traits, with_garment, body_parts), face_box=face, original_hands=hands,
         warnings=support_warnings(scores, joints), safety=safety, joints_used=sorted(joints),
         note="특징 문장·성별은 자동 측정이며 사람 확인 전이다. 자세·구도는 원본을 따른다."))
 
@@ -173,7 +179,8 @@ def generate_flux(directory, req):
     from diffusers import Flux2KleinPipeline
     from diffusers.quantizers import PipelineQuantizationConfig
     from genai_lab.style_redraw_flux import (GUIDANCE, IDENTITY_PARTS, IDENTITY_SHIFT_CAP, MAX_SEQUENCE_LENGTH, PARTS, SEEDS, STEPS,
-                                             colour_match, hand_flag)
+                                             body_part_tags, colour_match, hand_flag, missing_body_parts)
+    from genai_lab.clothing_analysis import ClothingDesignAnalysisSettings, WdTagSession
     prepared = json.loads((directory / "prepare.json").read_text(encoding="utf-8"))
     torch.cuda.set_per_process_memory_fraction(MEMORY_CAP_GIB * 2**30 / torch.cuda.get_device_properties(0).total_memory)
     started = time.time()
@@ -205,8 +212,10 @@ def generate_flux(directory, req):
     original = np.asarray(reference)
     original_masks = dict(np.load(directory / "original-masks.npz"))
     hands = count_hands([r for _, r, _ in raws], req)
+    with WdTagSession(ClothingDesignAnalysisSettings(cache_dir=Path(req["model_cache"]), local_files_only=True)) as tagger:
+        result_scores = [dict(tagger.analyze(Image.fromarray(r)).raw_general_scores) for _, r, _ in raws]
     candidates = []
-    for (seed, raw, seconds), count in zip(raws, hands):
+    for (seed, raw, seconds), count, scores in zip(raws, hands, result_scores):
         _, masks = person_and_parts(raw, req)
         # 옷을 바꿨으면 원본에 맞출 부위는 피부·머리뿐(옷은 옷 그림 것), 아니면 네 부위 모두
         fixed, shifts = (colour_match(raw, original, masks, original_masks, parts=IDENTITY_PARTS, cap=IDENTITY_SHIFT_CAP)
@@ -214,7 +223,9 @@ def generate_flux(directory, req):
         path = directory / f"result-seed{seed}.png"
         Image.fromarray(fixed).save(path)
         candidates.append(dict(seed=seed, file=path.name, raw_file=f"result-raw-seed{seed}.png", sha256=sha(path), seconds=seconds,
-                               colour_shift=shifts, hands=count, extra_hands=hand_flag(prepared.get("original_hands"), count)))
+                               colour_shift=shifts, hands=count, extra_hands=hand_flag(prepared.get("original_hands"), count),
+                               missing_body_parts=missing_body_parts(prepared.get("body_parts"), scores),
+                               body_part_tags=body_part_tags(scores)))
     save(directory / "generation.json", dict(
         state="generated_unreviewed", engine="flux", with_garment=with_garment, load_seconds=loaded, candidates=candidates, review="사용자가 후보 중 1장을 고른다",
         peak_reserved_gib=peak, memory_cap_gib=MEMORY_CAP_GIB, prompt=prepared["prompt"],

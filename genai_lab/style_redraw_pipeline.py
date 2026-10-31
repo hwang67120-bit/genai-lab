@@ -68,10 +68,16 @@ def _stage(run, stage, directory, expected):
     return round(time.time() - t0, 1)
 
 
-def run_style_redraw(source_path, directory, runtime=None, *, confirmed_gender=None, paths=None, run=None, garment_path=None):
+def run_style_redraw(source_path, directory, runtime=None, *, confirmed_gender=None, confirmed_body_parts=None, paths=None, run=None,
+                     garment_path=None):
     """캐릭터 그림 1장 → 후보 3장. 반환: outcome(state = review_pending | refused | failed). 결과를 자동 승인하지 않는다.
     confirmed_gender: 사람이 확정한 성별(male·female, 캐릭터 기억 등). 없으면 성별 낱말 없이 그린다(D-198).
+    confirmed_body_parts: 사람이 확정한 동물 귀·꼬리·날개(ears·tail·wings 목록, 없으면 빈 목록). None이면 태그로 추정(D-221).
     garment_path: 옷 그림(선택, D-212). 있으면 그 옷으로 갈아입히면서 목표 그림체로 그린다(모드 A·B 통합)."""
+    if confirmed_body_parts is not None:
+        confirmed_body_parts = list(confirmed_body_parts)
+        if not set(confirmed_body_parts) <= {"ears", "tail", "wings"} or len(set(confirmed_body_parts)) != len(confirmed_body_parts):
+            raise ValueError("확정 부위는 ears·tail·wings 중에서 겹치지 않게 골라야 합니다.")
     if confirmed_gender not in (None, "male", "female"):
         raise ValueError("확정 성별은 male·female 또는 None이어야 합니다.")
     from genai_lab.outfit_edit import canvas
@@ -89,7 +95,7 @@ def run_style_redraw(source_path, directory, runtime=None, *, confirmed_gender=N
             with Image.open(garment_path) as garment:            # 옷 그림은 비율 그대로(흰 여백으로 캔버스에 맞춤)
                 canvas(garment).save(directory / "garment.png")
             outcome["garment"] = str(garment_path)
-        _save(directory / "request.json", dict(request_paths(runtime, paths), confirmed_gender=confirmed_gender, engine="flux",
+        _save(directory / "request.json", dict(request_paths(runtime, paths), confirmed_gender=confirmed_gender, confirmed_body_parts=confirmed_body_parts, engine="flux",
                                               garment=str(garment_path) if garment_path is not None else None))
         outcome["seconds"]["pose"] = _stage(run, "pose", directory, "pose.json")
         outcome["seconds"]["prepare"] = _stage(run, "prepare", directory, "prepare.json")

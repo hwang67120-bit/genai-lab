@@ -124,6 +124,34 @@ def test_refused_outcome_is_reported_not_shown(product_window, tmp_path, monkeyp
     assert failed == ["이 그림은 진행할 수 없습니다."] and w.studio.results is None
 
 
+def test_cancel_reaches_the_flux_step_and_discards_the_run(product_window, tmp_path, monkeypatch):
+    """D-224: '현재 작업 취소'가 FLUX 단계에 전달되고, 결과는 버리고, 오류 창 없이 '취소됨'."""
+    w = product_window
+    character = tmp_path / "character.png"
+    Image.new("RGB", (8, 8)).save(character)
+    w.style_path = character
+    w.update_input_ready_status()
+    started, seen = [], []
+    def slow(source, directory, runtime=None, *, cancelled=None, **kw):
+        started.append(True)
+        import time
+        t0 = time.time()
+        while not cancelled() and time.time() - t0 < 20:
+            time.sleep(0.05)
+        seen.append(cancelled())
+        return dict(state="cancelled", stage="generate", message="취소했습니다.")
+    monkeypatch.setattr(style_redraw_pipeline, "run_style_redraw", slow)
+    from PySide6.QtWidgets import QMessageBox
+    monkeypatch.setattr(QMessageBox, "exec", lambda self: pytest.fail("취소는 오류 창을 띄우지 않는다: " + self.text()))
+    w.generate_button.click()
+    wait_for(QApplication.instance(), lambda: bool(started))
+    assert not w.studio_cancel_button.isHidden()
+    w.studio_cancel_button.click()
+    wait_for(QApplication.instance(), lambda: w.studio.task is None)
+    assert seen == [True] and w.studio.results is None
+    assert "취소" in w.status_label.text() and w.generate_button.isEnabled()
+
+
 def test_preview_shows_the_newest_candidate_and_progress(product_window, tmp_path):
     w = product_window
     w.studio.run_directory = tmp_path / "run"

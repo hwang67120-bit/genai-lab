@@ -218,7 +218,8 @@ class ProductFlow:
             progress("상태: 이미지 만드는 중 · 후보 3장, 약 2~3분")
             # 확정값(캐릭터 기억·파일 저장값)만 넘긴다. 없으면 준비 단계가 태그로 추정한다(자동 성별 낱말은 문장에 쓰지 않음, D-198).
             return run_style_redraw(character, directory, runtime, confirmed_gender=ident["confirmed_gender"],
-                                    confirmed_body_parts=ident["confirmed_body_parts"], garment_path=garment, scene=scene["text"])
+                                    confirmed_body_parts=ident["confirmed_body_parts"], garment_path=garment, scene=scene["text"],
+                                    cancelled=cancel)
         s.launch(operation, self.done, on_error=self.failed)
 
     def done(self, outcome):

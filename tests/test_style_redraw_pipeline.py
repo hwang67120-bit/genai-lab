@@ -1,5 +1,6 @@
 """모드 B 공통 진입점·작업 프로세스 도우미 시험. 하위 프로세스는 가짜 실행기로 바꾼다(모델·GPU 불필요)."""
 import json
+import time
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
@@ -33,6 +34,49 @@ def fake_run(calls, prepare_state="ready", fail=None):
             (directory / "generation.json").write_text(json.dumps(body), encoding="utf-8")
         return 0
     return run
+
+
+class TestCancel(unittest.TestCase):
+    """D-224: 작업실 '취소'가 실행 중인 작업 프로세스를 실제로 끝낸다."""
+
+    def test_running_process_is_stopped_on_cancel(self):
+        import sys
+        from genai_lab.style_redraw_pipeline import StyleRedrawCancelled, run_process
+        with TemporaryDirectory() as temp:
+            t0 = time.time()
+            asked = time.time() + 1.0
+            with self.assertRaises(StyleRedrawCancelled):
+                run_process([sys.executable, "-c", "import time; time.sleep(60)"], Path(temp) / "log.txt", 120,
+                            cancelled=lambda: time.time() > asked, stage="generate")
+            self.assertLess(time.time() - t0, 15)                 # 60초를 기다리지 않는다
+            time.sleep(0.5)
+            (Path(temp) / "log.txt").unlink()                     # 자식(실제 Python)까지 끝나 로그를 놓았다
+
+    def test_timeout_stops_the_process_and_normal_exit_returns_code(self):
+        import subprocess
+        import sys
+        from genai_lab.style_redraw_pipeline import run_process
+        with TemporaryDirectory() as temp:
+            with self.assertRaises(subprocess.TimeoutExpired):
+                run_process([sys.executable, "-c", "import time; time.sleep(60)"], Path(temp) / "a.txt", 1.0)
+            self.assertEqual(run_process([sys.executable, "-c", "print('ok'); raise SystemExit(3)"], Path(temp) / "b.txt", 30), 3)
+            self.assertIn("ok", (Path(temp) / "b.txt").read_text(encoding="utf-8"))
+
+    def test_cancel_between_stages_skips_generation(self):
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "char.png"
+            Image.new("RGB", (400, 600)).save(source)
+            calls, flag = [], []
+            def run(stage, directory):
+                calls.append(stage)
+                if stage == "prepare":
+                    flag.append(True)                              # 준비가 끝날 즈음 사용자가 취소
+                return fake_run([])(stage, directory)
+            out = run_style_redraw(source, root / "run", RUNTIME, run=run, cancelled=lambda: bool(flag))
+            self.assertEqual(out["state"], "cancelled")
+            self.assertEqual(calls, ["pose", "prepare"])
+            self.assertEqual(json.loads((root / "run" / "outcome.json").read_text(encoding="utf-8"))["state"], "cancelled")
 
 
 class TestStyleRedrawPipeline(unittest.TestCase):

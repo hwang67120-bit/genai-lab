@@ -23,6 +23,46 @@ class StyleRedrawFailed(RuntimeError):
         self.stage = stage
 
 
+class StyleRedrawCancelled(StyleRedrawFailed):
+    """사용자 취소: 실행 중인 작업 프로세스를 끝냈다(GPU 메모리는 프로세스와 함께 돌아간다)."""
+
+
+POLL_SECONDS = 0.5
+
+
+def _stop(process):
+    """프로세스와 그 자식까지 끝낸다. Windows 가상환경의 python.exe는 실제 Python을 자식으로 띄우는 실행기라,
+    바깥만 끝내면 안쪽 작업(GPU 사용)이 계속 돈다(D-224 시험에서 발견) → 트리째(taskkill /T /F)."""
+    import os
+    if os.name == "nt":
+        subprocess.run(["taskkill", "/T", "/F", "/PID", str(process.pid)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    else:
+        process.terminate()
+    try:
+        process.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait(timeout=10)
+
+
+def run_process(command, log_path, timeout, cancelled=None, stage="", env=None):
+    """하위 프로세스를 띄우고 끝날 때까지 기다리되, POLL_SECONDS마다 취소를 확인한다(D-224).
+    취소면 프로세스를 끝내고 StyleRedrawCancelled, 시간 초과면 끝내고 subprocess.TimeoutExpired. 반환: 종료 코드."""
+    deadline = time.monotonic() + timeout
+    with open(log_path, "w", encoding="utf-8") as log:
+        process = subprocess.Popen(command, env=env, stdout=log, stderr=subprocess.STDOUT)
+        while True:
+            try:
+                return process.wait(timeout=POLL_SECONDS)
+            except subprocess.TimeoutExpired:
+                if cancelled is not None and cancelled():
+                    _stop(process)
+                    raise StyleRedrawCancelled(stage, "취소했습니다.")
+                if time.monotonic() > deadline:
+                    _stop(process)
+                    raise subprocess.TimeoutExpired(command, timeout)
+
+
 def _save(path, value):
     Path(path).write_text(json.dumps(value, ensure_ascii=False, indent=2, default=str) + "\n", encoding="utf-8")
 
@@ -37,8 +77,8 @@ def request_paths(runtime, overrides=None):
     return paths
 
 
-def default_run(runtime):
-    """단계별 하위 프로세스. 필요한 환경 변수만 넘긴다(D-170)."""
+def default_run(runtime, cancelled=None):
+    """단계별 하위 프로세스. 필요한 환경 변수만 넘긴다(D-170). cancelled: 취소 확인 함수(작업실 '취소', D-224)."""
     from genai_lab.child_env import child_environment
     worker = Path(__file__).resolve().with_name("style_redraw_worker.py")
     analysis = Path(__file__).resolve().with_name("studio_analysis.py")
@@ -48,14 +88,13 @@ def default_run(runtime):
                        str(runtime.model_cache), str(runtime.head_cache)]
         else:
             command = [str(runtime.analysis_python), "-X", "utf8", str(worker), stage, str(directory)]
-        with open(directory / f"{stage}.log", "w", encoding="utf-8") as log:
-            done = subprocess.run(command, env=child_environment(), stdout=log, stderr=subprocess.STDOUT,
-                                  timeout=TIMEOUTS[stage])
-        return done.returncode
+        return run_process(command, directory / f"{stage}.log", TIMEOUTS[stage], cancelled, stage, child_environment())
     return run
 
 
-def _stage(run, stage, directory, expected):
+def _stage(run, stage, directory, expected, cancelled=None):
+    if cancelled is not None and cancelled():          # 단계 사이에서도 취소를 본다
+        raise StyleRedrawCancelled(stage, "취소했습니다.")
     t0 = time.time()
     try:
         code = run(stage, directory)
@@ -69,8 +108,9 @@ def _stage(run, stage, directory, expected):
 
 
 def run_style_redraw(source_path, directory, runtime=None, *, confirmed_gender=None, confirmed_body_parts=None, paths=None, run=None,
-                     garment_path=None, scene=None):
-    """캐릭터 그림 1장 → 후보 3장. 반환: outcome(state = review_pending | refused | failed). 결과를 자동 승인하지 않는다.
+                     garment_path=None, scene=None, cancelled=None):
+    """캐릭터 그림 1장 → 후보 3장. 반환: outcome(state = review_pending | refused | failed | cancelled). 결과를 자동 승인하지 않는다.
+    cancelled: 취소 확인 함수(작업실 '취소'). 참이면 실행 중인 작업 프로세스를 끝내고 state=cancelled(D-224).
     confirmed_gender: 사람이 확정한 성별(male·female, 캐릭터 기억 등). 없으면 성별 낱말 없이 그린다(D-198).
     confirmed_body_parts: 사람이 확정한 동물 귀·꼬리·날개(ears·tail·wings 목록, 없으면 빈 목록). None이면 태그로 추정(D-221).
     garment_path: 옷 그림(선택, D-212). 있으면 그 옷으로 갈아입히면서 목표 그림체로 그린다(모드 A·B 통합).
@@ -94,7 +134,7 @@ def run_style_redraw(source_path, directory, runtime=None, *, confirmed_gender=N
         runtime = StudioRuntime.from_environment()
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=False)
-    run = run or default_run(runtime)
+    run = run or default_run(runtime, cancelled)
     outcome = dict(mode="style_redraw", source=str(source_path), started=time.time(), seconds={})
     try:
         with Image.open(source_path) as image:
@@ -105,21 +145,24 @@ def run_style_redraw(source_path, directory, runtime=None, *, confirmed_gender=N
             outcome["garment"] = str(garment_path)
         _save(directory / "request.json", dict(request_paths(runtime, paths), confirmed_gender=confirmed_gender, confirmed_body_parts=confirmed_body_parts, scene=scene, engine="flux",
                                               garment=str(garment_path) if garment_path is not None else None))
-        outcome["seconds"]["pose"] = _stage(run, "pose", directory, "pose.json")
-        outcome["seconds"]["prepare"] = _stage(run, "prepare", directory, "prepare.json")
+        outcome["seconds"]["pose"] = _stage(run, "pose", directory, "pose.json", cancelled)
+        outcome["seconds"]["prepare"] = _stage(run, "prepare", directory, "prepare.json", cancelled)
         prepared = json.loads((directory / "prepare.json").read_text(encoding="utf-8"))
         outcome.update(warnings=prepared.get("warnings", []), traits=prepared.get("traits"), gender=prepared.get("gender"),
                        guessed_gender=prepared.get("guessed_gender"))
         if prepared["state"] == "refused":
             outcome.update(state="refused", code=prepared["code"], message=prepared["message"])
             return outcome
-        outcome["seconds"]["generate"] = _stage(run, "generate", directory, "generation.json")
+        outcome["seconds"]["generate"] = _stage(run, "generate", directory, "generation.json", cancelled)
         generated = json.loads((directory / "generation.json").read_text(encoding="utf-8"))
         candidates = [str(directory / c["file"]) for c in generated.get("candidates", []) if (directory / c["file"]).is_file()]
         if not candidates:
             raise StyleRedrawFailed("generate", "생성 결과 그림이 없습니다.")
         outcome.update(state="review_pending", candidates=candidates, review="사용자가 후보 중 1장을 고른다(동일성·그림체 확인 전)",
                        peak_reserved_gib=generated.get("peak_reserved_gib"))
+        return outcome
+    except StyleRedrawCancelled as error:
+        outcome.update(state="cancelled", stage=error.stage, message=str(error))
         return outcome
     except StyleRedrawFailed as error:
         outcome.update(state="failed", stage=error.stage, message=str(error))

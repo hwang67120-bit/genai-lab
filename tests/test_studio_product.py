@@ -173,6 +173,22 @@ def test_preview_shows_the_newest_candidate_and_progress(product_window, tmp_pat
     (flux / "progress.json").write_text(json.dumps(dict(candidate=2, candidates=3)), encoding="utf-8")
     w.studio.product.poll_preview()
     assert not w.candidate_preview._original.isNull() and "후보 2/3" in w.status_label.text()
+    (flux / "progress.json").write_text(json.dumps(dict(candidate=1, candidates=3, phase="autofix")), encoding="utf-8")
+    w.studio.product.poll_preview()
+    assert "자동 보정" in w.status_label.text() and "후보 1/3" in w.status_label.text()      # D-241 빠진 특징 다시 그리기
+
+
+def test_autofixed_candidate_says_what_was_asked_again(tmp_path):
+    outcome = fake_flux([])(tmp_path / "c.png", tmp_path / "run")
+    generation = tmp_path / "run" / "generation.json"
+    record = json.loads(generation.read_text(encoding="utf-8"))
+    for c in record["candidates"]:
+        c["autofix"] = dict(round=1, asked=["furry", "animal_nose"])
+    generation.write_text(json.dumps(record), encoding="utf-8")
+    results = StyleRedrawResults(outcome)          # generation.json의 자동 보정 기록을 후보로 옮겨 온다(실제 화면 시험에서 빠졌음)
+    assert "자동 보정: 빠진 특징(furry, animal nose)" in results.head_notice
+    results.candidates[results.selected]["autofix"] = dict(round=0, asked=[])
+    assert "자동 보정" not in results.head_notice
 
 
 def test_saved_by_user_is_not_a_quality_judgement(tmp_path):

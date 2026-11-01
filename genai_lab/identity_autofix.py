@@ -92,3 +92,9 @@ def load_kinds(path):
     from pathlib import Path
     path = Path(path)
     return json.loads(path.read_text(encoding="utf-8")).get("table", {}) if path.is_file() else {}
+
+
+def kinds_table():
+    """앱에 들어 있는 태그 종류 표(프로젝트 폴더 기준 KINDS_TABLE). 없으면 빈 표."""
+    from pathlib import Path
+    return load_kinds(Path(__file__).resolve().parents[1] / KINDS_TABLE)

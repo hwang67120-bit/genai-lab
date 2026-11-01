@@ -34,7 +34,7 @@ class StyleRedrawResults:
             info = by_file.get(Path(path).name, {})
             self.candidates.append(dict(path=str(path), seed=info.get("seed"), sha256=info.get("sha256") or _sha(path),
                                         extra_hands=info.get("extra_hands"), missing_body_parts=info.get("missing_body_parts") or [],
-                                        identity_anchors=info.get("identity_anchors"), variant="raw"))
+                                        identity_anchors=info.get("identity_anchors"), autofix=info.get("autofix"), variant="raw"))
         flagged = lambda c: bool(c["extra_hands"]) or bool(c["missing_body_parts"])
         self.selected = next((i for i, c in enumerate(self.candidates) if not flagged(c)), 0)
         self.status, self.approved_sha, self.checks = "awaiting_user_review", None, {}
@@ -79,6 +79,9 @@ class StyleRedrawResults:
             notes.append("사라진 부위: " + ", ".join(c["missing_body_parts"]))
         from genai_lab.identity_anchors import summary_ko
         anchors = f" {summary_ko(c['identity_anchors'])}." if c.get("identity_anchors") else ""
+        fixed = c.get("autofix") or {}
+        if fixed.get("round"):        # D-241 자동 고치기로 다시 그린 후보
+            anchors += " 자동 보정: 빠진 특징(" + ", ".join(t.replace("_", " ") for t in fixed.get("asked", [])) + ")을 다시 요청해 그렸습니다."
         return (f"FLUX 결과 {label}." + anchors + (" 자동 표시: " + " · ".join(notes) + "." if notes else "")
                 + " 자동 표시는 품질 판정이 아닙니다.")
 

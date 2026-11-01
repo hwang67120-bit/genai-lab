@@ -180,7 +180,9 @@ def prepare_flux(directory, req, canvas, rgb, scores, safety, joints, face, star
 
 
 def generate_flux(directory, req):
-    """FLUX.2-klein 편집으로 후보 3장(D-210) → 부위별 색 맞춤 → 손 개수. 원래 생성 그림(raw)도 남긴다."""
+    """FLUX.2-klein 편집으로 후보 3장(D-210) → 자동 고치기(D-241) → 부위별 색 맞춤 → 손 개수. 원래 생성 그림(raw)도 남긴다.
+    자동 고치기: 원본 태그 중 후보 과반이 잃은 몸·입은 것 태그가 있으면 '빠진 특징' 문장을 붙여 같은 seed로 한 번 더 그리고, seed마다 덜 잃은
+    쪽을 후보로 쓴다(identity_autofix, 사람이 고른 항목 없음). 바뀐 후보의 첫 그림은 result-raw-seed*-r0.png로 남긴다."""
     import gc
     import torch
     from PIL import Image
@@ -190,6 +192,7 @@ def generate_flux(directory, req):
                                              STYLE_LORA_WEIGHT, body_part_tags, colour_match, hand_flag, missing_body_parts)
     from genai_lab.clothing_analysis import ClothingDesignAnalysisSettings, WdTagSession
     from genai_lab.identity_anchors import compare as compare_anchors
+    from genai_lab.identity_autofix import best_per_seed, fixed_prompt, kinds_table, lost_tags, remaining, to_fix
     prepared = json.loads((directory / "prepare.json").read_text(encoding="utf-8"))
     torch.cuda.set_per_process_memory_fraction(MEMORY_CAP_GIB * 2**30 / torch.cuda.get_device_properties(0).total_memory)
     started = time.time()
@@ -209,15 +212,41 @@ def generate_flux(directory, req):
     with_garment = bool(prepared.get("with_garment"))
     references = [reference] + ([Image.open(directory / "garment.png").convert("RGB")] if with_garment else [])
     torch.cuda.reset_peak_memory_stats()
-    raws = []
-    for number, seed in enumerate(SEEDS):
-        save(directory / "progress.json", dict(candidate=number + 1, candidates=len(SEEDS), step=0, total=STEPS))
-        t0 = time.time()
-        image = pipe(image=references, prompt=prepared["prompt"], width=OUTPUT_SIZE[0], height=OUTPUT_SIZE[1],
-                     num_inference_steps=STEPS, guidance_scale=GUIDANCE, max_sequence_length=MAX_SEQUENCE_LENGTH,
-                     generator=torch.Generator(device="cpu").manual_seed(seed)).images[0]
-        image.save(directory / f"result-raw-seed{seed}.png")
-        raws.append((seed, np.asarray(image), round(time.time() - t0, 1)))
+
+    def draw(prompt, phase, suffix):
+        drawn = []
+        for number, seed in enumerate(SEEDS):
+            save(directory / "progress.json", dict(candidate=number + 1, candidates=len(SEEDS), step=0, total=STEPS, phase=phase))
+            t0 = time.time()
+            image = pipe(image=references, prompt=prompt, width=OUTPUT_SIZE[0], height=OUTPUT_SIZE[1],
+                         num_inference_steps=STEPS, guidance_scale=GUIDANCE, max_sequence_length=MAX_SEQUENCE_LENGTH,
+                         generator=torch.Generator(device="cpu").manual_seed(seed)).images[0]
+            image.save(directory / f"result-raw-seed{seed}{suffix}.png")
+            drawn.append((seed, np.asarray(image), round(time.time() - t0, 1)))
+        return drawn
+
+    settings = ClothingDesignAnalysisSettings(cache_dir=Path(req["model_cache"]), local_files_only=True)
+    raws = draw(prepared["prompt"], "generate", "")
+    with WdTagSession(settings) as tagger:
+        original_scores = dict(tagger.analyze(reference).raw_general_scores)
+        result_scores = [dict(tagger.analyze(Image.fromarray(r)).raw_general_scores) for _, r, _ in raws]
+    lost = lost_tags(original_scores, result_scores)
+    asked = to_fix(lost, kinds_table(), with_garment)
+    autofix = dict(lost=lost, asked=asked, rounds=1 if asked else 0, picks=[0] * len(SEEDS))
+    if asked:
+        prompt = fixed_prompt(prepared["prompt"], asked)
+        again = draw(prompt, "autofix", "-fix")
+        with WdTagSession(settings) as tagger:
+            again_scores = [dict(tagger.analyze(Image.fromarray(r)).raw_general_scores) for _, r, _ in again]
+        picks = best_per_seed(original_scores, [result_scores, again_scores], asked)
+        for i, pick in enumerate(picks):
+            seed = SEEDS[i]
+            if pick == 1:
+                (directory / f"result-raw-seed{seed}.png").replace(directory / f"result-raw-seed{seed}-r0.png")
+                (directory / f"result-raw-seed{seed}-fix.png").replace(directory / f"result-raw-seed{seed}.png")
+                raws[i] = (seed, again[i][1], round(raws[i][2] + again[i][2], 1))
+                result_scores[i] = again_scores[i]
+        autofix.update(prompt=prompt, picks=picks, still_lost=[remaining(original_scores, s, asked) for s in result_scores])
     peak = round(torch.cuda.max_memory_reserved() / 2**30, 2)
     pipe = None
     gc.collect()
@@ -225,10 +254,8 @@ def generate_flux(directory, req):
     original = np.asarray(reference)
     original_masks = dict(np.load(directory / "original-masks.npz"))
     hands = count_hands([r for _, r, _ in raws], req)
-    with WdTagSession(ClothingDesignAnalysisSettings(cache_dir=Path(req["model_cache"]), local_files_only=True)) as tagger:
-        result_scores = [dict(tagger.analyze(Image.fromarray(r)).raw_general_scores) for _, r, _ in raws]
     candidates = []
-    for (seed, raw, seconds), count, scores in zip(raws, hands, result_scores):
+    for (seed, raw, seconds), count, scores, pick in zip(raws, hands, result_scores, autofix["picks"]):
         _, masks = person_and_parts(raw, req)
         # 옷을 바꿨으면 원본에 맞출 부위는 피부·머리뿐(옷은 옷 그림 것), 아니면 네 부위 모두
         scene = bool(prepared.get("scene"))         # 새 장면이면 밝기는 조명 몫(D-225)
@@ -241,10 +268,12 @@ def generate_flux(directory, req):
                                colour_shift=shifts, hands=count, extra_hands=hand_flag(prepared.get("original_hands"), count),
                                missing_body_parts=missing_body_parts(prepared.get("body_parts"), scores),
                                body_part_tags=body_part_tags(scores),
-                               identity_anchors=compare_anchors(prepared.get("identity_anchors") or [], scores)))
+                               identity_anchors=compare_anchors(prepared.get("identity_anchors") or [], scores),
+                               autofix=dict(round=pick, asked=asked if pick else [],
+                                            still_lost=remaining(original_scores, scores, asked))))
     save(directory / "generation.json", dict(
         state="generated_unreviewed", engine="flux", style_lora=dict(file=str(lora), weight=STYLE_LORA_WEIGHT),
-        with_garment=with_garment, load_seconds=loaded, candidates=candidates, review="사용자가 후보 중 1장을 고른다",
+        with_garment=with_garment, load_seconds=loaded, candidates=candidates, review="사용자가 후보 중 1장을 고른다", autofix=autofix,
         peak_reserved_gib=peak, memory_cap_gib=MEMORY_CAP_GIB, prompt=prepared["prompt"],
         model=dict(name="black-forest-labs/FLUX.2-klein-4B", path=str(req["flux_model"]), license="Apache-2.0")))
 

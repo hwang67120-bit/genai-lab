@@ -6,9 +6,14 @@
 set -euo pipefail
 BASE_REV=a3b4f4849157f664bdbc776fd7453c2783562f4d
 STEPS=${STEPS:-2000}
+RANK=${RANK:-32}
+LR=${LR:-1e-4}
+DATA=${DATA:-/root/s26-data}
+OUT=${OUT:-/root/s26-lora}
+# 2판(S43): 같은 스크립트를 자료·출력·rank·학습률만 바꿔 두 번 돌린다(DATA=/root/s43-data OUT=/root/s43-lora-a …).
 export PIP_NO_CACHE_DIR=1 HF_HUB_DISABLE_XET=1
-rm -rf /root/qi /dev/shm/qi
-pip install -q peft==0.21.2 datasets tensorboard
+rm -rf /root/qi /dev/shm/qi /root/klein-base/.cache
+pip install -q diffusers==0.38.0 transformers==4.57.6 accelerate==1.15.0 peft==0.21.2 datasets tensorboard sentencepiece
 pip uninstall -y -q torchaudio   # Pod 기본 이미지의 옛 torchaudio가 torch 2.9.1과 맞지 않아 transformers 가져오기에서 멈춤(학습엔 안 씀)
 curl -sSfL -o /root/train_dreambooth_lora_flux2_klein.py \
   https://raw.githubusercontent.com/huggingface/diffusers/v0.38.0/examples/dreambooth/train_dreambooth_lora_flux2_klein.py
@@ -21,9 +26,9 @@ df -h / | tail -1
 date
 accelerate launch --mixed_precision=bf16 --num_processes=1 /root/train_dreambooth_lora_flux2_klein.py \
   --pretrained_model_name_or_path=/root/klein-base \
-  --dataset_name=/root/s26-data --image_column=image --caption_column=text \
+  --dataset_name=$DATA --image_column=image --caption_column=text \
   --instance_prompt="gnlbq4 style illustration." \
-  --output_dir=/root/s26-lora \
+  --output_dir=$OUT \
   --mixed_precision=bf16 \
   --aspect_ratio_buckets="1360,1024" \
   --random_flip \
@@ -32,14 +37,14 @@ accelerate launch --mixed_precision=bf16 --num_processes=1 /root/train_dreamboot
   --train_batch_size=1 \
   --gradient_accumulation_steps=1 \
   --guidance_scale=1 \
-  --rank=32 --lora_alpha=32 \
+  --rank=$RANK --lora_alpha=$RANK \
   --optimizer=adamW \
-  --learning_rate=1e-4 \
+  --learning_rate=$LR \
   --lr_scheduler=constant --lr_warmup_steps=100 \
   --max_train_steps=$STEPS \
   --checkpointing_steps=250 \
   --seed=0 \
   --report_to=tensorboard
 date
-ls -la /root/s26-lora
+ls -la $OUT
 echo TRAIN_DONE

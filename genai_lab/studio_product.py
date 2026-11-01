@@ -197,7 +197,7 @@ class ProductFlow:
         flux = Path(directory) / "flux"
         try:
             progress = json.loads((flux / "progress.json").read_text(encoding="utf-8"))
-            doing = "빠진 특징을 다시 그리는 중(자동 보정)" if progress.get("phase") == "autofix" else "이미지 만드는 중"
+            doing = {"autofix": "빠진 특징을 다시 그리는 중(자동 보정)", "face": "얼굴을 다듬는 중"}.get(progress.get("phase"), "이미지 만드는 중")
             self.window.status_label.setText(f"상태: {doing} · 후보 {progress['candidate']}/{progress['candidates']}")
         except (OSError, ValueError, KeyError):
             pass

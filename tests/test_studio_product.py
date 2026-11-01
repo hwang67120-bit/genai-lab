@@ -176,6 +176,9 @@ def test_preview_shows_the_newest_candidate_and_progress(product_window, tmp_pat
     (flux / "progress.json").write_text(json.dumps(dict(candidate=1, candidates=3, phase="autofix")), encoding="utf-8")
     w.studio.product.poll_preview()
     assert "자동 보정" in w.status_label.text() and "후보 1/3" in w.status_label.text()      # D-241 빠진 특징 다시 그리기
+    (flux / "progress.json").write_text(json.dumps(dict(candidate=3, candidates=3, phase="face")), encoding="utf-8")
+    w.studio.product.poll_preview()
+    assert "얼굴을 다듬는 중" in w.status_label.text()                                        # D-243
 
 
 def test_autofixed_candidate_says_what_was_asked_again(tmp_path):

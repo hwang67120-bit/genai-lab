@@ -98,3 +98,10 @@ def kinds_table():
     """앱에 들어 있는 태그 종류 표(프로젝트 폴더 기준 KINDS_TABLE). 없으면 빈 표."""
     from pathlib import Path
     return load_kinds(Path(__file__).resolve().parents[1] / KINDS_TABLE)
+
+
+def newly_lost(original, before, after, kinds, with_garment=False):
+    """다듬기 같은 뒤처리가 새로 잃게 한 원본 특징: 원본에 확실하고(PRESENT) 처리 전에는 있었는데(GONE 이상) 처리 뒤에 없는 태그 중
+    고칠 대상 종류(to_fix와 같은 규칙). 얼굴 다듬기가 T009 보라 눈을 파랗게 바꾼 것을 잡는다(D-243)."""
+    lost = [t for t, v in original.items() if v >= PRESENT and before.get(t, 0.0) >= GONE and after.get(t, 0.0) < GONE]
+    return to_fix(lost, kinds, with_garment)

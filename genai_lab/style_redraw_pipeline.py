@@ -74,6 +74,8 @@ def request_paths(runtime, overrides=None):
     paths = {key: str(model_path(key, legacy)) for key, legacy in LEGACY.items()}
     paths.update(model_cache=str(runtime.model_cache), head_semantic_repo=str(runtime.head_semantic_repo),
                  head_semantic_checkpoint=str(runtime.head_semantic_checkpoint))
+    if getattr(runtime, "head_cache", None):            # 얼굴 다듬기(D-243) — 머리 검출 캐시가 없으면 작업 프로세스가 다듬기를 건너뛴다
+        paths["head_cache"] = str(runtime.head_cache)
     paths.update({k: str(v) for k, v in (overrides or {}).items()})
     return paths
 

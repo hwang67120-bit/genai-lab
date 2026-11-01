@@ -57,3 +57,13 @@ def test_unsure_kinds_are_not_fixed_and_the_shipped_table_knows_the_furry_case()
 def test_body_exposure_words_are_never_asked_for():
     kinds = {"breasts": dict(kind="body", body=0.9), "navel": dict(kind="body", body=0.8), "whiskers": dict(kind="body", body=1.0)}
     assert to_fix(["breasts", "medium_breasts", "navel", "whiskers", "cleavage"], kinds) == ["whiskers"]
+
+
+def test_newly_lost_catches_a_post_process_that_changes_eye_colour():
+    from genai_lab.identity_autofix import newly_lost
+    original = {"purple_eyes": 0.9, "black_hair": 0.9, "smile": 0.8}
+    before = {"purple_eyes": 0.7, "black_hair": 0.9, "smile": 0.8}
+    after = {"blue_eyes": 0.8, "black_hair": 0.9, "smile": 0.1}
+    kinds = {"purple_eyes": dict(kind="body", body=1.0), "black_hair": dict(kind="body", body=1.0), "smile": dict(kind="scene", scene=1.0)}
+    assert newly_lost(original, before, after, kinds) == ["purple_eyes"]                     # 표정(장면)은 바뀌어도 된다
+    assert newly_lost(original, {"purple_eyes": 0.2}, after, kinds) == []                    # 처리 전에도 없던 것은 처리 탓이 아님

@@ -39,7 +39,8 @@ IDENTITY_SHIFT_CAP = np.array([40.0, 20.0, 20.0])   # 옷 그림의 흰 마네�
 # 장면 문장 공통 규칙(D-225): 황금빛 역광에서 검은 머리가 회색으로(U003), '걷기'가 서 있는 자세로, 거리 간판에 가짜 글자.
 SCENE_RULES = ("The scene lighting may add highlights and shadows but must not change the character's own colours: the hair, "
                "eyes, skin and clothes keep their colours from image 1. Show the pose and action of the scene clearly with the whole "
-               "body, arms and legs. ")
+               "body, arms and legs. Both hands are visible and fully drawn; do not hide a hand behind the back or inside a pocket. ")
+# 손 문장(D-242): 장면 동작에서 다른 손을 등 뒤로 숨겨 손 개수가 원본보다 적음(S39 기준 36장 중 5장, 간판 장소 16장 중 1장).
 # 간판 문장("Signs and screens … no letters")은 시험에서 가짜 글자를 못 막고 공원에 빈 간판을 새로 세워 뺐다(D-225).
 
 

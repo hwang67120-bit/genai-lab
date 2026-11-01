@@ -14,11 +14,14 @@
 """
 import random
 
-VERSION = 3
-FULL_BODY_TEXT = "Full-body shot: the whole character is visible from head to feet, with a detailed background."
+VERSION = 4
+# 4판(D-242, 사용자 11/1 "나중 연동을 생각해 배경 품질도"): 배경을 원근이 있는 장소로 — 앞·중간·먼 배경, 공기 원근, 캐릭터와 같은 마감.
+FULL_BODY_TEXT = ("Full-body shot: the whole character is visible from head to feet. The background is a richly detailed place with clear "
+                  "depth: a foreground, a middle ground and a distant background, natural perspective and soft atmospheric haze, "
+                  "painted with the same polish as the character.")
 
 OUTDOOR = (
-    "on a quiet city street with neon signs", "in a forest clearing", "on a rooftop overlooking the city",
+    "on a quiet city street with warm shop lights and potted plants", "in a forest clearing", "on a rooftop overlooking the city",
     "on a stone bridge over a river", "in a park with autumn trees", "on a sandy beach by the sea", "in a snowy mountain village",
     "in a field of tall grass under a wide sky", "on an empty train station platform", "in an old town alley with paper lanterns",
     "by a calm lake surrounded by mountains", "in a desert with distant dunes", "in a castle courtyard", "at a seaside harbor with small boats",
@@ -56,6 +59,8 @@ EXPRESSIONS = (
     "with a slightly shy smile", "with a cheerful open-mouthed smile", "with a curious look", "with a soft, relaxed expression",
     "with a proud, smug smile", "with a dreamy look",
 )
+# 4판: 장소 문장에서 글자를 부르는 말(neon signs)을 뺐다 — 네온 거리에서 가짜 한자 간판이 생기고 태그 검사는 못 잡음(S39).
+# '간판에 글자 없음' 문장은 빈 간판을 새로 세웠다(D-225) → 부르는 말 자체를 없앤다.
 # 시간대(낮/밤)를 먼저 고르고 그에 맞는 시간·조명만 고른다(1판 견본에 '햇빛 숲 + 밤 가로등' 같은 모순이 있었다).
 # 조명 문장에 'from behind'를 쓰지 않는다 — 요청 규칙이 뒷모습으로 읽어 눈 색·피부 검사를 뺀다(free_generation.BACK_VIEW_REQUEST).
 TIME = {

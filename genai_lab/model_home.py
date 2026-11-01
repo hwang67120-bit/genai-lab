@@ -21,6 +21,7 @@ LAYOUT = {
     "head_semantic_checkpoint": "hf/" + L2D_SAM_SNAPSHOT,
     # 모드 B(그림체로 다시 그리기). 모드 A만 쓰면 없어도 된다. 예전 SDXL 묶음·참조 그림·스타일 LoRA 자리는 D-216에서 뺐다.
     "flux_model": "flux/FLUX.2-klein-4B",                     # D-210 모드 B 본체(Apache-2.0)
+    "flux_style_lora": "flux/style-lora-gnlbq4-s500/pytorch_lora_weights.safetensors",   # D-236 그림체 LoRA(사용자 선택 500단계)
     "hand_cache": "head-detection/hub",                      # deepghs anime_hand_detection(머리 검출과 같은 캐시 구조)
 }
 

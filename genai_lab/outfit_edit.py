@@ -371,8 +371,21 @@ BODY_PARTS_UNKNOWN = ("If the character has animal ears, a tail or wings in imag
 BODY_PARTS_NONE = "The character has no animal ears, no tail and no wings; do not add any. "
 
 
-def body_parts_sentence(body_parts):
-    """확인된 부위 목록(튜플)에 맞는 문장. None은 확인하지 않음(조건문), 빈 튜플은 없음(추가 금지)."""
+def _kind_words(part, kinds):
+    """부위 종류 태그(identity_anchors.body_part_kinds) → 문장 낱말(D-236). 종류를 모르면 기존 낱말."""
+    tag = (kinds or {}).get(part)
+    if not tag:
+        return BODY_PART_WORDS[part]
+    words = tag.replace("_", " ")
+    if part == "ears":
+        floppy = "floppy " if kinds.get("ears_floppy") else ""
+        return f"{floppy}{words} (the same {words[:-1]} shape, size and angle as in image 1)"
+    return f"a {words}" if part == "tail" else words
+
+
+def body_parts_sentence(body_parts, kinds=None):
+    """확인된 부위 목록(튜플)에 맞는 문장. None은 확인하지 않음(조건문), 빈 튜플은 없음(추가 금지).
+    kinds: 부위 종류(dict, 예: ears="dog_ears") — 있으면 '동물 귀' 대신 종류를 적는다(D-236 그림체 LoRA가 귀 모양을 바꿈)."""
     if body_parts is None:
         return BODY_PARTS_UNKNOWN
     parts = tuple(body_parts)
@@ -380,7 +393,7 @@ def body_parts_sentence(body_parts):
         raise ValueError("캐릭터 부위는 ears / tail / wings 중에서 골라야 합니다.")
     if not parts:
         return BODY_PARTS_NONE
-    present = [BODY_PART_WORDS[p] for p in BODY_PARTS if p in parts]
+    present = [_kind_words(p, kinds) for p in BODY_PARTS if p in parts]
     absent = [BODY_PART_WORDS[p] for p in BODY_PARTS if p not in parts]
     text = (f"The character has {' and '.join(present)}; keep them exactly as in image 1 with the same number, shape, "
             "color and position; they are part of the body, not props or clothing. ")

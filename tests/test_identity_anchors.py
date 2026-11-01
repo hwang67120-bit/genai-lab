@@ -36,3 +36,21 @@ def test_summary_line():
     line = summary_ko(report)
     assert line.startswith("고정 특징 0/2 유지") and "black_hair→grey_hair" in line and "꼬리(tail)" in line
     assert summary_ko(compare([], {})) == "고정 특징: 판단할 특징 없음"
+
+
+def test_body_part_kinds_and_ear_kind_change_is_caught():
+    # D-236: 그림체 LoRA가 늘어진 개 귀를 서 있는 늑대 귀로 바꿨는데 부위 유무만 봐서 '유지'로 읽었다
+    from genai_lab.identity_anchors import body_part_kinds
+    scores = {"animal_ears": 0.94, "dog_ears": 0.85, "wolf_ears": 0.3, "tail": 0.91, "dog_tail": 0.85, "fox_tail": 0.6}
+    assert body_part_kinds(scores, ("ears", "tail")) == {"ears": "dog_ears", "tail": "dog_tail", "ears_floppy": True}
+    assert body_part_kinds(scores, ("tail",)) == {"tail": "dog_tail"}                 # 없는 부위의 종류는 넣지 않는다
+    assert body_part_kinds({"wolf_ears": 0.8}, ("ears",)) == {"ears": "wolf_ears"}   # 선 개과 귀는 wolf_ears — '늘어진' 없음
+    assert body_part_kinds({"animal_ears": 0.9, "cat_ears": 0.4}, ("ears",)) == {}     # 확실하지 않으면 종류 없음(기존 문장)
+    assert body_part_kinds({"cat_ears": 0.9, "floppy_ears": 0.7}, ("ears",)) == {"ears": "cat_ears", "ears_floppy": True}
+    original = anchors(scores)
+    assert ("ear_kind", "dog_ears") in {(a["group"], a["tag"]) for a in original}
+    drifted = compare(original, {"animal_ears": 0.98, "dog_ears": 0.18, "wolf_ears": 0.46, "tail": 0.96, "wolf_tail": 0.58,
+                                 "dog_tail": 0.24})
+    assert {i["tag"] for i in drifted["items"] if i["status"] in ("lost", "changed")} == {"dog_ears", "dog_tail"}
+    kept = compare(original, {"animal_ears": 0.95, "dog_ears": 0.82, "tail": 0.95, "dog_tail": 0.87})
+    assert kept["score"] == 1.0

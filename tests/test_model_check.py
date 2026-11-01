@@ -141,3 +141,27 @@ def test_generate_stops_before_any_analysis_when_models_are_missing(monkeypatch,
     assert len(failures) == 1 and isinstance(failures[0], model_check.MissingModelFiles) and "할 일" in str(failures[0])
     assert window.studio.task is None
     window.close()
+
+
+def test_flux_check_needs_the_style_lora(tmp_path):
+    # D-236: 그림체 LoRA 한 파일도 FLUX 검사에 — 없음·크기 다름, 깊은 검사는 SHA까지
+    root = tmp_path / "flux"
+    (root / "a").mkdir(parents=True)
+    (root / "a" / "x.bin").write_bytes(b"12345")
+    lora = tmp_path / "lora.safetensors"
+    manifest = tmp_path / "flux.json"
+    manifest.write_text(json.dumps(dict(files={"a/x.bin": 5}, style_lora=dict(size=3, sha256=hashlib.sha256(b"abc").hexdigest()))),
+                        encoding="utf-8")
+    check = lambda deep=False: model_check._check_flux({}, root, manifest, lora=lora, deep=deep)
+    assert [p["problem"] for p in check()] == ["없음"]
+    lora.write_bytes(b"abcd")
+    assert [p["problem"] for p in check()] == ["크기 다름"]
+    lora.write_bytes(b"abd")
+    assert check() == [] and [p["problem"] for p in check(deep=True)] == ["SHA 다름"]
+    lora.write_bytes(b"abc")
+    assert check(deep=True) == []
+
+
+def test_flux_manifest_lists_the_installed_style_lora():
+    spec = json.loads((ROOT / "configs" / "flux_model_files.json").read_text(encoding="utf-8"))["style_lora"]
+    assert spec["size"] == 66866416 and len(spec["sha256"]) == 64 and spec["weight"] == 1.0

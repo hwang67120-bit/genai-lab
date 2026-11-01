@@ -13,6 +13,7 @@ from PIL import Image
 
 # 모델 폴더(GENAI_MODEL_HOME)가 없을 때의 개발 PC 경로.
 LEGACY = {"flux_model": Path("D:/genai-cache/models/FLUX.2-klein-4B-e7b7dc27"),
+          "flux_style_lora": Path("D:/genai-cache/models/flux-style-lora-gnlbq4-s500/pytorch_lora_weights.safetensors"),
           "hand_cache": Path("D:/genai-cache/huggingface")}
 TIMEOUTS = {"pose": 600.0, "prepare": 900.0, "generate": 1800.0, "combine": 600.0}
 

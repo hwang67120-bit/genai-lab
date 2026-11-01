@@ -24,5 +24,13 @@
     "transformer/diffusion_pytorch_model.safetensors": 7751109744,
     "vae/config.json": 821,
     "vae/diffusion_pytorch_model.safetensors": 168120878
+  },
+  "style_lora": {
+    "name": "gnlbq4 style LoRA step 500 (D-236)",
+    "file": "pytorch_lora_weights.safetensors",
+    "size": 66866416,
+    "sha256": "2403f169d5629b580070012a5c9b8bafba8bc8aaaef8c912dff749eed336a523",
+    "weight": 1.0,
+    "note": "FLUX.2-klein-base-4B(Apache-2.0)에서 학습, 사용자가 고른 Qwen-Image-2512(Apache-2.0) 그림 21장"
   }
 }

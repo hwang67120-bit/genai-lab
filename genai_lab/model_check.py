@@ -22,7 +22,7 @@ LABELS = {
     "head_segmentation": "머리 분할 모델(l2d_sam)",
     "see_through_code": "머리 분할 도구 코드(see-through)",
     "qwen": "이미지 생성 모델(Qwen-Image-Edit-2511)",
-    "flux": "이미지 생성 모델(FLUX.2-klein-4B)",
+    "flux": "이미지 생성 모델(FLUX.2-klein-4B + 그림체 LoRA)",
 }
 # 사용자 화면 흐름별 필수 구성(CPU 관찰·정적 확인, INSTALLER_PACKAGING_PREP 3-1)
 FLOWS = {
@@ -64,10 +64,10 @@ def _sha(path):
     return h.hexdigest()
 
 
-def check_models(runtime, settings, flow, *, deep=False, manifest_path=MANIFEST, progress=None, flux_root=None):
+def check_models(runtime, settings, flow, *, deep=False, manifest_path=MANIFEST, progress=None, flux_root=None, flux_lora=None):
     """flow('outfit'|'staging')에 필요한 모델 → dict(ok, problems, locations). problems: 구성·경로·문제(없음/크기 다름/SHA 다름).
     progress: 구성마다 진행 문장을 받는 함수(준비 화면용, 검사 내용은 같다).
-    flux_root: FLUX 모델 폴더(준비 화면이 고른 모델 폴더 기준). 없으면 실행 설정의 위치(model_path)."""
+    flux_root: FLUX 모델 폴더(준비 화면이 고른 모델 폴더 기준). 없으면 실행 설정의 위치(model_path). flux_lora: 그림체 LoRA 파일(같은 규칙)."""
     manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
     by_key = {c["key"]: c for c in manifest["components"]}
     problems, locations = [], {}
@@ -78,7 +78,7 @@ def check_models(runtime, settings, flow, *, deep=False, manifest_path=MANIFEST,
             problems += _check_qwen(settings, deep, locations)
             continue
         if key == "flux":
-            problems += _check_flux(locations, flux_root)
+            problems += _check_flux(locations, flux_root, lora=flux_lora, deep=deep)
             continue
         component = by_key[key]
         base = component_location(key, component["folder"], runtime)
@@ -117,16 +117,28 @@ def _check_qwen(settings, deep, locations):
     return problems
 
 
-def _check_flux(locations, root=None, manifest_path=FLUX_MANIFEST):
-    """FLUX 모델 폴더(모델 폴더 배치 flux_model 또는 개발 PC 경로)의 필수 파일이 있고 크기가 같은지. SHA 목록은 배포 단계에서."""
+def _check_flux(locations, root=None, manifest_path=FLUX_MANIFEST, lora=None, deep=False):
+    """FLUX 모델 폴더(모델 폴더 배치 flux_model 또는 개발 PC 경로)의 필수 파일이 있고 크기가 같은지. SHA 목록은 배포 단계에서.
+    그림체 LoRA(D-236) 한 파일도 같이 — 크기, deep이면 SHA까지."""
+    from genai_lab.model_home import model_path
+    from genai_lab.style_redraw_pipeline import LEGACY
     if root is None:
-        from genai_lab.model_home import model_path
-        from genai_lab.style_redraw_pipeline import LEGACY
         root = model_path("flux_model", LEGACY["flux_model"])
-    root = Path(root)
+    if lora is None:
+        lora = model_path("flux_style_lora", LEGACY["flux_style_lora"])
+    root, lora = Path(root), Path(lora)
     locations["flux"] = str(root)
-    files = json.loads(Path(manifest_path).read_text(encoding="utf-8"))["files"]
+    manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
+    files = manifest["files"]
     problems = []
+    spec = manifest.get("style_lora")
+    if spec:
+        if not lora.is_file():
+            problems.append(dict(component="flux", label=LABELS["flux"], path=str(lora), problem="없음"))
+        elif lora.stat().st_size != spec["size"]:
+            problems.append(dict(component="flux", label=LABELS["flux"], path=str(lora), problem="크기 다름"))
+        elif deep and _sha(lora) != spec["sha256"]:
+            problems.append(dict(component="flux", label=LABELS["flux"], path=str(lora), problem="SHA 다름"))
     for relative, size in files.items():
         path = root / relative
         if not path.is_file():

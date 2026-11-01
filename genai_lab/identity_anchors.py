@@ -17,6 +17,22 @@ MARK_TAGS = ("scar", "scar_on_face", "scar_across_eye", "mole", "mole_under_eye"
              "whisker_markings", "beauty_mark")
 # 묶음: (이름, 화면 이름, 태그들, 한 가지만 맞는 묶음인가)
 HAIR_PATTERN_TAGS = ("multicolored_hair", "gradient_hair", "streaked_hair", "two-tone_hair", "colored_inner_hair", "colored_tips")
+# 귀·꼬리·날개의 종류(D-236): 부위 유무만 보면 그림체 LoRA가 늘어진 개 귀를 서 있는 늑대·여우 귀로 바꿔도 '유지'로 읽었다.
+# WD v3 태그 목록에 있는 동물 종류만. 한 부위에 종류는 하나(가장 강한 것).
+EAR_KIND_TAGS = ("dog_ears", "cat_ears", "fox_ears", "wolf_ears", "rabbit_ears", "lop_rabbit_ears", "horse_ears", "mouse_ears", "cow_ears",
+                 "tiger_ears", "raccoon_ears", "lion_ears", "bear_ears", "bird_ears", "sheep_ears", "squirrel_ears", "jackal_ears",
+                 "deer_ears", "goat_ears", "leopard_ears", "bat_ears", "panda_ears", "monkey_ears", "jaguar_ears", "owl_ears",
+                 "alpaca_ears", "weasel_ears", "hedgehog_ears", "otter_ears", "pig_ears", "moose_ears")
+TAIL_KIND_TAGS = ("dog_tail", "cat_tail", "fox_tail", "wolf_tail", "rabbit_tail", "horse_tail", "demon_tail", "dragon_tail", "mouse_tail",
+                  "fish_tail", "raccoon_tail", "tiger_tail", "shark_tail", "cow_tail", "bird_tail", "lion_tail", "squirrel_tail",
+                  "monkey_tail", "snake_tail", "lizard_tail", "leopard_tail", "cetacean_tail", "crocodilian_tail", "bear_tail",
+                  "jaguar_tail", "deer_tail", "weasel_tail", "otter_tail", "hedgehog_tail")
+WING_KIND_TAGS = ("bat_wings", "feathered_wings", "demon_wings", "angel_wings", "fairy_wings", "bird_wings", "insect_wings",
+                  "butterfly_wings", "dragon_wings", "mechanical_wings", "energy_wings", "ice_wings", "crystal_wings", "fiery_wings")
+KIND_TAGS = {"ears": EAR_KIND_TAGS, "tail": TAIL_KIND_TAGS, "wings": WING_KIND_TAGS}
+# 늘어진 귀: WD v3의 floppy_ears는 늘어진 개 귀(U007)에도 0.02 미만이라 쓸 수 없다. 태그 관례상 선 개과 귀는 wolf_ears(사용자 수인 그림
+# 2장 0.42·0.45), dog_ears는 늘어진 귀 → 이 두 종류는 '늘어진'을 붙인다. 낱말 하나로 U007 개 귀 유지가 1/3 → 3/3(D-237).
+FLOPPY_EAR_KINDS = ("dog_ears", "lop_rabbit_ears")
 GROUPS = (
     ("hair_color", "머리색", tuple(t for t in HAIR_COLOR_TAGS if t not in HAIR_PATTERN_TAGS), True),
     ("hair_pattern", "머리 무늬", HAIR_PATTERN_TAGS, False),
@@ -26,6 +42,9 @@ GROUPS = (
     ("skin", "피부", SKIN_TAGS, True),
     ("head_accessories", "머리 장식", HEAD_ACCESSORY_TAGS, False),
     ("marks", "고유 표시", MARK_TAGS, False),
+    ("ear_kind", "귀 종류", EAR_KIND_TAGS, True),
+    ("tail_kind", "꼬리 종류", TAIL_KIND_TAGS, True),
+    ("wing_kind", "날개 종류", WING_KIND_TAGS, True),
 )
 BODY_PART_LABELS = {"ears": "동물 귀", "tail": "꼬리", "wings": "날개"}
 
@@ -43,6 +62,21 @@ def anchors(scores):
     for part in guessed_body_parts(dict(character_scores=scores)):
         found.append(dict(group="body_parts", label=BODY_PART_LABELS[part], tag=part, score=None))
     return found
+
+
+def body_part_kinds(scores, body_parts):
+    """있는 부위(body_parts)마다 원본 태그에서 가장 강한 종류(ANCHOR_MIN 이상) → dict(ears="dog_ears", ...). 생성 문장에 종류를 적어
+    그림체 LoRA가 모양을 바꾸지 못하게 한다(D-236). 늘어진 귀(FLOPPY_EAR_KINDS 또는 floppy_ears 태그)면 ears_floppy=True."""
+    scores = scores or {}
+    kinds = {}
+    for part in body_parts or ():
+        strong = sorted(((float(scores.get(t, 0.0)), t) for t in KIND_TAGS.get(part, ()) if float(scores.get(t, 0.0)) >= ANCHOR_MIN),
+                        reverse=True)
+        if strong:
+            kinds[part] = strong[0][1]
+    if "ears" in kinds and (kinds["ears"] in FLOPPY_EAR_KINDS or float(scores.get("floppy_ears", 0.0)) >= ANCHOR_MIN):
+        kinds["ears_floppy"] = True
+    return kinds
 
 
 def compare(original_anchors, result_scores):

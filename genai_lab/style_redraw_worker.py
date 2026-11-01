@@ -155,7 +155,7 @@ def prepare_flux(directory, req, canvas, rgb, scores, safety, joints, face, star
             save(directory / "prepare.json", dict(state="refused", code="garment_safety",
                                                   message="이 옷 그림은 사용할 수 없습니다.", safety=garment_safety))
             return
-    from genai_lab.identity_anchors import anchors
+    from genai_lab.identity_anchors import anchors, body_part_kinds
     from genai_lab.studio_controller import guessed_body_parts
     parts, masks = person_and_parts(rgb, req)
     guessed = guessed_gender(dict(character_scores=scores))
@@ -165,13 +165,15 @@ def prepare_flux(directory, req, canvas, rgb, scores, safety, joints, face, star
     # 동물 귀·꼬리·날개: 사람이 확정한 값(캐릭터 기억 등)이 있으면 그것, 없으면 태그 자동 추정(사용자 화면과 같은 규칙, D-221)
     confirmed_parts = req.get("confirmed_body_parts")
     body_parts = tuple(confirmed_parts) if confirmed_parts is not None else guessed_body_parts(dict(character_scores=scores))
+    kinds = body_part_kinds(scores, body_parts)     # 귀·꼬리·날개 종류를 문장에(D-236)
     np.savez_compressed(directory / "original-masks.npz", **masks)
     hands = count_hands([rgb], req)[0]
     save(directory / "prepare.json", dict(
         state="ready", engine="flux", with_garment=with_garment, seconds=round(time.time() - started, 1), gender=confirmed,
         guessed_gender=guessed, traits=traits, body_parts=list(body_parts), identity_anchors=anchors(scores),
-        body_parts_source="confirmed" if confirmed_parts is not None else "automatic_tags",
-        scene=req.get("scene"), prompt=flux_prompt(traits, with_garment, body_parts, req.get("scene")), face_box=face, original_hands=hands,
+        body_parts_source="confirmed" if confirmed_parts is not None else "automatic_tags", body_part_kinds=kinds,
+        scene=req.get("scene"), prompt=flux_prompt(traits, with_garment, body_parts, req.get("scene"), kinds), face_box=face,
+        original_hands=hands,
         warnings=support_warnings(scores, joints), safety=safety, joints_used=sorted(joints),
         note="특징 문장·성별은 자동 측정이며 사람 확인 전이다. "
              + ("자세·장면은 장면 문장을 따른다." if req.get("scene") else "자세·구도는 원본을 따른다.")))
@@ -185,7 +187,7 @@ def generate_flux(directory, req):
     from diffusers import Flux2KleinPipeline
     from diffusers.quantizers import PipelineQuantizationConfig
     from genai_lab.style_redraw_flux import (GUIDANCE, IDENTITY_PARTS, IDENTITY_SHIFT_CAP, MAX_SEQUENCE_LENGTH, OUTPUT_SIZE, PARTS, SEEDS, STEPS,
-                                             body_part_tags, colour_match, hand_flag, missing_body_parts)
+                                             STYLE_LORA_WEIGHT, body_part_tags, colour_match, hand_flag, missing_body_parts)
     from genai_lab.clothing_analysis import ClothingDesignAnalysisSettings, WdTagSession
     from genai_lab.identity_anchors import compare as compare_anchors
     prepared = json.loads((directory / "prepare.json").read_text(encoding="utf-8"))
@@ -196,6 +198,10 @@ def generate_flux(directory, req):
         components_to_quantize=["transformer", "text_encoder"])
     pipe = Flux2KleinPipeline.from_pretrained(str(req["flux_model"]), torch_dtype=torch.bfloat16, quantization_config=quant,
                                               low_cpu_mem_usage=True, local_files_only=True)
+    # 그림체 LoRA(D-236): 4비트 본체 위에 붙인다. CPU 오프로드 전에 붙여야 한다(시험 S27과 같은 순서).
+    lora = Path(req["flux_style_lora"])
+    pipe.load_lora_weights(str(lora.parent), weight_name=lora.name, adapter_name="style")
+    pipe.set_adapters(["style"], adapter_weights=[STYLE_LORA_WEIGHT])
     pipe.enable_model_cpu_offload()
     pipe.vae.enable_tiling()
     loaded = round(time.time() - started, 1)
@@ -237,7 +243,8 @@ def generate_flux(directory, req):
                                body_part_tags=body_part_tags(scores),
                                identity_anchors=compare_anchors(prepared.get("identity_anchors") or [], scores)))
     save(directory / "generation.json", dict(
-        state="generated_unreviewed", engine="flux", with_garment=with_garment, load_seconds=loaded, candidates=candidates, review="사용자가 후보 중 1장을 고른다",
+        state="generated_unreviewed", engine="flux", style_lora=dict(file=str(lora), weight=STYLE_LORA_WEIGHT),
+        with_garment=with_garment, load_seconds=loaded, candidates=candidates, review="사용자가 후보 중 1장을 고른다",
         peak_reserved_gib=peak, memory_cap_gib=MEMORY_CAP_GIB, prompt=prepared["prompt"],
         model=dict(name="black-forest-labs/FLUX.2-klein-4B", path=str(req["flux_model"]), license="Apache-2.0")))
 

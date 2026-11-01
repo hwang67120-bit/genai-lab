@@ -10,6 +10,15 @@
 - 실제 확인(`s5u-part-combine-20261031/`): N004 43+44, V002 43+44, T017 43+42(어긋남 3.8px), T009 42+43 모두 경계 없음. CPU 시험 37개. 화면 연결은 S5에서.
 - **사용자 판정(10/31): N004·V002·T009 합친 결과 통과.** T017은 "얼굴에 광원이 너무 강해 윤곽이 안 보임".
 
+## D-237 그림체 LoRA를 앱에 연결(세기 1.0), 귀·꼬리·날개 종류를 문장과 고정 특징표에 (2026-11-01)
+
+- **사용자: 세기 1.0 결과 3장(U007 귀 힌트 s43·s42, U002 s44 넥타이)을 보여 주며 "이 정도면 괜찮은 것 같아"** → 세기 1.0.
+- 연결: LoRA 500단계를 `D:/genai-cache/models/flux-style-lora-gnlbq4-s500/`(lora-record.json·학습 자료 출처)에, 모델 폴더 배치 `flux/style-lora-gnlbq4-s500/…`(model_home.LAYOUT `flux_style_lora`), `configs/flux_model_files.json`의 `style_lora`(크기·SHA·세기). 작업 프로세스(generate_flux)가 4비트 본체에 붙이고(오프로드 전) generation.json에 파일·세기 기록, 문장 맨 앞에 트리거 낱말(`flux_prompt`). 시작 검사(`_check_flux`)는 LoRA 없음·크기 다름, 깊은 검사는 SHA까지.
+- 귀·꼬리·날개 종류: `identity_anchors.body_part_kinds`(WD 태그 중 가장 강한 종류, 0.5 이상, 있는 부위만) → `body_parts_sentence(kinds)`가 'dog ears (the same dog ear shape, size and angle as in image 1) and a dog tail'처럼. 고정 특징표에 귀·꼬리·날개 종류 묶음(한 가지만) — 어제처럼 개 귀가 늑대 귀가 되면 '바뀜/사라짐'.
+- **실제 화면 GPU 확인(`flux-style-lora-product-s30-20261101/`, product_flow_run, 자동 장면):** L1 U007 289초, L2 T009+옷 192초, L3 U002 160초, 모두 저장까지. 최고 메모리 5.19GiB, **옷 그림이 있으면 6.11GiB**(LoRA 없을 때 4.55) — 상한 6.5GiB 안이지만 여유가 줄었다. L2·L3 고정 특징 4/4.
+  - L1 U007은 종류를 적어도 1/3만 개 귀(눈 마을·두 팔 올림 장면에서 여우·늑대 귀 2장, 고정 특징표가 '바뀜: 귀 종류(dog_ears→fox_ears)'로 잡음). 같은 장면·seed로 낱말만: 'floppy dog ears' 3/3, 'dog ears that droop down' 2/3 → '늘어진'이 결정적. WD v3 floppy_ears는 늘어진 개 귀에도 0.02 미만이라 못 씀; 태그 관례상 선 개과 귀는 wolf_ears(수인 그림 2장 0.42·0.45), dog_ears는 늘어진 귀 → dog_ears·lop_rabbit_ears면 'floppy'를 붙임. 다시 실행(rerun-L1, 다른 자동 장면 숲·비): **3/3 늘어진 개 귀·개 꼬리**, 고정 특징 6/7(ahoge만).
+- 그 밖: 장면 조합 3판(D-232) 뒤 옛 배포 시험(요청 34 P5)이 같은 seed로 2판 문장을 기대해 실패 → 기록된 문장을 그대로 쓰는지만 보도록 고침.
+
 ## D-236 그림체 LoRA 500단계(사용자 선택), 귀 모양은 세기가 아니라 '귀 종류'를 문장에 넣어 해결 (2026-11-01)
 
 - **사용자: S27에서 U002 500단계 seed 44, U007 500단계 seed 43을 골라 "이 두 개가 좋다", 귀 문제는 무료 시험부터.**

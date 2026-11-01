@@ -79,7 +79,7 @@ def run_check(home, run_id, *, progress=print):
         if not home.is_dir():
             raise FileNotFoundError(f"모델 폴더가 없습니다: {home}")
         checked = model_check.check_models(runtime_for_home(home), None, "flux", deep=True, progress=progress,
-                                           flux_root=home / LAYOUT["flux_model"])
+                                           flux_root=home / LAYOUT["flux_model"], flux_lora=home / LAYOUT["flux_style_lora"])
         result.update(ok=checked["ok"], problems=checked["problems"][:200], problem_count=len(checked["problems"]),
                       message="" if checked["ok"] else model_check.message(checked), locations=checked["locations"])
     except Exception as error:  # noqa: BLE001 — 검사 실패도 결과(완료로 저장하지 않음)

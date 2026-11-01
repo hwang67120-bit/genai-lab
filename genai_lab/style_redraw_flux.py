@@ -22,6 +22,11 @@ STYLE = ("highly detailed semi-realistic anime illustration, dense digital paint
          "skin rendering, subtle glossy highlights and light blush, detailed eyes with reflections, very fine individual hair strands with "
          "loose flyaway wisps and strong backlight, deep realistic fabric folds and creases, detailed material texture, strong directional "
          "sunlight with sharp deep shadows and soft bounce light, high detail density, cinematic colour grading")
+# 그림체 LoRA(D-236, 사용자 11/1): 사용자가 고른 Q4 그림 21장(Qwen-Image-2512, Apache-2.0)으로 기본판에서 학습한 500단계 저장본을
+# 빠른 판에 세기 1.0으로 붙인다(머리 광택·눈 반사광·테두리 빛·매끈한 피부). 학습 설명문 맨 앞의 트리거 낱말을 문장 맨 앞에 둔다.
+# 파일은 모델 폴더 flux_style_lora(configs/flux_model_files.json의 style_lora에 크기·SHA).
+STYLE_LORA_TRIGGER = "gnlbq4 style illustration."
+STYLE_LORA_WEIGHT = 1.0
 BACKGROUND = "Weathered concrete wall background with soft texture, strong warm key light from upper left."
 COLOUR_SHIFT_CAP = np.array([15.0, 12.0, 12.0])     # L, a, b — 이보다 크게 옮기지 않는다(잘못 잡은 영역의 피해를 줄임)
 SPREAD_CLIP = (0.8, 1.25)
@@ -38,13 +43,18 @@ SCENE_RULES = ("The scene lighting may add highlights and shadows but must not c
 # 간판 문장("Signs and screens … no letters")은 시험에서 가짜 글자를 못 막고 공원에 빈 간판을 새로 세워 뺐다(D-225).
 
 
-def flux_prompt(traits, with_garment=False, body_parts=None, scene=None):
+def flux_prompt(traits, with_garment=False, body_parts=None, scene=None, body_part_kinds=None):
     """같은 캐릭터를 목표 그림체로 다시 그리라는 문장. 특징 문장(자동 측정)과 피부색 유지 지시를 넣는다.
     with_garment: 그림 2의 옷으로 갈아입히고 그린다(D-212, 모드 A·B 통합). 원래 옷 낱말은 빼야 새 옷과 다투지 않는다.
     body_parts: 확인된 동물 귀·꼬리·날개(튜플, 없으면 빈 튜플, 모르면 None) — Qwen 경로와 같은 부위 문장(D-108·D-111, D-221).
-    scene: 새 자세·장면 문장(scene_composer 또는 검사를 지난 사용자 문장, D-222). 없으면 원본 자세 + 콘크리트 벽 배경."""
+    scene: 새 자세·장면 문장(scene_composer 또는 검사를 지난 사용자 문장, D-222). 없으면 원본 자세 + 콘크리트 벽 배경.
+    body_part_kinds: 귀·꼬리·날개의 종류(identity_anchors.body_part_kinds, D-236). 맨 앞에는 그림체 LoRA 트리거 낱말."""
+    return f"{STYLE_LORA_TRIGGER} {_prompt_body(traits, with_garment, body_parts, scene, body_part_kinds)}"
+
+
+def _prompt_body(traits, with_garment, body_parts, scene, body_part_kinds):
     from genai_lab.outfit_edit import body_parts_sentence
-    parts = body_parts_sentence(None if body_parts is None else tuple(body_parts))
+    parts = body_parts_sentence(None if body_parts is None else tuple(body_parts), body_part_kinds)
     if scene:
         # D-219·D-221 장면 시험 문장(처음 보는 8명 동일성 유지)과 같은 짜임. 옷 그림이 있으면 그 옷을 입고 새 장면에.
         outfit = ("wearing the complete outfit shown in image 2 (replace all of the character's current clothing with it, matching its "

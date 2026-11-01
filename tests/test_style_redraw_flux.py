@@ -39,6 +39,19 @@ class TestFluxHelpers(unittest.TestCase):
         self.assertIn("If the character has animal ears, a tail or wings", flux_prompt([]))          # 모름 = 조건문
         self.assertIn("no animal ears, no tail and no wings", flux_prompt([], with_garment=True, body_parts=()))
 
+    def test_prompt_starts_with_style_lora_trigger_and_names_part_kinds(self):
+        # D-236: 그림체 LoRA 트리거 낱말이 맨 앞, 귀·꼬리 종류를 적으면 LoRA가 귀 모양을 바꾸지 못했다(9/9)
+        from genai_lab.style_redraw_flux import STYLE_LORA_TRIGGER
+        for p in (flux_prompt([]), flux_prompt([], with_garment=True), flux_prompt([], scene="Walking in a park.")):
+            self.assertTrue(p.startswith(STYLE_LORA_TRIGGER + " "))
+        kinds = dict(ears="dog_ears", tail="dog_tail")
+        p = flux_prompt([dict(text="red hair")], body_parts=("ears", "tail"), scene="Standing in a greenhouse.", body_part_kinds=kinds)
+        self.assertIn("The character has dog ears (the same dog ear shape, size and angle as in image 1) and a dog tail; keep them", p)
+        floppy = flux_prompt([], body_parts=("ears",), body_part_kinds=dict(ears="dog_ears", ears_floppy=True))
+        self.assertIn("has floppy dog ears (", floppy)
+        self.assertIn("The character has animal ears and a tail or tails;",
+                      flux_prompt([], body_parts=("ears", "tail"), body_part_kinds={}))      # 종류를 모르면 기존 문장
+
     def test_scene_prompt_changes_pose_and_keeps_identity(self):
         traits = [dict(name="eyes", text="purple eyes"), dict(name="clothes", text="black bodysuit")]
         p = flux_prompt(traits, body_parts=("ears", "tail"), scene="The character is sitting on a bench in a park.")

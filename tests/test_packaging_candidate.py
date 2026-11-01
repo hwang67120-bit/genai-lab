@@ -73,12 +73,16 @@ def test_segmentation_comparison_counts_differing_pixels(tmp_path):
     assert not result["all_equal"] and result["arrays"]["protect"]["differing"] == 2 and result["arrays"]["face"]["equal"]
 
 
-def test_p5_cases_reproduce_the_request_34_scenes_from_their_seeds():
-    from genai_lab.scene_composer import compose_scene
+def test_p5_cases_keep_the_request_34_scenes_they_ran_with():
+    # 요청 34(기준 빌드, 읽기 전용)는 장면 조합 2판의 문장으로 돌았다. 3판(D-232)은 앉기·강한 역광·진한 색을 빼서 같은 seed라도
+    # 다른 장면이 나온다 → 기록된 문장을 그대로 쓰는지(다시 만들지 않는지)와 현재 판이 3판인지만 본다.
+    from genai_lab.scene_composer import VERSION, compose_scene
     cases = json.loads((ROOT / "outputs/packaging-gpu-20261023/cases-p5.json").read_text(encoding="utf-8"))
     assert [c["case"] for c in cases] == ["A3", "B2"] and cases[0]["garment"] is None and cases[1]["garment"]
+    assert VERSION == 3
     for case in cases:
-        assert compose_scene(case["scene_seed"])["text"] == case["scene_text"]
+        assert case["scene_text"].startswith("The character is") and "Full-body shot" in case["scene_text"]
+        assert compose_scene(case["scene_seed"])["version"] == 3
 
 
 runner = load("run_candidate_gpu", "packaging/run_candidate_gpu.py")

@@ -26,3 +26,29 @@ def test_fix_sentence_goes_before_the_keep_instruction():
     assert fixed_prompt(p, []) == p and fix_sentence([]) == ""
     assert fixed_prompt("no anchor here.", ["furry"]).endswith("must be shown clearly: furry.")
     assert remaining(ORIGINAL, {"furry": 0.88, "animal_nose": 0.14}, ["furry", "animal_nose"]) == ["animal_nose"]
+
+
+def test_next_round_keeps_asking_for_everything_and_adds_new_losses():
+    from genai_lab.identity_autofix import next_round
+    asked = next_round(["furry", "animal_nose"], ["animal_nose", "rabbit_tail", "standing"], KINDS | {"rabbit_tail": dict(kind="body")})
+    assert asked == ["furry", "animal_nose", "rabbit_tail"]                        # 안 돌아온 코도 계속(빼면 털까지 다시 잃음)
+
+
+def test_best_per_seed_prefers_fewer_lost_then_the_earlier_round():
+    from genai_lab.identity_autofix import best_per_seed
+    r0 = [{"furry": 0.0}, {"furry": 0.0}, {"furry": 0.9}]
+    r1 = [{"furry": 0.9}, {"furry": 0.8}, {"furry": 0.9}]
+    r2 = [{"furry": 0.9}, {"furry": 0.0}, {"furry": 0.1}]
+    assert best_per_seed(ORIGINAL, [r0, r1, r2], ["furry"]) == [1, 1, 0]
+
+
+def test_unsure_kinds_are_not_fixed_and_the_shipped_table_knows_the_furry_case():
+    import json
+    from pathlib import Path
+    kinds = {"qr_code": dict(kind="outfit", outfit=0.66), "cleavage": dict(kind="outfit", outfit=0.95), "plant": dict(kind="body", body=0.47),
+             "furry": dict(kind="body", body=1.0)}
+    assert to_fix(["qr_code", "cleavage", "plant", "furry"], kinds) == ["cleavage", "furry"]
+    table = json.loads((Path(__file__).resolve().parents[1] / "configs" / "tag_kinds_wd_v3.json").read_text(encoding="utf-8"))["table"]
+    assert len(table) > 8000
+    assert {table[t]["kind"] for t in ("furry", "body_fur", "animal_nose", "dog_ears", "very_dark_skin", "scar")} == {"body"}
+    assert {table[t]["kind"] for t in ("realistic", "sky", "smile", "sitting", "hand_on_own_hip", "simple_background")} == {"scene"}

@@ -1,6 +1,8 @@
 """S32 자동 고치기 순환 시험(identity_autofix, 최대 2바퀴): 앞서 앱 흐름으로 만든 작업 폴더마다 원본·후보 태그 비교 → 잃은 태그 →
 AI 태그 분류(tag_kinds)로 장면 태그 빼기 → '빠진 특징' 문장 붙여 같은 seed로 다시 → 아직 잃었으면 한 번 더. 사람이 고른 항목 없음.
 잃은 태그가 없으면 다시 그리지 않는다(멀쩡한 캐릭터를 건드리지 않는지 = 회귀 확인). CCIP 차이(0.178 미만 같은 캐릭터)도 같이 기록.
+바퀴 규칙(3판): 요청은 계속 묶어서(내려놓으면 털까지 다시 잃음), seed마다 첫 진단 태그를 가장 덜 잃은 바퀴의 후보(best_per_seed).
+태그 종류: 환경 변수 S32_KINDS에 표(tag_kinds 판정 json)가 있으면 그것, 없으면 이 PC의 4B 분류기.
 사용: python autofix_loop_s32.py <출력 폴더> <이름>=<작업 폴더(flux)> ...
 """
 import os
@@ -10,7 +12,8 @@ from pathlib import Path
 sys.path.insert(0, r"D:\Code\genai-lab"); sys.path.insert(0, r"D:\Code\genai-lab\genai_lab")
 from PIL import Image, ImageDraw
 
-from genai_lab.identity_autofix import MAX_ROUNDS, PRESENT, fixed_prompt, lost_tags, remaining, to_fix
+from genai_lab.identity_autofix import (MAX_ROUNDS, PRESENT, best_per_seed, fixed_prompt, load_kinds, lost_tags, next_round, remaining,
+                                       to_fix)
 
 
 def main():
@@ -34,9 +37,14 @@ def main():
             state[name] = dict(R=R, prompt=prepared["prompt"], with_garment=bool(prepared.get("with_garment")), original=original,
                                rounds=[dict(prompt=prepared["prompt"], files=[str(R / f"result-raw-seed{s}.png") for s in SEEDS], scores=results)])
     started = time.time()
-    with TagKindClassifier(model / "text_encoder", model / "tokenizer") as c:      # 원본 태그 전체를 한 번에(바퀴마다 다시 올리지 않게)
+    table = load_kinds(os.environ.get("S32_KINDS", ""))
+    if table:
         for s in state.values():
-            s["kinds"] = c.classify([k for k, v in s["original"].items() if v >= PRESENT])
+            s["kinds"] = {k: table.get(k, dict(kind="body")) for k, v in s["original"].items() if v >= PRESENT}
+    else:
+        with TagKindClassifier(model / "text_encoder", model / "tokenizer") as c:      # 원본 태그 전체를 한 번에(바퀴마다 다시 올리지 않게)
+            for s in state.values():
+                s["kinds"] = c.classify([k for k, v in s["original"].items() if v >= PRESENT])
     classify_seconds = round(time.time() - started, 1)
     import huggingface_hub.constants as hub
     hub.HF_HUB_CACHE = str(first["model_cache"])
@@ -47,9 +55,10 @@ def main():
         for name, s in state.items():
             last = s["rounds"][-1]
             lost = lost_tags(s["original"], last["scores"])
-            fix = to_fix(lost, s["kinds"], s["with_garment"])
+            prev = s["rounds"][-2]["asked"] if len(s["rounds"]) > 1 else []
+            asked = next_round(prev, lost, s["kinds"], s["with_garment"])
+            fix = [t for t in asked if t not in prev]
             last.update(lost=lost, fix=fix)
-            asked = list(dict.fromkeys((s["rounds"][-2]["asked"] if len(s["rounds"]) > 1 else []) + fix))
             if fix:
                 todo[name] = asked
         if not todo:
@@ -94,13 +103,14 @@ def main():
             last["lost"] = lost_tags(s["original"], last["scores"]); last["fix"] = to_fix(last["lost"], s["kinds"], s["with_garment"])
         base = ccip_extract_feature(Image.open(s["R"] / "character.png").convert("RGB"))
         rows = []
+        watch = s["rounds"][0].get("asked") or []
+        picks = best_per_seed(s["original"], [r["scores"] for r in s["rounds"]], watch)
         for i, rnd in enumerate(s["rounds"]):
-            watch = s["rounds"][0]["fix"] or []
             rows.append(dict(round=i, fix_asked=rnd.get("asked"), lost=rnd.get("lost"), fix_next=rnd.get("fix"),
                              still_lost_per_seed=[remaining(s["original"], sc, watch) for sc in rnd["scores"]],
                              ccip=[round(float(ccip_difference(base, ccip_extract_feature(Image.open(f).convert("RGB")))), 3) for f in rnd["files"]],
                              files=rnd["files"]))
-        report[name] = dict(work=str(s["R"]), with_garment=s["with_garment"], rounds=rows,
+        report[name] = dict(work=str(s["R"]), with_garment=s["with_garment"], rounds=rows, picks=picks,
                             kinds={k: v["kind"] for k, v in s["kinds"].items()})
         W, H = 300, 398
         sheet = Image.new("RGB", (W * (1 + len(SEEDS)), (H + 22) * len(s["rounds"])), "white"); dr = ImageDraw.Draw(sheet)
@@ -110,12 +120,15 @@ def main():
             dr.text((4, y + 5), f"{name} original", fill="black")
             for j, f in enumerate(rnd["files"]):
                 sheet.paste(Image.open(f).convert("RGB").resize((W, H)), ((j + 1) * W, y + 22))
-                dr.text(((j + 1) * W + 4, y + 5), f"round {i} seed {SEEDS[j]} ccip {rows[i]['ccip'][j]}", fill="black")
+                chosen = picks[j] == i
+                dr.text(((j + 1) * W + 4, y + 5), f"round {i} seed {SEEDS[j]} ccip {rows[i]['ccip'][j]}" + (" CHOSEN" if chosen else ""),
+                        fill="red" if chosen else "black")
         sheet.save(out / f"{name}-rounds.png")
     (out / "autofix-loop.json").write_text(json.dumps(dict(classify_seconds=classify_seconds, cases=report), ensure_ascii=False, indent=1),
                                            encoding="utf-8")
     for name, r in report.items():
-        print(name, [dict(round=x["round"], fix_next=x["fix_next"], still=x["still_lost_per_seed"], ccip=x["ccip"]) for x in r["rounds"]])
+        print(name, "picks", r["picks"],
+              [dict(round=x["round"], asked=x["fix_asked"], still=x["still_lost_per_seed"], ccip=x["ccip"]) for x in r["rounds"]])
 
 
 if __name__ == "__main__":

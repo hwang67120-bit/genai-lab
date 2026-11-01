@@ -2,7 +2,7 @@
 ① 원본과 그 변형(좌우 뒤집기, 허벅지 위·상반신 자르기) ② 앱과 같은 FLUX + 그림체 LoRA로 장면 조합 여러 개 × seed 2를 그리되,
 첫 진단(앱 후보가 과반에서 잃은 몸·입은 것 태그, identity_autofix)을 '빠진 특징' 문장으로 미리 붙인다 ③ 그린 것마다 지킬 태그를
 몇 개 잃었는지(remaining)와 CCIP 차이로 자동 선별(전부 잃은 것 빼고 덜 잃은 순 상위 12장, CCIP 0.178 미만). 설명문 = 트리거 낱말 + 장면 문장(캐릭터는 트리거가 맡게).
-사용: python character_lora_data_s34.py <앱 작업 폴더(flux)> <출력 폴더> [장면 수, 기본 10]
+사용: python character_lora_data_s34.py <앱 작업 폴더(flux)> <출력 폴더> [장면 수, 기본 10] [트리거 낱말, 기본 'f1chr character.']
 """
 import os
 os.environ.update(HF_HUB_OFFLINE="1", TRANSFORMERS_OFFLINE="1", HF_HUB_DISABLE_TELEMETRY="1")
@@ -20,7 +20,9 @@ CCIP_SAME = 0.178
 
 
 def main():
+    global TRIGGER
     R, out = Path(sys.argv[1]), Path(sys.argv[2]); scenes = int(sys.argv[3]) if len(sys.argv) > 3 else 10
+    TRIGGER = sys.argv[4] if len(sys.argv) > 4 else TRIGGER
     data = out / "data"; data.mkdir(parents=True, exist_ok=True)
     req = json.loads((R / "request.json").read_text(encoding="utf-8"))
     prepared = json.loads((R / "prepare.json").read_text(encoding="utf-8"))

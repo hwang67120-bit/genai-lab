@@ -15,6 +15,11 @@ MAX_ROUNDS = 1
 BODY_MIN = 0.6
 OUTFIT_MIN = 0.9
 KINDS_TABLE = "configs/tag_kinds_wd_v3.json"
+# 안전 규칙(동일성 항목이 아님): 가슴·배꼽·엉덩이 같은 신체 노출 낱말은 '빠진 특징' 문장으로 강조하지 않는다 — 체형은 참조 그림이 맡는다
+# (S36 쥐 캐릭터 진단에 breasts·medium_breasts·navel이 들어옴). 낱말 일부가 맞으면 뺀다.
+NEVER_ASK = ("breast", "cleavage", "navel", "nipple", "areola", "midriff", "ass", "butt", "thigh", "groin", "crotch", "underboob",
+             "sideboob", "nude", "naked", "pussy", "penis", "panties", "underwear", "lingerie", "bra", "cameltoe", "bulge", "topless",
+             "bottomless", "sex", "cum")
 
 
 def lost_tags(original, results):
@@ -41,7 +46,7 @@ def to_fix(lost, kinds, with_garment=False):
             return False
         floor = BODY_MIN if kind == "body" else OUTFIT_MIN
         return row.get(kind, 1.0) >= floor
-    return [t for t in lost if sure(t)]
+    return [t for t in lost if sure(t) and not any(word in t for word in NEVER_ASK)]
 
 
 def fix_sentence(tags):

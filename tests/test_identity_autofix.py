@@ -47,8 +47,13 @@ def test_unsure_kinds_are_not_fixed_and_the_shipped_table_knows_the_furry_case()
     from pathlib import Path
     kinds = {"qr_code": dict(kind="outfit", outfit=0.66), "cleavage": dict(kind="outfit", outfit=0.95), "plant": dict(kind="body", body=0.47),
              "furry": dict(kind="body", body=1.0)}
-    assert to_fix(["qr_code", "cleavage", "plant", "furry"], kinds) == ["cleavage", "furry"]
+    assert to_fix(["qr_code", "plant", "furry"], kinds) == ["furry"]
     table = json.loads((Path(__file__).resolve().parents[1] / "configs" / "tag_kinds_wd_v3.json").read_text(encoding="utf-8"))["table"]
     assert len(table) > 8000
     assert {table[t]["kind"] for t in ("furry", "body_fur", "animal_nose", "dog_ears", "very_dark_skin", "scar")} == {"body"}
     assert {table[t]["kind"] for t in ("realistic", "sky", "smile", "sitting", "hand_on_own_hip", "simple_background")} == {"scene"}
+
+
+def test_body_exposure_words_are_never_asked_for():
+    kinds = {"breasts": dict(kind="body", body=0.9), "navel": dict(kind="body", body=0.8), "whiskers": dict(kind="body", body=1.0)}
+    assert to_fix(["breasts", "medium_breasts", "navel", "whiskers", "cleavage"], kinds) == ["whiskers"]

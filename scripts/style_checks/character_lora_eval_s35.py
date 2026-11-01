@@ -14,7 +14,7 @@ from genai_lab.identity_autofix import KINDS_TABLE, fixed_prompt, load_kinds, lo
 
 SCENES = (35001, 35002, 35003)
 SEEDS = (42, 43)
-TRIGGER = "f1chr character."
+TRIGGER = os.environ.get("S35_TRIGGER", "f1chr character.")   # 캐릭터마다 학습 트리거
 
 
 def main():

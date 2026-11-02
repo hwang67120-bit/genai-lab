@@ -193,6 +193,8 @@ def test_autofixed_candidate_says_what_was_asked_again(tmp_path):
     assert "털 수인" not in results.head_notice
     results.candidates[results.selected]["style_lora_weight"] = 0.3                  # D-245
     assert "털 수인으로 판별해 그림체를 약하게" in results.head_notice
+    results.candidates[results.selected]["style_lora_weight"] = 0.0                  # D-246
+    assert "그림체 없이 다시 그렸습니다" in results.head_notice
     results.candidates[results.selected]["autofix"] = dict(round=0, asked=[])
     assert "자동 보정" not in results.head_notice
 

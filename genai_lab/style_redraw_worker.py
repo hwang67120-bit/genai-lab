@@ -192,10 +192,10 @@ def generate_flux(directory, req):
     from diffusers import Flux2KleinPipeline
     from diffusers.quantizers import PipelineQuantizationConfig
     from genai_lab.style_redraw_flux import (GUIDANCE, IDENTITY_PARTS, IDENTITY_SHIFT_CAP, MAX_SEQUENCE_LENGTH, OUTPUT_SIZE, PARTS, SEEDS, STEPS,
-                                             STYLE_LORA_WEIGHT, body_part_tags, colour_match, hand_flag, missing_body_parts)
+                                             FURRY_TAGS, STYLE_LORA_WEIGHT, body_part_tags, colour_match, hand_flag, missing_body_parts)
     from genai_lab.clothing_analysis import ClothingDesignAnalysisSettings, WdTagSession
     from genai_lab.identity_anchors import compare as compare_anchors
-    from genai_lab.identity_autofix import best_per_seed, fixed_prompt, kinds_table, lost_tags, newly_lost, remaining, to_fix
+    from genai_lab.identity_autofix import PRESENT, best_per_seed, fixed_prompt, kinds_table, lost_tags, newly_lost, remaining, to_fix
     prepared = json.loads((directory / "prepare.json").read_text(encoding="utf-8"))
     torch.cuda.set_per_process_memory_fraction(MEMORY_CAP_GIB * 2**30 / torch.cuda.get_device_properties(0).total_memory)
     started = time.time()
@@ -217,9 +217,9 @@ def generate_flux(directory, req):
     references = [reference] + ([Image.open(directory / "garment.png").convert("RGB")] if with_garment else [])
     torch.cuda.reset_peak_memory_stats()
 
-    def draw(prompt, phase, suffix):
+    def draw(prompt, phase, suffix, seeds=SEEDS):
         drawn = []
-        for number, seed in enumerate(SEEDS):
+        for number, seed in enumerate(seeds):
             save(directory / "progress.json", dict(candidate=number + 1, candidates=len(SEEDS), step=0, total=STEPS, phase=phase))
             t0 = time.time()
             image = pipe(image=references, prompt=prompt, width=OUTPUT_SIZE[0], height=OUTPUT_SIZE[1],
@@ -251,6 +251,29 @@ def generate_flux(directory, req):
                 raws[i] = (seed, again[i][1], round(raws[i][2] + again[i][2], 1))
                 result_scores[i] = again_scores[i]
         autofix.update(prompt=prompt, picks=picks, still_lost=[remaining(original_scores, s, asked) for s in result_scores])
+    # 털 수인 마지막 장치(D-246): 세기 0.3 + 자동 고치기 뒤에도 털 수인 태그를 잃은 후보는 그림체 LoRA를 끄고 같은 seed로 한 번 더 그려,
+    # 털 수인이 돌아오면 그것을 쓴다(그 후보는 그림체가 빠진다). 흑백 선화 털 토끼(F1)가 장면에 따라 사람 얼굴이 됨.
+    weights = [weight] * len(SEEDS)
+    furry_watch = [t for t in FURRY_TAGS if original_scores.get(t, 0.0) >= PRESENT]
+    if weight < STYLE_LORA_WEIGHT and furry_watch:
+        lost_furry = [i for i, s in enumerate(result_scores) if remaining(original_scores, s, furry_watch)]
+        if lost_furry:
+            pipe.set_adapters(["style"], adapter_weights=[0.0])
+            plain = draw(autofix.get("prompt", prepared["prompt"]), "furry", "-nostyle", [SEEDS[i] for i in lost_furry])
+            pipe.set_adapters(["style"], adapter_weights=[weight])
+            with WdTagSession(settings) as tagger:
+                plain_scores = [dict(tagger.analyze(Image.fromarray(r)).raw_general_scores) for _, r, _ in plain]
+            kept = []
+            for i, (seed, rgb, seconds), scores in zip(lost_furry, plain, plain_scores):
+                if remaining(original_scores, scores, furry_watch):
+                    continue
+                (directory / f"result-raw-seed{seed}.png").replace(directory / f"result-raw-seed{seed}-styled.png")
+                (directory / f"result-raw-seed{seed}-nostyle.png").replace(directory / f"result-raw-seed{seed}.png")
+                raws[i] = (seed, rgb, round(raws[i][2] + seconds, 1))
+                result_scores[i] = scores
+                weights[i] = 0.0
+                kept.append(seed)
+            autofix.update(furry_retry=dict(seeds=[SEEDS[i] for i in lost_furry], used=kept))
     faces = []
     if req.get("head_cache"):
         from genai_lab.face_detail import detail_face
@@ -285,7 +308,8 @@ def generate_flux(directory, req):
     original_masks = dict(np.load(directory / "original-masks.npz"))
     hands = count_hands([r for _, r, _ in raws], req)
     candidates = []
-    for (seed, raw, seconds), count, scores, pick, face in zip(raws, hands, result_scores, autofix["picks"], faces or [None] * len(raws)):
+    for (seed, raw, seconds), count, scores, pick, face, cand_weight in zip(raws, hands, result_scores, autofix["picks"],
+                                                                             faces or [None] * len(raws), weights):
         _, masks = person_and_parts(raw, req)
         # 옷을 바꿨으면 원본에 맞출 부위는 피부·머리뿐(옷은 옷 그림 것), 아니면 네 부위 모두
         scene = bool(prepared.get("scene"))         # 새 장면이면 밝기는 조명 몫(D-225)
@@ -301,7 +325,7 @@ def generate_flux(directory, req):
                                identity_anchors=compare_anchors(prepared.get("identity_anchors") or [], scores),
                                autofix=dict(round=pick, asked=asked if pick else [],
                                             still_lost=remaining(original_scores, scores, asked)),
-                               face_detail=face, style_lora_weight=weight))
+                               face_detail=face, style_lora_weight=cand_weight))
     save(directory / "generation.json", dict(
         state="generated_unreviewed", engine="flux", style_lora=dict(file=str(lora), weight=weight),
         with_garment=with_garment, load_seconds=loaded, candidates=candidates, review="사용자가 후보 중 1장을 고른다", autofix=autofix,

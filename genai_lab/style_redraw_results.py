@@ -80,7 +80,9 @@ class StyleRedrawResults:
             notes.append("사라진 부위: " + ", ".join(c["missing_body_parts"]))
         from genai_lab.identity_anchors import summary_ko
         anchors = f" {summary_ko(c['identity_anchors'])}." if c.get("identity_anchors") else ""
-        if c.get("style_lora_weight") is not None and c["style_lora_weight"] < 1.0:       # D-245 털 수인
+        if c.get("style_lora_weight") == 0.0:                                              # D-246 털 수인 마지막 장치
+            anchors += " 털 수인 특징을 지키려고 그림체 없이 다시 그렸습니다."
+        elif c.get("style_lora_weight") is not None and c["style_lora_weight"] < 1.0:     # D-245 털 수인
             anchors += " 털 수인으로 판별해 그림체를 약하게 적용했습니다."
         fixed = c.get("autofix") or {}
         if fixed.get("round"):        # D-241 자동 고치기로 다시 그린 후보

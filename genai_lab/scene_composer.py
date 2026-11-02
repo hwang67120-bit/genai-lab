@@ -14,7 +14,7 @@
 """
 import random
 
-VERSION = 4
+VERSION = 5
 # 4판(D-242, 사용자 11/1 "나중 연동을 생각해 배경 품질도"): 배경을 원근이 있는 장소로 — 앞·중간·먼 배경, 공기 원근, 캐릭터와 같은 마감.
 FULL_BODY_TEXT = ("Full-body shot: the whole character is visible from head to feet. The background is a richly detailed place with clear "
                   "depth: a foreground, a middle ground and a distant background, natural perspective and soft atmospheric haze, "
@@ -48,7 +48,6 @@ ACTIONS = (
     "spinning in place with the arms out and a light motion",
     "stepping forward with one hand raised in a small wave",
     "pointing ahead with one hand while the other rests on the hip",
-    "petting a small cat that sits beside the feet",
     "carrying a paper shopping bag in one hand, the other hand at the side",
     "reaching up to touch a hanging branch",
     "standing on tiptoes with the hands joined in front",
@@ -59,6 +58,7 @@ EXPRESSIONS = (
     "with a slightly shy smile", "with a cheerful open-mouthed smile", "with a curious look", "with a soft, relaxed expression",
     "with a proud, smug smile", "with a dreamy look",
 )
+# 5판(D-246): '작은 고양이를 쓰다듬기'는 고양이 한 마리가 두 마리로 그려짐(C005, S50 F1, S51 U004 — 세 번째) → 동작에서 뺐다.
 # 4판: 장소 문장에서 글자를 부르는 말(neon signs)을 뺐다 — 네온 거리에서 가짜 한자 간판이 생기고 태그 검사는 못 잡음(S39).
 # '간판에 글자 없음' 문장은 빈 간판을 새로 세웠다(D-225) → 부르는 말 자체를 없앤다.
 # 시간대(낮/밤)를 먼저 고르고 그에 맞는 시간·조명만 고른다(1판 견본에 '햇빛 숲 + 밤 가로등' 같은 모순이 있었다).

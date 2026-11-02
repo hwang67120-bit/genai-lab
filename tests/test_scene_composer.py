@@ -9,7 +9,7 @@ from genai_lab.scene_composer import ACTIONS, CAMERA, EXPRESSIONS, LIGHTING, TIM
 def test_same_seed_same_scene_and_many_different_scenes():
     assert compose_scene(7) == compose_scene(7)
     texts = {compose_scene(seed)["text"] for seed in range(300)}
-    assert len(texts) >= 295 and compose_scene(1)["version"] == VERSION == 4
+    assert len(texts) >= 295 and compose_scene(1)["version"] == VERSION == 5
 
 
 def test_v3_drops_what_the_user_marked_as_failing():

@@ -139,7 +139,7 @@ def prepare_flux(directory, req, canvas, rgb, scores, safety, joints, face, star
     """FLUX 경로 준비(D-210): 특징 문장·원본 부위 마스크·원본 손 개수. 그림체 참조·의상 참조·입력 묶음은 만들지 않는다."""
     from genai_lab.character_features import extract_features
     from genai_lab.studio_controller import guessed_gender
-    from genai_lab.style_redraw_flux import flux_prompt, proportion_sentence, style_lora_weight
+    from genai_lab.style_redraw_flux import flux_prompt, framing, style_lora_weight
     from genai_lab.style_redraw_inputs import trait_rows
     garment_path = directory / "garment.png"
     with_garment = garment_path.is_file()
@@ -166,7 +166,7 @@ def prepare_flux(directory, req, canvas, rgb, scores, safety, joints, face, star
     confirmed_parts = req.get("confirmed_body_parts")
     body_parts = tuple(confirmed_parts) if confirmed_parts is not None else guessed_body_parts(dict(character_scores=scores))
     kinds = body_part_kinds(scores, body_parts)     # 귀·꼬리·날개 종류를 문장에(D-236)
-    proportions = proportion_sentence(scores, confirmed or guessed)   # 원본에 다리가 안 보이면 성인 비율(D-247)
+    shot = framing(scores)          # 원본이 보여 준 만큼만 그린다(D-247): 전신·허벅지 위·상반신
     np.savez_compressed(directory / "original-masks.npz", **masks)
     hands = count_hands([rgb], req)[0]
     save(directory / "prepare.json", dict(
@@ -174,8 +174,8 @@ def prepare_flux(directory, req, canvas, rgb, scores, safety, joints, face, star
         guessed_gender=guessed, traits=traits, body_parts=list(body_parts), identity_anchors=anchors(scores),
         body_parts_source="confirmed" if confirmed_parts is not None else "automatic_tags", body_part_kinds=kinds,
         style_lora_weight=style_lora_weight(scores),         # 털 수인이면 그림체를 약하게(D-245)
-        proportions=proportions,
-        scene=req.get("scene"), prompt=flux_prompt(traits, with_garment, body_parts, req.get("scene"), kinds, proportions), face_box=face,
+        framing=shot,
+        scene=req.get("scene"), prompt=flux_prompt(traits, with_garment, body_parts, req.get("scene"), kinds, shot), face_box=face,
         original_hands=hands,
         warnings=support_warnings(scores, joints), safety=safety, joints_used=sorted(joints),
         note="특징 문장·성별은 자동 측정이며 사람 확인 전이다. "
@@ -216,10 +216,7 @@ def generate_flux(directory, req):
     loaded = round(time.time() - started, 1)
     reference = Image.open(directory / "character.png").convert("RGB")
     with_garment = bool(prepared.get("with_garment"))
-    from genai_lab.style_redraw_flux import shrunk_reference
-    # 다리가 안 보이는 원본은 생성용 참조만 작게(D-247). 자동 고치기 태그·얼굴 다듬기·색 맞춤은 원래 참조를 쓴다.
-    first = shrunk_reference(reference) if prepared.get("proportions") else reference
-    references = [first] + ([Image.open(directory / "garment.png").convert("RGB")] if with_garment else [])
+    references = [reference] + ([Image.open(directory / "garment.png").convert("RGB")] if with_garment else [])
     torch.cuda.reset_peak_memory_stats()
 
     def draw(prompt, phase, suffix, seeds=SEEDS):

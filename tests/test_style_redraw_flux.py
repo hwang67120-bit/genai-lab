@@ -39,21 +39,21 @@ class TestFluxHelpers(unittest.TestCase):
         self.assertIn("If the character has animal ears, a tail or wings", flux_prompt([]))          # 모름 = 조건문
         self.assertIn("no animal ears, no tail and no wings", flux_prompt([], with_garment=True, body_parts=()))
 
-    def test_adult_proportions_only_when_the_legs_are_not_shown(self):
-        # D-247: 상반신만 보이는 원본(T009)은 다리를 짐작해 짧게 그림 → 그때만 성인 비율 문장, 남성이면 키 큰 남성
-        from genai_lab.style_redraw_flux import PROPORTION_SENTENCE, TALL_MAN_SENTENCE, proportion_sentence
-        self.assertEqual(proportion_sentence({"upper_body": 0.8}, "male"), PROPORTION_SENTENCE + TALL_MAN_SENTENCE)
-        self.assertEqual(proportion_sentence({"cowboy_shot": 0.7}, "female"), PROPORTION_SENTENCE)
-        self.assertEqual(proportion_sentence({"full_body": 0.9}, "male"), "")
-        self.assertEqual(proportion_sentence({"pink_footwear": 0.97, "sneakers": 0.8}), "")          # 발이 보이면 원본 비율 그대로
-        p = flux_prompt([dict(text="black hair")], body_parts=(), scene="Standing.", proportions=PROPORTION_SENTENCE)
-        self.assertIn("about seven and a half heads tall", p)
-        from genai_lab.style_redraw_flux import shrunk_reference
-        ref = Image.new("RGB", (100, 200), (10, 20, 30))
-        small = shrunk_reference(ref)
-        self.assertEqual(small.size, (100, 200))
-        self.assertEqual(small.getpixel((50, 10)), (10, 20, 30))                     # 위쪽 가운데에 줄인 원본
-        self.assertEqual(small.getpixel((50, 190)), (10, 20, 30))                    # 아래는 모서리 색(같은 색이라 같음)
+    def test_framing_follows_how_much_of_the_body_the_original_shows(self):
+        # D-247: 상반신 원본에 전신을 강제로 그리면 없는 다리를 지어내 비율·옷이 오염됨 → 원본이 보여 준 만큼만
+        from genai_lab.scene_composer import compose_scene
+        from genai_lab.style_redraw_flux import COWBOY_FRAMING, FULL_BODY_FRAMING, UPPER_FRAMING, framing
+        self.assertEqual(framing({"full_body": 0.9}), FULL_BODY_FRAMING)
+        self.assertEqual(framing({"pink_footwear": 0.97}), FULL_BODY_FRAMING)
+        self.assertEqual(framing({"upper_body": 0.8, "belt": 0.7, "pants": 0.6}), COWBOY_FRAMING)      # T009: 허리·바지 보임
+        self.assertEqual(framing({"portrait": 0.9}), UPPER_FRAMING)
+        scene = compose_scene(39001)["text"]
+        p = flux_prompt([dict(text="black hair")], body_parts=(), scene=scene, shot=COWBOY_FRAMING)
+        self.assertNotIn("head to feet", p)
+        self.assertNotIn("Full body, the whole character", p)
+        self.assertNotIn("whole body, arms and legs", p)
+        self.assertIn("do not show the lower legs or feet", p)
+        self.assertIn("head to feet", flux_prompt([dict(text="black hair")], body_parts=(), scene=scene))      # 기본은 전신
 
     def test_furry_characters_get_a_weaker_style_lora(self):
         # D-245: 사람 캐릭터로 학습한 그림체 LoRA가 털 수인 얼굴을 사람 쪽으로 당김 → 원본 태그로 판별해 세기 0.3

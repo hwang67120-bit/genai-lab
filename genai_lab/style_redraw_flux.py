@@ -35,36 +35,25 @@ FURRY_TAGS = ("furry", "furry_female", "furry_male")
 FURRY_MIN = 0.5
 
 
-# 비율(D-247, 사용자 11/2 "남자 비율은 다른 것 같아, 원본은 상체만 보이거나 키 큰 남성"): 원본에 다리·발이 안 보이면 모델이 다리 길이를
-# 짐작해 머리가 크고 다리가 짧은 체형(T009 + 옷: 약 5.5등신)이 나온다 → 그때만 성인 비율 문장 + 생성용 참조를 작게(시각 조건이 주효,
-# S52: 문장만으로는 T009 조금·옷 바꿈 효과 없음, 참조를 60%로 줄이면 둘 다 다리가 길어져 약 7등신). 발까지 보이는 원본(N2 쥐처럼
-# 원래 작은 체형)은 참조 그림의 비율을 그대로 따른다.
+# 구도(D-247, 사용자 11/2 "참조 이미지가 전신이 아니면 전신 모습을 생성하지 말아야 — 강제로 만들면 오염될 가능성이 높다"): 원본에 발·전신이
+# 안 보이면 안 보이는 다리를 지어내지 않고 원본이 보여 준 만큼만 그린다. 허리·엉덩이·허벅지가 보이면 허벅지 위(카우보이 샷), 아니면 상반신.
+# (먼저 시험한 '성인 비율 문장 + 참조 축소'는 T009에서는 비율이 맞았지만 없는 몸을 강제로 만드는 방식이라 뺐다.)
 FEET_TAGS = ("full_body", "shoes", "boots", "sneakers", "barefoot", "feet", "high_heels", "sandals", "loafers", "socks")
-PROPORTION_SENTENCE = ("Image 1 does not show the whole body, so draw the hidden legs with adult proportions: about seven and a half "
-                       "heads tall with long legs. ")
-TALL_MAN_SENTENCE = "He is a tall adult man with broad shoulders and long legs. "
+THIGH_TAGS = ("cowboy_shot", "thighs", "belt", "pants", "skirt", "shorts", "hips", "hand_on_own_hip", "jeans", "pleated_skirt")
+FULL_BODY_FRAMING = "Full-body shot: the whole character is visible from head to feet."
+COWBOY_FRAMING = ("Cowboy shot: the character is shown from the head to the mid thigh, the same amount of the body as in image 1; "
+                  "do not show the lower legs or feet.")
+UPPER_FRAMING = ("Upper-body shot: the character is shown from the head to the waist, the same amount of the body as in image 1; "
+                 "do not show the legs.")
 
 
-SHRINK_SCALE = 0.6       # 다리가 안 보이는 원본: 생성용 참조를 60%로 줄여 위쪽 가운데에 놓는다(S52 — 문장만으로는 옷 바꿀 때 효과 없음)
-
-
-def shrunk_reference(image, scale=SHRINK_SCALE):
-    """참조 그림을 같은 크기 캔버스 위쪽 가운데에 scale배로 줄여 놓고 나머지는 아래 모서리 색으로 채운다(보이지 않는 다리의 자리)."""
-    from PIL import Image
-    w, h = image.size
-    small = image.resize((int(w * scale), int(h * scale)), Image.LANCZOS)
-    canvas = Image.new("RGB", (w, h), image.getpixel((2, h - 3)))
-    canvas.paste(small, ((w - small.width) // 2, 0))
-    return canvas
-
-
-def proportion_sentence(scores, gender=None):
-    """원본 태그에 전신·발이 없으면 성인 비율 문장(남성이면 키 큰 남성). 보이면 빈 문장."""
+def framing(scores):
+    """원본 태그 → 결과 구도 문장. 발·전신이 보이면 전신, 허리 아래가 조금 보이면 허벅지 위, 아니면 상반신."""
     scores = scores or {}
-    visible = any(float(v) >= 0.5 and (k in FEET_TAGS or k.endswith("_footwear")) for k, v in scores.items())
-    if visible:
-        return ""
-    return PROPORTION_SENTENCE + (TALL_MAN_SENTENCE if gender == "male" else "")
+    sure = lambda k: float(scores.get(k, 0.0)) >= 0.5
+    if any(sure(k) for k in FEET_TAGS) or any(float(v) >= 0.5 and k.endswith("_footwear") for k, v in scores.items()):
+        return FULL_BODY_FRAMING
+    return COWBOY_FRAMING if any(sure(k) for k in THIGH_TAGS) else UPPER_FRAMING
 
 
 def style_lora_weight(scores):
@@ -85,21 +74,27 @@ SCENE_RULES = ("The scene lighting may add highlights and shadows but must not c
                "eyes, skin and clothes keep their colours from image 1. Show the pose and action of the scene clearly with the whole "
                "body, arms and legs. Both hands are visible and fully drawn; do not hide a hand behind the back or inside a pocket. ")
 # 손 문장(D-242): 장면 동작에서 다른 손을 등 뒤로 숨겨 손 개수가 원본보다 적음(S39 기준 36장 중 5장, 간판 장소 16장 중 1장).
+UPPER_SCENE_RULES = ("The scene lighting may add highlights and shadows but must not change the character's own colours: the hair, "
+                     "eyes, skin and clothes keep their colours from image 1. Show the pose and action of the scene with the visible "
+                     "part of the body. Hands that are in the frame are fully drawn. ")
 # 간판 문장("Signs and screens … no letters")은 시험에서 가짜 글자를 못 막고 공원에 빈 간판을 새로 세워 뺐다(D-225).
 
 
-def flux_prompt(traits, with_garment=False, body_parts=None, scene=None, body_part_kinds=None, proportions=""):
+def flux_prompt(traits, with_garment=False, body_parts=None, scene=None, body_part_kinds=None, shot=FULL_BODY_FRAMING):
     """같은 캐릭터를 목표 그림체로 다시 그리라는 문장. 특징 문장(자동 측정)과 피부색 유지 지시를 넣는다.
     with_garment: 그림 2의 옷으로 갈아입히고 그린다(D-212, 모드 A·B 통합). 원래 옷 낱말은 빼야 새 옷과 다투지 않는다.
     body_parts: 확인된 동물 귀·꼬리·날개(튜플, 없으면 빈 튜플, 모르면 None) — Qwen 경로와 같은 부위 문장(D-108·D-111, D-221).
     scene: 새 자세·장면 문장(scene_composer 또는 검사를 지난 사용자 문장, D-222). 없으면 원본 자세 + 콘크리트 벽 배경.
     body_part_kinds: 귀·꼬리·날개의 종류(identity_anchors.body_part_kinds, D-236). 맨 앞에는 그림체 LoRA 트리거 낱말."""
-    return f"{STYLE_LORA_TRIGGER} {_prompt_body(traits, with_garment, body_parts, scene, body_part_kinds, proportions)}"
+    return f"{STYLE_LORA_TRIGGER} {_prompt_body(traits, with_garment, body_parts, scene, body_part_kinds, shot)}"
 
 
-def _prompt_body(traits, with_garment, body_parts, scene, body_part_kinds, proportions=""):
+def _prompt_body(traits, with_garment, body_parts, scene, body_part_kinds, shot=FULL_BODY_FRAMING):
     from genai_lab.outfit_edit import body_parts_sentence
-    parts = body_parts_sentence(None if body_parts is None else tuple(body_parts), body_part_kinds) + (proportions or "")
+    parts = body_parts_sentence(None if body_parts is None else tuple(body_parts), body_part_kinds)
+    full = shot == FULL_BODY_FRAMING
+    if scene and not full:          # 장면 조합 문장의 전신 지시를 원본 구도로 바꾼다(D-247)
+        scene = scene.replace(FULL_BODY_FRAMING, shot)
     if scene:
         # D-219·D-221 장면 시험 문장(처음 보는 8명 동일성 유지)과 같은 짜임. 옷 그림이 있으면 그 옷을 입고 새 장면에.
         outfit = ("wearing the complete outfit shown in image 2 (replace all of the character's current clothing with it, matching its "
@@ -110,7 +105,8 @@ def _prompt_body(traits, with_garment, body_parts, scene, body_part_kinds, propo
         keep = "body proportions" if with_garment else "body proportions and outfit"
         return (f"Show the same adult character as in image 1{who}{' ' + outfit if outfit else ''} in a new scene. Scene: {scene.strip()} "
                 f"Keep the same face, hairstyle, hair colour, eye colour, skin tone and {keep} exactly as in image 1; do not lighten "
-                f"or darken the skin. {parts}{SCENE_RULES}Full body, the whole character inside the frame, face clearly visible. Render as a new "
+                f"or darken the skin. {parts}{SCENE_RULES if full else UPPER_SCENE_RULES}"
+                f"{'Full body, the whole character inside the frame' if full else shot.split(':')[0]}, face clearly visible. Render as a new "
                 f"{STYLE}. {'Do not copy the mannequin or the clothing photo background. ' if with_garment else ''}"
                 f"No lettering, logo, watermark or multiple people.")
     if with_garment:

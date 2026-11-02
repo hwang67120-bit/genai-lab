@@ -35,6 +35,38 @@ FURRY_TAGS = ("furry", "furry_female", "furry_male")
 FURRY_MIN = 0.5
 
 
+# 비율(D-247, 사용자 11/2 "남자 비율은 다른 것 같아, 원본은 상체만 보이거나 키 큰 남성"): 원본에 다리·발이 안 보이면 모델이 다리 길이를
+# 짐작해 머리가 크고 다리가 짧은 체형(T009 + 옷: 약 5.5등신)이 나온다 → 그때만 성인 비율 문장 + 생성용 참조를 작게(시각 조건이 주효,
+# S52: 문장만으로는 T009 조금·옷 바꿈 효과 없음, 참조를 60%로 줄이면 둘 다 다리가 길어져 약 7등신). 발까지 보이는 원본(N2 쥐처럼
+# 원래 작은 체형)은 참조 그림의 비율을 그대로 따른다.
+FEET_TAGS = ("full_body", "shoes", "boots", "sneakers", "barefoot", "feet", "high_heels", "sandals", "loafers", "socks")
+PROPORTION_SENTENCE = ("Image 1 does not show the whole body, so draw the hidden legs with adult proportions: about seven and a half "
+                       "heads tall with long legs. ")
+TALL_MAN_SENTENCE = "He is a tall adult man with broad shoulders and long legs. "
+
+
+SHRINK_SCALE = 0.6       # 다리가 안 보이는 원본: 생성용 참조를 60%로 줄여 위쪽 가운데에 놓는다(S52 — 문장만으로는 옷 바꿀 때 효과 없음)
+
+
+def shrunk_reference(image, scale=SHRINK_SCALE):
+    """참조 그림을 같은 크기 캔버스 위쪽 가운데에 scale배로 줄여 놓고 나머지는 아래 모서리 색으로 채운다(보이지 않는 다리의 자리)."""
+    from PIL import Image
+    w, h = image.size
+    small = image.resize((int(w * scale), int(h * scale)), Image.LANCZOS)
+    canvas = Image.new("RGB", (w, h), image.getpixel((2, h - 3)))
+    canvas.paste(small, ((w - small.width) // 2, 0))
+    return canvas
+
+
+def proportion_sentence(scores, gender=None):
+    """원본 태그에 전신·발이 없으면 성인 비율 문장(남성이면 키 큰 남성). 보이면 빈 문장."""
+    scores = scores or {}
+    visible = any(float(v) >= 0.5 and (k in FEET_TAGS or k.endswith("_footwear")) for k, v in scores.items())
+    if visible:
+        return ""
+    return PROPORTION_SENTENCE + (TALL_MAN_SENTENCE if gender == "male" else "")
+
+
 def style_lora_weight(scores):
     """원본 WD 태그 → 그림체 LoRA 세기. 털 수인이면 FURRY_STYLE_LORA_WEIGHT."""
     furry = any(float((scores or {}).get(t, 0.0)) >= FURRY_MIN for t in FURRY_TAGS)
@@ -56,18 +88,18 @@ SCENE_RULES = ("The scene lighting may add highlights and shadows but must not c
 # 간판 문장("Signs and screens … no letters")은 시험에서 가짜 글자를 못 막고 공원에 빈 간판을 새로 세워 뺐다(D-225).
 
 
-def flux_prompt(traits, with_garment=False, body_parts=None, scene=None, body_part_kinds=None):
+def flux_prompt(traits, with_garment=False, body_parts=None, scene=None, body_part_kinds=None, proportions=""):
     """같은 캐릭터를 목표 그림체로 다시 그리라는 문장. 특징 문장(자동 측정)과 피부색 유지 지시를 넣는다.
     with_garment: 그림 2의 옷으로 갈아입히고 그린다(D-212, 모드 A·B 통합). 원래 옷 낱말은 빼야 새 옷과 다투지 않는다.
     body_parts: 확인된 동물 귀·꼬리·날개(튜플, 없으면 빈 튜플, 모르면 None) — Qwen 경로와 같은 부위 문장(D-108·D-111, D-221).
     scene: 새 자세·장면 문장(scene_composer 또는 검사를 지난 사용자 문장, D-222). 없으면 원본 자세 + 콘크리트 벽 배경.
     body_part_kinds: 귀·꼬리·날개의 종류(identity_anchors.body_part_kinds, D-236). 맨 앞에는 그림체 LoRA 트리거 낱말."""
-    return f"{STYLE_LORA_TRIGGER} {_prompt_body(traits, with_garment, body_parts, scene, body_part_kinds)}"
+    return f"{STYLE_LORA_TRIGGER} {_prompt_body(traits, with_garment, body_parts, scene, body_part_kinds, proportions)}"
 
 
-def _prompt_body(traits, with_garment, body_parts, scene, body_part_kinds):
+def _prompt_body(traits, with_garment, body_parts, scene, body_part_kinds, proportions=""):
     from genai_lab.outfit_edit import body_parts_sentence
-    parts = body_parts_sentence(None if body_parts is None else tuple(body_parts), body_part_kinds)
+    parts = body_parts_sentence(None if body_parts is None else tuple(body_parts), body_part_kinds) + (proportions or "")
     if scene:
         # D-219·D-221 장면 시험 문장(처음 보는 8명 동일성 유지)과 같은 짜임. 옷 그림이 있으면 그 옷을 입고 새 장면에.
         outfit = ("wearing the complete outfit shown in image 2 (replace all of the character's current clothing with it, matching its "

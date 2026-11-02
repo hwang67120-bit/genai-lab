@@ -139,7 +139,7 @@ def prepare_flux(directory, req, canvas, rgb, scores, safety, joints, face, star
     """FLUX 경로 준비(D-210): 특징 문장·원본 부위 마스크·원본 손 개수. 그림체 참조·의상 참조·입력 묶음은 만들지 않는다."""
     from genai_lab.character_features import extract_features
     from genai_lab.studio_controller import guessed_gender
-    from genai_lab.style_redraw_flux import flux_prompt
+    from genai_lab.style_redraw_flux import flux_prompt, style_lora_weight
     from genai_lab.style_redraw_inputs import trait_rows
     garment_path = directory / "garment.png"
     with_garment = garment_path.is_file()
@@ -172,6 +172,7 @@ def prepare_flux(directory, req, canvas, rgb, scores, safety, joints, face, star
         state="ready", engine="flux", with_garment=with_garment, seconds=round(time.time() - started, 1), gender=confirmed,
         guessed_gender=guessed, traits=traits, body_parts=list(body_parts), identity_anchors=anchors(scores),
         body_parts_source="confirmed" if confirmed_parts is not None else "automatic_tags", body_part_kinds=kinds,
+        style_lora_weight=style_lora_weight(scores),         # 털 수인이면 그림체를 약하게(D-245)
         scene=req.get("scene"), prompt=flux_prompt(traits, with_garment, body_parts, req.get("scene"), kinds), face_box=face,
         original_hands=hands,
         warnings=support_warnings(scores, joints), safety=safety, joints_used=sorted(joints),
@@ -206,7 +207,8 @@ def generate_flux(directory, req):
     # 그림체 LoRA(D-236): 4비트 본체 위에 붙인다. CPU 오프로드 전에 붙여야 한다(시험 S27과 같은 순서).
     lora = Path(req["flux_style_lora"])
     pipe.load_lora_weights(str(lora.parent), weight_name=lora.name, adapter_name="style")
-    pipe.set_adapters(["style"], adapter_weights=[STYLE_LORA_WEIGHT])
+    weight = prepared.get("style_lora_weight", STYLE_LORA_WEIGHT)
+    pipe.set_adapters(["style"], adapter_weights=[weight])
     pipe.enable_model_cpu_offload()
     pipe.vae.enable_tiling()
     loaded = round(time.time() - started, 1)
@@ -299,9 +301,9 @@ def generate_flux(directory, req):
                                identity_anchors=compare_anchors(prepared.get("identity_anchors") or [], scores),
                                autofix=dict(round=pick, asked=asked if pick else [],
                                             still_lost=remaining(original_scores, scores, asked)),
-                               face_detail=face))
+                               face_detail=face, style_lora_weight=weight))
     save(directory / "generation.json", dict(
-        state="generated_unreviewed", engine="flux", style_lora=dict(file=str(lora), weight=STYLE_LORA_WEIGHT),
+        state="generated_unreviewed", engine="flux", style_lora=dict(file=str(lora), weight=weight),
         with_garment=with_garment, load_seconds=loaded, candidates=candidates, review="사용자가 후보 중 1장을 고른다", autofix=autofix,
         peak_reserved_gib=peak, memory_cap_gib=MEMORY_CAP_GIB, prompt=prepared["prompt"],
         model=dict(name="black-forest-labs/FLUX.2-klein-4B", path=str(req["flux_model"]), license="Apache-2.0")))

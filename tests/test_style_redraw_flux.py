@@ -39,6 +39,14 @@ class TestFluxHelpers(unittest.TestCase):
         self.assertIn("If the character has animal ears, a tail or wings", flux_prompt([]))          # 모름 = 조건문
         self.assertIn("no animal ears, no tail and no wings", flux_prompt([], with_garment=True, body_parts=()))
 
+    def test_furry_characters_get_a_weaker_style_lora(self):
+        # D-245: 사람 캐릭터로 학습한 그림체 LoRA가 털 수인 얼굴을 사람 쪽으로 당김 → 원본 태그로 판별해 세기 0.3
+        from genai_lab.style_redraw_flux import FURRY_STYLE_LORA_WEIGHT, STYLE_LORA_WEIGHT, style_lora_weight
+        self.assertEqual(style_lora_weight({"furry": 0.97, "furry_female": 0.98}), FURRY_STYLE_LORA_WEIGHT)
+        self.assertEqual(style_lora_weight({"furry_male": 0.6}), FURRY_STYLE_LORA_WEIGHT)
+        self.assertEqual(style_lora_weight({"animal_ears": 0.97, "dog_ears": 0.85, "furry": 0.1}), STYLE_LORA_WEIGHT)   # 동물 귀 사람은 그대로
+        self.assertEqual(style_lora_weight(None), STYLE_LORA_WEIGHT)
+
     def test_prompt_starts_with_style_lora_trigger_and_names_part_kinds(self):
         # D-236: 그림체 LoRA 트리거 낱말이 맨 앞, 귀·꼬리 종류를 적으면 LoRA가 귀 모양을 바꾸지 못했다(9/9)
         from genai_lab.style_redraw_flux import STYLE_LORA_TRIGGER

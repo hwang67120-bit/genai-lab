@@ -27,6 +27,18 @@ STYLE = ("highly detailed semi-realistic anime illustration, dense digital paint
 # 파일은 모델 폴더 flux_style_lora(configs/flux_model_files.json의 style_lora에 크기·SHA).
 STYLE_LORA_TRIGGER = "gnlbq4 style illustration."
 STYLE_LORA_WEIGHT = 1.0
+# 털 수인(D-245, 사용자 11/2 "털 수인은 자료도 적고 구체적인 그림체를 알 수 없으니 자동 규칙으로"): 그림체 LoRA는 사람 캐릭터로 학습해
+# 털 수인 얼굴을 사람 쪽으로 당긴다(F1·N2, 세기 1.0·0.6에서 furry 0). 원본 태그로 털 수인을 판별하면 세기 0.3 — 동물 얼굴이 돌아오고
+# (furry 0.52~0.94) 광택·빛 번짐은 상당 부분 남는다(S49). 0은 그림체가 빠진다.
+FURRY_STYLE_LORA_WEIGHT = 0.3
+FURRY_TAGS = ("furry", "furry_female", "furry_male")
+FURRY_MIN = 0.5
+
+
+def style_lora_weight(scores):
+    """원본 WD 태그 → 그림체 LoRA 세기. 털 수인이면 FURRY_STYLE_LORA_WEIGHT."""
+    furry = any(float((scores or {}).get(t, 0.0)) >= FURRY_MIN for t in FURRY_TAGS)
+    return FURRY_STYLE_LORA_WEIGHT if furry else STYLE_LORA_WEIGHT
 BACKGROUND = "Weathered concrete wall background with soft texture, strong warm key light from upper left."
 COLOUR_SHIFT_CAP = np.array([15.0, 12.0, 12.0])     # L, a, b — 이보다 크게 옮기지 않는다(잘못 잡은 영역의 피해를 줄임)
 SPREAD_CLIP = (0.8, 1.25)

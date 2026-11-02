@@ -190,6 +190,9 @@ def test_autofixed_candidate_says_what_was_asked_again(tmp_path):
     generation.write_text(json.dumps(record), encoding="utf-8")
     results = StyleRedrawResults(outcome)          # generation.json의 자동 보정 기록을 후보로 옮겨 온다(실제 화면 시험에서 빠졌음)
     assert "자동 보정: 빠진 특징(furry, animal nose)" in results.head_notice
+    assert "털 수인" not in results.head_notice
+    results.candidates[results.selected]["style_lora_weight"] = 0.3                  # D-245
+    assert "털 수인으로 판별해 그림체를 약하게" in results.head_notice
     results.candidates[results.selected]["autofix"] = dict(round=0, asked=[])
     assert "자동 보정" not in results.head_notice
 

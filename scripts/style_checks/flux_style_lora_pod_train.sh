@@ -10,6 +10,7 @@ RANK=${RANK:-32}
 LR=${LR:-1e-4}
 DATA=${DATA:-/root/s26-data}
 OUT=${OUT:-/root/s26-lora}
+BUCKETS=${BUCKETS:-1360,1024}   # 2판: 잘라낸 옷·머리카락·얼굴 그림이 섞여 세로·정사각·가로 묶음
 # 2판(S43): 같은 스크립트를 자료·출력·rank·학습률만 바꿔 두 번 돌린다(DATA=/root/s43-data OUT=/root/s43-lora-a …).
 export PIP_NO_CACHE_DIR=1 HF_HUB_DISABLE_XET=1
 rm -rf /root/qi /dev/shm/qi /root/klein-base/.cache
@@ -30,7 +31,7 @@ accelerate launch --mixed_precision=bf16 --num_processes=1 /root/train_dreamboot
   --instance_prompt="gnlbq4 style illustration." \
   --output_dir=$OUT \
   --mixed_precision=bf16 \
-  --aspect_ratio_buckets="1360,1024" \
+  --aspect_ratio_buckets="$BUCKETS" \
   --random_flip \
   --gradient_checkpointing \
   --cache_latents \

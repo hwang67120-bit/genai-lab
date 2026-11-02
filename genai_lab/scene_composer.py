@@ -14,7 +14,7 @@
 """
 import random
 
-VERSION = 5
+VERSION = 6
 # 4판(D-242, 사용자 11/1 "나중 연동을 생각해 배경 품질도"): 배경을 원근이 있는 장소로 — 앞·중간·먼 배경, 공기 원근, 캐릭터와 같은 마감.
 FULL_BODY_TEXT = ("Full-body shot: the whole character is visible from head to feet. The background is a richly detailed place with clear "
                   "depth: a foreground, a middle ground and a distant background, natural perspective and soft atmospheric haze, "
@@ -40,7 +40,6 @@ ACTIONS = (
     "turning slightly with a glance over the shoulder, the face toward the viewer",
     "leaning against a wall with one foot crossed over the other and the arms loosely folded in front",
     "stretching one arm up toward the sky with a lively pose",
-    "tucking a strand of hair behind one ear with one hand",
     "holding an open umbrella over one shoulder",
     "holding a book against the chest with both hands",
     "holding a cup of tea in both hands near the chest",
@@ -58,6 +57,8 @@ EXPRESSIONS = (
     "with a slightly shy smile", "with a cheerful open-mouthed smile", "with a curious look", "with a soft, relaxed expression",
     "with a proud, smug smile", "with a dreamy look",
 )
+# 6판(D-248): '머리카락을 귀 뒤로 넘기기'는 짧은 머리를 길게·묶은 머리로 바꿈(T009 S54 — 3장 모두 short_hair 잃음, 자동 고치기·
+# 머리 길이 강조 문장으로도 1/3만 돌아옴, 동작만 바꾸면 3/3 짧은 곱슬머리) → 동작에서 뺐다.
 # 5판(D-246): '작은 고양이를 쓰다듬기'는 고양이 한 마리가 두 마리로 그려짐(C005, S50 F1, S51 U004 — 세 번째) → 동작에서 뺐다.
 # 4판: 장소 문장에서 글자를 부르는 말(neon signs)을 뺐다 — 네온 거리에서 가짜 한자 간판이 생기고 태그 검사는 못 잡음(S39).
 # '간판에 글자 없음' 문장은 빈 간판을 새로 세웠다(D-225) → 부르는 말 자체를 없앤다.

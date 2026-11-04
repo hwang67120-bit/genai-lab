@@ -105,3 +105,20 @@ def newly_lost(original, before, after, kinds, with_garment=False):
     고칠 대상 종류(to_fix와 같은 규칙). 얼굴 다듬기가 T009 보라 눈을 파랗게 바꾼 것을 잡는다(D-243)."""
     lost = [t for t, v in original.items() if v >= PRESENT and before.get(t, 0.0) >= GONE and after.get(t, 0.0) < GONE]
     return to_fix(lost, kinds, with_garment)
+
+
+def garment_targets(garment_scores, kinds):
+    """옷 그림에서 확실한(PRESENT) '입은 것' 태그(종류 표 OUTFIT_MIN 이상, 신체 노출 낱말 제외) — 결과가 입어야 할 것(D-249)."""
+    out = []
+    for tag, value in (garment_scores or {}).items():
+        row = kinds.get(tag) or {}
+        if value >= PRESENT and row.get("kind") == "outfit" and row.get("outfit", 0.0) >= OUTFIT_MIN and not any(w in tag for w in NEVER_ASK):
+            out.append(tag)
+    return sorted(out, key=lambda t: -garment_scores[t])
+
+
+def garment_fix_sentence(tags):
+    if not tags:
+        return ""
+    return ("The character is not yet wearing these items of the outfit in image 2 and must wear them clearly: "
+            + ", ".join(t.replace("_", " ") for t in tags) + ". ")

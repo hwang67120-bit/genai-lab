@@ -56,7 +56,14 @@ def run_case(window, case, limit_minutes=240):
         save_status()
         return
     start = time.time()
-    window.generate_button.click()
+    # 비교 시험에서만 저장된 장면을 재사용한다. 일반 시험은 앱의 자동 조합을 그대로 사용한다.
+    fixed_scene = case.get("fixed_scene")
+    if fixed_scene is None:
+        window.generate_button.click()
+    else:
+        from unittest.mock import patch
+        with patch.object(window.studio.product, "choose_scene", return_value=fixed_scene.copy()):
+            window.generate_button.click()
     while time.time() - start < limit_minutes * 60:
         app.processEvents()
         time.sleep(0.5)
@@ -71,6 +78,10 @@ def run_case(window, case, limit_minutes=240):
     scene = Path(run_directory) / "scene.json"
     if scene.is_file():
         record["scene"] = json.loads(scene.read_text(encoding="utf-8"))
+    if fixed_scene is not None and record.get("scene") != fixed_scene:
+        record.update(state="failed", errors=[*errors, "기록된 장면이 고정 비교 조건과 다릅니다."])
+        save_status()
+        return
     if window.studio.results is None:
         record["state"] = "failed"
         save_status()

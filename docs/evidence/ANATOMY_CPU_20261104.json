@@ -1,0 +1,21 @@
+{
+  "observed_at": "2026-11-04T22:50:52.8501365+09:00",
+  "status": "cpu_regression_passed_image_quality_unresolved",
+  "tests_passed": 196,
+  "subtests_passed": 7,
+  "duration_seconds": 31.44,
+  "exit_code": 0,
+  "gpu_execution": false,
+  "test_log_sha256": "ec305e4ac564ccdcf097981bfa6bfa67f363c3b5fcf01a5fe4eca22dda5e40fe",
+  "user_quality": "E32_E35_rejected",
+  "latest_correction_gpu_verified": false,
+  "code_sha256": {
+    "genai_lab/style_redraw_pipeline.py": "5311bd8828797504f9047cfcd17d565c9e23e30105fc171423755e3af1f418a9",
+    "genai_lab/style_redraw_worker.py": "970acdb70e9cc7a82d2b443c61354eda5f3c07ba1a6b90c5ece8675325f69900",
+    "genai_lab/style_redraw_correction_evidence.py": "098846e68a5ce567ad0f68413d314889884db6a17be17d794fba6118eb6fa405",
+    "genai_lab/style_redraw_results.py": "a96d65f49524c121959a36d8692751b3e32557c1c518562945d2184634a78d52",
+    "genai_lab/flux_prompt_delivery.py": "3e2a0fc6a0612a3c7b539ae836c23de7ff924bd83e7439bf581badc3d5d2c9ca",
+    "genai_lab/style_redraw_arm_evidence.py": "45e5ac2b3c7e2bb86800a842413ea1e97d30626732f1235c255495a0dc9228b4",
+    "genai_lab/style_redraw_anatomy.py": "9bc044ef0688633f1f44f3f06a24fa86d3d559080f417ad0d59a72b701f42322"
+  }
+}

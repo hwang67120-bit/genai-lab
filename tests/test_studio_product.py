@@ -43,7 +43,7 @@ def fake_flux(calls, flags=None):
             path = directory / f"result-seed{seed}.png"
             Image.new("RGB", (8, 8), (seed, i, 0)).save(path)
             files.append(str(path))
-            rows.append(dict(seed=seed, file=path.name, extra_hands=(flags or {}).get(seed, False), missing_body_parts=[]))
+            rows.append(dict(seed=seed, hands=3 if (flags or {}).get(seed, False) else 2, file=path.name, extra_hands=(flags or {}).get(seed, False), missing_body_parts=[]))
         (directory / "generation.json").write_text(json.dumps(dict(candidates=rows)), encoding="utf-8")
         return dict(state="review_pending", candidates=files)
     return run
@@ -114,9 +114,10 @@ def test_garment_goes_to_the_same_flux_step_and_flagged_candidate_is_not_shown_f
     calls = []
     start(w, tmp_path, monkeypatch, calls, flags={42: True}, garment=garment)
     assert calls[0]["garment_path"] == garment
-    assert w.studio.results.selected == 1 and "손이 원본보다" not in w.studio.results.head_notice   # 손이 늘어난 42는 처음에 안 보임
+    assert w.studio.results.selected == 0 and w.studio.results.current_path.name == "result-seed43.png"   # 손이 늘어난 42는 처음에 안 보임
     w.studio_candidate_combo.setCurrentIndex(0)
-    assert "손이 원본보다" in w.studio.results.head_notice
+    assert w.studio_candidate_combo.count() == 2
+    assert all(c["seed"] != 42 for c in w.studio.results.candidates)
 
 
 def test_refused_outcome_is_reported_not_shown(product_window, tmp_path, monkeypatch):
@@ -232,3 +233,63 @@ def test_scene_field_feeds_the_request_and_blocks_appearance_changes(product_win
     w.generate_button.click()
     wait_for(QApplication.instance(), lambda: w.studio.task is None and w.studio.results is not None)
     assert calls[0]["scene"].startswith("jumping happily. Setting: ")       # 배경 말이 없어 장소·빛을 덧붙임
+
+
+@pytest.mark.parametrize("unchanged", [False, True])
+def test_user_rejection_reuses_selected_seed_and_original_inputs(product_window, tmp_path, monkeypatch, unchanged):
+    from PySide6.QtWidgets import QInputDialog
+    from genai_lab import style_redraw_worker
+    w = product_window
+    start(w, tmp_path, monkeypatch, [])
+    w.studio_candidate_combo.setCurrentIndex(1)
+    previous = w.studio.results
+    previous.outcome["source"] = str(w.style_path)
+    parent = previous.directory
+    (parent / "character.png").write_bytes(w.style_path.read_bytes())
+    (parent / "garment.png").write_bytes(b"original garment")
+    (parent / "original-masks.npz").write_bytes(b"original masks")
+    (parent / "request.json").write_text(json.dumps(dict(adult_confirmed=True, scene="walking")))
+    (parent / "prepare.json").write_text(json.dumps(dict(state="ready", prompt="Paint the original.", with_garment=True)))
+    rejected = previous.current_path.read_bytes()
+    reason = next(iter(style_redraw_pipeline.REJECTION_INSTRUCTIONS))
+    seen = []
+    monkeypatch.setattr(QInputDialog, "getItem", lambda *args: (reason, True))
+    monkeypatch.setattr(style_redraw_worker, "prompt_delivery", lambda *args: dict(truncated=False))
+
+    def stage(name, directory):
+        assert name == "generate"
+        req = json.loads((directory / "request.json").read_text(encoding="utf-8"))
+        prepared = style_redraw_worker.require_initial_prompt(directory, req)
+        feedback = req["user_rejection"]
+        assert feedback["seed"] == 43 and feedback["sha256"] == previous.candidate["sha256"]
+        assert req["scene"] == "walking" and feedback["reason"] == reason
+        assert prepared["prompt"] == "Paint the original. " + style_redraw_pipeline.REJECTION_INSTRUCTIONS[reason]
+        for filename in ("character.png", "garment.png", "original-masks.npz"):
+            assert (directory / filename).read_bytes() == (parent / filename).read_bytes()
+        path = directory / "result-seed43.png"
+        if unchanged:
+            path.write_bytes(rejected)
+        else:
+            Image.new("RGB", (8, 8), "blue").save(path)
+        (directory / "generation.json").write_text(json.dumps(dict(candidates=[
+            dict(file=path.name, seed=43, hands=2, extra_hands=False)])))
+        seen.append(directory)
+        return 0
+
+    monkeypatch.setattr(style_redraw_pipeline, "default_run", lambda *args: stage)
+    w.reject_candidate_button.click()
+    wait_for(QApplication.instance(), lambda: w.studio.task is None)
+    assert len(seen) == 1
+    assert previous.current_path.read_bytes() == rejected
+    with pytest.raises(ValueError, match="거절"):
+        previous.approve_saved_by_user()
+    outcome = json.loads((seen[0] / "outcome.json").read_text(encoding="utf-8"))
+    if unchanged:
+        assert outcome["code"] == "unchanged_rejected_image"
+        assert w.studio.results is previous and not w.save_candidate_button.isEnabled()
+        w.studio_candidate_combo.setCurrentIndex(0)
+        assert w.save_candidate_button.isEnabled()
+    else:
+        assert outcome["state"] == "review_pending"
+        assert [c["seed"] for c in w.studio.results.candidates] == [43]
+        assert w.studio.results.status == "awaiting_user_review"

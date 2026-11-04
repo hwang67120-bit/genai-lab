@@ -78,11 +78,12 @@ class TestPartCombineEntry(unittest.TestCase):
             for seed in (42, 43, 44):
                 path = d / f"result-seed{seed}.png"; Image.new("RGB", (8, 8), (seed, 0, 0)).save(path); files.append(str(path))
             (d / "outcome.json").write_text(json.dumps(dict(state="review_pending", candidates=files)), encoding="utf-8")
+            (d / "generation.json").write_text(json.dumps(dict(candidates=[dict(file=Path(p).name, hands=2) for p in files])))
             def run(stage, directory):
                 ask = json.loads((directory / "combine-request.json").read_text(encoding="utf-8"))
                 self.assertEqual((ask["face_seed"], ask["body_seed"]), (43, 44))
                 Image.new("RGB", (8, 8)).save(directory / "combined-face43-body44.png")
-                (directory / "combine-result.json").write_text(json.dumps(dict(file="combined-face43-body44.png", shift=[0.1, -0.2])),
+                (directory / "combine-result.json").write_text(json.dumps(dict(file="combined-face43-body44.png", hands=2, shift=[0.1, -0.2])),
                                                                encoding="utf-8")
                 return 0
             result = run_style_part_combine(d, files[1], files[2], run=run)
@@ -101,6 +102,7 @@ class TestPartCombineEntry(unittest.TestCase):
             for seed in (42, 43):
                 path = d / f"result-seed{seed}.png"; Image.new("RGB", (8, 8)).save(path); files.append(str(path))
             (d / "outcome.json").write_text(json.dumps(dict(state="review_pending", candidates=files)), encoding="utf-8")
+            (d / "generation.json").write_text(json.dumps(dict(candidates=[dict(file=Path(p).name, hands=2) for p in files])))
             def run(stage, directory):
                 (directory / "combine-error.json").write_text(json.dumps(dict(message="머리 위치가 너무 다릅니다")), encoding="utf-8")
                 return 1

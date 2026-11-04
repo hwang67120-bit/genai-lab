@@ -20,7 +20,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import QCheckBox, QLabel, QLineEdit
+from PySide6.QtWidgets import QCheckBox, QInputDialog, QLabel, QLineEdit
 
 GENERATE = "이미지 생성"
 GENERATE_TIP = "캐릭터 그림(과 의상 그림)으로 새 장면의 그림 후보 3장을 만듭니다. 약 3분 걸립니다."
@@ -85,8 +85,11 @@ class ProductFlow:
         w.save_candidate_button.clicked.disconnect()
         w.save_candidate_button.clicked.connect(self.save)
         w.save_candidate_button.setText("저장")
+        w.reject_candidate_button.clicked.disconnect()
+        w.reject_candidate_button.setText("거절하고 같은 시드로 수정")
+        w.reject_candidate_button.clicked.connect(self.reject)
         self.hidden = [w.free_generation_button.parentWidget(), w.diagnostics_toggle, w.diagnostics_panel,
-                       w.approve_candidate_button, w.reject_candidate_button, w.discard_candidate_button,
+                       w.approve_candidate_button, w.discard_candidate_button,
                        w.studio_raw_button, w.studio_before_head_button, w.identity_report_button,
                        w.identity_report_label, w.studio_background_notice, w.studio_finish_button, w.studio_finish_notice,
                        w.tail_edit_button, w.studio_head_paste_button]
@@ -176,7 +179,11 @@ class ProductFlow:
         self.scene_note.setStyleSheet("color: #b00020;" if problem else "")
         w.generate_button.setEnabled(not active and not s.cleanup_blocked and bool(w.style_path)
                                      and w.pending_character_candidate is None and not problem and self.adult_confirmed())
-        w.save_candidate_button.setEnabled(not active and s.results is not None and getattr(s.results, "free_mode", False))
+        redraw = isinstance(s.results, StyleRedrawResults)
+        w.reject_candidate_button.setVisible(redraw)
+        w.reject_candidate_button.setEnabled(redraw and not active and not s.cleanup_blocked and self.adult_confirmed()
+                                             and str(w.style_path) == str(self.character) and s.results.candidate["seed"] is not None)
+        w.save_candidate_button.setEnabled(not (redraw and s.results.user_rejected()) and not active and s.results is not None and getattr(s.results, "free_mode", False))
 
     def inputs_changed(self):
         if self.adult_check.isChecked() and self.adult_for != str(self.window.style_path):
@@ -274,12 +281,47 @@ class ProductFlow:
         combo.setCurrentIndex(s.results.selected)
         combo.blockSignals(False)
         w.candidate_preview.setPixmap(QPixmap(str(s.results.current_path)))
-        w.status_label.setText(DONE + " " + s.results.head_notice)
+        message = "같은 시드로 수정한 후보입니다. 결과를 확인해 주세요." if outcome.get("feedback") else DONE
+        w.status_label.setText(message + " " + s.results.head_notice)
         s.controls()
 
     def failed(self, error, details=""):
         self.timer.stop()
         self.studio.fail(error, details)
+
+    def reject(self):
+        from genai_lab.style_redraw_pipeline import REJECTION_INSTRUCTIONS, retry_rejected_candidate
+        s, w = self.studio, self.window
+        if s.task or not w.reject_candidate_button.isEnabled():
+            return
+        previous = s.results
+        reason, accepted = QInputDialog.getItem(w, "후보 거절", "이 후보에서 무엇을 고쳐야 하나요?",
+                                                list(REJECTION_INSTRUCTIONS), 0, False)
+        if not accepted:
+            return
+        parent_directory = s.run_directory
+        s.run_directory = s.output_root / uuid.uuid4().hex
+        directory = s.run_directory / "flux"
+        self.preview_seen = None
+        self.timer.start()
+
+        def failed(error, details=""):
+            self.failed(error, details)
+            s.results, s.run_directory = previous, parent_directory
+            w.candidate_preview.setPixmap(QPixmap(str(previous.current_path)))
+            s.controls()
+
+        def complete(outcome):
+            if outcome.get("state") != "review_pending":
+                failed(RuntimeError(outcome.get("message", "수정 후보가 없습니다.")))
+                return
+            self.done(outcome)
+
+        def operation(cancel, progress):
+            progress(f"거절한 후보를 같은 시드 {previous.candidate['seed']}로 수정하고 있습니다.")
+            return retry_rejected_candidate(previous, reason, directory, s.runtime, cancelled=cancel)
+
+        s.launch(operation, complete, on_error=failed)
 
     def save(self):
         """저장 = 이 결과를 쓰겠다는 사용자 결정. 품질 항목 판정은 아니므로 그렇게 기록한다(approve_saved_by_user)."""

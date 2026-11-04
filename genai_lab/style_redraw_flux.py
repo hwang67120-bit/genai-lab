@@ -39,12 +39,31 @@ FURRY_MIN = 0.5
 # 안 보이면 안 보이는 다리를 지어내지 않고 원본이 보여 준 만큼만 그린다. 허리·엉덩이·허벅지가 보이면 허벅지 위(카우보이 샷), 아니면 상반신.
 # (먼저 시험한 '성인 비율 문장 + 참조 축소'는 T009에서는 비율이 맞았지만 없는 몸을 강제로 만드는 방식이라 뺐다.)
 FEET_TAGS = ("full_body", "shoes", "boots", "sneakers", "barefoot", "feet", "high_heels", "sandals", "loafers", "socks")
-THIGH_TAGS = ("cowboy_shot", "thighs", "belt", "pants", "skirt", "shorts", "hips", "hand_on_own_hip", "jeans", "pleated_skirt")
+THIGH_TAGS = ("cowboy_shot", "thighs", "belt", "pants", "skirt", "shorts", "hips", "jeans", "pleated_skirt")
 FULL_BODY_FRAMING = "Full-body shot: the whole character is visible from head to feet."
 COWBOY_FRAMING = ("Cowboy shot: the character is shown from the head to the mid thigh, the same amount of the body as in image 1; "
                   "do not show the lower legs or feet.")
 UPPER_FRAMING = ("Upper-body shot: the character is shown from the head to the waist, the same amount of the body as in image 1; "
                  "do not show the legs.")
+
+
+# 성별·옷(D-249, 사용자 11/2 시험 6건: "남성인데 너무 여성적으로 그림, 특히 얼굴에 남성미가 없음 / 옷 적용이 안 됨"). 그림체 LoRA 자료가
+# 여성 쪽이라 긴 머리 남성이 여성 얼굴로 끌린다 → 원본이 남성이면 남성 얼굴·체형을 문장으로. 옷 그림은 '그림 2의 옷'만으로는 원래 옷이
+# 남거나(무늬 셔츠) 맨몸이 그대로 → 옷 그림의 태그 낱말을 문장에 적는다.
+MALE_SENTENCE = ("The character is an adult man: keep a clearly masculine face with a defined jaw and brow, male eyes without "
+                 "eyeliner or makeup, and a male body with broad shoulders and a flat chest, exactly as in image 1. ")
+
+
+def gender_sentence(gender):
+    return MALE_SENTENCE if gender == "male" else ""
+
+
+def garment_sentence(words):
+    """옷 그림 태그 낱말 → '그림 2의 옷: …을 모두 입는다' 문장. 없으면 빈 문장."""
+    if not words:
+        return ""
+    return ("The outfit in image 2 is: " + ", ".join(words) + ". The character wears every one of these items and nothing from the "
+            "original outfit; bare skin that was not covered by the outfit in image 2 stays bare only where image 2 leaves it bare. ")
 
 
 def framing(scores):
@@ -80,21 +99,27 @@ UPPER_SCENE_RULES = ("The scene lighting may add highlights and shadows but must
 # 간판 문장("Signs and screens … no letters")은 시험에서 가짜 글자를 못 막고 공원에 빈 간판을 새로 세워 뺐다(D-225).
 
 
-def flux_prompt(traits, with_garment=False, body_parts=None, scene=None, body_part_kinds=None, shot=FULL_BODY_FRAMING):
+def flux_prompt(traits, with_garment=False, body_parts=None, scene=None, body_part_kinds=None, shot=FULL_BODY_FRAMING, gender=None,
+                garment_words=None):
     """같은 캐릭터를 목표 그림체로 다시 그리라는 문장. 특징 문장(자동 측정)과 피부색 유지 지시를 넣는다.
     with_garment: 그림 2의 옷으로 갈아입히고 그린다(D-212, 모드 A·B 통합). 원래 옷 낱말은 빼야 새 옷과 다투지 않는다.
     body_parts: 확인된 동물 귀·꼬리·날개(튜플, 없으면 빈 튜플, 모르면 None) — Qwen 경로와 같은 부위 문장(D-108·D-111, D-221).
     scene: 새 자세·장면 문장(scene_composer 또는 검사를 지난 사용자 문장, D-222). 없으면 원본 자세 + 콘크리트 벽 배경.
     body_part_kinds: 귀·꼬리·날개의 종류(identity_anchors.body_part_kinds, D-236). 맨 앞에는 그림체 LoRA 트리거 낱말."""
-    return f"{STYLE_LORA_TRIGGER} {_prompt_body(traits, with_garment, body_parts, scene, body_part_kinds, shot)}"
+    return f"{STYLE_LORA_TRIGGER} {_prompt_body(traits, with_garment, body_parts, scene, body_part_kinds, shot, gender, garment_words)}"
 
 
-def _prompt_body(traits, with_garment, body_parts, scene, body_part_kinds, shot=FULL_BODY_FRAMING):
+def _prompt_body(traits, with_garment, body_parts, scene, body_part_kinds, shot=FULL_BODY_FRAMING, gender=None, garment_words=None):
     from genai_lab.outfit_edit import body_parts_sentence
-    parts = body_parts_sentence(None if body_parts is None else tuple(body_parts), body_part_kinds)
+    parts = (gender_sentence(gender) + (garment_sentence(garment_words) if with_garment else "")
+             + body_parts_sentence(None if body_parts is None else tuple(body_parts), body_part_kinds))
     full = shot == FULL_BODY_FRAMING
     if scene and not full:          # 장면 조합 문장의 전신 지시를 원본 구도로 바꾼다(D-247)
         scene = scene.replace(FULL_BODY_FRAMING, shot)
+    scene_rules = SCENE_RULES if full else UPPER_SCENE_RULES
+    if with_garment:
+        scene_rules = scene_rules.replace("eyes, skin and clothes keep their colours from image 1.",
+                                          "eyes and skin keep their colours from image 1; clothes take their colours from image 2.")
     if scene:
         # D-219·D-221 장면 시험 문장(처음 보는 8명 동일성 유지)과 같은 짜임. 옷 그림이 있으면 그 옷을 입고 새 장면에.
         outfit = ("wearing the complete outfit shown in image 2 (replace all of the character's current clothing with it, matching its "
@@ -105,7 +130,7 @@ def _prompt_body(traits, with_garment, body_parts, scene, body_part_kinds, shot=
         keep = "body proportions" if with_garment else "body proportions and outfit"
         return (f"Show the same adult character as in image 1{who}{' ' + outfit if outfit else ''} in a new scene. Scene: {scene.strip()} "
                 f"Keep the same face, hairstyle, hair colour, eye colour, skin tone and {keep} exactly as in image 1; do not lighten "
-                f"or darken the skin. {parts}{SCENE_RULES if full else UPPER_SCENE_RULES}"
+                f"or darken the skin. {parts}{scene_rules}"
                 f"{'Full body, the whole character inside the frame' if full else shot.split(':')[0]}, face clearly visible. Render as a new "
                 f"{STYLE}. {'Do not copy the mannequin or the clothing photo background. ' if with_garment else ''}"
                 f"No lettering, logo, watermark or multiple people.")
@@ -116,7 +141,8 @@ def _prompt_body(traits, with_garment, body_parts, scene, body_part_kinds, shot=
         return (f"Dress the same adult character from image 1{who} in the complete outfit shown in image 2: replace all of the "
                 f"character's current clothing with the outfit from image 2, matching its shape, length, colours and details; nothing "
                 f"from the original outfit may remain. Keep the same face, hairstyle, hair colour, eye colour, skin tone and body "
-                f"proportions as in image 1; do not lighten or darken the skin. {parts}Keep the same pose and framing as image 1. Render as a "
+                f"proportions as in image 1; do not lighten or darken the skin. {parts}Keep the same pose and framing as image 1. "
+                f"{shot + ' ' if not full else ''}Render as a "
                 f"new {STYLE}. {BACKGROUND} Do not copy the mannequin or the clothing photo background. No lettering, logo, watermark "
                 f"or multiple people.")
     described = "; ".join(row["text"].strip() for row in traits if row.get("text", "").strip())

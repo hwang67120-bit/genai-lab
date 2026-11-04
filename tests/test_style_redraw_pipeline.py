@@ -30,7 +30,7 @@ def fake_run(calls, prepare_state="ready", fail=None):
         else:
             for seed in (42, 43, 44):
                 Image.new("RGB", (768, 1024)).save(directory / f"result-seed{seed}.png")
-            body = {"peak_reserved_gib": 6.2, "candidates": [{"seed": s, "file": f"result-seed{s}.png"} for s in (42, 43, 44)]}
+            body = {"peak_reserved_gib": 6.2, "candidates": [{"seed": s, "hands": 2, "file": f"result-seed{s}.png"} for s in (42, 43, 44)]}
             (directory / "generation.json").write_text(json.dumps(body), encoding="utf-8")
         return 0
     return run

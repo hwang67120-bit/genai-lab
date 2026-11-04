@@ -67,3 +67,12 @@ def test_newly_lost_catches_a_post_process_that_changes_eye_colour():
     kinds = {"purple_eyes": dict(kind="body", body=1.0), "black_hair": dict(kind="body", body=1.0), "smile": dict(kind="scene", scene=1.0)}
     assert newly_lost(original, before, after, kinds) == ["purple_eyes"]                     # 표정(장면)은 바뀌어도 된다
     assert newly_lost(original, {"purple_eyes": 0.2}, after, kinds) == []                    # 처리 전에도 없던 것은 처리 탓이 아님
+
+
+def test_garment_targets_are_sure_worn_items_only():
+    from genai_lab.identity_autofix import garment_fix_sentence, garment_targets
+    kinds = {"vest": dict(kind="outfit", outfit=1.0), "white_shirt": dict(kind="outfit", outfit=1.0), "mannequin": dict(kind="scene", scene=1.0),
+             "qr_code": dict(kind="outfit", outfit=0.66), "bra": dict(kind="outfit", outfit=1.0)}
+    scores = {"vest": 0.9, "white_shirt": 0.7, "mannequin": 0.95, "qr_code": 0.8, "bra": 0.8, "pants": 0.3}
+    assert garment_targets(scores, kinds) == ["vest", "white_shirt"]
+    assert "must wear them clearly: vest, white shirt." in garment_fix_sentence(["vest", "white_shirt"])

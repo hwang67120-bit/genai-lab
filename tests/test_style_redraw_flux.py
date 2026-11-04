@@ -47,6 +47,9 @@ class TestFluxHelpers(unittest.TestCase):
         self.assertEqual(framing({"pink_footwear": 0.97}), FULL_BODY_FRAMING)
         self.assertEqual(framing({"upper_body": 0.8, "belt": 0.7, "pants": 0.6}), COWBOY_FRAMING)      # T009: 허리·바지 보임
         self.assertEqual(framing({"portrait": 0.9}), UPPER_FRAMING)
+        # U002의 상체 자르기. 손 자세만으로 허벅지까지 그리게 해서는 안 된다.
+        self.assertEqual(framing({"upper_body": .442, "hand_on_own_hip": .831}), UPPER_FRAMING)
+        self.assertEqual(framing({"hand_on_own_hip": .831, "thighs": .90}), COWBOY_FRAMING)
         scene = compose_scene(39001)["text"]
         p = flux_prompt([dict(text="black hair")], body_parts=(), scene=scene, shot=COWBOY_FRAMING)
         self.assertNotIn("head to feet", p)
@@ -54,6 +57,17 @@ class TestFluxHelpers(unittest.TestCase):
         self.assertNotIn("whole body, arms and legs", p)
         self.assertIn("do not show the lower legs or feet", p)
         self.assertIn("head to feet", flux_prompt([dict(text="black hair")], body_parts=(), scene=scene))      # 기본은 전신
+
+    def test_male_and_garment_words_are_written_out(self):
+        # D-249: 남성이 여성 얼굴로, 옷 그림의 옷이 안 입혀짐 → 남성 문장·옷 그림 낱말
+        from genai_lab.style_redraw_flux import MALE_SENTENCE
+        p = flux_prompt([dict(text="black hair")], with_garment=True, body_parts=(), scene="Walking.", gender="male",
+                        garment_words=["black vest", "white shirt"])
+        self.assertIn(MALE_SENTENCE, p)
+        self.assertIn("The outfit in image 2 is: black vest, white shirt.", p)
+        q = flux_prompt([dict(text="black hair")], body_parts=(), scene="Walking.", gender="female", garment_words=["black vest"])
+        self.assertNotIn("masculine", q)
+        self.assertNotIn("The outfit in image 2", q)                          # 옷 그림이 없으면 옷 낱말 문장 없음
 
     def test_furry_characters_get_a_weaker_style_lora(self):
         # D-245: 사람 캐릭터로 학습한 그림체 LoRA가 털 수인 얼굴을 사람 쪽으로 당김 → 원본 태그로 판별해 세기 0.3

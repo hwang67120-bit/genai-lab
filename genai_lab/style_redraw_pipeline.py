@@ -10,6 +10,7 @@ import time
 from pathlib import Path
 
 from PIL import Image
+from genai_lab.style_redraw_anatomy import candidate_anatomy, require_reviewable
 
 # 모델 폴더(GENAI_MODEL_HOME)가 없을 때의 개발 PC 경로.
 LEGACY = {"flux_model": Path("D:/genai-cache/models/FLUX.2-klein-4B-e7b7dc27"),
@@ -76,6 +77,9 @@ def request_paths(runtime, overrides=None):
                  head_semantic_checkpoint=str(runtime.head_semantic_checkpoint))
     if getattr(runtime, "head_cache", None):            # 얼굴 다듬기(D-243) — 머리 검출 캐시가 없으면 작업 프로세스가 다듬기를 건너뛴다
         paths["head_cache"] = str(runtime.head_cache)
+    for key in ("pose_python", "pose_models"):
+        if getattr(runtime, key, None):
+            paths[key] = str(getattr(runtime, key))
     paths.update({k: str(v) for k, v in (overrides or {}).items()})
     return paths
 
@@ -163,14 +167,7 @@ def run_style_redraw(source_path, directory, runtime=None, *, confirmed_gender=N
         if prepared["state"] == "refused":
             outcome.update(state="refused", code=prepared["code"], message=prepared["message"])
             return outcome
-        outcome["seconds"]["generate"] = _stage(run, "generate", directory, "generation.json", cancelled)
-        generated = json.loads((directory / "generation.json").read_text(encoding="utf-8"))
-        candidates = [str(directory / c["file"]) for c in generated.get("candidates", []) if (directory / c["file"]).is_file()]
-        if not candidates:
-            raise StyleRedrawFailed("generate", "생성 결과 그림이 없습니다.")
-        outcome.update(state="review_pending", candidates=candidates, review="사용자가 후보 중 1장을 고른다(동일성·그림체 확인 전)",
-                       peak_reserved_gib=generated.get("peak_reserved_gib"))
-        return outcome
+        return _generate_review_candidates(directory, outcome, run, cancelled)
     except StyleRedrawCancelled as error:
         outcome.update(state="cancelled", stage=error.stage, message=str(error))
         return outcome
@@ -185,6 +182,90 @@ def run_style_redraw(source_path, directory, runtime=None, *, confirmed_gender=N
         _save(directory / "outcome.json", outcome)
 
 
+def _generate_review_candidates(directory, outcome, run, cancelled):
+    outcome["seconds"]["generate"] = _stage(run, "generate", directory, "generation.json", cancelled)
+    generated = json.loads((directory / "generation.json").read_text(encoding="utf-8"))
+    present = [c for c in generated.get("candidates", []) if (directory / c["file"]).is_file()]
+    if outcome.get("feedback"):
+        import hashlib
+        feedback = outcome["feedback"]
+        if len(present) != 1 or present[0].get("seed") != feedback["seed"]:
+            raise StyleRedrawFailed("generate", "수정 후보의 수 또는 시드가 원래 선택과 다릅니다.")
+        if hashlib.sha256((directory / present[0]["file"]).read_bytes()).hexdigest() == feedback["sha256"]:
+            outcome.update(state="refused", code="unchanged_rejected_image", message="거절한 그림과 수정 결과가 동일합니다.")
+            return outcome
+    candidates = [str(directory / c["file"]) for c in present if candidate_anatomy(c)["eligible_for_review"]]
+    outcome["excluded_candidates"] = [
+        dict(path=str(directory / c["file"]), anatomy=candidate_anatomy(c))
+        for c in present if not candidate_anatomy(c)["eligible_for_review"]]
+    if present and not candidates:
+        outcome.update(state="refused", code="anatomy_review_required",
+                       message="손 과다 의심 또는 검사 미확인으로 선택 가능한 후보가 없습니다. 원본 결과와 검사 기록은 보존했습니다.")
+        return outcome
+    if not candidates:
+        raise StyleRedrawFailed("generate", "생성 결과 그림이 없습니다.")
+    outcome.update(state="review_pending", candidates=candidates, review="사용자가 후보 중 1장을 고른다(동일성·그림체 확인 전)",
+                   peak_reserved_gib=generated.get("peak_reserved_gib"))
+    return outcome
+
+
+REJECTION_INSTRUCTIONS = {
+    "팔·손 잘림": "Keep the requested action and torso crop, but reposition the arms so the visible hands and elbows fit inside the canvas with margin; do not extend the unseen lower body.",
+    "팔·손 중복과 잘림": "Replace the duplicated arms with one coherent pose of the original arms. Keep visible hands and elbows inside the canvas without extending the unseen lower body.",
+    "팔·손 중복 또는 연결 오류": "Correct the visible anatomy: each visible arm follows one continuous shoulder-elbow-wrist chain, with one hand at its end. Preserve occlusion and the original framing.",
+    "자세 또는 구도 오류": "Follow the requested action with a balanced pose, keeping the requested framing and naturally cropped or hidden limbs.",
+    "캐릭터 특징 불일치": "Preserve the character reference's visible facial features, hair and body proportions in the requested scene.",
+    "의상 불일치": "Match the designated outfit's visible garments, layering, materials and colours.",
+    "그림체 불일치": "Render the subject consistently in the requested illustration style, including the face, fabric shading and hair.",
+}
+
+
+def retry_rejected_candidate(results, reason, directory, runtime, *, run=None, cancelled=None):
+    """거절된 그림은 판정 증거로만 남기고, 같은 실행의 준비된 입력으로 한 후보를 다시 그린다."""
+    import shutil
+    parent = results.directory
+    digest = results.verify_current()
+    seed = results.candidate["seed"]
+    if type(seed) is not int or reason not in REJECTION_INSTRUCTIONS:
+        raise ValueError("시드가 있는 후보와 거절 사유를 선택해 주세요.")
+    request = json.loads((parent / "request.json").read_text(encoding="utf-8"))
+    prepared = json.loads((parent / "prepare.json").read_text(encoding="utf-8"))
+    if request.get("adult_confirmed") is not True or prepared.get("state") != "ready":
+        raise ValueError("성인 확인 및 참조 준비를 마친 실행만 다시 그릴 수 있습니다.")
+    instruction = REJECTION_INSTRUCTIONS[reason]
+    directory = Path(directory)
+    directory.mkdir(parents=True, exist_ok=False)
+    feedback = dict(decision="user_rejected", reason=reason, seed=seed, candidate=str(results.current_path),
+                    sha256=digest, parent=str(parent), retry=str(directory), instruction=instruction)
+    _save(parent / f"rejected-{digest}-{directory.parent.name}.json", feedback)
+    outcome = dict(mode="style_redraw", source=results.outcome["source"], feedback=feedback, started=time.time(), seconds={})
+    try:
+        if instruction in prepared["prompt"]:
+            raise ValueError("같은 수정 지시로 이미 그린 후보입니다. 다른 사유를 선택해 주세요.")
+        for name in ["character.png", "original-masks.npz"] + (["garment.png"] if prepared["with_garment"] else []):
+            shutil.copyfile(parent / name, directory / name)
+        from genai_lab.style_redraw_prompt import corrected_rejection_prompt
+        prepared = corrected_rejection_prompt(prepared, instruction, anatomy=reason in (
+            "팔·손 잘림", "팔·손 중복과 잘림", "팔·손 중복 또는 연결 오류"))
+        for key in ("pose_python", "pose_models"):
+            if key not in request and getattr(runtime, key, None):
+                request[key] = str(getattr(runtime, key))
+        prepared.pop("prompt_delivery", None)  # 새 문장은 생성 직전에 실제 토크나이저로 다시 검사한다.
+        _save(directory / "request.json", dict(request, user_rejection=feedback))
+        _save(directory / "prepare.json", prepared)
+        return _generate_review_candidates(directory, outcome, run or default_run(runtime, cancelled), cancelled)
+    except StyleRedrawCancelled as error:
+        outcome.update(state="cancelled", stage=error.stage, message=str(error))
+    except StyleRedrawFailed as error:
+        outcome.update(state="failed", stage=error.stage, message=str(error))
+    except (OSError, ValueError) as error:
+        outcome.update(state="failed", stage="feedback", message=str(error))
+    finally:
+        outcome["finished"] = time.time()
+        _save(directory / "outcome.json", outcome)
+    return outcome
+
+
 def run_style_part_combine(directory, face_candidate, body_candidate, runtime=None, *, run=None):
     """부위별 고르기(D-214): 후보 하나의 얼굴·머리 + 다른 후보의 몸·옷 → 1장(CPU). 반환: state = review_pending | failed.
     두 후보는 이 실행의 서로 다른 후보여야 하고 SHA로 확인한다. 원래 후보 그림은 바꾸지 않는다."""
@@ -194,9 +275,12 @@ def run_style_part_combine(directory, face_candidate, body_candidate, runtime=No
     if outcome.get("state") != "review_pending":
         raise ValueError("후보가 준비된 실행만 부위를 고를 수 있습니다.")
     face, body = Path(face_candidate), Path(body_candidate)
+    generated = json.loads((directory / "generation.json").read_text(encoding="utf-8"))
+    by_file = {c["file"]: c for c in generated.get("candidates", [])}
     for chosen in (face, body):
         if str(chosen) not in outcome.get("candidates", []) or not chosen.is_file():
             raise ValueError("고를 그림은 이 실행의 후보 중 하나여야 합니다.")
+        require_reviewable(by_file.get(chosen.name, {}))
     if face == body:
         raise ValueError("얼굴·머리와 몸·옷은 서로 다른 후보에서 골라야 합니다.")
     if runtime is None and run is None:
@@ -211,8 +295,11 @@ def run_style_part_combine(directory, face_candidate, body_candidate, runtime=No
     try:
         result["seconds"] = _stage(run, "combine", directory, "combine-result.json")
         done = json.loads((directory / "combine-result.json").read_text(encoding="utf-8"))
-        result.update(state="review_pending", result=str(directory / done["file"]), shift=done.get("shift"),
+        require_reviewable(done)
+        result.update(state="review_pending", hands=done.get("hands"), anatomy=candidate_anatomy(done), result=str(directory / done["file"]), shift=done.get("shift"),
                       review="사람 확인 전(부위별 고르기 결과)")
+    except ValueError as error:
+        result.update(state="refused", code="anatomy_review_required", message=str(error))
     except StyleRedrawFailed as error:
         result.update(state="failed", stage=error.stage, message=str(error))
     result["finished"] = time.time()

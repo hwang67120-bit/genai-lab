@@ -18,6 +18,8 @@ def redraw(pipe, image, refs, prompt, strength, seed, steps=4, guidance=1.0, max
     """image(PIL, 16의 배수 크기)를 출발점으로 뒤쪽 단계만 다시 그린다. refs: 조건 그림 목록. 반환 PIL."""
     import torch
     from diffusers.pipelines.flux2.pipeline_flux2_klein import compute_empirical_mu
+    from genai_lab.flux_prompt_delivery import build_flux_condition
+    condition, _ = build_flux_condition(pipe, prompt, max_sequence_length)
     width, height = image.size
     device = pipe._execution_device
     tensor = pipe.image_processor.preprocess(image, height=height, width=width).to(device=device, dtype=pipe.vae.dtype)
@@ -30,6 +32,6 @@ def redraw(pipe, image, refs, prompt, strength, seed, steps=4, guidance=1.0, max
     mu = compute_empirical_mu(image_seq_len=seq_len, num_steps=steps)
     start = float(pipe.scheduler.time_shift(mu, 1.0, torch.tensor([sigmas[0]], dtype=torch.float64))[0])
     latents = (1.0 - start) * clean + start * noise
-    return pipe(image=refs, prompt=prompt, width=width, height=height, num_inference_steps=steps, sigmas=list(sigmas),
-                latents=latents, guidance_scale=guidance, max_sequence_length=max_sequence_length,
+    return pipe(image=refs, width=width, height=height, num_inference_steps=steps, sigmas=list(sigmas),
+                latents=latents, guidance_scale=guidance, **condition,
                 generator=torch.Generator(device="cpu").manual_seed(seed)).images[0]

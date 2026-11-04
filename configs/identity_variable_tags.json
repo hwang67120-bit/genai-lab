@@ -1,0 +1,72 @@
+{
+ "schema": 1,
+ "made": "2026-11-01 17:44:05",
+ "rule": {
+  "present": 0.5,
+  "gone": 0.35,
+  "min_characters": 3,
+  "min_loss_rate": 0.5
+ },
+ "source": {
+  "pairs": 216,
+  "characters": 22,
+  "root": "D:\\Code\\genai-lab\\outputs\\style-training-prep-20261025"
+ },
+ "note": "장면을 따라 바뀌는 태그(데이터에서 배움). 여기에 없는 원본 태그는 모두 지켜야 할 태그.",
+ "variable": {
+  "book": {
+   "lost": 28,
+   "present": 54,
+   "characters": 3,
+   "rate": 0.52
+  },
+  "dark-skinned_male": {
+   "lost": 23,
+   "present": 39,
+   "characters": 3,
+   "rate": 0.59
+  },
+  "grey_pants": {
+   "lost": 14,
+   "present": 27,
+   "characters": 3,
+   "rate": 0.52
+  },
+  "hand_on_own_hip": {
+   "lost": 21,
+   "present": 36,
+   "characters": 5,
+   "rate": 0.58
+  },
+  "holding_book": {
+   "lost": 28,
+   "present": 54,
+   "characters": 3,
+   "rate": 0.52
+  },
+  "indoors": {
+   "lost": 37,
+   "present": 54,
+   "characters": 3,
+   "rate": 0.69
+  },
+  "simple_background": {
+   "lost": 42,
+   "present": 42,
+   "characters": 8,
+   "rate": 1.0
+  },
+  "very_dark_skin": {
+   "lost": 35,
+   "present": 39,
+   "characters": 4,
+   "rate": 0.9
+  },
+  "white_background": {
+   "lost": 24,
+   "present": 24,
+   "characters": 6,
+   "rate": 1.0
+  }
+ }
+}
